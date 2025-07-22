@@ -1,60 +1,29 @@
-"use client";
-import { useEffect, useState } from "react";
-
-const roleMap: Record<string, "admin" | "assistant"> = {
-  "ns.babczyk@live.de": "admin",
-  "sn_apt_management@outlook.com": "assistant",
-};
-
-export default function DashboardPage() {
-  const [email, setEmail] = useState<string | null>(null);
-  const [role, setRole] = useState<"admin" | "assistant" | null>(null);
-
-  useEffect(() => {
-    // Simulating user session with localStorage
-    const storedEmail = localStorage.getItem("HEP_user_email");
-    if (storedEmail && roleMap[storedEmail]) {
-      setEmail(storedEmail);
-      setRole(roleMap[storedEmail]);
-    }
-  }, []);
-
-  if (!email || !role) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-gray-100 text-gray-700">
-        <p className="text-xl">Please log in first to view your dashboard.</p>
-      </main>
-    );
-  }
-
+export default function LandingPage() {
   return (
-    <main className="min-h-screen bg-white p-10 text-gray-800">
-      <h1 className="text-4xl font-bold mb-4">Welcome, {email}</h1>
-      <p className="text-lg mb-6">
-        You are logged in as:{" "}
-        <span className="font-semibold text-blue-600">{role.toUpperCase()}</span>
-      </p>
+    <main className="min-h-screen bg-gray-100 p-10 text-gray-800">
+      <header className="flex justify-between items-center mb-10">
+        <h1 className="text-3xl font-bold">HostEasePro</h1>
+        <nav>
+          <a href="/login" className="mr-4">Login</a>
+          <a href="/signup" className="bg-blue-600 text-white px-4 py-2 rounded-md">Sign Up</a>
+        </nav>
+      </header>
 
-      {role === "admin" ? (
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Admin Tools</h2>
-          <ul className="list-disc ml-6 space-y-2">
-            <li>📊 View bookings across platforms</li>
-            <li>🛠️ Assign tasks to assistants</li>
-            <li>🗂️ Manage SOP library</li>
-            <li>🔑 Invite new team members</li>
-          </ul>
-        </section>
-      ) : (
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Assistant Dashboard</h2>
-          <ul className="list-disc ml-6 space-y-2">
-            <li>📋 View assigned tasks</li>
-            <li>📚 Access SOPs and checklists</li>
-            <li>📅 Sync calendar availability</li>
-          </ul>
-        </section>
-      )}
+      <section className="text-center mt-20">
+        <h2 className="text-4xl font-semibold mb-4">Let the system handle it.</h2>
+        <p className="text-lg mb-6">HostEasePro (HEP) is your ultimate tool for automated, stress-free rental management.</p>
+        <a href="/signup" className="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600">Get Started</a>
+      </section>
+
+      <section className="mt-20 text-left">
+        <h3 className="text-2xl font-semibold mb-4">Why HEP?</h3>
+        <ul className="list-disc ml-6 space-y-2">
+          <li>📅 Booking calendar with platform view</li>
+          <li>✅ Task manager with seasonal automation</li>
+          <li>📚 SOP library for assistants</li>
+          <li>🤖 Assistant sync — HEP keeps you in sync</li>
+        </ul>
+      </section>
     </main>
   );
 }
