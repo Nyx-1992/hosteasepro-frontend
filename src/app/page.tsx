@@ -1,29 +1,62 @@
-export default function LandingPage() {
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+const validUsers = {
+  "ns.babczyk@live.de": "admin",
+  "sn_apt_management@outlook.com": "assistant",
+};
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const router = useRouter();
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (validUsers[email]) {
+      // In the future, use JWT/session + fetch backend
+      router.push("/dashboard");
+    } else {
+      setError("Invalid email address or user not found.");
+    }
+  };
+
   return (
-    <main className="min-h-screen bg-gray-100 p-10 text-gray-800">
-      <header className="flex justify-between items-center mb-10">
-        <h1 className="text-3xl font-bold">HostEasePro</h1>
-        <nav>
-          <a href="/login" className="mr-4">Login</a>
-          <a href="/signup" className="bg-blue-600 text-white px-4 py-2 rounded-md">Sign Up</a>
-        </nav>
-      </header>
-
-      <section className="text-center mt-20">
-        <h2 className="text-4xl font-semibold mb-4">Let the system handle it.</h2>
-        <p className="text-lg mb-6">HostEasePro (HEP) is your ultimate tool for automated, stress-free rental management.</p>
-        <a href="/signup" className="bg-blue-500 text-white px-6 py-3 rounded-md hover:bg-blue-600">Get Started</a>
-      </section>
-
-      <section className="mt-20 text-left">
-        <h3 className="text-2xl font-semibold mb-4">Why HEP?</h3>
-        <ul className="list-disc ml-6 space-y-2">
-          <li>📅 Booking calendar with platform view</li>
-          <li>✅ Task manager with seasonal automation</li>
-          <li>📚 SOP library for assistants</li>
-          <li>🤖 Assistant sync -- HEP keeps you in sync</li>
-        </ul>
-      </section>
+    <main className="min-h-screen bg-gray-100 p-10 text-gray-800 flex items-center justify-center">
+      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
+        <h1 className="text-3xl font-bold mb-6 text-center">Log In to HostEasePro</h1>
+        <form onSubmit={handleLogin} className="space-y-4">
+          <input
+            type="email"
+            placeholder="Email"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            className="w-full px-4 py-2 border border-gray-300 rounded-md"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          {error && <p className="text-red-600 text-sm">{error}</p>}
+          <button
+            type="submit"
+            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
+          >
+            Log In
+          </button>
+        </form>
+        <p className="mt-4 text-center text-sm">
+          Not registered? <a href="/signup" className="text-blue-600 hover:underline">Sign up here</a>
+        </p>
+      </div>
     </main>
   );
 }
