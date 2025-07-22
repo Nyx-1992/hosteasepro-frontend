@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import BookingsSection from "@/components/BookingsSection";
 
 const roleMap: Record<string, "admin" | "assistant"> = {
   "ns.babczyk@live.de": "admin",
@@ -35,24 +36,30 @@ export default function DashboardPage() {
       </p>
 
       {role === "admin" ? (
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Admin Tools</h2>
-          <ul className="list-disc ml-6 space-y-2">
-            <li>📊 View bookings across platforms</li>
-            <li>🛠️ Assign tasks to assistants</li>
-            <li>🗂️ Manage SOP library</li>
-            <li>🔑 Invite new team members</li>
-          </ul>
-        </section>
+        <>
+          <section className="mb-10">
+            <h2 className="text-2xl font-semibold mb-4">Admin Tools</h2>
+            <ul className="list-disc ml-6 space-y-2">
+              <li>📊 View bookings across platforms</li>
+              <li>🛠️ Assign tasks to assistants</li>
+              <li>🗂️ Manage SOP library</li>
+              <li>🔑 Invite new team members</li>
+            </ul>
+          </section>
+          <BookingsSection />
+        </>
       ) : (
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Assistant Dashboard</h2>
-          <ul className="list-disc ml-6 space-y-2">
-            <li>📋 View assigned tasks</li>
-            <li>📚 Access SOPs and checklists</li>
-            <li>📅 Sync calendar availability</li>
-          </ul>
-        </section>
+        <>
+          <section className="mb-10">
+            <h2 className="text-2xl font-semibold mb-4">Assistant Dashboard</h2>
+            <ul className="list-disc ml-6 space-y-2">
+              <li>📋 View assigned tasks</li>
+              <li>📚 Access SOPs and checklists</li>
+              <li>📅 Sync calendar availability</li>
+            </ul>
+          </section>
+          <BookingsSection />
+        </>
       )}
     </main>
   );
