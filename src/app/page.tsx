@@ -1,62 +1,60 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-const validUsers = {
+const roleMap: Record<string, "admin" | "assistant"> = {
   "ns.babczyk@live.de": "admin",
   "sn_apt_management@outlook.com": "assistant",
 };
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const router = useRouter();
+export default function DashboardPage() {
+  const [email, setEmail] = useState<string | null>(null);
+  const [role, setRole] = useState<"admin" | "assistant" | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (validUsers[email]) {
-      // In the future, use JWT/session + fetch backend
-      router.push("/dashboard");
-    } else {
-      setError("Invalid email address or user not found.");
+  useEffect(() => {
+    // Simulating user session with localStorage
+    const storedEmail = localStorage.getItem("HEP_user_email");
+    if (storedEmail && roleMap[storedEmail]) {
+      setEmail(storedEmail);
+      setRole(roleMap[storedEmail]);
     }
-  };
+  }, []);
+
+  if (!email || !role) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gray-100 text-gray-700">
+        <p className="text-xl">Please log in first to view your dashboard.</p>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-gray-100 p-10 text-gray-800 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-md">
-        <h1 className="text-3xl font-bold mb-6 text-center">Log In to HostEasePro</h1>
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <p className="text-red-600 text-sm">{error}</p>}
-          <button
-            type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-          >
-            Log In
-          </button>
-        </form>
-        <p className="mt-4 text-center text-sm">
-          Not registered? <a href="/signup" className="text-blue-600 hover:underline">Sign up here</a>
-        </p>
-      </div>
+    <main className="min-h-screen bg-white p-10 text-gray-800">
+      <h1 className="text-4xl font-bold mb-4">Welcome, {email}</h1>
+      <p className="text-lg mb-6">
+        You are logged in as:{" "}
+        <span className="font-semibold text-blue-600">{role.toUpperCase()}</span>
+      </p>
+
+      {role === "admin" ? (
+        <section>
+          <h2 className="text-2xl font-semibold mb-4">Admin Tools</h2>
+          <ul className="list-disc ml-6 space-y-2">
+            <li>📊 View bookings across platforms</li>
+            <li>🛠️ Assign tasks to assistants</li>
+            <li>🗂️ Manage SOP library</li>
+            <li>🔑 Invite new team members</li>
+          </ul>
+        </section>
+      ) : (
+        <section>
+          <h2 className="text-2xl font-semibold mb-4">Assistant Dashboard</h2>
+          <ul className="list-disc ml-6 space-y-2">
+            <li>📋 View assigned tasks</li>
+            <li>📚 Access SOPs and checklists</li>
+            <li>📅 Sync calendar availability</li>
+          </ul>
+        </section>
+      )}
     </main>
   );
 }
