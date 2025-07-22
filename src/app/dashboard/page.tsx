@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
-import BookingsSection from "@/components/BookingsSection";
-import TaskSection from "@/components/TaskSection";
-import SOPSection from "@/components/SOPSection";
-import CalendarSyncSection from "@/components/CalendarSyncSection";
+import BookingsSection from "../../components/BookingsSection";
+import TaskSection from "../../components/TaskSection";
+import SOPSection from "../../components/SOPSection";
+import CalendarSyncSection from "../../components/CalendarSyncSection";
+
 
 export default function DashboardPage() {
   const [email, setEmail] = useState<string>("");
