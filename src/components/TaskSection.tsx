@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Role = "admin" | "assistant";
 
@@ -7,17 +7,29 @@ interface Task {
   id: number;
   title: string;
   completed: boolean;
-  assignedTo: string;
+  assigned_to: string;
 }
 
 export default function TaskSection({ role }: { role: Role }) {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: 1, title: "Restock toiletries – Apt 3", completed: false, assignedTo: "assistant" },
-    { id: 2, title: "Verify July Airbnb payout", completed: true, assignedTo: "admin" },
-    { id: 3, title: "Deep clean kitchen – Apt 1", completed: false, assignedTo: "assistant" },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
-  const toggleComplete = (id: number) => {
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        const res = await fetch("https://hosteasepro-backend.vercel.app/tasks");
+        const data: Task[] = await res.json();
+        setTasks(data);
+      } catch (err) {
+        console.error("Failed to fetch tasks", err);
+      }
+    };
+    fetchTasks();
+  }, []);
+
+  const toggleComplete = async (id: number) => {
+    await fetch(`https://hosteasepro-backend.vercel.app/tasks/${id}`, {
+      method: "PATCH",
+    });
     setTasks((prev) =>
       prev.map((task) =>
         task.id === id ? { ...task, completed: !task.completed } : task
@@ -25,8 +37,7 @@ export default function TaskSection({ role }: { role: Role }) {
     );
   };
 
-  // Filter tasks based on user role
-  const visibleTasks = tasks.filter((task) => role === "admin" || task.assignedTo === role);
+  const visibleTasks = tasks.filter((task) => role === "admin" || task.assigned_to === role);
 
   return (
     <section className="mt-10">
@@ -43,9 +54,7 @@ export default function TaskSection({ role }: { role: Role }) {
               }`}
             >
               <span
-                className={`${
-                  task.completed ? "line-through text-gray-500" : ""
-                }`}
+                className={`${task.completed ? "line-through text-gray-500" : ""}`}
               >
                 {task.title}
               </span>
