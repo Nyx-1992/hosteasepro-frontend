@@ -2383,7 +2383,7 @@
 
         // CORS Proxy for iCal feeds
         const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
-        const CORS_PROXY_ALT = 'https://api.allorigins.win/raw?url=';
+        const CORS_PROXY_ALT = 'https://api.allorigins.win/get?url=';
 
         // iCal Parser Function
         function parseICalData(icalText, platform) {
@@ -2468,7 +2468,8 @@
                                 const proxyUrl = CORS_PROXY_ALT + encodeURIComponent(feedUrl);
                                 console.log(`🔄 Trying primary proxy: ${proxyUrl}`);
                                 const response = await fetch(proxyUrl);
-                                icalData = await response.text();
+                                const jsonData = await response.json();
+                                icalData = jsonData.contents || '';
                                 console.log(`✅ Primary proxy success for ${platform}`);
                             } catch (e) {
                                 console.warn(`⚠️ CORS proxy failed for ${platform}, trying alternative...`);
