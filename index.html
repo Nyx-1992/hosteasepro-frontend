@@ -1887,6 +1887,9 @@
             
             // Hide restricted tabs
             hideRestrictedTabs(user.restrictions);
+            
+            // Trigger real data load after successful login
+            triggerRealDataLoad();
         }
         
         function hideRestrictedTabs(restrictions) {
@@ -2438,6 +2441,7 @@
 
         // Fetch booking data from all platforms
         async function fetchRealBookingData() {
+            console.log('🔥 FETCHING REAL BOOKING DATA...');
             const statusElement = document.getElementById('booking-status');
             if (statusElement) {
                 statusElement.textContent = 'Loading real booking data...';
@@ -2447,32 +2451,48 @@
             try {
                 const allBookings = { speranta: [], tvhouse: [] };
 
+                console.log('📋 iCal feeds configured:', PROPERTY_ICAL_FEEDS);
+
                 // Fetch data for both properties
                 for (const [propertyKey, property] of Object.entries(PROPERTY_ICAL_FEEDS)) {
-                    console.log(`Fetching bookings for ${property.name}`);
+                    console.log(`📍 Fetching bookings for ${property.name}`);
                     
                     for (const [platform, feedUrl] of Object.entries(property.feeds)) {
                         try {
-                            console.log(`Fetching ${platform} data for ${propertyKey}`);
+                            console.log(`🌐 Fetching ${platform} data for ${propertyKey}`);
+                            console.log(`📡 URL: ${feedUrl}`);
                             
                             // Try different CORS approaches
                             let icalData;
                             try {
-                                const response = await fetch(CORS_PROXY_ALT + encodeURIComponent(feedUrl));
+                                const proxyUrl = CORS_PROXY_ALT + encodeURIComponent(feedUrl);
+                                console.log(`🔄 Trying primary proxy: ${proxyUrl}`);
+                                const response = await fetch(proxyUrl);
                                 icalData = await response.text();
+                                console.log(`✅ Primary proxy success for ${platform}`);
                             } catch (e) {
-                                console.warn(`CORS proxy failed for ${platform}, trying alternative...`);
-                                const response = await fetch(CORS_PROXY + feedUrl);
+                                console.warn(`⚠️ CORS proxy failed for ${platform}, trying alternative...`);
+                                const altProxyUrl = CORS_PROXY + feedUrl;
+                                console.log(`🔄 Trying alternative proxy: ${altProxyUrl}`);
+                                const response = await fetch(altProxyUrl);
                                 icalData = await response.text();
+                                console.log(`✅ Alternative proxy success for ${platform}`);
                             }
 
                             if (icalData && icalData.includes('BEGIN:VCALENDAR')) {
                                 const events = parseICalData(icalData, platform);
                                 allBookings[propertyKey] = allBookings[propertyKey].concat(events);
-                                console.log(`Found ${events.length} events from ${platform} for ${propertyKey}`);
+                                console.log(`🎉 Found ${events.length} events from ${platform} for ${propertyKey}`);
+                                
+                                // Show immediate feedback
+                                if (statusElement) {
+                                    statusElement.innerHTML = `Loading... Found ${allBookings.speranta.length + allBookings.tvhouse.length} bookings so far`;
+                                }
+                            } else {
+                                console.log(`❌ No valid iCal data from ${platform} for ${propertyKey}`);
                             }
                         } catch (error) {
-                            console.error(`Error fetching ${platform} data for ${propertyKey}:`, error);
+                            console.error(`💥 Error fetching ${platform} data for ${propertyKey}:`, error);
                         }
                     }
                 }
@@ -2484,21 +2504,29 @@
                     lastUpdated: new Date()
                 };
 
+                const totalBookings = allBookings.speranta.length + allBookings.tvhouse.length;
+                console.log(`🎯 TOTAL REAL BOOKINGS LOADED: ${totalBookings}`);
+
                 // Update UI with real data
                 updateBookingDashboard();
                 updateFinancialMetrics();
 
                 if (statusElement) {
-                    statusElement.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
-                    statusElement.style.color = '#28a745';
+                    if (totalBookings > 0) {
+                        statusElement.innerHTML = `✅ ${totalBookings} real bookings loaded! Last updated: ${new Date().toLocaleTimeString()}`;
+                        statusElement.style.color = '#28a745';
+                    } else {
+                        statusElement.innerHTML = `⚠️ Connected but no bookings found. Last checked: ${new Date().toLocaleTimeString()}`;
+                        statusElement.style.color = '#ffc107';
+                    }
                 }
 
-                console.log('Real booking data loaded successfully:', globalBookingData);
+                console.log('🚀 Real booking data loaded successfully:', globalBookingData);
                 
             } catch (error) {
-                console.error('Error fetching booking data:', error);
+                console.error('💥 Error fetching booking data:', error);
                 if (statusElement) {
-                    statusElement.textContent = 'Error loading booking data';
+                    statusElement.innerHTML = `❌ Error loading booking data: ${error.message}`;
                     statusElement.style.color = '#dc3545';
                 }
             }
@@ -2755,17 +2783,32 @@
         document.addEventListener('DOMContentLoaded', function() {
             addRealDataControls();
             
-            // Load all live data
+            // Load all live data immediately
+            console.log('🚀 Starting real data load process...');
+            fetchRealBookingData();
+            fetchLiveExchangeRate();
+            fetchCapeFeatures();
+            
+            // Also try after login
             setTimeout(() => {
+                console.log('🔄 Secondary data load attempt...');
                 fetchRealBookingData();
-                fetchLiveExchangeRate();
-                fetchCapeFeatures();
-            }, 2000);
+            }, 5000);
             
             // Refresh rates every hour
             setInterval(fetchLiveExchangeRate, 60 * 60 * 1000);
             setInterval(fetchCapeFeatures, 30 * 60 * 1000);
         });
+
+        // Also trigger after login
+        function triggerRealDataLoad() {
+            console.log('🎯 Triggering real data load after login...');
+            setTimeout(() => {
+                fetchRealBookingData();
+                fetchLiveExchangeRate();
+                fetchCapeFeatures();
+            }, 1000);
+        }
 
         // ===========================================
         // END REAL DATA INTEGRATION SYSTEM
