@@ -2479,8 +2479,17 @@
                                 console.log(`✅ Alternative proxy success for ${platform}`);
                             }
 
-                            if (icalData && icalData.includes('BEGIN:VCALENDAR')) {
-                                const events = parseICalData(icalData, platform);
+                            if (icalData && (icalData.includes('BEGIN:VCALENDAR') || icalData.startsWith('data:text/calendar;base64,'))) {
+                                // Handle base64 encoded content
+                                let processedData = icalData;
+                                if (icalData.startsWith('data:text/calendar;base64,')) {
+                                    console.log('🔓 Decoding base64 iCal content...');
+                                    const base64Content = icalData.split(',')[1];
+                                    processedData = atob(base64Content);
+                                    console.log('✅ Decoded iCal length:', processedData.length);
+                                }
+                                
+                                const events = parseICalData(processedData, platform);
                                 allBookings[propertyKey] = allBookings[propertyKey].concat(events);
                                 console.log(`🎉 Found ${events.length} events from ${platform} for ${propertyKey}`);
                                 
@@ -2921,7 +2930,15 @@
                 if (data.contents) {
                     console.log('📝 iCal content preview:', data.contents.substring(0, 500));
                     
-                    if (data.contents.includes('VEVENT')) {
+                    let processedContent = data.contents;
+                    if (data.contents.startsWith('data:text/calendar;base64,')) {
+                        console.log('🔓 Decoding base64 content for testing...');
+                        const base64Content = data.contents.split(',')[1];
+                        processedContent = atob(base64Content);
+                        console.log('✅ Decoded content preview:', processedContent.substring(0, 500));
+                    }
+                    
+                    if (processedContent.includes('VEVENT')) {
                         console.log('✅ Found VEVENT blocks - this feed has booking data!');
                     } else {
                         console.log('❌ No VEVENT blocks found - this feed appears empty');
