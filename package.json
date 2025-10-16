@@ -1,0 +1,17 @@
+{
+  "name": "hosteasepro-frontend",
+  "version": "1.0.0",
+  "description": "HostEasePro - Property Management System",
+  "private": true,
+  "scripts": {
+    "build": "echo 'Static site - no build needed'",
+    "start": "echo 'Static site ready'"
+  },
+  "keywords": [
+    "property-management",
+    "hosteasepro",
+    "static-site"
+  ],
+  "author": "Nyx-1992",
+  "license": "MIT"
+}
