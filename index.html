@@ -2387,56 +2387,85 @@
 
         // iCal Parser Function
         function parseICalData(icalText, platform) {
+            console.log(`🔧 parseICalData called for ${platform}`);
+            console.log(`📝 Input text length: ${icalText.length}`);
+            console.log(`📄 First 200 chars: ${icalText.substring(0, 200)}`);
+            
             const events = [];
             const lines = icalText.split('\n');
             let currentEvent = {};
             let inEvent = false;
+            let eventCount = 0;
 
-            for (let line of lines) {
-                line = line.trim();
+            console.log(`📋 Processing ${lines.length} lines`);
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
                 
                 if (line === 'BEGIN:VEVENT') {
+                    console.log(`🎯 Found BEGIN:VEVENT at line ${i + 1}`);
                     inEvent = true;
                     currentEvent = { platform: platform };
+                    eventCount++;
                 } else if (line === 'END:VEVENT' && inEvent) {
+                    console.log(`🏁 Found END:VEVENT at line ${i + 1} for event ${eventCount}`);
                     if (currentEvent.start && currentEvent.end) {
+                        console.log(`✅ Valid event: ${currentEvent.summary} from ${currentEvent.start} to ${currentEvent.end}`);
                         events.push(currentEvent);
+                    } else {
+                        console.log(`❌ Invalid event (missing dates): start=${currentEvent.start}, end=${currentEvent.end}`);
                     }
                     currentEvent = {};
                     inEvent = false;
                 } else if (inEvent) {
                     if (line.startsWith('DTSTART:')) {
-                        currentEvent.start = parseICalDate(line.split(':')[1]);
+                        const dateStr = line.split(':')[1];
+                        currentEvent.start = parseICalDate(dateStr);
+                        console.log(`📅 DTSTART: ${dateStr} → ${currentEvent.start}`);
                     } else if (line.startsWith('DTEND:')) {
-                        currentEvent.end = parseICalDate(line.split(':')[1]);
+                        const dateStr = line.split(':')[1];
+                        currentEvent.end = parseICalDate(dateStr);
+                        console.log(`📅 DTEND: ${dateStr} → ${currentEvent.end}`);
                     } else if (line.startsWith('SUMMARY:')) {
                         currentEvent.summary = line.split(':')[1] || 'Booking';
+                        console.log(`📝 SUMMARY: ${currentEvent.summary}`);
                     } else if (line.startsWith('DESCRIPTION:')) {
                         currentEvent.description = line.split(':')[1] || '';
+                        console.log(`📄 DESCRIPTION: ${currentEvent.description}`);
                     }
                 }
             }
             
+            console.log(`🎊 parseICalData finished: Found ${events.length} valid events out of ${eventCount} VEVENT blocks`);
             return events;
         }
 
         function parseICalDate(dateString) {
+            console.log(`🕒 Parsing date: "${dateString}"`);
+            
             // Handle different iCal date formats
             if (dateString.length === 8) { // YYYYMMDD
-                return new Date(
+                const parsed = new Date(
                     dateString.substring(0, 4),
                     dateString.substring(4, 6) - 1,
                     dateString.substring(6, 8)
                 );
+                console.log(`📅 Parsed YYYYMMDD format: ${dateString} → ${parsed}`);
+                return parsed;
             } else if (dateString.includes('T')) { // YYYYMMDDTHHMMSS
                 const date = dateString.split('T')[0];
-                return new Date(
+                const parsed = new Date(
                     date.substring(0, 4),
                     date.substring(4, 6) - 1,
                     date.substring(6, 8)
                 );
+                console.log(`📅 Parsed datetime format: ${dateString} → ${parsed}`);
+                return parsed;
             }
-            return new Date(dateString);
+            
+            const parsed = new Date(dateString);
+            console.log(`📅 Parsed generic format: ${dateString} → ${parsed}`);
+            return parsed;
         }
 
         // Fetch booking data from all platforms
@@ -2471,6 +2500,8 @@
                                 const jsonData = await response.json();
                                 icalData = jsonData.contents || '';
                                 console.log(`✅ Primary proxy success for ${platform}`);
+                                console.log(`📦 Raw data type: ${typeof icalData}, length: ${icalData.length}`);
+                                console.log(`📝 Raw data preview (first 200 chars): ${icalData.substring(0, 200)}`);
                             } catch (e) {
                                 console.warn(`⚠️ CORS proxy failed for ${platform}, trying alternative...`);
                                 const altProxyUrl = CORS_PROXY + feedUrl;
@@ -2481,16 +2512,42 @@
                             }
 
                             if (icalData && (icalData.includes('BEGIN:VCALENDAR') || icalData.startsWith('data:text/calendar;base64,'))) {
+                                console.log(`🎯 Processing iCal data for ${platform} on ${propertyKey}`);
+                                console.log(`📋 Data starts with: ${icalData.substring(0, 50)}`);
+                                
                                 // Handle base64 encoded content
                                 let processedData = icalData;
                                 if (icalData.startsWith('data:text/calendar;base64,')) {
                                     console.log('🔓 Decoding base64 iCal content...');
                                     const base64Content = icalData.split(',')[1];
-                                    processedData = atob(base64Content);
-                                    console.log('✅ Decoded iCal length:', processedData.length);
+                                    console.log(`🔍 Base64 content length: ${base64Content.length}`);
+                                    
+                                    try {
+                                        processedData = atob(base64Content);
+                                        console.log('✅ Decoded iCal length:', processedData.length);
+                                        console.log('📄 Decoded preview:', processedData.substring(0, 300));
+                                    } catch (decodeError) {
+                                        console.error('❌ Base64 decode failed:', decodeError);
+                                        continue;
+                                    }
+                                } else {
+                                    console.log('📄 Plain text iCal data (first 300 chars):', processedData.substring(0, 300));
                                 }
                                 
+                                console.log(`🔍 Looking for VEVENT in processed data...`);
+                                const hasVEvent = processedData.includes('VEVENT');
+                                const hasBeginVCalendar = processedData.includes('BEGIN:VCALENDAR');
+                                console.log(`📊 Has BEGIN:VCALENDAR: ${hasBeginVCalendar}, Has VEVENT: ${hasVEvent}`);
+                                
                                 const events = parseICalData(processedData, platform);
+                                console.log(`🎉 parseICalData returned ${events.length} events for ${platform}`);
+                                
+                                if (events.length > 0) {
+                                    events.forEach((event, idx) => {
+                                        console.log(`📅 Event ${idx + 1}: "${event.summary}" from ${new Date(event.start).toDateString()} to ${new Date(event.end).toDateString()}`);
+                                    });
+                                }
+                                
                                 allBookings[propertyKey] = allBookings[propertyKey].concat(events);
                                 console.log(`🎉 Found ${events.length} events from ${platform} for ${propertyKey}`);
                                 
@@ -2513,6 +2570,9 @@
                                 }
                             } else {
                                 console.log(`❌ No valid iCal data from ${platform} for ${propertyKey}`);
+                                console.log(`📋 Data received: "${icalData.substring(0, 100)}..."`);
+                                console.log(`🔍 Includes BEGIN:VCALENDAR: ${icalData.includes('BEGIN:VCALENDAR')}`);
+                                console.log(`🔍 Starts with base64: ${icalData.startsWith('data:text/calendar;base64,')}`);
                             }
                         } catch (error) {
                             console.error(`💥 Error fetching ${platform} data for ${propertyKey}:`, error);
