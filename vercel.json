@@ -9,7 +9,11 @@
   "routes": [
     {
       "src": "/",
-      "dest": "/index.html"
+      "dest": "/demo/index_fixed.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }
