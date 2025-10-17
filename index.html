@@ -278,11 +278,19 @@
                 <div id="booking-status" style="margin-top: 10px; font-weight: bold;">Ready to load real data</div>
             </div>
             
-            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
                 <h4>📡 iCal Feed Integration Status</h4>
                 <p>🟢 <strong>Speranta:</strong> 4 platforms configured</p>
                 <p>🟢 <strong>TV House:</strong> 3 platforms configured</p>
                 <p>📝 Real booking data will replace test data automatically</p>
+            </div>
+
+            <!-- Real Bookings Display -->
+            <div id="bookings-display" style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                <h3>📅 Current Bookings</h3>
+                <div id="bookings-list" style="margin-top: 15px;">
+                    <p style="color: #6c757d; font-style: italic;">Load real booking data to see current reservations...</p>
+                </div>
             </div>
         </div>
 
@@ -377,15 +385,30 @@
         function parseICalData(icalText, platform) {
             console.log(`🔧 parseICalData called for ${platform}`);
             console.log(`📝 Input text length: ${icalText.length}`);
-            console.log(`📄 First 200 chars: ${icalText.substring(0, 200)}`);
+            console.log(`📄 First 500 chars: ${icalText.substring(0, 500)}`);
             
             const events = [];
             const lines = icalText.split('\n');
             let currentEvent = {};
             let inEvent = false;
             let eventCount = 0;
+            let vcalendarFound = false;
 
             console.log(`📋 Processing ${lines.length} lines`);
+
+            // Check for VCALENDAR structure
+            for (let i = 0; i < Math.min(50, lines.length); i++) {
+                const line = lines[i].trim();
+                if (line === 'BEGIN:VCALENDAR') {
+                    vcalendarFound = true;
+                    console.log(`📅 Found VCALENDAR at line ${i + 1}`);
+                    break;
+                }
+            }
+
+            if (!vcalendarFound) {
+                console.log(`⚠️ No VCALENDAR found in first 50 lines - this might not be a valid iCal file`);
+            }
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
@@ -397,34 +420,59 @@
                     eventCount++;
                 } else if (line === 'END:VEVENT' && inEvent) {
                     console.log(`🏁 Found END:VEVENT at line ${i + 1} for event ${eventCount}`);
+                    console.log(`🔍 Event data:`, currentEvent);
+                    
                     if (currentEvent.start && currentEvent.end) {
                         console.log(`✅ Valid event: ${currentEvent.summary} from ${currentEvent.start} to ${currentEvent.end}`);
                         events.push(currentEvent);
                     } else {
                         console.log(`❌ Invalid event (missing dates): start=${currentEvent.start}, end=${currentEvent.end}`);
+                        console.log(`🔍 Raw event object:`, currentEvent);
                     }
                     currentEvent = {};
                     inEvent = false;
                 } else if (inEvent) {
-                    if (line.startsWith('DTSTART:')) {
-                        const dateStr = line.split(':')[1];
+                    if (line.startsWith('DTSTART')) {
+                        const fullLine = line;
+                        let dateStr = '';
+                        if (line.includes(':')) {
+                            dateStr = line.split(':').slice(1).join(':');
+                        } else if (line.includes('=')) {
+                            dateStr = line.split('=').pop();
+                        }
+                        console.log(`📅 DTSTART line: "${fullLine}" → extracted: "${dateStr}"`);
                         currentEvent.start = parseICalDate(dateStr);
-                        console.log(`📅 DTSTART: ${dateStr} → ${currentEvent.start}`);
-                    } else if (line.startsWith('DTEND:')) {
-                        const dateStr = line.split(':')[1];
+                        console.log(`📅 DTSTART parsed: ${dateStr} → ${currentEvent.start}`);
+                    } else if (line.startsWith('DTEND')) {
+                        const fullLine = line;
+                        let dateStr = '';
+                        if (line.includes(':')) {
+                            dateStr = line.split(':').slice(1).join(':');
+                        } else if (line.includes('=')) {
+                            dateStr = line.split('=').pop();
+                        }
+                        console.log(`📅 DTEND line: "${fullLine}" → extracted: "${dateStr}"`);
                         currentEvent.end = parseICalDate(dateStr);
-                        console.log(`📅 DTEND: ${dateStr} → ${currentEvent.end}`);
-                    } else if (line.startsWith('SUMMARY:')) {
-                        currentEvent.summary = line.split(':')[1] || 'Booking';
-                        console.log(`📝 SUMMARY: ${currentEvent.summary}`);
-                    } else if (line.startsWith('DESCRIPTION:')) {
-                        currentEvent.description = line.split(':')[1] || '';
-                        console.log(`📄 DESCRIPTION: ${currentEvent.description}`);
+                        console.log(`📅 DTEND parsed: ${dateStr} → ${currentEvent.end}`);
+                    } else if (line.startsWith('SUMMARY')) {
+                        const summary = line.includes(':') ? line.split(':').slice(1).join(':') : 'Booking';
+                        currentEvent.summary = summary;
+                        console.log(`📝 SUMMARY: ${summary}`);
+                    } else if (line.startsWith('DESCRIPTION')) {
+                        const description = line.includes(':') ? line.split(':').slice(1).join(':') : '';
+                        currentEvent.description = description;
+                        console.log(`📄 DESCRIPTION: ${description}`);
                     }
                 }
             }
             
             console.log(`🎊 parseICalData finished: Found ${events.length} valid events out of ${eventCount} VEVENT blocks`);
+            console.log(`📊 Summary: VCALENDAR=${vcalendarFound}, VEVENT blocks=${eventCount}, Valid events=${events.length}`);
+            
+            if (eventCount > 0 && events.length === 0) {
+                console.log(`⚠️ WARNING: Found ${eventCount} VEVENT blocks but 0 valid events - likely date parsing issues`);
+            }
+            
             return events;
         }
 
@@ -455,7 +503,7 @@
             return parsed;
         }
 
-        // Enhanced Data Fetching with Base64 Support
+        // Enhanced Data Fetching with Advanced Debugging
         async function fetchRealBookingData() {
             console.log('🔥 FETCHING REAL BOOKING DATA...');
             const statusElement = document.getElementById('booking-status');
@@ -466,6 +514,7 @@
 
             try {
                 const allBookings = { speranta: [], tvhouse: [] };
+                const detailedResults = [];
                 console.log('📋 iCal feeds configured:', PROPERTY_ICAL_FEEDS);
 
                 for (const [propertyKey, property] of Object.entries(PROPERTY_ICAL_FEEDS)) {
@@ -480,11 +529,27 @@
                             console.log(`🔄 Using proxy: ${proxyUrl}`);
                             
                             const response = await fetch(proxyUrl);
+                            console.log(`📊 Response status: ${response.status} ${response.statusText}`);
+                            
                             const jsonData = await response.json();
+                            console.log(`📦 JSON response keys: ${Object.keys(jsonData)}`);
+                            console.log(`📦 JSON status info:`, jsonData.status || 'No status field');
+                            
                             let icalData = jsonData.contents || '';
                             
                             console.log(`📦 Raw data type: ${typeof icalData}, length: ${icalData.length}`);
-                            console.log(`📝 Raw data preview: ${icalData.substring(0, 200)}`);
+                            console.log(`📝 Raw data preview (first 500 chars): ${icalData.substring(0, 500)}`);
+                            
+                            // Log more details for debugging
+                            detailedResults.push({
+                                property: propertyKey,
+                                platform: platform,
+                                responseStatus: response.status,
+                                dataLength: icalData.length,
+                                hasVcalendar: icalData.includes('BEGIN:VCALENDAR'),
+                                hasVevent: icalData.includes('BEGIN:VEVENT'),
+                                preview: icalData.substring(0, 200)
+                            });
 
                             // Handle base64 encoded content
                             let processedData = icalData;
@@ -503,8 +568,17 @@
                                 }
                             }
 
-                            if (processedData && (processedData.includes('BEGIN:VCALENDAR') || processedData.includes('VEVENT'))) {
+                            // More thorough validation
+                            const hasValidCalendar = processedData && (
+                                processedData.includes('BEGIN:VCALENDAR') || 
+                                processedData.includes('VEVENT') ||
+                                processedData.includes('DTSTART') ||
+                                processedData.includes('DTEND')
+                            );
+
+                            if (hasValidCalendar) {
                                 console.log(`🎯 Processing iCal data for ${platform} on ${propertyKey}`);
+                                console.log(`📋 Calendar content indicators: VCALENDAR=${processedData.includes('BEGIN:VCALENDAR')}, VEVENT=${processedData.includes('BEGIN:VEVENT')}, DTSTART=${processedData.includes('DTSTART')}`);
                                 
                                 const events = parseICalData(processedData, platform);
                                 console.log(`🎉 parseICalData returned ${events.length} events for ${platform}`);
@@ -514,15 +588,28 @@
                                         console.log(`📅 Event ${idx + 1}: "${event.summary}" from ${new Date(event.start).toDateString()} to ${new Date(event.end).toDateString()}`);
                                     });
                                     allBookings[propertyKey] = allBookings[propertyKey].concat(events);
+                                } else {
+                                    console.log(`⚠️ No events parsed from ${platform} for ${propertyKey} despite valid calendar markers`);
                                 }
                             } else {
                                 console.log(`❌ No valid iCal data from ${platform} for ${propertyKey}`);
+                                console.log(`🔍 Data analysis: length=${processedData.length}, starts with: "${processedData.substring(0, 100)}"`);
                             }
                         } catch (error) {
                             console.error(`💥 Error fetching ${platform} data for ${propertyKey}:`, error);
+                            detailedResults.push({
+                                property: propertyKey,
+                                platform: platform,
+                                error: error.message,
+                                responseStatus: 'ERROR'
+                            });
                         }
                     }
                 }
+
+                // Enhanced summary logging
+                console.log('📊 DETAILED FETCH RESULTS:');
+                console.table(detailedResults);
 
                 globalBookingData = {
                     speranta: allBookings.speranta,
@@ -532,13 +619,23 @@
 
                 const totalBookings = allBookings.speranta.length + allBookings.tvhouse.length;
                 console.log(`🎯 TOTAL REAL BOOKINGS LOADED: ${totalBookings}`);
+                console.log(`📈 Speranta bookings: ${allBookings.speranta.length}`);
+                console.log(`📈 TV House bookings: ${allBookings.tvhouse.length}`);
+
+                // Show summary in status
+                const summary = detailedResults.map(r => 
+                    `${r.platform}: ${r.error ? 'ERROR' : (r.hasVevent ? 'HAS_EVENTS' : 'NO_EVENTS')}`
+                ).join(', ');
 
                 if (statusElement) {
                     if (totalBookings > 0) {
                         statusElement.innerHTML = `✅ ${totalBookings} real bookings loaded! Last updated: ${new Date().toLocaleTimeString()}`;
                         statusElement.style.color = '#28a745';
+                        
+                        // Display the bookings
+                        displayBookings(allBookings);
                     } else {
-                        statusElement.innerHTML = `⚠️ Connected but no bookings found. Check console for details. Last checked: ${new Date().toLocaleTimeString()}`;
+                        statusElement.innerHTML = `⚠️ Connected (${detailedResults.length} feeds checked) but no bookings found. ${summary}. Last checked: ${new Date().toLocaleTimeString()}`;
                         statusElement.style.color = '#ffc107';
                     }
                 }
@@ -552,6 +649,110 @@
                     statusElement.style.color = '#dc3545';
                 }
             }
+        }
+
+        // Display bookings in a nice format
+        function displayBookings(bookings) {
+            const bookingsListElement = document.getElementById('bookings-list');
+            if (!bookingsListElement) return;
+
+            let html = '';
+            const today = new Date();
+            const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+            // Combine all bookings and sort by date
+            const allBookings = [
+                ...bookings.speranta.map(b => ({...b, property: 'Speranta'})),
+                ...bookings.tvhouse.map(b => ({...b, property: 'TV House'}))
+            ].sort((a, b) => new Date(a.start) - new Date(b.start));
+
+            if (allBookings.length === 0) {
+                html = '<p style="color: #6c757d; font-style: italic;">No bookings found in the selected time range.</p>';
+            } else {
+                // Upcoming bookings (next 30 days)
+                const upcomingBookings = allBookings.filter(booking => {
+                    const bookingDate = new Date(booking.start);
+                    const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+                    return bookingDate >= today && bookingDate <= thirtyDaysFromNow;
+                });
+
+                // Current bookings (happening now)
+                const currentBookings = allBookings.filter(booking => {
+                    const startDate = new Date(booking.start);
+                    const endDate = new Date(booking.end);
+                    return startDate <= today && endDate >= today;
+                });
+
+                if (currentBookings.length > 0) {
+                    html += '<h4 style="color: #28a745; margin-bottom: 10px;">🔴 Current Bookings</h4>';
+                    currentBookings.forEach(booking => {
+                        const startDate = new Date(booking.start);
+                        const endDate = new Date(booking.end);
+                        html += `
+                            <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 15px; margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: between; align-items: center;">
+                                    <div>
+                                        <strong style="color: #155724;">${booking.property} - ${booking.summary || 'Booking'}</strong>
+                                        <div style="color: #155724; font-size: 14px;">
+                                            📅 ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}
+                                            | 🏢 ${booking.platform}
+                                        </div>
+                                    </div>
+                                    <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">ACTIVE</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                if (upcomingBookings.length > 0) {
+                    html += '<h4 style="color: #007bff; margin-bottom: 10px; margin-top: 20px;">📅 Upcoming Bookings (Next 30 Days)</h4>';
+                    upcomingBookings.forEach(booking => {
+                        const startDate = new Date(booking.start);
+                        const endDate = new Date(booking.end);
+                        const daysUntil = Math.ceil((startDate - today) / (1000 * 60 * 60 * 24));
+                        
+                        html += `
+                            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 5px; padding: 15px; margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: between; align-items: center;">
+                                    <div>
+                                        <strong style="color: #495057;">${booking.property} - ${booking.summary || 'Booking'}</strong>
+                                        <div style="color: #6c757d; font-size: 14px;">
+                                            📅 ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}
+                                            | 🏢 ${booking.platform}
+                                            ${daysUntil <= 7 ? `| ⚠️ ${daysUntil} days away` : ''}
+                                        </div>
+                                    </div>
+                                    <span style="background: #007bff; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">UPCOMING</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                // Summary stats
+                html += `
+                    <div style="margin-top: 20px; padding: 15px; background: #f1f3f4; border-radius: 5px;">
+                        <h5>📊 Booking Summary</h5>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: #28a745;">${currentBookings.length}</div>
+                                <div style="font-size: 12px; color: #6c757d;">Current</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: #007bff;">${upcomingBookings.length}</div>
+                                <div style="font-size: 12px; color: #6c757d;">Upcoming</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 24px; font-weight: bold; color: #6f42c1;">${allBookings.length}</div>
+                                <div style="font-size: 12px; color: #6c757d;">Total Loaded</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            bookingsListElement.innerHTML = html;
         }
 
         function fillAdminCredentials() {
