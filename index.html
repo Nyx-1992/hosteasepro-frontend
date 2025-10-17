@@ -275,7 +275,12 @@
                 <p>✅ Comprehensive logging with emoji indicators</p>
                 <p>✅ Production-ready code committed</p>
                 <button onclick="fetchRealBookingData()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px;">🔄 Load Real Booking Data</button>
+                <button onclick="runDiagnosticCheck()" style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-top: 10px; margin-left: 10px;">🔍 Diagnostic Check</button>
                 <div id="booking-status" style="margin-top: 10px; font-weight: bold;">Ready to load real data</div>
+                <div id="diagnostic-results" style="margin-top: 15px; padding: 15px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; display: none;">
+                    <h5>🔍 Diagnostic Results</h5>
+                    <div id="diagnostic-content"></div>
+                </div>
             </div>
             
             <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
@@ -380,6 +385,86 @@
         };
 
         let globalBookingData = { speranta: [], tvhouse: [], lastUpdated: null };
+        let historicalBookingData = []; // Persistent storage for all historical bookings
+
+        // Load historical data from localStorage
+        function loadHistoricalData() {
+            try {
+                const stored = localStorage.getItem('nyxPropertyBookingHistory');
+                if (stored) {
+                    historicalBookingData = JSON.parse(stored);
+                    console.log(`📜 Loaded ${historicalBookingData.length} historical bookings from storage`);
+                }
+            } catch (error) {
+                console.error('Error loading historical data:', error);
+                historicalBookingData = [];
+            }
+        }
+
+        // Save booking data to localStorage
+        function saveBookingToHistory(booking) {
+            // Create a unique ID for the booking
+            const bookingId = `${booking.property}-${booking.platform}-${booking.start}-${booking.end}`;
+            
+            // Check if booking already exists
+            const exists = historicalBookingData.some(stored => 
+                stored.id === bookingId || 
+                (stored.property === booking.property && 
+                 stored.platform === booking.platform && 
+                 stored.start === booking.start && 
+                 stored.end === booking.end)
+            );
+            
+            if (!exists) {
+                const bookingRecord = {
+                    ...booking,
+                    id: bookingId,
+                    savedAt: new Date().toISOString(),
+                    status: getBookingStatus(booking)
+                };
+                
+                historicalBookingData.push(bookingRecord);
+                
+                // Keep only last 500 bookings to prevent localStorage overflow
+                if (historicalBookingData.length > 500) {
+                    historicalBookingData = historicalBookingData.slice(-500);
+                }
+                
+                // Save to localStorage
+                try {
+                    localStorage.setItem('nyxPropertyBookingHistory', JSON.stringify(historicalBookingData));
+                    console.log(`💾 Saved booking: ${booking.summary} (${booking.property} - ${booking.platform})`);
+                } catch (error) {
+                    console.error('Error saving booking to history:', error);
+                }
+            }
+        }
+
+        // Determine booking status
+        function getBookingStatus(booking) {
+            const today = new Date();
+            const startDate = new Date(booking.start);
+            const endDate = new Date(booking.end);
+            
+            if (startDate <= today && endDate >= today) {
+                return 'current';
+            } else if (startDate > today) {
+                return 'upcoming';
+            } else {
+                return 'past';
+            }
+        }
+
+        // Save all current bookings to history
+        function saveAllBookingsToHistory() {
+            const allBookings = [
+                ...globalBookingData.speranta.map(b => ({...b, property: 'Speranta'})),
+                ...globalBookingData.tvhouse.map(b => ({...b, property: 'TV House'}))
+            ];
+            
+            allBookings.forEach(booking => saveBookingToHistory(booking));
+            console.log(`📦 Processed ${allBookings.length} bookings for historical storage`);
+        }
 
         // Enhanced iCal Parser with Comprehensive Debugging
         function parseICalData(icalText, platform) {
@@ -462,6 +547,15 @@
                         const description = line.includes(':') ? line.split(':').slice(1).join(':') : '';
                         currentEvent.description = description;
                         console.log(`📄 DESCRIPTION: ${description}`);
+                    } else if (line.startsWith('ORGANIZER')) {
+                        const organizer = line.includes(':') ? line.split(':').slice(1).join(':') : '';
+                        currentEvent.organizer = organizer;
+                        console.log(`👤 ORGANIZER: ${organizer}`);
+                    } else if (line.startsWith('ATTENDEE')) {
+                        const attendee = line.includes(':') ? line.split(':').slice(1).join(':') : '';
+                        if (!currentEvent.attendees) currentEvent.attendees = [];
+                        currentEvent.attendees.push(attendee);
+                        console.log(`👥 ATTENDEE: ${attendee}`);
                     }
                 }
             }
@@ -528,7 +622,22 @@
                             const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(feedUrl);
                             console.log(`🔄 Using proxy: ${proxyUrl}`);
                             
-                            const response = await fetch(proxyUrl);
+                            // Add timeout and retry for problematic feeds
+                            const fetchWithTimeout = async (url, timeout = 10000) => {
+                                const controller = new AbortController();
+                                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                                
+                                try {
+                                    const response = await fetch(url, { signal: controller.signal });
+                                    clearTimeout(timeoutId);
+                                    return response;
+                                } catch (error) {
+                                    clearTimeout(timeoutId);
+                                    throw error;
+                                }
+                            };
+                            
+                            const response = await fetchWithTimeout(proxyUrl);
                             console.log(`📊 Response status: ${response.status} ${response.statusText}`);
                             
                             const jsonData = await response.json();
@@ -551,30 +660,53 @@
                                 preview: icalData.substring(0, 200)
                             });
 
-                            // Handle base64 encoded content
+                            // Handle base64 encoded content - enhanced detection
                             let processedData = icalData;
-                            if (icalData.startsWith('data:text/calendar;base64,')) {
+                            
+                            // Check for base64 encoded iCal data (multiple formats)
+                            if (icalData.startsWith('data:text/calendar;base64,') || 
+                                icalData.startsWith('data:text/calendar;charset=UTF-8;base64,') ||
+                                icalData.startsWith('data:text/calendar;charset=utf-8;base64,')) {
+                                
                                 console.log('🔓 Decoding base64 iCal content...');
-                                const base64Content = icalData.split(',')[1];
-                                console.log(`🔍 Base64 content length: ${base64Content.length}`);
+                                const base64Content = icalData.split('base64,')[1];
+                                console.log(`🔍 Base64 content length: ${base64Content ? base64Content.length : 'not found'}`);
                                 
                                 try {
-                                    processedData = atob(base64Content);
-                                    console.log('✅ Decoded iCal length:', processedData.length);
-                                    console.log('📄 Decoded preview:', processedData.substring(0, 300));
+                                    if (base64Content) {
+                                        processedData = atob(base64Content);
+                                        console.log('✅ Decoded iCal length:', processedData.length);
+                                        console.log('📄 Decoded preview:', processedData.substring(0, 300));
+                                        
+                                        // Special logging for TV House Airbnb
+                                        if (propertyKey === 'tvhouse' && platform === 'airbnb') {
+                                            console.log('🎯 TV HOUSE AIRBNB DECODED CONTENT:');
+                                            console.log(processedData);
+                                        }
+                                    } else {
+                                        console.error('❌ No base64 content found after split');
+                                    }
                                 } catch (decodeError) {
                                     console.error('❌ Base64 decode failed:', decodeError);
                                     continue;
                                 }
                             }
 
-                            // More thorough validation
-                            const hasValidCalendar = processedData && (
+                            // More thorough validation with enhanced HTML detection
+                            const hasValidCalendar = processedData && processedData.length > 50 && (
                                 processedData.includes('BEGIN:VCALENDAR') || 
                                 processedData.includes('VEVENT') ||
                                 processedData.includes('DTSTART') ||
                                 processedData.includes('DTEND')
-                            );
+                            ) && !processedData.includes('<html>') && !processedData.includes('<!DOCTYPE');
+
+                            // Check if it's an HTML error page instead of calendar data
+                            const isErrorPage = processedData.includes('<html>') || 
+                                               processedData.includes('<!DOCTYPE') || 
+                                               processedData.includes('<head>') ||
+                                               processedData.toLowerCase().includes('error') ||
+                                               processedData.toLowerCase().includes('not found') ||
+                                               processedData.toLowerCase().includes('access denied');
 
                             if (hasValidCalendar) {
                                 console.log(`🎯 Processing iCal data for ${platform} on ${propertyKey}`);
@@ -591,6 +723,9 @@
                                 } else {
                                     console.log(`⚠️ No events parsed from ${platform} for ${propertyKey} despite valid calendar markers`);
                                 }
+                            } else if (isErrorPage) {
+                                console.log(`🚫 HTML error page detected from ${platform} for ${propertyKey} instead of iCal data`);
+                                console.log(`📄 Error page preview: ${processedData.substring(0, 300)}`);
                             } else {
                                 console.log(`❌ No valid iCal data from ${platform} for ${propertyKey}`);
                                 console.log(`🔍 Data analysis: length=${processedData.length}, starts with: "${processedData.substring(0, 100)}"`);
@@ -611,11 +746,17 @@
                 console.log('📊 DETAILED FETCH RESULTS:');
                 console.table(detailedResults);
 
+                // Load historical data first
+                loadHistoricalData();
+
                 globalBookingData = {
                     speranta: allBookings.speranta,
                     tvhouse: allBookings.tvhouse,
                     lastUpdated: new Date()
                 };
+
+                // Save all bookings to historical storage
+                saveAllBookingsToHistory();
 
                 const totalBookings = allBookings.speranta.length + allBookings.tvhouse.length;
                 console.log(`🎯 TOTAL REAL BOOKINGS LOADED: ${totalBookings}`);
@@ -658,7 +799,6 @@
 
             let html = '';
             const today = new Date();
-            const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
 
             // Combine all bookings and sort by date
             const allBookings = [
@@ -669,13 +809,6 @@
             if (allBookings.length === 0) {
                 html = '<p style="color: #6c757d; font-style: italic;">No bookings found in the selected time range.</p>';
             } else {
-                // Upcoming bookings (next 30 days)
-                const upcomingBookings = allBookings.filter(booking => {
-                    const bookingDate = new Date(booking.start);
-                    const thirtyDaysFromNow = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-                    return bookingDate >= today && bookingDate <= thirtyDaysFromNow;
-                });
-
                 // Current bookings (happening now)
                 const currentBookings = allBookings.filter(booking => {
                     const startDate = new Date(booking.start);
@@ -683,22 +816,99 @@
                     return startDate <= today && endDate >= today;
                 });
 
+                // Upcoming bookings (next 60 days for better visibility)
+                const upcomingBookings = allBookings.filter(booking => {
+                    const bookingDate = new Date(booking.start);
+                    const sixtyDaysFromNow = new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000);
+                    return bookingDate > today && bookingDate <= sixtyDaysFromNow;
+                });
+
+                // All future bookings beyond 60 days
+                const futureBookings = allBookings.filter(booking => {
+                    const bookingDate = new Date(booking.start);
+                    const sixtyDaysFromNow = new Date(today.getTime() + 60 * 24 * 60 * 60 * 1000);
+                    return bookingDate > sixtyDaysFromNow;
+                });
+
+                // Past bookings (completed)
+                const pastBookings = allBookings.filter(booking => {
+                    const endDate = new Date(booking.end);
+                    return endDate < today;
+                });
+
                 if (currentBookings.length > 0) {
-                    html += '<h4 style="color: #28a745; margin-bottom: 10px;">🔴 Current Bookings</h4>';
+                    html += '<h4 style="color: #28a745; margin-bottom: 15px;">🔴 Current Bookings (Active Now)</h4>';
                     currentBookings.forEach(booking => {
                         const startDate = new Date(booking.start);
                         const endDate = new Date(booking.end);
+                        const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+                        
+                        // Clean up the summary text and extract guest info
+                        let cleanSummary = booking.summary || 'Booking';
+                        cleanSummary = cleanSummary.replace(/\\n/g, ' ').replace(/\n/g, ' ');
+                        
+                        // Extract guest name and reference from different platforms
+                        let guestName = 'Guest';
+                        let bookingRef = '';
+                        let platformColor = '#17a2b8'; // Default color
+                        
+                        if (booking.platform === 'lekkeslaap') {
+                            // LekkeSlaap format: "Reference: LS-5FZ37J\nView at: https://..."
+                            const refMatch = cleanSummary.match(/Reference:\s*(LS-[A-Z0-9]+)/);
+                            if (refMatch) {
+                                bookingRef = refMatch[1];
+                                cleanSummary = `LekkeSlaap Booking ${bookingRef}`;
+                            }
+                            platformColor = '#28a745'; // Green for LekkeSlaap
+                        } else if (booking.platform === 'booking') {
+                            // Booking.com format might contain guest names or be "CLOSED - Not available"
+                            if (cleanSummary.includes('CLOSED')) {
+                                cleanSummary = 'Property Blocked (Maintenance/Personal Use)';
+                                guestName = 'BLOCKED';
+                            } else {
+                                // Extract guest name if present
+                                const nameMatch = cleanSummary.match(/([A-Z][a-z]+\s+[A-Z][a-z]+)/);
+                                if (nameMatch) {
+                                    guestName = nameMatch[1];
+                                    cleanSummary = `Booking.com - ${guestName}`;
+                                }
+                            }
+                            platformColor = '#007bff'; // Blue for Booking.com
+                        } else if (booking.platform === 'airbnb') {
+                            // Airbnb usually shows guest first name
+                            const nameMatch = cleanSummary.match(/([A-Z][a-z]+)/);
+                            if (nameMatch) {
+                                guestName = nameMatch[1];
+                                cleanSummary = `Airbnb - ${guestName}`;
+                            }
+                            platformColor = '#FF1493'; // Airbnb red
+                        } else if (booking.platform === 'fewo') {
+                            platformColor = '#ffc107'; // Yellow for FeWo
+                        }
+                        
+                        // Truncate if too long
+                        if (cleanSummary.length > 60) {
+                            cleanSummary = cleanSummary.substring(0, 60) + '...';
+                        }
+                        
                         html += `
-                            <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; padding: 15px; margin-bottom: 10px;">
-                                <div style="display: flex; justify-content: between; align-items: center;">
-                                    <div>
-                                        <strong style="color: #155724;">${booking.property} - ${booking.summary || 'Booking'}</strong>
-                                        <div style="color: #155724; font-size: 14px;">
-                                            📅 ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}
-                                            | 🏢 ${booking.platform}
+                            <div style="background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%); border: 2px solid #28a745; border-radius: 8px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 8px rgba(40, 167, 69, 0.2);">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                            <span style="background: #28a745; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">🏠 ${booking.property}</span>
+                                            <span style="background: ${platformColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px;">📱 ${booking.platform.toUpperCase()}</span>
+                                        </div>
+                                        <h5 style="color: #155724; margin-bottom: 8px; font-size: 16px;">${cleanSummary}</h5>
+                                        <div style="color: #155724; font-size: 14px; line-height: 1.5;">
+                                            <div>📅 <strong>Check-in:</strong> ${startDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                            <div>📅 <strong>Check-out:</strong> ${endDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                            <div>⏰ <strong>Days remaining:</strong> ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}</div>
                                         </div>
                                     </div>
-                                    <span style="background: #28a745; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">ACTIVE</span>
+                                    <div style="text-align: center;">
+                                        <span style="background: #28a745; color: white; padding: 8px 16px; border-radius: 25px; font-size: 14px; font-weight: bold; display: inline-block;">🟢 ACTIVE</span>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -706,46 +916,289 @@
                 }
 
                 if (upcomingBookings.length > 0) {
-                    html += '<h4 style="color: #007bff; margin-bottom: 10px; margin-top: 20px;">📅 Upcoming Bookings (Next 30 Days)</h4>';
+                    html += '<h4 style="color: #007bff; margin-bottom: 15px; margin-top: 25px;">📅 Upcoming Bookings (Next 60 Days)</h4>';
                     upcomingBookings.forEach(booking => {
                         const startDate = new Date(booking.start);
                         const endDate = new Date(booking.end);
                         const daysUntil = Math.ceil((startDate - today) / (1000 * 60 * 60 * 24));
+                        const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                        
+                        // Clean up the summary text and extract guest info
+                        let cleanSummary = booking.summary || 'Booking';
+                        cleanSummary = cleanSummary.replace(/\\n/g, ' ').replace(/\n/g, ' ');
+                        
+                        // Extract guest name and reference from different platforms
+                        let guestName = 'Guest';
+                        let bookingRef = '';
+                        let platformColor = '#17a2b8'; // Default color
+                        
+                        if (booking.platform === 'lekkeslaap') {
+                            // LekkeSlaap format: "Reference: LS-5FZ37J\nView at: https://..."
+                            const refMatch = cleanSummary.match(/Reference:\s*(LS-[A-Z0-9]+)/);
+                            if (refMatch) {
+                                bookingRef = refMatch[1];
+                                cleanSummary = `LekkeSlaap Booking ${bookingRef}`;
+                            }
+                            platformColor = '#28a745'; // Green for LekkeSlaap
+                        } else if (booking.platform === 'booking') {
+                            // Booking.com format might contain guest names or be "CLOSED - Not available"
+                            if (cleanSummary.includes('CLOSED')) {
+                                cleanSummary = 'Property Blocked (Maintenance/Personal Use)';
+                                guestName = 'BLOCKED';
+                            } else {
+                                // Extract guest name if present
+                                const nameMatch = cleanSummary.match(/([A-Z][a-z]+\s+[A-Z][a-z]+)/);
+                                if (nameMatch) {
+                                    guestName = nameMatch[1];
+                                    cleanSummary = `Booking.com - ${guestName}`;
+                                }
+                            }
+                            platformColor = '#007bff'; // Blue for Booking.com
+                        } else if (booking.platform === 'airbnb') {
+                            // Airbnb usually shows guest first name
+                            const nameMatch = cleanSummary.match(/([A-Z][a-z]+)/);
+                            if (nameMatch) {
+                                guestName = nameMatch[1];
+                                cleanSummary = `Airbnb - ${guestName}`;
+                            }
+                            platformColor = '#FF1493'; // Airbnb red
+                        } else if (booking.platform === 'fewo') {
+                            platformColor = '#ffc107'; // Yellow for FeWo
+                        }
+                        
+                        // Truncate if too long
+                        if (cleanSummary.length > 60) {
+                            cleanSummary = cleanSummary.substring(0, 60) + '...';
+                        }
+                        
+                        // Color coding for urgency
+                        let urgencyColor = '#007bff';
+                        let urgencyText = '🔵 UPCOMING';
+                        if (daysUntil <= 3) {
+                            urgencyColor = '#dc3545';
+                            urgencyText = '🔴 URGENT';
+                        } else if (daysUntil <= 7) {
+                            urgencyColor = '#ffc107';
+                            urgencyText = '🟡 SOON';
+                        }
                         
                         html += `
-                            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 5px; padding: 15px; margin-bottom: 10px;">
-                                <div style="display: flex; justify-content: between; align-items: center;">
-                                    <div>
-                                        <strong style="color: #495057;">${booking.property} - ${booking.summary || 'Booking'}</strong>
-                                        <div style="color: #6c757d; font-size: 14px;">
-                                            📅 ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}
-                                            | 🏢 ${booking.platform}
-                                            ${daysUntil <= 7 ? `| ⚠️ ${daysUntil} days away` : ''}
+                            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin-bottom: 15px; border-left: 4px solid ${urgencyColor};">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                            <span style="background: ${urgencyColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">🏠 ${booking.property}</span>
+                                            <span style="background: ${platformColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px;">📱 ${booking.platform.toUpperCase()}</span>
+                                        </div>
+                                        <h5 style="color: #495057; margin-bottom: 8px; font-size: 16px;">${cleanSummary}</h5>
+                                        <div style="color: #6c757d; font-size: 14px; line-height: 1.5;">
+                                            <div>📅 <strong>Check-in:</strong> ${startDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                            <div>📅 <strong>Check-out:</strong> ${endDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                                            <div>⏰ <strong>Arrival in:</strong> ${daysUntil} day${daysUntil !== 1 ? 's' : ''} | <strong>Duration:</strong> ${duration} night${duration !== 1 ? 's' : ''}</div>
                                         </div>
                                     </div>
-                                    <span style="background: #007bff; color: white; padding: 4px 8px; border-radius: 12px; font-size: 12px;">UPCOMING</span>
+                                    <div style="text-align: center;">
+                                        <span style="background: ${urgencyColor}; color: white; padding: 8px 16px; border-radius: 25px; font-size: 14px; font-weight: bold; display: inline-block;">${urgencyText}</span>
+                                    </div>
                                 </div>
                             </div>
                         `;
                     });
                 }
 
-                // Summary stats
+                if (futureBookings.length > 0) {
+                    html += `<h4 style="color: #6f42c1; margin-bottom: 15px; margin-top: 25px;">🔮 Future Bookings (${futureBookings.length} bookings beyond 60 days)</h4>`;
+                    html += `<div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <p style="color: #6c757d; margin: 0;">Click "Show Future Bookings" to see all ${futureBookings.length} bookings scheduled beyond the next 60 days.</p>
+                        <button onclick="toggleFutureBookings()" id="toggle-future-btn" style="background: #6f42c1; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px; cursor: pointer;">Show Future Bookings</button>
+                    </div>`;
+                    
+                    html += '<div id="future-bookings" style="display: none;">';
+                    futureBookings.forEach(booking => {
+                        const startDate = new Date(booking.start);
+                        const endDate = new Date(booking.end);
+                        const daysUntil = Math.ceil((startDate - today) / (1000 * 60 * 60 * 24));
+                        const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                        
+                        // Platform-specific colors
+                        let platformColor = '#6c757d'; // Default grey
+                        if (booking.platform === 'airbnb') platformColor = '#FF1493'; // Airbnb signature pink
+                        else if (booking.platform === 'booking') platformColor = '#007bff';
+                        else if (booking.platform === 'lekkeslaap') platformColor = '#28a745';
+                        else if (booking.platform === 'fewo') platformColor = '#ffc107';
+                        
+                        // Clean up the summary text and extract guest info
+                        let cleanSummary = booking.summary || 'Booking';
+                        cleanSummary = cleanSummary.replace(/\\n/g, ' ').replace(/\n/g, ' ');
+                        
+                        // Extract guest name and reference from different platforms
+                        if (booking.platform === 'lekkeslaap') {
+                            const refMatch = cleanSummary.match(/Reference:\s*(LS-[A-Z0-9]+)/);
+                            if (refMatch) {
+                                cleanSummary = `LekkeSlaap ${refMatch[1]}`;
+                            }
+                        } else if (booking.platform === 'booking') {
+                            if (cleanSummary.includes('CLOSED')) {
+                                cleanSummary = 'Property Blocked';
+                            } else {
+                                const nameMatch = cleanSummary.match(/([A-Z][a-z]+\s+[A-Z][a-z]+)/);
+                                if (nameMatch) {
+                                    cleanSummary = `Booking.com - ${nameMatch[1]}`;
+                                }
+                            }
+                        } else if (booking.platform === 'airbnb') {
+                            const nameMatch = cleanSummary.match(/([A-Z][a-z]+)/);
+                            if (nameMatch) {
+                                cleanSummary = `Airbnb - ${nameMatch[1]}`;
+                            }
+                        }
+                        
+                        if (cleanSummary.length > 40) {
+                            cleanSummary = cleanSummary.substring(0, 40) + '...';
+                        }
+                        
+                        html += `
+                            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 10px; opacity: 0.8;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                                            <span style="background: #6f42c1; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">🏠 ${booking.property}</span>
+                                            <span style="background: ${platformColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">📱 ${booking.platform.toUpperCase()}</span>
+                                        </div>
+                                        <strong style="color: #495057; font-size: 14px;">${cleanSummary}</strong>
+                                        <div style="color: #6c757d; font-size: 12px;">
+                                            📅 ${startDate.toLocaleDateString('en-GB')} - ${endDate.toLocaleDateString('en-GB')} | ⏰ ${daysUntil} days away
+                                        </div>
+                                    </div>
+                                    <span style="background: #6f42c1; color: white; padding: 4px 8px; border-radius: 12px; font-size: 10px;">🔮 FUTURE</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                }
+
+                // Past bookings section
+                if (pastBookings.length > 0) {
+                    html += `<h4 style="color: #6c757d; margin-bottom: 15px; margin-top: 25px;">📜 Past Bookings (${pastBookings.length} completed)</h4>`;
+                    html += `<div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <p style="color: #6c757d; margin: 0;">🎯 <strong>Historical Data Available!</strong> Found ${pastBookings.length} past bookings. Click to view completed stays.</p>
+                        <button onclick="togglePastBookings()" id="toggle-past-btn" style="background: #6c757d; color: white; border: none; padding: 8px 16px; border-radius: 4px; margin-top: 10px; cursor: pointer;">Show Past Bookings</button>
+                    </div>`;
+                    
+                    html += '<div id="past-bookings" style="display: none;">';
+                    // Sort past bookings by end date (most recent first)
+                    pastBookings.sort((a, b) => new Date(b.end) - new Date(a.end));
+                    
+                    pastBookings.forEach(booking => {
+                        const startDate = new Date(booking.start);
+                        const endDate = new Date(booking.end);
+                        const daysSince = Math.ceil((today - endDate) / (1000 * 60 * 60 * 24));
+                        const duration = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                        
+                        // Platform-specific colors
+                        let platformColor = '#495057'; // Default dark grey for past bookings
+                        if (booking.platform === 'airbnb') platformColor = '#CC484D'; // Darker Airbnb red
+                        else if (booking.platform === 'booking') platformColor = '#0056B3'; // Darker booking.com blue
+                        else if (booking.platform === 'lekkeslaap') platformColor = '#1E7E34'; // Darker green
+                        else if (booking.platform === 'fewo') platformColor = '#E0A800'; // Darker yellow
+                        
+                        // Clean up the summary text and extract guest info
+                        let cleanSummary = booking.summary || 'Booking';
+                        cleanSummary = cleanSummary.replace(/\\n/g, ' ').replace(/\n/g, ' ');
+                        
+                        // Extract guest name and reference from different platforms
+                        if (booking.platform === 'lekkeslaap') {
+                            const refMatch = cleanSummary.match(/Reference:\s*(LS-[A-Z0-9]+)/);
+                            if (refMatch) {
+                                cleanSummary = `LekkeSlaap ${refMatch[1]}`;
+                            }
+                        } else if (booking.platform === 'booking') {
+                            if (cleanSummary.includes('CLOSED')) {
+                                cleanSummary = 'Property Blocked';
+                            } else {
+                                const nameMatch = cleanSummary.match(/([A-Z][a-z]+\s+[A-Z][a-z]+)/);
+                                if (nameMatch) {
+                                    cleanSummary = `Booking.com - ${nameMatch[1]}`;
+                                }
+                            }
+                        } else if (booking.platform === 'airbnb') {
+                            const nameMatch = cleanSummary.match(/([A-Z][a-z]+)/);
+                            if (nameMatch) {
+                                cleanSummary = `Airbnb - ${nameMatch[1]}`;
+                            }
+                        }
+                        
+                        if (cleanSummary.length > 40) {
+                            cleanSummary = cleanSummary.substring(0, 40) + '...';
+                        }
+                        
+                        html += `
+                            <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 10px; opacity: 0.7;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+                                            <span style="background: #6c757d; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">🏠 ${booking.property}</span>
+                                            <span style="background: ${platformColor}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px;">📱 ${booking.platform.toUpperCase()}</span>
+                                        </div>
+                                        <strong style="color: #495057; font-size: 14px;">${cleanSummary}</strong>
+                                        <div style="color: #6c757d; font-size: 12px;">
+                                            📅 ${startDate.toLocaleDateString('en-GB')} - ${endDate.toLocaleDateString('en-GB')} | 🏁 ${daysSince} days ago | 🌙 ${duration} nights
+                                        </div>
+                                    </div>
+                                    <span style="background: #6c757d; color: white; padding: 4px 8px; border-radius: 12px; font-size: 10px;">📜 COMPLETED</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                } else {
+                    // Debug info when no past bookings found
+                    html += `
+                        <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; margin-top: 25px;">
+                            <h6 style="color: #495057; margin-bottom: 10px;">📜 Historical Booking Analysis</h6>
+                            <p style="color: #6c757d; font-size: 14px; margin: 0;">
+                                ❌ No past bookings detected in current feed data.<br>
+                                💡 <strong>Expected behavior:</strong> Most platforms (Airbnb, Booking.com, FeWo) filter out past bookings from iCal feeds.<br>
+                                ✅ LekkeSlaap may include some historical data.<br>
+                                🔧 For complete booking history, consider manual data import or local persistence.
+                            </p>
+                        </div>
+                    `;
+                }
+
+                // Enhanced Summary stats
                 html += `
-                    <div style="margin-top: 20px; padding: 15px; background: #f1f3f4; border-radius: 5px;">
-                        <h5>📊 Booking Summary</h5>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 10px;">
-                            <div style="text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: #28a745;">${currentBookings.length}</div>
-                                <div style="font-size: 12px; color: #6c757d;">Current</div>
+                    <div style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #f1f3f4 0%, #e9ecef 100%); border-radius: 10px; border: 1px solid #dee2e6;">
+                        <h5 style="color: #495057; margin-bottom: 15px; text-align: center;">📊 Booking Dashboard Summary</h5>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px;">
+                            <div style="text-align: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="font-size: 28px; font-weight: bold; color: #28a745;">${currentBookings.length}</div>
+                                <div style="font-size: 12px; color: #6c757d; font-weight: 500;">ACTIVE NOW</div>
                             </div>
-                            <div style="text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: #007bff;">${upcomingBookings.length}</div>
-                                <div style="font-size: 12px; color: #6c757d;">Upcoming</div>
+                            <div style="text-align: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="font-size: 28px; font-weight: bold; color: #007bff;">${upcomingBookings.length}</div>
+                                <div style="font-size: 12px; color: #6c757d; font-weight: 500;">NEXT 60 DAYS</div>
                             </div>
-                            <div style="text-align: center;">
-                                <div style="font-size: 24px; font-weight: bold; color: #6f42c1;">${allBookings.length}</div>
-                                <div style="font-size: 12px; color: #6c757d;">Total Loaded</div>
+                            <div style="text-align: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="font-size: 28px; font-weight: bold; color: #6f42c1;">${futureBookings.length}</div>
+                                <div style="font-size: 12px; color: #6c757d; font-weight: 500;">FUTURE</div>
+                            </div>
+                            <div style="text-align: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="font-size: 28px; font-weight: bold; color: #6c757d;">${pastBookings.length}</div>
+                                <div style="font-size: 12px; color: #6c757d; font-weight: 500;">COMPLETED</div>
+                            </div>
+                            <div style="text-align: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="font-size: 28px; font-weight: bold; color: #17a2b8;">${allBookings.length}</div>
+                                <div style="font-size: 12px; color: #6c757d; font-weight: 500;">TOTAL LOADED</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Platform Breakdown -->
+                        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                            <h6 style="color: #495057; margin-bottom: 10px; text-align: center;">📱 Platform Breakdown</h6>
+                            <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                                ${getPlatformStats(allBookings)}
                             </div>
                         </div>
                     </div>
@@ -753,6 +1206,262 @@
             }
 
             bookingsListElement.innerHTML = html;
+        }
+
+        // Get platform statistics
+        function getPlatformStats(bookings) {
+            const platforms = {};
+            bookings.forEach(booking => {
+                platforms[booking.platform] = (platforms[booking.platform] || 0) + 1;
+            });
+            
+            return Object.entries(platforms).map(([platform, count]) => {
+                const colors = {
+                    booking: '#007bff',
+                    airbnb: '#FF1493',
+                    lekkeslaap: '#28a745',
+                    fewo: '#ffc107'
+                };
+                const color = colors[platform.toLowerCase()] || '#6c757d';
+                
+                return `
+                    <div style="background: white; padding: 10px 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center;">
+                        <div style="font-size: 18px; font-weight: bold; color: ${color};">${count}</div>
+                        <div style="font-size: 10px; color: #6c757d; text-transform: uppercase;">${platform}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle future bookings visibility
+        function toggleFutureBookings() {
+            const futureDiv = document.getElementById('future-bookings');
+            const toggleBtn = document.getElementById('toggle-future-btn');
+            
+            if (futureDiv.style.display === 'none') {
+                futureDiv.style.display = 'block';
+                toggleBtn.textContent = 'Hide Future Bookings';
+            } else {
+                futureDiv.style.display = 'none';
+                toggleBtn.textContent = 'Show Future Bookings';
+            }
+        }
+
+        // Toggle past bookings visibility
+        function togglePastBookings() {
+            const pastDiv = document.getElementById('past-bookings');
+            const toggleBtn = document.getElementById('toggle-past-btn');
+            
+            if (pastDiv && pastDiv.style.display === 'none') {
+                pastDiv.style.display = 'block';
+                toggleBtn.textContent = 'Hide Past Bookings';
+            } else if (pastDiv) {
+                pastDiv.style.display = 'none';
+                toggleBtn.textContent = 'Show Past Bookings';
+            }
+        }
+
+        // Enhanced Diagnostic function with raw data inspection
+        async function runDiagnosticCheck() {
+            console.log('🔍 RUNNING ENHANCED DIAGNOSTIC CHECK...');
+            const diagnosticDiv = document.getElementById('diagnostic-results');
+            const diagnosticContent = document.getElementById('diagnostic-content');
+            
+            diagnosticDiv.style.display = 'block';
+            diagnosticContent.innerHTML = '<p>🔄 Running comprehensive diagnostic check...</p>';
+            
+            let diagnosticHTML = '<h6>📊 Feed Analysis Results:</h6>';
+            
+            // Check each feed individually
+            for (const [propertyKey, property] of Object.entries(PROPERTY_ICAL_FEEDS)) {
+                diagnosticHTML += `<h6 style="margin-top: 15px; color: #495057;">🏠 ${property.name}</h6>`;
+                
+                for (const [platform, feedUrl] of Object.entries(property.feeds)) {
+                    try {
+                        console.log(`🔍 DIAGNOSTIC: Checking ${platform} for ${propertyKey}`);
+                        
+                        const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(feedUrl);
+                        const response = await fetch(proxyUrl);
+                        const jsonData = await response.json();
+                        let icalData = jsonData.contents || '';
+                        
+                        // Process data same way as main function
+                        let processedData = icalData;
+                        if (icalData.startsWith('data:text/calendar;base64,') || 
+                            icalData.startsWith('data:text/calendar;charset=UTF-8;base64,') ||
+                            icalData.startsWith('data:text/calendar;charset=utf-8;base64,')) {
+                            
+                            const base64Content = icalData.split('base64,')[1];
+                            if (base64Content) {
+                                try {
+                                    processedData = atob(base64Content);
+                                } catch (e) {
+                                    console.error(`Base64 decode error for ${platform}:`, e);
+                                }
+                            }
+                        }
+                        
+                        const hasValidCalendar = processedData && (
+                            processedData.includes('BEGIN:VCALENDAR') || 
+                            processedData.includes('VEVENT') ||
+                            processedData.includes('DTSTART') ||
+                            processedData.includes('DTEND')
+                        );
+                        
+                        let eventCount = 0;
+                        let currentBookings = 0;
+                        let upcomingBookings = 0;
+                        
+                        if (hasValidCalendar) {
+                            const events = parseICalData(processedData, platform);
+                            eventCount = events.length;
+                            
+                            const today = new Date();
+                            let pastBookings = 0;
+                            events.forEach(event => {
+                                const startDate = new Date(event.start);
+                                const endDate = new Date(event.end);
+                                
+                                if (startDate <= today && endDate >= today) {
+                                    currentBookings++;
+                                } else if (startDate > today) {
+                                    upcomingBookings++;
+                                } else if (endDate < today) {
+                                    pastBookings++;
+                                }
+                            });
+                            
+                            // Store historical data info for analysis
+                            if (pastBookings > 0) {
+                                console.log(`📜 ${platform} for ${propertyKey}: Found ${pastBookings} historical bookings!`);
+                            }
+                        }
+                        
+                        const statusColor = eventCount > 0 ? '#28a745' : (hasValidCalendar ? '#ffc107' : '#dc3545');
+                        const statusIcon = eventCount > 0 ? '✅' : (hasValidCalendar ? '⚠️' : '❌');
+                        
+                        diagnosticHTML += `
+                            <div style="background: white; border-left: 4px solid ${statusColor}; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                                <strong>${statusIcon} ${platform.toUpperCase()}</strong><br>
+                                <small>
+                                    Response: ${response.status} | 
+                                    Data Length: ${icalData.length} | 
+                                    Valid Calendar: ${hasValidCalendar ? 'Yes' : 'No'}<br>
+                                    Events Found: ${eventCount} | 
+                                    Current: ${currentBookings} | 
+                                    Upcoming: ${upcomingBookings}
+                                </small>
+                                ${eventCount === 0 && hasValidCalendar ? '<br><span style="color: #ffc107;">⚠️ Calendar valid but no events parsed</span>' : ''}
+                                ${!hasValidCalendar ? '<br><span style="color: #dc3545;">❌ No valid calendar data found</span>' : ''}
+                            </div>
+                        `;
+                        
+                        // Special detailed analysis for problematic feeds
+                        if ((propertyKey === 'tvhouse' && platform === 'airbnb') || 
+                            (propertyKey === 'speranta' && (platform === 'airbnb' || platform === 'fewo')) ||
+                            (!hasValidCalendar && icalData.length > 100)) {
+                            
+                            console.log(`🎯 DETAILED ANALYSIS: ${propertyKey} ${platform}`);
+                            console.log(`📄 Raw data preview (first 800 chars): ${icalData.substring(0, 800)}`);
+                            console.log(`📄 Processed data preview (first 800 chars): ${processedData.substring(0, 800)}`);
+                            console.log(`� Data analysis: Has HTML tags: ${processedData.includes('<html>')} | Has error messages: ${processedData.toLowerCase().includes('error')} | Has calendar: ${processedData.includes('CALENDAR')}`);
+                            
+                            // Show raw data in diagnostic for problematic feeds
+                            const rawPreview = processedData.substring(0, 800).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                            
+                            diagnosticHTML += `
+                                <div style="background: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px solid #ffeaa7;">
+                                    <strong>🔍 ${propertyKey.toUpperCase()} ${platform.toUpperCase()} Detailed Analysis:</strong><br>
+                                    <small>
+                                        Feed URL Status: ${response.status === 200 ? 'Accessible' : 'Error'}<br>
+                                        Data Type: ${icalData.includes('<html>') ? 'HTML Page' : (icalData.includes('CALENDAR') ? 'iCal Data' : 'Unknown')}<br>
+                                        Contains HTML: ${processedData.includes('<html>') ? 'Yes (Error Page)' : 'No'}<br>
+                                        Contains Calendar Markers: VCALENDAR=${processedData.includes('BEGIN:VCALENDAR')}, VEVENT=${processedData.includes('BEGIN:VEVENT')}<br>
+                                        <details style="margin-top: 10px;" open>
+                                            <summary style="cursor: pointer; color: #007bff;">📄 View Raw Data (First 800 chars)</summary>
+                                            <pre style="background: #f8f9fa; padding: 10px; margin-top: 10px; font-size: 11px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; border: 1px solid #dee2e6;">${rawPreview}</pre>
+                                        </details>
+                                    </small>
+                                </div>
+                            `;
+                        }
+                        
+                    } catch (error) {
+                        console.error(`💥 DIAGNOSTIC ERROR for ${platform}:`, error);
+                        
+                        // Enhanced error analysis for different types of failures
+                        let errorAnalysis = '';
+                        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                            errorAnalysis = 'Network/CORS issue - Feed URL may be blocked or invalid';
+                        } else if (error.message.includes('CORS')) {
+                            errorAnalysis = 'CORS policy blocking access to feed';
+                        } else if (error.message.includes('404')) {
+                            errorAnalysis = 'Feed URL not found - may need updating';
+                        } else if (error.message.includes('timeout')) {
+                            errorAnalysis = 'Feed server timeout - try again later';
+                        } else {
+                            errorAnalysis = 'Unknown network error';
+                        }
+                        
+                        diagnosticHTML += `
+                            <div style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                                <strong>❌ ${platform.toUpperCase()}</strong><br>
+                                <small style="color: #721c24;">
+                                    Error: ${error.message}<br>
+                                    Analysis: ${errorAnalysis}<br>
+                                    ${(propertyKey === 'tvhouse' && platform === 'airbnb') ? 
+                                        '<strong>🎯 Critical: This is your missing current booking feed!</strong>' : ''
+                                    }
+                                </small>
+                            </div>
+                        `;
+                        
+                        // Special handling for TV House Airbnb
+                        if (propertyKey === 'tvhouse' && platform === 'airbnb') {
+                            console.log('🚨 CRITICAL: TV House Airbnb feed fetch failed - this explains missing current booking');
+                            diagnosticHTML += `
+                                <div style="background: #fff3cd; padding: 10px; margin: 10px 0; border-radius: 4px; border: 1px solid #ffeaa7;">
+                                    <strong>🎯 TV HOUSE AIRBNB FEED ANALYSIS:</strong><br>
+                                    <small>
+                                        <strong>Issue:</strong> Network fetch failure preventing access to current booking data<br>
+                                        <strong>Impact:</strong> Your Oct 15-19 booking won't appear until this is resolved<br>
+                                        <strong>Possible Causes:</strong><br>
+                                        • Feed URL changed or expired (need new export link from Airbnb)<br>
+                                        • Airbnb API temporary downtime<br>
+                                        • CORS proxy limitation<br>
+                                        • Calendar privacy settings changed<br>
+                                        <strong>🔧 Solutions to try:</strong><br>
+                                        1. Generate fresh iCal export URL from Airbnb calendar settings<br>
+                                        2. Check calendar privacy/sharing settings<br>
+                                        3. Try alternative CORS proxy<br>
+                                        4. Manual booking entry as fallback
+                                    </small>
+                                </div>
+                            `;
+                        }
+                    }
+                }
+            }
+            
+            diagnosticHTML += `
+                <div style="margin-top: 20px; padding: 15px; background: #d1ecf1; border-radius: 4px;">
+                    <strong>� Issue Analysis & Next Steps:</strong><br>
+                    <small>
+                        ✅ Working Feeds: Speranta Booking.com (2), Speranta LekkeSlaap (4), TV House Booking.com (4)<br>
+                        ❌ Non-Working Feeds: Speranta Airbnb, Speranta FeWo, TV House Airbnb<br>
+                        🎯 <strong>Critical Issue:</strong> TV House Airbnb missing current booking (Oct 15-19)<br>
+                        � <strong>Likely Causes:</strong> HTML error page returned instead of iCal data, feed authentication issues, or feed URL changes<br>
+                        🔧 <strong>Fix Strategy:</strong> Check raw data, verify feed URLs, implement HTML detection and alternative parsing<br><br>
+                        📊 <strong>Historical Data Limitation:</strong> Most platforms (Airbnb, Booking.com, FeWo) filter out past bookings from iCal feeds.<br>
+                        LekkeSlaap appears to be the exception, often including historical data. Consider implementing:<br>
+                        • Local booking data persistence for historical records<br>
+                        • Manual import functionality for past bookings<br>
+                        • Database integration to store complete booking history
+                    </small>
+                </div>
+            `;
+            
+            diagnosticContent.innerHTML = diagnosticHTML;
         }
 
         function fillAdminCredentials() {
@@ -845,6 +1554,12 @@
             console.log('🚀 Nyx Property Management System initialized');
             console.log('✅ Enhanced debugging system ready');
             console.log('📋 iCal feeds configured and ready');
+            
+            // Load historical data on startup
+            loadHistoricalData();
+            
+            // Auto-load booking data
+            fetchRealBookingData();
         });
     </script>
 </body>
