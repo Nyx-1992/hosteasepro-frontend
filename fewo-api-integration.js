@@ -254,8 +254,17 @@ class FeWoAPIIntegration {
     }
 }
 
-// Export for use in main application  
+// Create and export instance for use in main application  
+const fewoAPIInstance = new FeWoAPIIntegration();
+
 if (typeof window !== 'undefined') {
-    window.fewoAPI = FeWoAPIIntegration;
+    window.fewoAPI = fewoAPIInstance;
     window.FeWoAPIIntegration = FeWoAPIIntegration; // Keep backward compatibility
 }
+
+// Auto-initialize the API
+fewoAPIInstance.initialize().then(() => {
+    console.log('✅ FeWo API instance ready');
+}).catch(error => {
+    console.log('⚠️ FeWo API using fallback mode');
+});
