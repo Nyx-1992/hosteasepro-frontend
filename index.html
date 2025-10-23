@@ -2667,9 +2667,9 @@ Guest Details for ${property}:
             const apiStatus = {
                 financialAPI: typeof window.financialAPI !== 'undefined',
                 liveAPI: typeof window.liveAPI !== 'undefined', 
-                airbnbAPI: typeof window.airbnbAPI !== 'undefined',
-                lekkeslaapAPI: typeof window.lekkeslaapAPI !== 'undefined',
-                fewoAPI: typeof window.fewoAPI !== 'undefined'
+                airbnbAPI: typeof window.airbnbAPI !== 'undefined' && (window.airbnbAPI.isInitialized !== false),
+                lekkeslaapAPI: typeof window.lekkeslaapAPI !== 'undefined' && (window.lekkeslaapAPI.isInitialized !== false),
+                fewoAPI: typeof window.fewoAPI !== 'undefined' && (window.fewoAPI.isInitialized !== false)
             };
             
             const networkStatus = navigator.onLine ? '✅ Online' : '❌ Offline';
@@ -2680,11 +2680,11 @@ Guest Details for ${property}:
                 <div style="margin-bottom: 10px;"><strong>📡 Network:</strong> ${networkStatus}</div>
                 <div style="margin-bottom: 5px;"><strong>📚 API Files Status:</strong></div>
                 <div style="padding-left: 15px;">
-                    <div>• Financial API: ${apiStatus.financialAPI ? '✅ Loaded' : '❌ Missing'}</div>
-                    <div>• Live API: ${apiStatus.liveAPI ? '✅ Loaded' : '❌ Missing'}</div>  
-                    <div>• Airbnb API: ${apiStatus.airbnbAPI ? '✅ Loaded' : '❌ Missing'}</div>
-                    <div>• LekkeSlaap API: ${apiStatus.lekkeslaapAPI ? '✅ Loaded' : '❌ Missing'}</div>
-                    <div>• Fewo API: ${apiStatus.fewoAPI ? '✅ Loaded' : '❌ Missing'}</div>
+                    <div>• Financial API: ${typeof window.financialAPI !== 'undefined' ? '✅ Loaded' : '❌ Missing'}</div>
+                    <div>• Live API: ${typeof window.liveAPI !== 'undefined' ? '✅ Loaded' : '❌ Missing'}</div>  
+                    <div>• Airbnb API: ${typeof window.airbnbAPI !== 'undefined' ? (window.airbnbAPI.isInitialized ? '✅ Ready' : '🔄 Initializing') : '❌ Missing'}</div>
+                    <div>• LekkeSlaap API: ${typeof window.lekkeslaapAPI !== 'undefined' ? (window.lekkeslaapAPI.isInitialized ? '✅ Ready' : '🔄 Initializing') : '❌ Missing'}</div>
+                    <div>• Fewo API: ${typeof window.fewoAPI !== 'undefined' ? (window.fewoAPI.isInitialized ? '✅ Ready' : '🔄 Initializing') : '❌ Missing'}</div>
                 </div>
                 <div style="margin-top: 10px; font-size: 11px; color: #868e96;">
                     Last checked: ${new Date().toLocaleTimeString()}
@@ -3835,7 +3835,7 @@ Guest Details for ${property}:
                 }
                 
                 // Enhance with Airbnb API data
-                if (window.airbnbAPI && window.airbnbAPI.isInitialized) {
+                if (window.airbnbAPI && (window.airbnbAPI.isInitialized || typeof window.airbnbAPI.enhanceBookingData === 'function')) {
                     console.log('🔧 Starting Airbnb enhancement process...');
                     try {
                         let airbnbEnhanced = 0;
@@ -4975,6 +4975,14 @@ Guest Details for ${property}:
         // Check-in Management System
         let checkinData = JSON.parse(localStorage.getItem('checkinData')) || {};
 
+        // Helper function to format dates for HTML date inputs
+        function formatDateForInput(date) {
+            if (!date) return '';
+            const d = new Date(date);
+            if (isNaN(d.getTime())) return '';
+            return d.toISOString().split('T')[0]; // Returns 'yyyy-MM-dd' format
+        }
+
         function displayCheckinBookings() {
             console.log('🏨 Displaying check-in bookings...');
             const container = document.getElementById('checkin-bookings-container');
@@ -5104,7 +5112,7 @@ Guest Details for ${property}:
                                 <div>
                                     <label style="display: block; margin-bottom: 3px; font-weight: bold; color: ${propertyColor}; font-size: 12px;">📅 Service Date:</label>
                                     <input type="date" id="domestic-date-${bookingId}" 
-                                           value="${checkinInfo.domesticDate || booking.end}" 
+                                           value="${formatDateForInput(checkinInfo.domesticDate || booking.end)}" 
                                            style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
                                 </div>
                             </div>
@@ -5391,8 +5399,10 @@ Guest Details for ${property}:
             // Load guest contact data
             loadGuestContactData();
             
-            // Auto-load booking data (check-in data will be initialized after this completes)
-            fetchRealBookingData();
+            // Wait briefly for API instances to initialize, then load booking data
+            setTimeout(() => {
+                fetchRealBookingData();
+            }, 2000); // Give APIs time to initialize
             
             // Add network test for debugging
             console.log('🌐 Testing file accessibility...');
