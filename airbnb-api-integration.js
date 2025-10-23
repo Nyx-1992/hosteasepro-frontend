@@ -298,8 +298,17 @@ class AirbnbAPIIntegration {
     }
 }
 
-// Export for use in main application
+// Create and export instance for use in main application
+const airbnbAPIInstance = new AirbnbAPIIntegration();
+
 if (typeof window !== 'undefined') {
-    window.airbnbAPI = AirbnbAPIIntegration;
+    window.airbnbAPI = airbnbAPIInstance;
     window.AirbnbAPIIntegration = AirbnbAPIIntegration; // Keep backward compatibility
 }
+
+// Auto-initialize the API
+airbnbAPIInstance.initialize().then(() => {
+    console.log('✅ Airbnb API instance ready');
+}).catch(error => {
+    console.log('⚠️ Airbnb API using fallback mode');
+});
