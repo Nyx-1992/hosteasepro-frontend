@@ -246,8 +246,17 @@ class LekkeSlaapAPIIntegration {
     }
 }
 
-// Export for use in main application  
+// Create and export instance for use in main application  
+const lekkeslaapAPIInstance = new LekkeSlaapAPIIntegration();
+
 if (typeof window !== 'undefined') {
-    window.lekkeslaapAPI = LekkeSlaapAPIIntegration;
+    window.lekkeslaapAPI = lekkeslaapAPIInstance;
     window.LekkeSlaapAPIIntegration = LekkeSlaapAPIIntegration; // Keep backward compatibility
 }
+
+// Auto-initialize the API
+lekkeslaapAPIInstance.initialize().then(() => {
+    console.log('✅ LekkeSlaap API instance ready');
+}).catch(error => {
+    console.log('⚠️ LekkeSlaap API using fallback mode');
+});
