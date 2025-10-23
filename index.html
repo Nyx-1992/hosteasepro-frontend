@@ -1388,11 +1388,11 @@
     </div>
 
     <!-- Load API Integration -->
-    <script src="live-api-integration.js"></script>
-    <script src="airbnb-api-integration.js"></script>
-    <script src="lekkeslaap-api-integration.js"></script>
-    <script src="fewo-api-integration.js"></script>
-    <script src="financial-api-integration.js"></script>
+    <script src="live-api-integration.js" onerror="console.error('❌ Failed to load live-api-integration.js')"></script>
+    <script src="airbnb-api-integration.js" onerror="console.error('❌ Failed to load airbnb-api-integration.js')"></script>
+    <script src="lekkeslaap-api-integration.js" onerror="console.error('❌ Failed to load lekkeslaap-api-integration.js')"></script>
+    <script src="fewo-api-integration.js" onerror="console.error('❌ Failed to load fewo-api-integration.js')"></script>
+    <script src="financial-api-integration.js" onerror="console.error('❌ Failed to load financial-api-integration.js')"></script>
     
     <script>
         // ===========================================
@@ -2653,6 +2653,46 @@ Guest Details for ${property}:
         }
 
         // Finance Functions with API Integration
+        
+        // API Debug Function
+        function refreshAPIStatus() {
+            console.log('🔄 Refreshing API Status...');
+            
+            const statusElement = document.getElementById('api-status-details');
+            if (!statusElement) {
+                console.log('❌ API status element not found');
+                return;
+            }
+            
+            const apiStatus = {
+                financialAPI: typeof window.financialAPI !== 'undefined',
+                liveAPI: typeof window.liveAPI !== 'undefined', 
+                airbnbAPI: typeof window.airbnbAPI !== 'undefined',
+                lekkeslaapAPI: typeof window.lekkeslaapAPI !== 'undefined',
+                fewoAPI: typeof window.fewoAPI !== 'undefined'
+            };
+            
+            const networkStatus = navigator.onLine ? '✅ Online' : '❌ Offline';
+            const environment = window.location.hostname === 'localhost' ? 'Local Development' : 'Production (Vercel)';
+            
+            statusElement.innerHTML = `
+                <div style="margin-bottom: 10px;"><strong>🌐 Environment:</strong> ${environment}</div>
+                <div style="margin-bottom: 10px;"><strong>📡 Network:</strong> ${networkStatus}</div>
+                <div style="margin-bottom: 5px;"><strong>📚 API Files Status:</strong></div>
+                <div style="padding-left: 15px;">
+                    <div>• Financial API: ${apiStatus.financialAPI ? '✅ Loaded' : '❌ Missing'}</div>
+                    <div>• Live API: ${apiStatus.liveAPI ? '✅ Loaded' : '❌ Missing'}</div>  
+                    <div>• Airbnb API: ${apiStatus.airbnbAPI ? '✅ Loaded' : '❌ Missing'}</div>
+                    <div>• LekkeSlaap API: ${apiStatus.lekkeslaapAPI ? '✅ Loaded' : '❌ Missing'}</div>
+                    <div>• Fewo API: ${apiStatus.fewoAPI ? '✅ Loaded' : '❌ Missing'}</div>
+                </div>
+                <div style="margin-top: 10px; font-size: 11px; color: #868e96;">
+                    Last checked: ${new Date().toLocaleTimeString()}
+                </div>
+            `;
+            
+            console.log('📊 API Status Results:', apiStatus);
+        }
         
         // Global financial data storage - Reset to R 0 for real data input
         let currentPropertyFilter = 'combined';
@@ -5326,8 +5366,24 @@ Guest Details for ${property}:
         // Initialize the system
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🚀 Nyx Property Management System initialized');
+            console.log('📍 Current URL:', window.location.href);
+            console.log('🌐 Environment:', window.location.hostname === 'localhost' ? 'Local' : 'Production');
             console.log('✅ Enhanced debugging system ready');
             console.log('📋 iCal feeds configured and ready');
+            
+            // Check if API integration files loaded properly
+            console.log('🔍 Checking API Integration Status:');
+            console.log('- Financial API:', typeof window.financialAPI !== 'undefined' ? '✅ Loaded' : '❌ Missing');
+            console.log('- Live API:', typeof window.liveAPI !== 'undefined' ? '✅ Loaded' : '❌ Missing');
+            console.log('- Airbnb API:', typeof window.airbnbAPI !== 'undefined' ? '✅ Loaded' : '❌ Missing');
+            console.log('- LekkeSlaap API:', typeof window.lekkeslaapAPI !== 'undefined' ? '✅ Loaded' : '❌ Missing');
+            
+            // Initialize API status display immediately
+            setTimeout(() => {
+                if (typeof refreshAPIStatus === 'function') {
+                    refreshAPIStatus();
+                }
+            }, 1000);
             
             // Load historical data on startup
             loadHistoricalData();
@@ -5337,6 +5393,28 @@ Guest Details for ${property}:
             
             // Auto-load booking data (check-in data will be initialized after this completes)
             fetchRealBookingData();
+            
+            // Add network test for debugging
+            console.log('🌐 Testing file accessibility...');
+            
+            // Test if JavaScript files are accessible
+            const testFiles = [
+                'live-api-integration.js',
+                'airbnb-api-integration.js', 
+                'lekkeslaap-api-integration.js',
+                'fewo-api-integration.js',
+                'financial-api-integration.js'
+            ];
+            
+            testFiles.forEach(file => {
+                fetch(file, { method: 'HEAD' })
+                    .then(response => {
+                        console.log(`📁 ${file}: ${response.ok ? '✅ Accessible' : '❌ Not Found'} (${response.status})`);
+                    })
+                    .catch(error => {
+                        console.log(`📁 ${file}: ❌ Error - ${error.message}`);
+                    });
+            });
         });
     </script>
 </body>
