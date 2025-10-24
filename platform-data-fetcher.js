@@ -1,57 +1,70 @@
 /**
- * Platform Data Fetcher - Automated Real Booking Amount System
- * Fetches real payout data from booking platforms using provided credentials
- * Replaces manual override system with automated platform API integration
+ * Enhanced Booking Data System - CORS-Free Implementation
+ * Combines iCal data with manual real amounts (no external API calls)
+ * Enhanced iCal parsing + Manual real amount entry system
  * Created: October 24, 2025
  */
 
-class PlatformDataFetcher {
+class EnhancedBookingDataSystem {
     constructor() {
-        this.credentials = {
-            booking: {
-                speranta: {
-                    username: 'sn_apt_management@outlook.com',
-                    password: 'Sevilla2015!!'
-                },
-                tvhouse: {
-                    username: 'SN_Apt_Management', 
-                    password: 'TVHouseHoliday2025'
-                }
-            },
-            airbnb: {
-                email: 'sn_apt_management@outlook.com',
-                password: 'Sevilla2015!!'
-            },
-            lekkeslaap: {
-                email: 'SN_Apt_Management@outlook.com',
-                password: 'Sevilla 2015!'
-            }
-        };
+        // Pre-configured confirmed amounts (manually entered)
+        this.confirmedAmounts = new Map([
+            // Your specific LekkeSlaap booking - R 3,475.36
+            ['lekkeslaap_2025-10-24_2025-10-28', {
+                platform: 'lekkeslaap',
+                realAmount: 3475.36,
+                source: 'user_confirmed',
+                note: 'Actual payout received October 24, 2025 - manually verified',
+                fetchedAt: '2025-10-24T00:00:00.000Z'
+            }]
+        ]);
         
-        this.fetchedAmounts = new Map(); // Store real amounts from platforms
+        this.fetchedAmounts = this.confirmedAmounts; // Use confirmed amounts
         this.isInitialized = false;
     }
 
     async initialize() {
-        console.log('🚀 Initializing Platform Data Fetcher...');
+        console.log('🚀 Initializing Enhanced Booking Data System (CORS-Free)...');
         try {
-            await this.initializePlatformConnections();
             this.isInitialized = true;
-            console.log('✅ Platform Data Fetcher ready');
+            console.log('✅ Enhanced Booking Data System ready');
+            console.log('💡 Reality: iCal data + Manual real amounts = No CORS issues!');
             return true;
         } catch (error) {
-            console.error('❌ Platform Data Fetcher initialization failed:', error);
+            console.error('❌ Enhanced Booking Data System initialization failed:', error);
             return false;
         }
     }
 
-    async initializePlatformConnections() {
-        console.log('🔗 Setting up platform connections...');
+    // Enhanced iCal parsing - extract more info from descriptions
+    enhanceBookingFromICal(booking) {
+        const summary = booking.summary || '';
+        const description = booking.description || '';
         
-        // Initialize platform-specific scrapers/APIs
-        await this.setupBookingComConnection();
-        await this.setupAirbnbConnection();
-        await this.setupLekkeSlaapConnection();
+        let enhancedData = {
+            originalGuest: summary,
+            extractedInfo: {}
+        };
+
+        // Extract LekkeSlaap reference codes
+        if (booking.platform === 'lekkeslaap') {
+            const lsMatch = description.match(/Reference:\s*(LS-[A-Z0-9]+)/i);
+            if (lsMatch) {
+                enhancedData.extractedInfo.referenceCode = lsMatch[1];
+                enhancedData.extractedInfo.guestName = `LekkeSlaap Guest (${lsMatch[1]})`;
+            }
+        }
+
+        // Extract Airbnb reservation codes
+        if (booking.platform === 'airbnb' && summary.includes('Reserved')) {
+            const airbnbMatch = summary.match(/Reserved.*?([A-Z0-9]{10,})/i);
+            if (airbnbMatch) {
+                enhancedData.extractedInfo.reservationCode = airbnbMatch[1];
+                enhancedData.extractedInfo.guestName = `Airbnb Guest (${airbnbMatch[1].substring(0,8)}...)`;
+            }
+        }
+
+        return enhancedData;
     }
 
     // BOOKING.COM REAL DATA FETCHING
@@ -284,49 +297,62 @@ class PlatformDataFetcher {
         return Math.floor(Math.random() * 6000) + 2500; // Mock amount between R2500-R8500
     }
 
-    delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    // GET FETCHED AMOUNTS STATUS
+    // GET STATUS - Updated for CORS-free reality
     getStatus() {
         return {
             isInitialized: this.isInitialized,
-            totalFetched: this.fetchedAmounts.size,
+            totalConfirmed: this.confirmedAmounts.size,
+            corsIssues: false, // No CORS problems with this approach!
+            reality: {
+                guestNames: 'From iCal descriptions (enhanced parsing)',
+                financialData: 'Manual entry (your R 3,475.36 system)',
+                liveAPI: 'Not possible due to platform CORS policies'
+            },
             platforms: {
-                booking: this.bookingComAPI?.connected || false,
-                airbnb: this.airbnbAPI?.connected || false,
-                lekkeslaap: this.lekkeSlaapAPI?.connected || false
+                booking: false, // No external calls = No CORS issues
+                airbnb: false,  // No external calls = No CORS issues  
+                lekkeslaap: true // Pre-configured confirmed data available
             },
-            credentials: {
-                booking: '✅ Configured (2 properties)',
-                airbnb: '✅ Configured', 
-                lekkeslaap: '✅ Configured'
-            },
-            fetchedAmounts: Array.from(this.fetchedAmounts.entries()).map(([id, data]) => ({
+            confirmedAmounts: Array.from(this.confirmedAmounts.entries()).map(([id, data]) => ({
                 bookingId: id,
                 platform: data.platform,
                 amount: data.realAmount,
                 source: data.source,
-                fetchedAt: data.fetchedAt
+                note: data.note
             }))
         };
     }
+
+    // Easy method to add more confirmed real amounts
+    addRealAmount(platform, checkIn, checkOut, amount, source = 'user_entered') {
+        const bookingId = `${platform}_${checkIn}_${checkOut}`;
+        this.confirmedAmounts.set(bookingId, {
+            platform: platform,
+            realAmount: amount,
+            source: source,
+            note: `Manually entered on ${new Date().toLocaleDateString()}`,
+            fetchedAt: new Date().toISOString()
+        });
+        
+        console.log(`✅ Added real amount: ${bookingId} = R ${amount.toLocaleString()}`);
+        return true;
+    }
 }
 
-// Create and export instance
-const platformDataFetcher = new PlatformDataFetcher();
+// Create and export instance  
+const enhancedBookingDataSystem = new EnhancedBookingDataSystem();
 
-// Make available globally
+// Make available globally (replaces old platformDataFetcher)
 if (typeof window !== 'undefined') {
-    window.platformDataFetcher = platformDataFetcher;
+    window.platformDataFetcher = enhancedBookingDataSystem; // Keep same interface
     
     // Auto-initialize
-    platformDataFetcher.initialize().then(() => {
-        console.log('🎉 Platform Data Fetcher ready - real amounts available!');
+    enhancedBookingDataSystem.initialize().then(() => {
+        console.log('🎉 Enhanced Booking Data System ready!');
+        console.log('💡 CORS-Free: iCal + Manual amounts = Perfect solution!');
     }).catch(error => {
-        console.log('⚠️ Platform Data Fetcher using fallback mode');
+        console.log('⚠️ Enhanced Booking Data System using fallback mode');
     });
 }
 
-export default platformDataFetcher;
+export default enhancedBookingDataSystem;
