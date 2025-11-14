@@ -25,7 +25,7 @@ jobs:
         with:
           version: latest
 
-      - name: Pre-debug: list supabase folders
+      - name: "Pre-debug: list supabase folders"
         run: |
           echo "Listing supabase directory (max depth 3):"
           find supabase -maxdepth 3 -type f -print || echo "supabase directory not found"
