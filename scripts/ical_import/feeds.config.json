@@ -1,0 +1,13 @@
+{
+  "feeds": [
+    {"property": "Speranta Flat", "platform": "booking", "url": "https://ical.booking.com/v1/export?t=8123e217-45b4-403d-8fa0-9dcc65c26800"},
+    {"property": "Speranta Flat", "platform": "lekkeslaap", "url": "https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=bXEzOHNicTJQT3Nkd1dHb1ZSaXhRUT09"},
+    {"property": "Speranta Flat", "platform": "fewo", "url": "http://www.fewo-direkt.de/icalendar/12b719114ecd42adab4e9ade2d2458e6.ics?nonTentative"},
+    {"property": "Speranta Flat", "platform": "airbnb", "url": "https://www.airbnb.com/calendar/ical/1237076374831130516.ics?s=01582d0497e99114aa6013156146cea4&locale=en-GB"},
+
+    {"property": "TV House", "platform": "booking", "url": "https://ical.booking.com/v1/export?t=ea29c451-4d0b-4fa4-b7a8-e879a33a8940"},
+    {"property": "TV House", "platform": "lekkeslaap", "url": "https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=QzZ2aFlFVHhxYnoxdGRVL3ZwelRGUT09"},
+    {"property": "TV House", "platform": "airbnb", "url": "https://www.airbnb.com/calendar/ical/1402174824640448492.ics?s=373c5a71c137230a72f928e88728dcf3&locale=en-GB"}
+  ],
+  "daysPast": 180
+}
