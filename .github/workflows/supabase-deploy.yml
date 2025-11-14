@@ -25,6 +25,21 @@ jobs:
         with:
           version: latest
 
+      - name: Pre-debug: list supabase folders
+        run: |
+          echo "Listing supabase directory (max depth 3):"
+          find supabase -maxdepth 3 -type f -print || echo "supabase directory not found"
+          echo "Current working directory: $(pwd)"
+          echo "Project ref: $SUPABASE_PROJECT_REF"
+
+      - name: Check secrets presence (no values leaked)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          [ -n "$SUPABASE_ACCESS_TOKEN" ] && echo "ACCESS_TOKEN: present" || echo "ACCESS_TOKEN: MISSING"
+          [ -n "$SUPABASE_SERVICE_ROLE_KEY" ] && echo "SERVICE_ROLE_KEY: present" || echo "SERVICE_ROLE_KEY: MISSING"
+
       - name: Debug CLI install
         run: |
           echo "PATH: $PATH"
@@ -34,23 +49,35 @@ jobs:
       - name: Link project (non-interactive)
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: supabase link --project-ref $SUPABASE_PROJECT_REF
+        run: |
+          set -e
+          echo "Linking project ref $SUPABASE_PROJECT_REF"
+          supabase link --project-ref $SUPABASE_PROJECT_REF || { echo "Project link failed"; exit 1; }
 
       - name: Set Edge Function secrets
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          set -e
+          echo "Re-linking (idempotent)"
           supabase link --project-ref $SUPABASE_PROJECT_REF
+          echo "Setting function secrets for import_ical"
           supabase functions secrets set import_ical \
             SUPABASE_URL=https://dkyzbzlshrxdwetykmdo.supabase.co \
-            SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+            SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_ROLE_KEY} || { echo "Function secret set failed"; exit 1; }
 
       - name: Apply migrations
-        run: supabase migration up
+        run: |
+          set -e
+          echo "Applying migrations"
+          supabase migration up || { echo "Migration step failed"; exit 1; }
 
       - name: Deploy import_ical Edge Function
-        run: supabase functions deploy import_ical
+        run: |
+          set -e
+          echo "Deploying import_ical function"
+          supabase functions deploy import_ical || { echo "Function deploy failed"; exit 1; }
 
       - name: (Optional) Schedule hourly import
         if: ${{ false }} # change to always() to enable scheduling
