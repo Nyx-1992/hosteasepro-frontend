@@ -1,17 +1,37 @@
 {
-  "name": "hosteasepro-frontend",
+  "name": "nyx-training-backend",
   "version": "1.0.0",
-  "description": "HostEasePro - Property Management System",
-  "private": true,
+  "description": "Property Management System Backend for Short-term Rentals",
+  "main": "src/server.js",
   "scripts": {
-    "build": "echo 'Static site - no build needed'",
-    "start": "echo 'Static site ready'"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest"
   },
-  "keywords": [
-    "property-management",
-    "hosteasepro",
-    "static-site"
-  ],
-  "author": "Nyx-1992",
-  "license": "MIT"
+  "keywords": ["property-management", "short-term-rentals", "booking-system"],
+  "author": "Nyx Training Team",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^7.5.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "axios": "^1.5.0",
+    "node-ical": "^0.17.1",
+    "moment": "^2.29.4",
+    "express-rate-limit": "^6.10.0",
+    "helmet": "^7.0.0",
+    "express-validator": "^7.0.1",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^9.0.0",
+    "pdfkit": "^0.14.0",
+    "@supabase/supabase-js": "^2.42.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.6.4",
+    "supertest": "^6.3.3"
+  }
 }
