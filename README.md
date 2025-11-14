@@ -469,3 +469,101 @@ For technical support or feature requests, contact the development team.
 ---
 
 **Built with ❤️ for Nyx Training Property Management**
+\n+## 🌐 Online Deployment (No Local CLI)
+
+This project deploys database migrations and the `import_ical` Edge Function automatically using **GitHub Actions**. You do **not** need to install the Supabase CLI on your work laptop.
+
+### 1. Prerequisites
+| Item | Where to find |
+|------|---------------|
+| Supabase Project Ref | In project URL (already: `dkyzbzlshrxdwetykmdo`) |
+| Supabase Access Token | Supabase dashboard → Avatar → Account → Access Tokens |
+| GitHub Repo Admin Rights | Needed to add secrets |
+
+### 2. GitHub Secret Setup
+1. Create access token in Supabase (Account → Access Tokens → New Token).
+2. In GitHub repo: Settings → Secrets and variables → Actions → New repository secret.
+3. Name: `SUPABASE_ACCESS_TOKEN` | Value: paste token.
+4. Save.
+
+You do **not** need the service role key for the workflow. Keep it private for server-only use.
+
+### 3. Workflow File
+The workflow lives at: `.github/workflows/supabase-deploy.yml`
+It runs on pushes to `main` affecting migrations or the Edge Function.
+
+### 4. What Happens On Push
+1. Checkout repository.
+2. Install Supabase CLI in runner.
+3. Link to project using `SUPABASE_ACCESS_TOKEN` + project ref.
+4. Apply migrations in `supabase/migrations/` (001 → 040).
+5. Deploy edge function `import_ical`.
+
+### 5. Seeding Data (Manual)
+Seeds are **not** auto‑run for safety (contain private feed URLs). Run manually in Supabase SQL Editor:
+Order:
+```sql
+-- 1. Core organization + admin/manager
+-- Open file: supabase/seeds/001_seed_core.sql and execute its contents.
+
+-- 2. Ensure properties exist (Speranta Flat, TV House)
+INSERT INTO public.properties (org_id, name, status)
+SELECT id, 'Speranta Flat', 'active' FROM public.organizations
+WHERE NOT EXISTS (SELECT 1 FROM public.properties WHERE name='Speranta Flat') LIMIT 1;
+
+INSERT INTO public.properties (org_id, name, status)
+SELECT id, 'TV House', 'active' FROM public.organizations
+WHERE NOT EXISTS (SELECT 1 FROM public.properties WHERE name='TV House') LIMIT 1;
+
+-- 3. iCal feed URLs
+-- Open file: supabase/seeds/010_seed_ical_feeds.sql and execute.
+```
+
+### 6. Scheduling Automatic Imports
+To enable hourly calendar sync, edit the workflow file and change:
+```yaml
+      - name: (Optional) Schedule hourly import
+   if: ${{ false }}
+```
+to
+```yaml
+   if: always()
+```
+Commit the change; next run creates the cron schedule.
+
+### 7. Manual Invocation (Testing)
+After deployment: Supabase dashboard → Functions → `import_ical` → Invoke.
+Or HTTP request:
+```
+GET https://dkyzbzlshrxdwetykmdo.functions.supabase.co/import_ical
+```
+
+### 8. Verification Queries
+Run in SQL Editor:
+```sql
+SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('organizations','properties','bookings','ical_feeds');
+SELECT COUNT(*) FROM public.organizations;
+SELECT platform, feed_url FROM public.ical_feeds;
+```
+
+### 9. Adding Future Migrations
+1. Create new file in `supabase/migrations/` with next number (e.g., `050_new_feature.sql`).
+2. Commit & push to `main`.
+3. Action runs automatically.
+
+### 10. Rollback Strategy (Simple)
+If a migration breaks something:
+1. Create a new migration file to reverse/unwind (avoid editing old files).
+2. Push; workflow applies forward-only fix.
+
+### 11. Security Notes
+- Keep repo **private** while ICS feed URLs remain in seed file.
+- Never commit real secrets: use GitHub secrets for tokens/keys.
+- Consider moving iCal URLs to a protected table accessible only by admin policies (already done) and removing them from the repo later.
+
+### 12. Next Improvements
+- Add automated seed job once feeds moved to env variables.
+- Introduce `current_user_roles()` helper to simplify policy conditions.
+- Add pgTAP tests for triggers/functions.
+
+Online deployment is now hands‑off: push code → CI updates Supabase automatically.
