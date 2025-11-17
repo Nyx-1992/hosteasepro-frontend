@@ -1,26 +1,30 @@
 name: ICS Import
+
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   schedule:
     - cron: "15 * * * *"
+
 jobs:
   import:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          fetch-depth: 2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
+          node-version: "20"
+
       - name: Run ICS Import
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        if: env.SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != ''
-        run: node scripts/ics-import.js
-      - name: Skip summary
-        if: env.SUPABASE_URL == '' || env.SUPABASE_SERVICE_ROLE_KEY == ''
-        run: echo 'Skipped: missing Supabase secrets.'
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "Skipped: missing Supabase secrets."; exit 0;
+          fi
+          echo "Starting ICS import at $(date -u)";
+          node scripts/ics-import.js || { echo "ICS import failed"; exit 1; }
+          echo "Completed ICS import at $(date -u)";
