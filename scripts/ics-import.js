@@ -94,7 +94,7 @@ function guest(summary){
 
   const map=new Map();
   for (const r of rows) {
-    const k=`${r.property_id}|${r.platform}|${r.check_in}|${r.check_out}`;
+    const k=`${r.org_id}|${r.property_id}|${r.platform}|${r.check_in}|${r.check_out}`;
     if(!map.has(k)) map.set(k,r);
   }
   const finalRows=[...map.values()];
@@ -115,9 +115,9 @@ function guest(summary){
   }
 
   const nowIso = new Date().toISOString();
-  const existing = await api('bookings',{query:`?select=id,property_id,platform,check_in,check_out,source_removed&check_in=gte.${nowIso}&source_removed=is.false`});
-  const newKeys = new Set(finalRows.map(r=>`${r.property_id}|${r.platform}|${r.check_in}|${r.check_out}`));
-  const toArchive = existing.filter(b=>!newKeys.has(`${b.property_id}|${b.platform}|${b.check_in}|${b.check_out}`)).map(b=>b.id);
+  const existing = await api('bookings',{query:`?select=id,org_id,property_id,platform,check_in,check_out,source_removed&check_in=gte.${nowIso}&source_removed=is.false`});
+  const newKeys = new Set(finalRows.map(r=>`${r.org_id}|${r.property_id}|${r.platform}|${r.check_in}|${r.check_out}`));
+  const toArchive = existing.filter(b=>!newKeys.has(`${b.org_id}|${b.property_id}|${b.platform}|${b.check_in}|${b.check_out}`)).map(b=>b.id);
 
   console.log('Archive candidates raw', JSON.stringify(toArchive));
   const cleanIds = toArchive.filter(id => Number.isInteger(id));
