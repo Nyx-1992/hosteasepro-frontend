@@ -26,8 +26,7 @@ jobs:
           node-version: 20
 
       - name: ICS Import
-        # Use GitHub expression syntax for conditional execution
-        if: ${{ env.SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        if: ${{ env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY }}
         shell: bash
         run: |
           set -euo pipefail
@@ -153,8 +152,8 @@ jobs:
               bookings_soft_removed: cleanIds.length
             }, null, 2));
           })().catch(e => { console.error('Fatal', e); process.exit(1); });
-EOF
+          EOF
 
       - name: Summary if env missing
-        if: ${{ env.SUPABASE_URL == '' || env.SUPABASE_SERVICE_ROLE_KEY == '' }}
+        if: ${{ !env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY }}
         run: echo "Skipped: missing Supabase secrets."
