@@ -1,18 +1,35 @@
 name: ICS Import
+
 on:
   schedule:
-    - cron: '0 * * * *'   # hourly
+    - cron: '15 * * * *' # runs at minute 15 of every hour (adjust if needed)
   workflow_dispatch: {}
+
+env:
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
 jobs:
   import:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
-      - name: Import iCal feeds
-        env:
-          SUPABASE_URL: https://dkyzbzlshrxdwetykmdo.supabase.co
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Node setup
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: ICS Import
+        if: env.SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != ''
+        shell: bash
         run: |
+          set -euo pipefail
           node - <<'EOF'
           const SUPABASE_URL = process.env.SUPABASE_URL;
           const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -20,31 +37,25 @@ jobs:
 
           const headers = { apikey: KEY, Authorization: `Bearer ${KEY}` };
 
-          async function get(path, query='') {
-            const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}${query}`, { headers });
-            if (!r.ok) throw new Error(`${path} ${r.status} ${await r.text()}`);
-            return r.json();
-          }
-          async function patch(path, body, filter) {
-            const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}?${filter}`, {
-              method:'PATCH',
-              headers:{...headers,'Content-Type':'application/json','Prefer':'return=minimal'},
-              body:JSON.stringify(body)
-            });
-            if (!r.ok) throw new Error(`PATCH ${path} ${r.status} ${await r.text()}`);
-          }
-          async function post(path, body, query='') {
-            const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}${query}`, {
-              method:'POST',
-              headers:{...headers,'Content-Type':'application/json','Prefer':'return=minimal'},
-              body:JSON.stringify(body)
-            });
-            if (!r.ok && r.status !== 409) throw new Error(`POST ${path} ${r.status} ${await r.text()}`);
+          async function api(path, { method='GET', body=null, query='' }={}) {
+            const url = `${SUPABASE_URL}/rest/v1/${path}${query}`;
+            const opts = { method, headers: { ...headers } };
+            if (body) {
+              opts.headers['Content-Type'] = 'application/json';
+              opts.headers['Prefer'] = 'return=minimal';
+              opts.body = JSON.stringify(body);
+            }
+            const r = await fetch(url, opts);
+            if (!r.ok) {
+              const text = await r.text();
+              throw new Error(`${method} ${path} ${r.status} ${text}`);
+            }
+            return method === 'GET' ? r.json() : null;
           }
 
-          function unfold(ics) { return ics.replace(/\\r?\\n[ \\t]/g,''); }
-          function parse(ics) {
-            const lines = unfold(ics).split(/\\r?\\n/);
+          function unfold(ics) { return ics.replace(/\r?\n[ \t]/g,''); }
+          function parseICS(ics) {
+            const lines = unfold(ics).split(/\r?\n/);
             const events=[]; let cur=null;
             for (const line of lines) {
               if (line==='BEGIN:VEVENT') cur={};
@@ -57,31 +68,30 @@ jobs:
           }
           function toTs(v){
             if (!v) return null;
-            if (/^\\d{8}$/.test(v)) return `${v.slice(0,4)}-${v.slice(4,6)}-${v.slice(6,8)}T00:00:00Z`;
+            if (/^\d{8}$/.test(v)) return `${v.slice(0,4)}-${v.slice(4,6)}-${v.slice(6,8)}T00:00:00Z`;
             return /Z$/.test(v)?v:v+'Z';
           }
           function guest(summary){
             if(!summary) return {first:null,last:null};
-            summary = summary.replace(/^Reservation:\\s*/i,'').trim();
-            const parts = summary.split(/\\s+/);
+            summary = summary.replace(/^Reservation:\s*/i,'').trim();
+            const parts = summary.split(/\s+/);
             if (parts.length===1) return {first:parts[0],last:null};
             return {first:parts[0],last:parts.slice(1).join(' ')};
           }
 
           (async () => {
-            const feeds = await get('ical_feeds','?select=id,org_id,property_id,platform,feed_url&is_active=eq.true');
-            const props = await get('properties','?select=id,name');
+            const feeds = await api('ical_feeds',{query:'?select=id,org_id,property_id,platform,feed_url&is_active=eq.true'});
+            const props = await api('properties',{query:'?select=id,name'});
             const propName = Object.fromEntries(props.map(p=>[p.id,p.name]));
-            const rows=[];
 
+            const rows=[];
             for (const f of feeds) {
               try {
                 const rf = await fetch(f.feed_url);
-                if(!rf.ok){ console.warn('Fetch fail', f.id, rf.status); continue; }
-                const events = parse(await rf.text());
+                if(!rf.ok){ console.warn(JSON.stringify({feed_id:f.id,status:rf.status,url:f.feed_url})); continue; }
+                const events = parseICS(await rf.text());
                 for (const ev of events) {
-                  const ci = toTs(ev.DTSTART);
-                  const co = toTs(ev.DTEND);
+                  const ci = toTs(ev.DTSTART); const co = toTs(ev.DTEND);
                   if(!ci || !co) continue;
                   const g = guest(ev.SUMMARY);
                   rows.push({
@@ -97,14 +107,13 @@ jobs:
                     currency: 'ZAR'
                   });
                 }
-                // Update feed timestamp
-                await patch('ical_feeds', { last_import_at: new Date().toISOString() }, `id=eq.${f.id}`);
+                await api('ical_feeds',{method:'PATCH',body:{ last_import_at: new Date().toISOString() },query:`?id=eq.${f.id}`});
               } catch(e) {
                 console.error('Feed error', f.id, e.message);
               }
             }
 
-            // Deduplicate
+            // Deduplicate (property_id|platform|check_in|check_out)
             const map=new Map();
             for (const r of rows) {
               const k=`${r.property_id}|${r.platform}|${r.check_in}|${r.check_out}`;
@@ -112,25 +121,39 @@ jobs:
             }
             const finalRows=[...map.values()];
 
-            // Batch upsert
+            // Batch upsert bookings
             for(let i=0;i<finalRows.length;i+=300){
-              await post('bookings', finalRows.slice(i,i+300), '?on_conflict=org_id,property_id,platform,check_in,check_out');
+              await api('bookings',{method:'POST',body:finalRows.slice(i,i+300),query:'?on_conflict=org_id,property_id,platform,check_in,check_out'});
             }
 
-            // Soft removal marking
+            // Soft removal for future bookings only
             const nowIso = new Date().toISOString();
-            const existing = await get('bookings', `?select=id,property_id,platform,check_in,check_out,source_removed&check_in=gte.${nowIso}&source_removed=is.false`);
+            const existing = await api('bookings',{query:`?select=id,property_id,platform,check_in,check_out,source_removed&check_in=gte.${nowIso}&source_removed=is.false`});
             const newKeys = new Set(finalRows.map(r=>`${r.property_id}|${r.platform}|${r.check_in}|${r.check_out}`));
             const toArchive = existing.filter(b=>!newKeys.has(`${b.property_id}|${b.platform}|${b.check_in}|${b.check_out}`)).map(b=>b.id);
-            if (toArchive.length) {
-              await patch('bookings', { source_removed: true }, `id=in.(${toArchive.join(',')})`);
+
+            console.log('Archive candidates raw', JSON.stringify(toArchive));
+            const cleanIds = toArchive.filter(id => Number.isInteger(id));
+            if (cleanIds.length !== toArchive.length) {
+              console.warn('Non-integer IDs detected, filtered out:', toArchive.filter(id => !Number.isInteger(id)));
+            }
+            if (cleanIds.length) {
+              const filter = `id=in.(${cleanIds.join(',')})`;
+              console.log('PATCH filter', filter);
+              await api('bookings',{method:'PATCH',body:{ source_removed:true },query:`?${filter}`});
+            } else {
+              console.log('No bookings to archive');
             }
 
             console.log(JSON.stringify({
               feeds_processed: feeds.length,
               events_raw: rows.length,
               events_dedup: finalRows.length,
-              bookings_soft_removed: toArchive.length
+              bookings_soft_removed: cleanIds.length
             }, null, 2));
           })().catch(e => { console.error('Fatal', e); process.exit(1); });
           EOF
+
+      - name: Summary if env missing
+        if: env.SUPABASE_URL == '' || env.SUPABASE_SERVICE_ROLE_KEY == ''
+        run: echo 'Skipped: missing Supabase secrets.'
