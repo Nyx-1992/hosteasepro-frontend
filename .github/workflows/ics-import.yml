@@ -1,9 +1,13 @@
 name: ICS Import
 
+# Manual-only trigger retained; scheduled cron removed to freeze logic.
 on:
   workflow_dispatch: {}
-  schedule:
-    - cron: "15 * * * *"
+
+# Prevent overlapping runs if manually triggered multiple times.
+concurrency:
+  group: ics-import
+  cancel-in-progress: true
 
 jobs:
   import:
