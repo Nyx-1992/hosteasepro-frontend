@@ -1,5 +1,9 @@
 {
   "version": 2,
-  "buildCommand": "echo 'Static deployment'",
-  "outputDirectory": "demo"
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/demo/index_fixed.html"
+    }
+  ]
 }
