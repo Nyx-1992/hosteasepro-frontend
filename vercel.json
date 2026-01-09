@@ -1,13 +1,6 @@
 {
   "version": 2,
-  "framework": "nextjs",
-  "routes": [
-    {
-      "src": "/legacy",
-      "dest": "/index.html"
-    }
-  ],
-  "overrides": {
-    "index.html": { "path": "legacy/index.html" }
-  }
+  "public": "demo",
+  "buildCommand": "echo 'Static deployment'",
+  "outputDirectory": "demo"
 }
