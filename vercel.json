@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "public": "demo",
   "buildCommand": "echo 'Static deployment'",
   "outputDirectory": "demo"
 }
