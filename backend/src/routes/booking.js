@@ -1,7 +1,8 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { auth, authorize } = require('../middleware/auth');
-const Booking = require('../models/Booking');
+// const Booking = require('../models/Booking');
+const supabaseBookings = require('../services/supabaseBookings');
 const Property = require('../models/Property');
 const moment = require('moment');
 const { syncMongoToSupabase } = require('../services/supabaseSync');
@@ -13,48 +14,10 @@ const router = express.Router();
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const { property, status, platform, startDate, endDate, page = 1, limit = 50 } = req.query;
-    
-    let query = { isActive: true };
-    
-    if (property) {
-      query.property = property;
-    }
-    
-    if (status) {
-      query.status = status;
-    }
-    
-    if (platform) {
-      query['platform.name'] = platform;
-    }
-    
-    if (startDate || endDate) {
-      query['dates.checkIn'] = {};
-      if (startDate) {
-        query['dates.checkIn'].$gte = new Date(startDate);
-      }
-      if (endDate) {
-        query['dates.checkIn'].$lte = new Date(endDate);
-      }
-    }
-
-    const bookings = await Booking.find(query)
-      .populate('property', 'name address')
-      .populate('checkIn.checkedInBy', 'firstName lastName')
-      .populate('checkOut.checkedOutBy', 'firstName lastName')
-      .sort({ 'dates.checkIn': -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Booking.countDocuments(query);
-
-    res.json({
-      bookings,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
-    });
+    const { property } = req.query;
+    // For now, only filter by property (extend as needed)
+    const bookings = await supabaseBookings.getBookings({ propertyId: property });
+    res.json({ bookings });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -66,130 +29,13 @@ router.get('/', auth, async (req, res) => {
 // @access  Private
 router.get('/:id', auth, async (req, res) => {
   try {
-    const booking = await Booking.findById(req.params.id)
-      .populate('property')
-      .populate('checkIn.checkedInBy', 'firstName lastName')
-      .populate('checkOut.checkedOutBy', 'firstName lastName')
-      .populate('communications.sentBy', 'firstName lastName');
-    
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-    
-    res.json(booking);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// @route   POST /api/bookings
-// @desc    Create new booking (manual/domestic)
-// @access  Private (Admin/Property Manager)
-router.post('/', auth, authorize('admin', 'property-manager'), [
-  body('property').notEmpty().withMessage('Property is required'),
-  body('guest.firstName').trim().notEmpty().withMessage('Guest first name is required'),
-  body('guest.lastName').trim().notEmpty().withMessage('Guest last name is required'),
-  body('guest.email').isEmail().withMessage('Valid email is required'),
-  body('dates.checkIn').isISO8601().withMessage('Valid check-in date is required'),
-  body('dates.checkOut').isISO8601().withMessage('Valid check-out date is required'),
-  body('pricing.totalAmount').isFloat({ min: 0 }).withMessage('Total amount must be positive')
-], async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-
-    const checkIn = moment(req.body.dates.checkIn);
-    const checkOut = moment(req.body.dates.checkOut);
-    const nights = checkOut.diff(checkIn, 'days');
-
-    if (nights <= 0) {
-      return res.status(400).json({ message: 'Check-out date must be after check-in date' });
-    }
-
-    const booking = new Booking({
-      ...req.body,
-      dates: {
-        ...req.body.dates,
-        nights
-      },
-      platform: {
-        name: 'domestic',
-        ...req.body.platform
-      }
-    });
-
-    await booking.save();
-    await booking.populate('property', 'name address');
-
-    res.status(201).json(booking);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// @route   PUT /api/bookings/:id/checkin
-// @desc    Process check-in
-// @access  Private (Admin/Property Manager)
-router.put('/:id/checkin', auth, authorize('admin', 'property-manager'), async (req, res) => {
-  try {
-    const booking = await Booking.findById(req.params.id);
-    
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    booking.checkIn = {
-      actualTime: req.body.actualTime || new Date(),
-      checkedInBy: req.user._id,
-      notes: req.body.notes || '',
-      damages: req.body.damages || '',
-      keyHandedOver: req.body.keyHandedOver || false
+    const booking = await supabaseBookings.getBookingById(req.params.id);
+    // [DISABLED] Batch sync endpoint for MongoDB is now deprecated. Use Supabase for all booking operations.
+    // router.post('/sync-batch', ...)
+      updated_at: new Date()
     };
-    
-    booking.status = 'checked-in';
-    await booking.save();
-    
-    await booking.populate('property', 'name address');
-    await booking.populate('checkIn.checkedInBy', 'firstName lastName');
-
-    res.json(booking);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// @route   PUT /api/bookings/:id/checkout
-// @desc    Process check-out
-// @access  Private (Admin/Property Manager)
-router.put('/:id/checkout', auth, authorize('admin', 'property-manager'), async (req, res) => {
-  try {
-    const booking = await Booking.findById(req.params.id);
-    
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    booking.checkOut = {
-      actualTime: req.body.actualTime || new Date(),
-      checkedOutBy: req.user._id,
-      notes: req.body.notes || '',
-      damages: req.body.damages || '',
-      cleaningNotes: req.body.cleaningNotes || '',
-      keyReturned: req.body.keyReturned || false
-    };
-    
-    booking.status = 'checked-out';
-    await booking.save();
-    
-    await booking.populate('property', 'name address');
-    await booking.populate('checkOut.checkedOutBy', 'firstName lastName');
-
-    res.json(booking);
+    const updated = await supabaseBookings.updateBooking(req.params.id, updates);
+    res.json(updated);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -203,21 +49,12 @@ router.put('/:id/status', auth, authorize('admin', 'property-manager'), async (r
   try {
     const { status } = req.body;
     const validStatuses = ['pending', 'confirmed', 'checked-in', 'checked-out', 'cancelled', 'no-show'];
-    
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status' });
     }
-
-    const booking = await Booking.findById(req.params.id);
-    
-    if (!booking) {
-      return res.status(404).json({ message: 'Booking not found' });
-    }
-
-    booking.status = status;
-    await booking.save();
-
-    res.json({ message: 'Status updated successfully', status });
+    const updates = { status, updated_at: new Date() };
+    const updated = await supabaseBookings.updateBooking(req.params.id, updates);
+    res.json({ message: 'Status updated successfully', status, updated });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -239,37 +76,30 @@ router.get('/calendar/:propertyId?', auth, async (req, res) => {
     }
     
     if (startDate && endDate) {
-      query.$or = [
-        { 'dates.checkIn': { $gte: new Date(startDate), $lte: new Date(endDate) } },
-        { 'dates.checkOut': { $gte: new Date(startDate), $lte: new Date(endDate) } },
-        { 
-          'dates.checkIn': { $lte: new Date(startDate) },
-          'dates.checkOut': { $gte: new Date(endDate) }
+      try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+          return res.status(400).json({ errors: errors.array() });
         }
-      ];
-    }
 
-    const bookings = await Booking.find(query)
-      .populate('property', 'name')
-      .select('property guest dates status platform pricing')
-      .sort({ 'dates.checkIn': 1 });
-
+        const checkIn = moment(req.body.checkin_date);
+        const checkOut = moment(req.body.checkout_date);
+        const nights = checkOut.diff(checkIn, 'days');
+    const bookings = await supabaseBookings.getBookings({ propertyId });
     res.json(bookings);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// @route   POST /api/bookings/sync-batch
-// @desc    Upsert an array of externally sourced bookings (iCal/manual injection) into DB
-// @access  Private (Admin/Property Manager)
-router.post('/sync-batch', auth, authorize('admin', 'property-manager'), async (req, res) => {
-  try {
-    const incoming = Array.isArray(req.body.bookings) ? req.body.bookings : [];
-    if (!incoming.length) {
-      return res.status(400).json({ message: 'No bookings provided', inserted:0, updated:0, skipped:0 });
-    }
+        const booking = {
+          ...req.body,
+          nights,
+          status: req.body.status || 'confirmed',
+          created_at: new Date(),
+          updated_at: new Date()
+        };
+        const created = await supabaseBookings.createBooking(booking);
+        res.status(201).json(created);
+      } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+      }
 
     // Preload properties map (name -> _id) case-insensitive for fast lookup
     const properties = await Property.find({ isActive: true }).select('_id name');
@@ -363,14 +193,5 @@ router.post('/sync-batch', auth, authorize('admin', 'property-manager'), async (
 
 module.exports = router;
 
-// Export to Supabase endpoint (admin only)
-router.post('/export-supabase', auth, authorize('admin', 'property-manager'), async (req, res) => {
-  try {
-    const result = await syncMongoToSupabase();
-    if(!result.ok) return res.status(500).json(result);
-    res.json({ message: 'Supabase sync complete', inserted: result.inserted });
-  } catch (e) {
-    console.error('Supabase export error', e);
-    res.status(500).json({ message: 'Supabase export failed', error: e.message });
-  }
-});
+// [DISABLED] Export to Supabase endpoint is now deprecated. Use Supabase as the primary data source.
+// router.post('/export-supabase', ...)

@@ -48,7 +48,7 @@ class ICalBookingFetcher {
             const response = await axios.get(icalUrl, {
                 timeout: 30000,
                 headers: {
-                    'User-Agent': 'Nyx-Training Property Management System'
+                    'User-Agent': 'HostEasePro Property Management System'
                 }
             });
 

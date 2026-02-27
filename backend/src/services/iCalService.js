@@ -66,6 +66,7 @@ class ICalService {
 
   // Sync iCal feed for a property
   static async syncPropertyCalendar(property) {
+    const { createBooking, getBookings, updateBooking } = require('./supabaseBookings');
     const results = {
       processed: 0,
       created: 0,
@@ -73,123 +74,88 @@ class ICalService {
       errors: []
     };
 
+    // You may need to adjust this to match your Supabase property integration structure
     const platforms = ['bookingCom', 'lekkeSlaap', 'fewo', 'airbnb'];
-    
     for (const platformKey of platforms) {
-      const platformConfig = property.platformIntegrations[platformKey];
-      
-      if (!platformConfig.isActive || !platformConfig.icalUrl) {
+      const platformConfig = property.platform_integrations?.[platformKey] || property.platformIntegrations?.[platformKey];
+      console.log('[iCal Sync] Property:', property.id, property.name, 'PlatformKey:', platformKey, 'Config:', platformConfig);
+      if (!platformConfig || !platformConfig.isActive || !platformConfig.icalUrl) {
+        console.log(`[iCal Sync] Skipping platform ${platformKey} for property ${property.name}: No active config or iCal URL.`);
         continue;
       }
-
       try {
         const response = await axios.get(platformConfig.icalUrl, {
           timeout: 30000,
-          headers: {
-            'User-Agent': 'Nyx-Training Property Management System'
-          }
+          headers: { 'User-Agent': 'HostEasePro Property Management System' }
         });
-
         const events = ical.parseICS(response.data);
-        
         for (const [uid, event] of Object.entries(events)) {
           if (event.type !== 'VEVENT') continue;
-          
           results.processed++;
-          
           try {
             const platform = this.determinePlatform(event, platformConfig.icalUrl);
             const guestInfo = this.parseGuestInfo(event.summary);
             const bookingId = this.extractBookingId(event, platform);
-            
-            const checkIn = moment(event.start).startOf('day').toDate();
-            const checkOut = moment(event.end).startOf('day').toDate();
+            const checkIn = moment(event.start).startOf('day').toISOString();
+            const checkOut = moment(event.end).startOf('day').toISOString();
             const nights = moment(checkOut).diff(moment(checkIn), 'days');
-            
-            // Skip if dates are invalid
             if (nights <= 0) continue;
-
-            // Check if booking already exists
-            let existingBooking = await Booking.findOne({
-              property: property._id,
-              'icalSource.eventId': uid
-            });
-
+            // Check if booking already exists in Supabase
+            const existing = await getBookings({ propertyId: property.id });
+            const found = existing.find(b => b.ical_event_id === uid);
             const bookingData = {
-              property: property._id,
-              guest: {
-                firstName: guestInfo.firstName,
-                lastName: guestInfo.lastName,
-                email: `${guestInfo.firstName.toLowerCase()}@${platform}.guest`,
-                numberOfGuests: 2, // Default, can be updated manually
-                specialRequests: event.description || ''
-              },
-              dates: {
-                checkIn,
-                checkOut,
-                nights
-              },
-              pricing: {
-                baseAmount: property.pricing.basePrice * nights,
-                totalAmount: property.pricing.basePrice * nights,
-                currency: property.pricing.currency
-              },
-              platform: {
-                name: platform,
-                bookingId,
-                confirmationNumber: bookingId
-              },
+              property_id: property.id,
+              property_name: property.name,
+              platform,
+              guest_first_name: guestInfo.firstName,
+              guest_last_name: guestInfo.lastName,
+              guest_email: `${guestInfo.firstName.toLowerCase()}@${platform}.guest`,
+              number_of_guests: 2, // Default, can be updated manually
+              check_in: checkIn,
+              check_out: checkOut,
               status: 'confirmed',
-              icalSource: {
-                lastSync: new Date(),
-                eventId: uid
-              }
+              ical_event_id: uid,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             };
-
-            if (existingBooking) {
-              // Update existing booking
-              Object.assign(existingBooking, bookingData);
-              await existingBooking.save();
+            if (found) {
+              await updateBooking(found.id, bookingData);
               results.updated++;
             } else {
-              // Create new booking
-              const newBooking = new Booking(bookingData);
-              await newBooking.save();
+              await createBooking(bookingData);
               results.created++;
             }
-
           } catch (eventError) {
-            console.error(`Error processing event ${uid}:`, eventError);
+            console.error(`[iCal Sync] Error processing event ${uid} for property ${property.name}:`, eventError);
             results.errors.push(`Event ${uid}: ${eventError.message}`);
           }
         }
-
       } catch (error) {
-        console.error(`Error syncing ${platformKey} for property ${property.name}:`, error);
+        console.error(`[iCal Sync] Error syncing ${platformKey} for property ${property.name}:`, error, 'Config:', platformConfig);
         results.errors.push(`${platformKey}: ${error.message}`);
       }
     }
-
     return results;
   }
 
-  // Sync all properties
+  // Sync all properties (Supabase version)
   static async syncAllProperties() {
-    const properties = await Property.find({ isActive: true });
+    const { getActiveProperties } = require('./supabaseProperties');
+    const properties = await getActiveProperties();
     const allResults = [];
 
     for (const property of properties) {
       try {
         const results = await this.syncPropertyCalendar(property);
         allResults.push({
-          propertyId: property._id,
+          propertyId: property.id,
           propertyName: property.name,
           results
         });
       } catch (error) {
         console.error(`Error syncing property ${property.name}:`, error);
         allResults.push({
-          propertyId: property._id,
+          propertyId: property.id,
           propertyName: property.name,
           results: {
             processed: 0,

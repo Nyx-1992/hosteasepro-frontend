@@ -31,7 +31,7 @@ app.use(express.urlencoded({ extended: true }));
 const ICalService = require('./services/icalService');
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/nyx-training', {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/HostEasePro', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
@@ -96,7 +96,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Nyx Training Property Management Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
-  console.log(`💾 Database: ${process.env.MONGODB_URI || 'mongodb://localhost:27017/nyx-training'}`);
+  console.log(`💾 Database: ${process.env.MONGODB_URI || 'mongodb://localhost:27017/HostEasePro'}`);
 });
 
 module.exports = app;
