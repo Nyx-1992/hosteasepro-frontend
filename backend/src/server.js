@@ -52,7 +52,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/nyx-train
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/properties', require('./routes/properties'));
-app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/bookings', require('./routes/booking'));
 app.use('/api/knowledge-base', require('./routes/knowledgeBase'));
 app.use('/api/financial', require('./routes/financial'));
 app.use('/api/invoices', require('./routes/invoices'));
