@@ -28,6 +28,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Import services
+// Trigger Vercel redeploy: trivial comment
 const ICalService = require('./services/ICalService');
 
 // Connect to MongoDB
