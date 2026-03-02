@@ -7,6 +7,9 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+// Trust the first proxy (needed for Vercel and rate limiting)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
