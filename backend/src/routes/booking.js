@@ -30,12 +30,10 @@ router.get('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const booking = await supabaseBookings.getBookingById(req.params.id);
-    // [DISABLED] Batch sync endpoint for MongoDB is now deprecated. Use Supabase for all booking operations.
-    // router.post('/sync-batch', ...)
-      updated_at: new Date()
-    };
-    const updated = await supabaseBookings.updateBooking(req.params.id, updates);
-    res.json(updated);
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' });
+    }
+    res.json(booking);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
