@@ -1,6 +1,6 @@
 const express = require('express');
 const { auth, authorize } = require('../middleware/auth');
-const ICalService = require('../services/icalService');
+const ICalService = require('../services/ICalService');
 const Property = require('../models/Property');
 
 const router = express.Router();

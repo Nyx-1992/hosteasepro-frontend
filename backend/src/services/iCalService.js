@@ -67,6 +67,9 @@ class ICalService {
   // Sync iCal feed for a property
   static async syncPropertyCalendar(property) {
     const { createBooking, getBookings, updateBooking } = require('./supabaseBookings');
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
     const results = {
       processed: 0,
       created: 0,
@@ -74,17 +77,21 @@ class ICalService {
       errors: []
     };
 
-    // You may need to adjust this to match your Supabase property integration structure
-    const platforms = ['bookingCom', 'lekkeSlaap', 'fewo', 'airbnb'];
-    for (const platformKey of platforms) {
-      const platformConfig = property.platform_integrations?.[platformKey] || property.platformIntegrations?.[platformKey];
-      console.log('[iCal Sync] Property:', property.id, property.name, 'PlatformKey:', platformKey, 'Config:', platformConfig);
-      if (!platformConfig || !platformConfig.isActive || !platformConfig.icalUrl) {
-        console.log(`[iCal Sync] Skipping platform ${platformKey} for property ${property.name}: No active config or iCal URL.`);
-        continue;
-      }
+    // Fetch all active iCal feeds for this property
+    const { data: feeds, error: feedsError } = await supabase
+      .from('ical_feeds')
+      .select('platform, feed_url')
+      .eq('property_id', property.id)
+      .eq('is_active', true);
+
+    if (feedsError) {
+      results.errors.push('Failed to fetch iCal feeds: ' + feedsError.message);
+      return results;
+    }
+
+    for (const feed of feeds) {
       try {
-        const response = await axios.get(platformConfig.icalUrl, {
+        const response = await axios.get(feed.feed_url, {
           timeout: 30000,
           headers: { 'User-Agent': 'HostEasePro Property Management System' }
         });
@@ -93,7 +100,7 @@ class ICalService {
           if (event.type !== 'VEVENT') continue;
           results.processed++;
           try {
-            const platform = this.determinePlatform(event, platformConfig.icalUrl);
+            const platform = feed.platform;
             const guestInfo = this.parseGuestInfo(event.summary);
             const bookingId = this.extractBookingId(event, platform);
             const checkIn = moment(event.start).startOf('day').toISOString();
@@ -126,13 +133,11 @@ class ICalService {
               results.created++;
             }
           } catch (eventError) {
-            console.error(`[iCal Sync] Error processing event ${uid} for property ${property.name}:`, eventError);
             results.errors.push(`Event ${uid}: ${eventError.message}`);
           }
         }
       } catch (error) {
-        console.error(`[iCal Sync] Error syncing ${platformKey} for property ${property.name}:`, error, 'Config:', platformConfig);
-        results.errors.push(`${platformKey}: ${error.message}`);
+        results.errors.push(`${feed.platform}: ${error.message}`);
       }
     }
     return results;
