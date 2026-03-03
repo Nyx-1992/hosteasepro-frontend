@@ -93,17 +93,32 @@ Deno.serve(async (req: Request) => {
       for (const ev of events) {
         const start = parseDate(ev.start); const end = parseDate(ev.end);
         if (!start || !end) continue;
-        const guest = splitGuest(ev.summary);
+        // Detect 'CLOSED' or 'Not available' events and import as blocked bookings
+        let guest_first_name = null;
+        let guest_last_name = null;
+        let status = 'confirmed';
+        let notes = undefined;
+        if (ev.summary && (/CLOSED|Not available/i.test(ev.summary))) {
+          guest_first_name = 'Unavailable';
+          guest_last_name = null;
+          status = 'blocked';
+          notes = ev.summary;
+        } else {
+          const guest = splitGuest(ev.summary);
+          guest_first_name = guest.first;
+          guest_last_name = guest.last;
+        }
         allRows.push({
           org_id: f.org_id,
           property_id: f.property_id,
           platform: f.platform,
-          guest_first_name: guest.first,
-          guest_last_name: guest.last,
+          guest_first_name,
+          guest_last_name,
           check_in: start.toISOString(),
           check_out: end.toISOString(),
-          status: 'confirmed',
-          currency: 'ZAR'
+          status,
+          currency: 'ZAR',
+          notes
         });
       }
     }
