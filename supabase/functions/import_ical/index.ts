@@ -11,7 +11,7 @@ import 'https://deno.land/x/dotenv/load.ts';
 declare const Deno: any;
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
-const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_KEY');
+const SUPABASE_SERVICE_KEY = Deno.env.get('SERVICE_ROLE_KEY');
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY env');
 }

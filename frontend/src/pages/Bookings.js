@@ -114,13 +114,21 @@ const Bookings = () => {
   // Calendar event mapping
   const calendarEvents = useMemo(() => {
     if (!Array.isArray(calendarData)) return [];
-    return calendarData.map(booking => ({
-      id: booking.id,
-      title: `${booking.guest_first_name || ''} ${booking.guest_last_name || ''} (${booking.property_name || ''})`,
-      start: booking.check_in,
-      end: booking.check_out,
-      extendedProps: booking
-    }));
+    return calendarData.map(booking => {
+      let title = `${booking.guest_first_name || ''} ${booking.guest_last_name || ''} (${booking.property_name || ''})`;
+      // Show blocked Booking.com entries clearly
+      if (booking.status === 'blocked' && booking.platform === 'booking') {
+        title = `Blocked (Booking.com) - ${booking.property_name || ''}`;
+      }
+      return {
+        id: booking.id,
+        title,
+        start: booking.check_in,
+        end: booking.check_out,
+        color: (booking.status === 'blocked' && booking.platform === 'booking') ? '#bdbdbd' : undefined,
+        extendedProps: booking
+      };
+    });
   }, [calendarData]);
 
   if (isLoading || calendarLoading) {
@@ -198,24 +206,36 @@ const Bookings = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {bookingsData?.bookings?.map((booking) => (
-                <TableRow key={booking.id}>
-                  <TableCell>
-                    <Box>
-                      <Typography variant="body2" fontWeight="bold">{booking.guest.firstName} {booking.guest.lastName}</Typography>
-                      <Typography variant="caption" color="textSecondary">{booking.guest.email}</Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>{booking.property?.name}</TableCell>
-                  <TableCell>{format(new Date(booking.dates.checkIn), 'MMM dd, yyyy')}</TableCell>
-                  <TableCell>{format(new Date(booking.dates.checkOut), 'MMM dd, yyyy')}</TableCell>
-                  <TableCell>{booking.dates.nights}</TableCell>
-                  <TableCell><Chip label={booking.platform.name} size="small" color={getPlatformColor(booking.platform.name)} variant="outlined" /></TableCell>
-                  <TableCell><Chip label={booking.status} size="small" color={getStatusColor(booking.status)} /></TableCell>
-                  <TableCell>R {booking.pricing.totalAmount}</TableCell>
-                  <TableCell><Button size="small" startIcon={<Visibility />} onClick={() => handleViewDetails(booking)}>View</Button></TableCell>
-                </TableRow>
-              ))}
+              {bookingsData?.bookings?.map((booking) => {
+                // Show blocked Booking.com entries with a clear label
+                const isBlockedBooking = booking.status === 'blocked' && booking.platform === 'booking';
+                return (
+                  <TableRow key={booking.id} style={isBlockedBooking ? { background: '#f5f5f5' } : {}}>
+                    <TableCell>
+                      <Box>
+                        <Typography variant="body2" fontWeight="bold">
+                          {isBlockedBooking ? 'Blocked (Booking.com)' : `${booking.guest.firstName} ${booking.guest.lastName}`}
+                        </Typography>
+                        {booking.guest.email && !isBlockedBooking && (
+                          <Typography variant="caption" color="textSecondary">{booking.guest.email}</Typography>
+                        )}
+                      </Box>
+                    </TableCell>
+                    <TableCell>{booking.property?.name}</TableCell>
+                    <TableCell>{format(new Date(booking.dates.checkIn), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell>{format(new Date(booking.dates.checkOut), 'MMM dd, yyyy')}</TableCell>
+                    <TableCell>{booking.dates.nights}</TableCell>
+                    <TableCell><Chip label={booking.platform.name} size="small" color={getPlatformColor(booking.platform.name)} variant="outlined" /></TableCell>
+                    <TableCell><Chip label={booking.status} size="small" color={getStatusColor(booking.status)} /></TableCell>
+                    <TableCell>{booking.pricing?.totalAmount ? `R ${booking.pricing.totalAmount}` : '-'}</TableCell>
+                    <TableCell>
+                      {!isBlockedBooking && (
+                        <Button size="small" startIcon={<Visibility />} onClick={() => handleViewDetails(booking)}>View</Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
