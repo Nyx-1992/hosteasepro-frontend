@@ -116,9 +116,9 @@ const Bookings = () => {
     if (!Array.isArray(calendarData)) return [];
     return calendarData.map(booking => ({
       id: booking.id,
-      title: `${booking.guest.firstName} ${booking.guest.lastName} (${booking.property?.name || ''})`,
-      start: booking.dates.checkIn,
-      end: booking.dates.checkOut,
+      title: `${booking.guest_first_name || ''} ${booking.guest_last_name || ''} (${booking.property_name || ''})`,
+      start: booking.check_in_date,
+      end: booking.check_out_date,
       extendedProps: booking
     }));
   }, [calendarData]);
@@ -150,7 +150,7 @@ const Bookings = () => {
       <Paper sx={{ p: 2, mb: 3 }}>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={6} md={3}>
-            <TextField select label="Property" value={filters.property} onChange={e => handleFilterChange('property', e.target.value)} fullWidth size="small">
+            <TextField select label="Property" value={filters.property_id || ''} onChange={e => handleFilterChange('property_id', e.target.value)} fullWidth size="small">
               <MenuItem value="">All Properties</MenuItem>
               {properties.map(property => (
                 <MenuItem key={property.id} value={property.id}>{property.name}</MenuItem>
