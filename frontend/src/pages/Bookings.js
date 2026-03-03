@@ -117,8 +117,8 @@ const Bookings = () => {
     return calendarData.map(booking => ({
       id: booking.id,
       title: `${booking.guest_first_name || ''} ${booking.guest_last_name || ''} (${booking.property_name || ''})`,
-      start: booking.check_in_date,
-      end: booking.check_out_date,
+      start: booking.check_in,
+      end: booking.check_out,
       extendedProps: booking
     }));
   }, [calendarData]);
