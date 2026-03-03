@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -34,24 +34,24 @@ app.use(express.urlencoded({ extended: true }));
 // Trigger Vercel redeploy: trivial comment
 const ICalService = require('./services/ICalService');
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/HostEasePro', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => {
-  console.log('Connected to MongoDB');
-  
-  // Start periodic iCal sync after database connection
-  if (process.env.NODE_ENV !== 'test') {
-    console.log('Starting iCal periodic sync service...');
-    ICalService.startPeriodicSync();
-  }
-})
-.catch(err => {
-  console.error('MongoDB connection error:', err);
-  process.exit(1);
-});
+// MongoDB connection removed after migration to Supabase/Postgres
+// mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/HostEasePro', {
+//   useNewUrlParser: true,
+//   useUnifiedTopology: true,
+// })
+// .then(() => {
+//   console.log('Connected to MongoDB');
+//   
+//   // Start periodic iCal sync after database connection
+//   if (process.env.NODE_ENV !== 'test') {
+//     console.log('Starting iCal periodic sync service...');
+//     ICalService.startPeriodicSync();
+//   }
+// })
+// .catch(err => {
+//   console.error('MongoDB connection error:', err);
+//   process.exit(1);
+// });
 
 // Set Cache-Control: no-store for all /api/bookings routes to prevent caching
 app.use('/api/bookings', (req, res, next) => {
@@ -90,13 +90,10 @@ app.use('*', (req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// Graceful shutdown
+// Graceful shutdown (MongoDB logic removed)
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully');
-  mongoose.connection.close(() => {
-    console.log('MongoDB connection closed');
-    process.exit(0);
-  });
+  process.exit(0);
 });
 
 const PORT = process.env.PORT || 5000;
@@ -104,7 +101,8 @@ app.listen(PORT, () => {
   console.log(`🚀 Nyx Training Property Management Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
-  console.log(`💾 Database: ${process.env.MONGODB_URI || 'mongodb://localhost:27017/HostEasePro'}`);
+  // console.log(`💾 Database: ${process.env.MONGODB_URI || 'mongodb://localhost:27017/HostEasePro'}`);
+  console.log('💾 Database: Supabase/Postgres');
 });
 
 module.exports = app;
