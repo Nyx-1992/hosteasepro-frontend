@@ -54,10 +54,41 @@ async function getDashboardOverview() {
     .gte('date', thirtyDaysAgo.toISOString().slice(0,10));
 
   // Property stats (bookings per property, last 30 days)
-  const { data: propertyStats } = await supabase
+  const { data: properties } = await supabase
     .from(PROPERTIES)
     .select('id, name');
-  // Additional stats can be calculated in route
+
+  // For each property, calculate occupancy rate
+  const periodDays = 30;
+  const occupancyStats = [];
+  for (const property of properties || []) {
+    // Get all bookings for this property in the last 30 days
+    const { data: bookings } = await supabase
+      .from(BOOKINGS)
+      .select('checkin_date, checkout_date')
+      .eq('property_id', property.id)
+      .gte('checkin_date', thirtyDaysAgo.toISOString().slice(0,10))
+      .lte('checkout_date', today.toISOString().slice(0,10));
+
+    // Calculate total nights booked
+    let nightsBooked = 0;
+    for (const b of bookings || []) {
+      const checkIn = new Date(b.checkin_date);
+      const checkOut = new Date(b.checkout_date);
+      // Nights = (checkout - checkin) in days
+      const nights = Math.max(0, Math.round((checkOut - checkIn) / (1000*60*60*24)));
+      nightsBooked += nights;
+    }
+    // Total nights available = periodDays
+    const occupancyRate = periodDays > 0 ? (nightsBooked / periodDays) * 100 : 0;
+    occupancyStats.push({
+      property_id: property.id,
+      property_name: property.name,
+      nightsBooked,
+      totalNightsAvailable: periodDays,
+      occupancyRate: occupancyRate.toFixed(1)
+    });
+  }
 
   // Recent bookings
   const { data: recentBookings } = await supabase
@@ -72,7 +103,7 @@ async function getDashboardOverview() {
     upcomingCheckIns,
     upcomingCheckOuts,
     revenueData,
-    propertyStats,
+    propertyStats: occupancyStats,
     recentBookings,
     error: currentError
   };

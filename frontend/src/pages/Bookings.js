@@ -1,4 +1,77 @@
 import React, { useState, useMemo } from 'react';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import AddIcon from '@mui/icons-material/Add';
+import Fab from '@mui/material/Fab';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Grid from '@mui/material/Grid';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import MenuItem from '@mui/material/MenuItem';
+const PLATFORM_OPTIONS = [
+  { value: 'airbnb', label: 'Airbnb' },
+  { value: 'lekkeslaap', label: 'LekkeSlaap' },
+  { value: 'booking.com', label: 'Booking.com' },
+  { value: 'website', label: 'Website' },
+  { value: 'privat', label: 'Privat' },
+  { value: 'family_friend_blocker', label: 'Family/Friend Blocker' },
+  { value: 'owner_blocker', label: 'Owner Blocker' },
+];
+const AddBookingDialog = ({ open, onClose, onSubmit, properties }) => {
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [guestCount, setGuestCount] = useState('');
+  const [platform, setPlatform] = useState('');
+  const [propertyId, setPropertyId] = useState('');
+  const handleSubmit = () => {
+    if (!startDate || !endDate || !platform || !propertyId) return;
+    onSubmit({
+      check_in: startDate,
+      check_out: endDate,
+      guest_count: guestCount,
+      platform,
+      property_id: propertyId,
+    });
+  };
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>Add Booking</DialogTitle>
+      <DialogContent>
+        <Grid container spacing={2}>
+          <Grid item xs={12}>
+            <TextField select label="Property" value={propertyId} onChange={e => setPropertyId(e.target.value)} fullWidth size="small" required>
+              {properties.map(property => (
+                <MenuItem key={property.id} value={property.id}>{property.name}</MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <DatePicker label="Start Date" value={startDate} onChange={setStartDate} slotProps={{ textField: { fullWidth: true, size: 'small' } }} />
+          </Grid>
+          <Grid item xs={12} sm={6}>
+            <DatePicker label="End Date" value={endDate} onChange={setEndDate} slotProps={{ textField: { fullWidth: true, size: 'small' } }} />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField label="Guest Count" value={guestCount} onChange={e => setGuestCount(e.target.value)} type="number" fullWidth size="small" />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField select label="Booking Platform" value={platform} onChange={e => setPlatform(e.target.value)} fullWidth size="small" required>
+              {PLATFORM_OPTIONS.map(opt => (
+                <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+        </Grid>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleSubmit} variant="contained">Add</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 import {
   Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Chip, Button, TextField, MenuItem, Grid, LinearProgress, Dialog, DialogTitle, DialogContent, DialogActions, Tabs, Tab
 } from '@mui/material';
@@ -99,12 +172,23 @@ function getPlatformColor(platform) {
 }
 
 const Bookings = () => {
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [filters, setFilters] = useState({ property: '', status: '', platform: '', page: 1 });
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [tab, setTab] = useState(0); // 0 = Table, 1 = Calendar
   const { user } = useAuth();
   const { data: properties = [] } = useQuery('properties', propertyService.getProperties);
+    const handleAddBooking = async (data) => {
+      try {
+        await bookingService.createBooking(data);
+        setAddDialogOpen(false);
+        // Optionally refetch bookings
+        window.location.reload();
+      } catch (e) {
+        alert('Failed to add booking');
+      }
+    };
   const { data: bookingsData, isLoading } = useQuery(['bookings', filters], () => bookingService.getBookings(filters), { keepPreviousData: true });
   const { data: calendarData, isLoading: calendarLoading } = useQuery(['calendar', filters], () => bookingService.getCalendar(filters.property), { keepPreviousData: true });
 
@@ -142,17 +226,19 @@ const Bookings = () => {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, position: 'relative' }}>
         <Typography variant="h4">Bookings</Typography>
         <Tabs value={tab} onChange={(_, v) => setTab(v)}>
           <Tab icon={<ListAlt />} label="Table View" />
           <Tab icon={<CalendarToday />} label="Calendar View" />
         </Tabs>
-        {(user.role === 'admin' || user.role === 'property-manager') && (
-          <Button variant="contained" startIcon={<Add />} onClick={() => {}}>
-            Add Domestic Booking
-          </Button>
+        {/* Floating Add Booking Button (only in Calendar view) */}
+        {tab === 1 && (user.role === 'admin' || user.role === 'property-manager') && (
+          <Fab color="primary" aria-label="add" sx={{ position: 'absolute', right: 16, bottom: -56, zIndex: 10 }} onClick={() => setAddDialogOpen(true)}>
+            <AddIcon />
+          </Fab>
         )}
+        <AddBookingDialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} onSubmit={handleAddBooking} properties={properties} />
       </Box>
       {/* Filters */}
       <Paper sx={{ p: 2, mb: 3 }}>

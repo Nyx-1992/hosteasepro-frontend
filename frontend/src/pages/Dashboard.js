@@ -88,14 +88,23 @@ const Dashboard = () => {
             color="info"
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Occupancy Rate"
-            value={`${stats?.occupancyRate || '0'}%`}
-            icon={<TrendingUp sx={{ fontSize: 40 }} />}
-            color="warning"
-          />
-        </Grid>
+        {/* Split Occupancy Rate by Property */}
+        {dashboardData?.propertyStats?.map((property) => (
+          <Grid item xs={12} sm={6} md={3} key={property.property_id}>
+            <StatCard
+              title={`Occupancy: ${property.property_name}`}
+              value={`${property.occupancyRate}%`}
+              icon={<TrendingUp sx={{ fontSize: 40 }} />}
+              color="warning"
+            />
+            <Box sx={{ mt: 1 }}>
+              <Typography variant="caption">
+                {property.nightsBooked} nights booked / {property.totalNightsAvailable} nights available
+              </Typography>
+              <LinearProgress variant="determinate" value={parseFloat(property.occupancyRate)} sx={{ height: 8, borderRadius: 4, mt: 0.5 }} />
+            </Box>
+          </Grid>
+        ))}
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="Avg Booking Value"
