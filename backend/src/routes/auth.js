@@ -2,7 +2,14 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
-const User = require('../models/User');
+const { createClient } = require('@supabase/supabase-js');
+
+function getSupabaseClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Missing Supabase credentials');
+  return createClient(url, key);
+}
 const { auth } = require('../middleware/auth');
 
 const router = express.Router();
@@ -25,9 +32,14 @@ router.post('/register', [
 
     const { email, password, firstName, lastName, role, phone } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    // Check if user already exists in Supabase
+    const supabase = getSupabaseClient();
+    const { data: existingUsers, error: findError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email);
+    if (findError) throw findError;
+    if (existingUsers && existingUsers.length > 0) {
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
@@ -35,21 +47,29 @@ router.post('/register', [
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
-    const user = new User({
-      email,
-      password: hashedPassword,
-      firstName,
-      lastName,
-      role,
-      phone
-    });
-
-    await user.save();
+    // Insert user into Supabase
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert([
+        {
+          email,
+          password: hashedPassword,
+          first_name: firstName,
+          last_name: lastName,
+          role,
+          phone,
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+      ])
+      .select()
+      .single();
+    if (insertError) throw insertError;
 
     // Generate JWT
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: newUser.id, role: newUser.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -57,12 +77,12 @@ router.post('/register', [
     res.status(201).json({
       token,
       user: {
-        id: user._id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-        phone: user.phone
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.first_name,
+        lastName: newUser.last_name,
+        role: newUser.role,
+        phone: newUser.phone
       }
     });
   } catch (error) {
@@ -86,43 +106,47 @@ router.post('/login', [
 
     const { email, password } = req.body;
 
-    // Find user
-    const user = await User.findOne({ email });
-    if (!user) {
+    // Find user in Supabase
+    const supabase = getSupabaseClient();
+    const { data: users, error: findError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+    if (findError) throw findError;
+    if (!users) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-
-    if (!user.isActive) {
+    const user = users;
+    if (user.is_active === false) {
       return res.status(400).json({ message: 'Account is deactivated' });
     }
-
     // Verify password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
-
     // Update last login
-    user.lastLogin = new Date();
-    await user.save();
-
+    await supabase
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', user.id);
     // Generate JWT
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user.id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-
     res.json({
       token,
       user: {
-        id: user._id,
+        id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: user.first_name,
+        lastName: user.last_name,
         role: user.role,
         phone: user.phone,
-        lastLogin: user.lastLogin
+        lastLogin: user.last_login
       }
     });
   } catch (error) {
@@ -136,15 +160,22 @@ router.post('/login', [
 // @access  Private
 router.get('/me', auth, async (req, res) => {
   try {
+    const supabase = getSupabaseClient();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', req.user.userId)
+      .single();
+    if (error) throw error;
     res.json({
       user: {
-        id: req.user._id,
-        email: req.user.email,
-        firstName: req.user.firstName,
-        lastName: req.user.lastName,
-        role: req.user.role,
-        phone: req.user.phone,
-        lastLogin: req.user.lastLogin
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role,
+        phone: user.phone,
+        lastLogin: user.last_login
       }
     });
   } catch (error) {
@@ -166,22 +197,26 @@ router.put('/profile', auth, [
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-
     const { firstName, lastName, phone } = req.body;
-    const user = await User.findById(req.user._id);
-
-    if (firstName) user.firstName = firstName;
-    if (lastName) user.lastName = lastName;
-    if (phone) user.phone = phone;
-
-    await user.save();
-
+    const supabase = getSupabaseClient();
+    const updates = {};
+    if (firstName) updates.first_name = firstName;
+    if (lastName) updates.last_name = lastName;
+    if (phone) updates.phone = phone;
+    updates.updated_at = new Date().toISOString();
+    const { data: user, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', req.user.userId)
+      .select()
+      .single();
+    if (error) throw error;
     res.json({
       user: {
-        id: user._id,
+        id: user.id,
         email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
+        firstName: user.first_name,
+        lastName: user.last_name,
         role: user.role,
         phone: user.phone
       }

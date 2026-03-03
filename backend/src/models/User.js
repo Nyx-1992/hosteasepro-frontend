@@ -1,3 +1,6 @@
+// Legacy MongoDB User model removed. Use Supabase/Postgres for all user data access.
+module.exports = {}; // Placeholder for future implementation
+
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({

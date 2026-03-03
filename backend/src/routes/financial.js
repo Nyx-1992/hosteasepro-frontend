@@ -1,8 +1,13 @@
 const express = require('express');
 const { auth, authorize } = require('../middleware/auth');
-const FinancialRecord = require('../models/FinancialRecord');
-const Booking = require('../models/Booking');
-const Property = require('../models/Property');
+const { createClient } = require('@supabase/supabase-js');
+
+function getSupabaseClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Missing Supabase credentials');
+  return createClient(url, key);
+}
 
 const router = express.Router();
 
@@ -12,34 +17,33 @@ const router = express.Router();
 router.get('/records', auth, authorize('admin', 'property-manager'), async (req, res) => {
   try {
     const { type, category, property, startDate, endDate, page = 1, limit = 50 } = req.query;
-    
-    let query = {};
-    
-    if (type) query.type = type;
-    if (category) query.category = category;
-    if (property) query.property = property;
-    
-    if (startDate || endDate) {
-      query.date = {};
-      if (startDate) query.date.$gte = new Date(startDate);
-      if (endDate) query.date.$lte = new Date(endDate);
-    }
-
-    const records = await FinancialRecord.find(query)
-      .populate('property', 'name')
-      .populate('booking', 'guest dates')
-      .populate('createdBy', 'firstName lastName')
-      .sort({ date: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await FinancialRecord.countDocuments(query);
-
+    const supabase = getSupabaseClient();
+    let query = supabase.from('financial_records').select('*');
+    if (type) query = query.eq('type', type);
+    if (category) query = query.eq('category', category);
+    if (property) query = query.eq('property_id', property);
+    if (startDate) query = query.gte('date', startDate);
+    if (endDate) query = query.lte('date', endDate);
+    query = query.order('date', { ascending: false });
+    // Pagination
+    const from = (page - 1) * limit;
+    const to = from + Number(limit) - 1;
+    query = query.range(from, to);
+    const { data: records, error } = await query;
+    if (error) throw error;
+    // Get total count
+    const { count, error: countError } = await supabase
+      .from('financial_records')
+      .select('*', { count: 'exact', head: true })
+      .eq('type', type || '')
+      .eq('category', category || '')
+      .eq('property_id', property || '');
+    if (countError) throw countError;
     res.json({
       records,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
+      totalPages: Math.ceil((count || 0) / limit),
+      currentPage: Number(page),
+      total: count || 0
     });
   } catch (error) {
     console.error(error);
@@ -53,40 +57,30 @@ router.get('/records', auth, authorize('admin', 'property-manager'), async (req,
 router.get('/summary', auth, authorize('admin', 'property-manager'), async (req, res) => {
   try {
     const { startDate, endDate, property } = req.query;
-    
-    let matchQuery = {};
-    if (property) matchQuery.property = property;
-    if (startDate || endDate) {
-      matchQuery.date = {};
-      if (startDate) matchQuery.date.$gte = new Date(startDate);
-      if (endDate) matchQuery.date.$lte = new Date(endDate);
+    const supabase = getSupabaseClient();
+    let query = supabase.from('financial_records').select('*');
+    if (property) query = query.eq('property_id', property);
+    if (startDate) query = query.gte('date', startDate);
+    if (endDate) query = query.lte('date', endDate);
+    const { data: records, error } = await query;
+    if (error) throw error;
+    // Summary by type
+    const summary = {};
+    const categoryBreakdown = {};
+    for (const rec of records) {
+      // By type
+      if (!summary[rec.type]) summary[rec.type] = { total: 0, count: 0 };
+      summary[rec.type].total += rec.amount;
+      summary[rec.type].count += 1;
+      // By type+category
+      const catKey = `${rec.type}|${rec.category}`;
+      if (!categoryBreakdown[catKey]) categoryBreakdown[catKey] = { type: rec.type, category: rec.category, total: 0, count: 0 };
+      categoryBreakdown[catKey].total += rec.amount;
+      categoryBreakdown[catKey].count += 1;
     }
-
-    const summary = await FinancialRecord.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: '$type',
-          total: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-
-    const categoryBreakdown = await FinancialRecord.aggregate([
-      { $match: matchQuery },
-      {
-        $group: {
-          _id: { type: '$type', category: '$category' },
-          total: { $sum: '$amount' },
-          count: { $sum: 1 }
-        }
-      }
-    ]);
-
     res.json({
-      summary,
-      categoryBreakdown
+      summary: Object.entries(summary).map(([type, val]) => ({ type, ...val })),
+      categoryBreakdown: Object.values(categoryBreakdown)
     });
   } catch (error) {
     console.error(error);
@@ -99,14 +93,19 @@ router.get('/summary', auth, authorize('admin', 'property-manager'), async (req,
 // @access  Private (Admin/Property Manager)
 router.post('/records', auth, authorize('admin', 'property-manager'), async (req, res) => {
   try {
-    const record = new FinancialRecord({
+    const supabase = getSupabaseClient();
+    const insertData = {
       ...req.body,
-      createdBy: req.user._id
-    });
-
-    await record.save();
-    await record.populate('property', 'name');
-
+      created_by: req.user.userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    const { data: record, error } = await supabase
+      .from('financial_records')
+      .insert([insertData])
+      .select()
+      .single();
+    if (error) throw error;
     res.status(201).json(record);
   } catch (error) {
     console.error(error);

@@ -1,7 +1,14 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { auth, authorize } = require('../middleware/auth');
-const Property = require('../models/Property');
+const { createClient } = require('@supabase/supabase-js');
+
+function getSupabaseClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Missing Supabase credentials');
+  return createClient(url, key);
+}
 
 const router = express.Router();
 
@@ -10,10 +17,13 @@ const router = express.Router();
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const properties = await Property.find({ isActive: true })
-      .populate('owner', 'firstName lastName email')
-      .sort({ name: 1 });
-    
+    const supabase = getSupabaseClient();
+    const { data: properties, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('is_active', true)
+      .order('name', { ascending: true });
+    if (error) throw error;
     res.json(properties);
   } catch (error) {
     console.error(error);
@@ -26,13 +36,16 @@ router.get('/', auth, async (req, res) => {
 // @access  Private
 router.get('/:id', auth, async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id)
-      .populate('owner', 'firstName lastName email');
-    
+    const supabase = getSupabaseClient();
+    const { data: property, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (error) throw error;
     if (!property) {
       return res.status(404).json({ message: 'Property not found' });
     }
-    
     res.json(property);
   } catch (error) {
     console.error(error);
@@ -58,15 +71,20 @@ router.post('/', auth, authorize('admin'), [
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-
-    const property = new Property({
+    const supabase = getSupabaseClient();
+    const insertData = {
       ...req.body,
-      owner: req.user._id
-    });
-
-    await property.save();
-    await property.populate('owner', 'firstName lastName email');
-
+      owner_id: req.user.userId,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    const { data: property, error } = await supabase
+      .from('properties')
+      .insert([insertData])
+      .select()
+      .single();
+    if (error) throw error;
     res.status(201).json(property);
   } catch (error) {
     console.error(error);
@@ -79,17 +97,28 @@ router.post('/', auth, authorize('admin'), [
 // @access  Private (Admin only)
 router.put('/:id', auth, authorize('admin'), async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id);
-    
+    const supabase = getSupabaseClient();
+    const { data: property, error: findError } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (findError) throw findError;
     if (!property) {
       return res.status(404).json({ message: 'Property not found' });
     }
-
-    Object.assign(property, req.body);
-    await property.save();
-    await property.populate('owner', 'firstName lastName email');
-
-    res.json(property);
+    const updates = {
+      ...req.body,
+      updated_at: new Date().toISOString()
+    };
+    const { data: updated, error } = await supabase
+      .from('properties')
+      .update(updates)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(updated);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -101,15 +130,21 @@ router.put('/:id', auth, authorize('admin'), async (req, res) => {
 // @access  Private (Admin only)
 router.delete('/:id', auth, authorize('admin'), async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id);
-    
+    const supabase = getSupabaseClient();
+    const { data: property, error: findError } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (findError) throw findError;
     if (!property) {
       return res.status(404).json({ message: 'Property not found' });
     }
-
-    property.isActive = false;
-    await property.save();
-
+    const { error } = await supabase
+      .from('properties')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', req.params.id);
+    if (error) throw error;
     res.json({ message: 'Property deactivated successfully' });
   } catch (error) {
     console.error(error);
@@ -122,19 +157,28 @@ router.delete('/:id', auth, authorize('admin'), async (req, res) => {
 // @access  Private (Admin only)
 router.put('/:id/platforms', auth, authorize('admin'), async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id);
-    
+    const supabase = getSupabaseClient();
+    const { data: property, error: findError } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('id', req.params.id)
+      .maybeSingle();
+    if (findError) throw findError;
     if (!property) {
       return res.status(404).json({ message: 'Property not found' });
     }
-
-    property.platformIntegrations = {
-      ...property.platformIntegrations,
+    const newIntegrations = {
+      ...property.platform_integrations,
       ...req.body
     };
-
-    await property.save();
-    res.json(property.platformIntegrations);
+    const { data: updated, error } = await supabase
+      .from('properties')
+      .update({ platform_integrations: newIntegrations, updated_at: new Date().toISOString() })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+    if (error) throw error;
+    res.json(updated.platform_integrations);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });

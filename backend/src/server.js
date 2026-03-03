@@ -7,6 +7,9 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+// Trust the first proxy (needed for Vercel and rate limiting)
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
@@ -50,7 +53,11 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/HostEaseP
   process.exit(1);
 });
 
-// Routes
+// Set Cache-Control: no-store for all /api/bookings routes to prevent caching
+app.use('/api/bookings', (req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/properties', require('./routes/properties'));
 app.use('/api/bookings', require('./routes/booking'));

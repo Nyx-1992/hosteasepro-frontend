@@ -1,6 +1,13 @@
 const express = require('express');
 const { auth, authorize } = require('../middleware/auth');
-const Invoice = require('../models/Invoice');
+const { createClient } = require('@supabase/supabase-js');
+
+function getSupabaseClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) throw new Error('Missing Supabase credentials');
+  return createClient(url, key);
+}
 
 const router = express.Router();
 
@@ -10,26 +17,29 @@ const router = express.Router();
 router.get('/', auth, authorize('admin', 'property-manager'), async (req, res) => {
   try {
     const { status, property, page = 1, limit = 20 } = req.query;
-    
-    let query = {};
-    if (status) query.status = status;
-    if (property) query.property = property;
-
-    const invoices = await Invoice.find(query)
-      .populate('property', 'name')
-      .populate('booking', 'guest dates')
-      .populate('createdBy', 'firstName lastName')
-      .sort({ issueDate: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Invoice.countDocuments(query);
-
+    const supabase = getSupabaseClient();
+    let query = supabase.from('invoices').select('*');
+    if (status) query = query.eq('status', status);
+    if (property) query = query.eq('property_id', property);
+    query = query.order('issue_date', { ascending: false });
+    // Pagination
+    const from = (page - 1) * limit;
+    const to = from + Number(limit) - 1;
+    query = query.range(from, to);
+    const { data: invoices, error } = await query;
+    if (error) throw error;
+    // Get total count
+    const { count, error: countError } = await supabase
+      .from('invoices')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', status || '')
+      .eq('property_id', property || '');
+    if (countError) throw countError;
     res.json({
       invoices,
-      totalPages: Math.ceil(total / limit),
-      currentPage: page,
-      total
+      totalPages: Math.ceil((count || 0) / limit),
+      currentPage: Number(page),
+      total: count || 0
     });
   } catch (error) {
     console.error(error);
@@ -42,14 +52,19 @@ router.get('/', auth, authorize('admin', 'property-manager'), async (req, res) =
 // @access  Private (Admin/Property Manager)
 router.post('/', auth, authorize('admin', 'property-manager'), async (req, res) => {
   try {
-    const invoice = new Invoice({
+    const supabase = getSupabaseClient();
+    const insertData = {
       ...req.body,
-      createdBy: req.user._id
-    });
-
-    await invoice.save();
-    await invoice.populate('property', 'name');
-
+      created_by: req.user.userId,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    const { data: invoice, error } = await supabase
+      .from('invoices')
+      .insert([insertData])
+      .select()
+      .single();
+    if (error) throw error;
     res.status(201).json(invoice);
   } catch (error) {
     console.error(error);
