@@ -115,7 +115,7 @@ const Bookings = () => {
   const calendarEvents = useMemo(() => {
     if (!Array.isArray(calendarData)) return [];
     return calendarData.map(booking => ({
-      id: booking._id,
+      id: booking.id,
       title: `${booking.guest.firstName} ${booking.guest.lastName} (${booking.property?.name || ''})`,
       start: booking.dates.checkIn,
       end: booking.dates.checkOut,
@@ -153,7 +153,7 @@ const Bookings = () => {
             <TextField select label="Property" value={filters.property} onChange={e => handleFilterChange('property', e.target.value)} fullWidth size="small">
               <MenuItem value="">All Properties</MenuItem>
               {properties.map(property => (
-                <MenuItem key={property._id} value={property._id}>{property.name}</MenuItem>
+                <MenuItem key={property.id} value={property.id}>{property.name}</MenuItem>
               ))}
             </TextField>
           </Grid>
@@ -199,7 +199,7 @@ const Bookings = () => {
             </TableHead>
             <TableBody>
               {bookingsData?.bookings?.map((booking) => (
-                <TableRow key={booking._id}>
+                <TableRow key={booking.id}>
                   <TableCell>
                     <Box>
                       <Typography variant="body2" fontWeight="bold">{booking.guest.firstName} {booking.guest.lastName}</Typography>
