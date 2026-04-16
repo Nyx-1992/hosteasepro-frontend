@@ -6,1515 +6,1225 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>HostEase Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
-  :root {
-    --ink: #1a1a2e;
-    --ink2: #16213e;
-    --sand: #f5f0e8;
-    --warm: #e8ddd0;
-    --accent: #c17f3c;
-    --accent2: #8b5e2a;
-    --green: #2d6a4f;
-    --green2: #52b788;
-    --red: #c1121f;
-    --blue: #2563eb;
-    --muted: #6b7280;
-    --border: #e5e0d8;
-    --card: #ffffff;
-    --radius: 12px;
-    --shadow: 0 2px 16px rgba(26,26,46,0.08);
-    --shadow-lg: 0 8px 40px rgba(26,26,46,0.14);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--sand); color: var(--ink); min-height: 100vh; }
-  h1,h2,h3 { font-family: 'DM Serif Display', serif; }
+:root{
+  --ink:#1a1a2e;--ink2:#16213e;--sand:#f5f0e8;--warm:#e8ddd0;
+  --accent:#c17f3c;--accent2:#8b5e2a;--green:#2d6a4f;--green2:#52b788;
+  --red:#c1121f;--blue:#2563eb;--muted:#6b7280;--border:#e2ddd5;
+  --card:#fff;--r:12px;
+  --sh:0 2px 16px rgba(26,26,46,.08);--shl:0 8px 40px rgba(26,26,46,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"DM Sans",sans-serif;background:var(--sand);color:var(--ink);min-height:100vh}
+h2,h3{font-family:"DM Serif Display",serif}
 
 /* AUTH */
-.auth-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; background: linear-gradient(135deg, var(–ink) 0%, var(–ink2) 100%); }
-.auth-card { background:var(–card); border-radius:20px; padding:48px 40px; width:100%; max-width:420px; box-shadow:var(–shadow-lg); }
-.auth-logo { font-family:‘DM Serif Display’,serif; font-size:2rem; color:var(–accent); margin-bottom:8px; }
-.auth-sub { color:var(–muted); font-size:.9rem; margin-bottom:32px; }
-.field-group { margin-bottom:20px; }
-.field-group label { display:block; font-size:.8rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(–muted); margin-bottom:6px; }
-.field-group input { width:100%; padding:12px 16px; border:1.5px solid var(–border); border-radius:10px; font-size:.95rem; font-family:inherit; transition:border .2s; outline:none; background:var(–sand); }
-.field-group input:focus { border-color:var(–accent); background:#fff; }
-.btn { display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border-radius:10px; font-family:inherit; font-size:.9rem; font-weight:500; cursor:pointer; border:none; transition:all .2s; }
-.btn-primary { background:var(–accent); color:#fff; width:100%; justify-content:center; }
-.btn-primary:hover { background:var(–accent2); }
-.btn-ghost { background:transparent; color:var(–ink); border:1.5px solid var(–border); }
-.btn-ghost:hover { background:var(–warm); }
-.btn-sm { padding:7px 14px; font-size:.82rem; }
-.btn-danger { background:var(–red); color:#fff; }
-.btn-green { background:var(–green); color:#fff; }
-.btn-green:hover { background:#1b4332; }
-.btn-blue { background:var(–blue); color:#fff; }
-.quick-fill { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
-.quick-fill button { font-size:.8rem; padding:6px 12px; border-radius:8px; border:1.5px solid var(–border); background:var(–sand); cursor:pointer; font-family:inherit; transition:all .2s; }
-.quick-fill button:hover { background:var(–warm); border-color:var(–accent); }
-.error-msg { background:#fef2f2; color:var(–red); border-radius:8px; padding:10px 14px; font-size:.85rem; margin-bottom:16px; }
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(–ink),var(–ink2))}
+.auth-card{background:#fff;border-radius:20px;padding:48px 40px;width:100%;max-width:420px;box-shadow:var(–shl)}
+.auth-logo{font-family:“DM Serif Display”,serif;font-size:2rem;color:var(–accent);margin-bottom:4px}
+.auth-sub{color:var(–muted);font-size:.9rem;margin-bottom:28px}
+.quick-fill{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
+.quick-fill span{font-size:.75rem;color:var(–muted)}
+.quick-btn{font-size:.78rem;padding:5px 11px;border-radius:8px;border:1.5px solid var(–border);background:var(–sand);cursor:pointer;font-family:inherit;transition:all .15s}
+.quick-btn:hover{background:var(–warm);border-color:var(–accent)}
+.field-group{margin-bottom:18px}
+.field-group label{display:block;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(–muted);margin-bottom:5px}
+.field-group input{width:100%;padding:11px 14px;border:1.5px solid var(–border);border-radius:9px;font-size:.93rem;font-family:inherit;outline:none;background:var(–sand);transition:border .15s}
+.field-group input:focus{border-color:var(–accent);background:#fff}
+.error-box{background:#fef2f2;color:var(–red);border-radius:8px;padding:10px 14px;font-size:.84rem;margin-bottom:14px;display:none}
 
-/* LAYOUT */
-.app { display:flex; min-height:100vh; }
-.sidebar { width:240px; background:var(–ink); color:#fff; display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; z-index:100; }
-.sidebar-logo { padding:28px 24px 20px; border-bottom:1px solid rgba(255,255,255,.08); }
-.sidebar-logo span { font-family:‘DM Serif Display’,serif; font-size:1.5rem; color:var(–accent); display:block; }
-.sidebar-logo small { font-size:.75rem; color:rgba(255,255,255,.4); }
-.prop-switcher { padding:14px 16px; border-bottom:1px solid rgba(255,255,255,.08); }
-.prop-switcher select { width:100%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); border-radius:8px; color:#fff; padding:8px 10px; font-family:inherit; font-size:.83rem; outline:none; cursor:pointer; }
-.prop-switcher select option { background:var(–ink2); }
-.nav-list { flex:1; padding:12px 0; overflow-y:auto; }
-.nav-item { display:flex; align-items:center; gap:10px; padding:11px 24px; font-size:.88rem; color:rgba(255,255,255,.6); cursor:pointer; transition:all .2s; border-left:3px solid transparent; }
-.nav-item:hover { color:#fff; background:rgba(255,255,255,.05); }
-.nav-item.active { color:#fff; background:rgba(193,127,60,.12); border-left-color:var(–accent); }
-.nav-icon { font-size:1.1rem; width:20px; text-align:center; }
-.sidebar-user { padding:16px; border-top:1px solid rgba(255,255,255,.08); }
-.user-chip { display:flex; align-items:center; gap:10px; }
-.user-avatar { width:34px; height:34px; border-radius:50%; background:var(–accent); display:flex; align-items:center; justify-content:center; font-weight:600; font-size:.85rem; }
-.user-info { flex:1; }
-.user-name { font-size:.82rem; font-weight:600; }
-.user-role { font-size:.72rem; color:rgba(255,255,255,.4); }
-.logout-btn { background:none; border:none; color:rgba(255,255,255,.4); cursor:pointer; font-size:1rem; padding:4px; transition:color .2s; }
-.logout-btn:hover { color:#fff; }
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border-radius:9px;font-family:inherit;font-size:.88rem;font-weight:500;cursor:pointer;border:none;transition:all .15s;text-decoration:none}
+.btn-full{width:100%;justify-content:center}
+.btn-primary{background:var(–accent);color:#fff}.btn-primary:hover{background:var(–accent2)}
+.btn-ghost{background:transparent;color:var(–ink);border:1.5px solid var(–border)}.btn-ghost:hover{background:var(–warm)}
+.btn-green{background:var(–green);color:#fff}.btn-green:hover{background:#1b4332}
+.btn-sm{padding:6px 13px;font-size:.8rem}
+.btn-danger{background:var(–red);color:#fff}
 
-.main { margin-left:240px; flex:1; display:flex; flex-direction:column; }
-.topbar { background:#fff; border-bottom:1px solid var(–border); padding:16px 32px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
-.page-title { font-family:‘DM Serif Display’,serif; font-size:1.5rem; color:var(–ink); }
-.topbar-actions { display:flex; gap:10px; align-items:center; }
-.content { padding:32px; flex:1; }
+/* APP LAYOUT */
+#app-screen{display:none;min-height:100vh}
+.sidebar{width:240px;background:var(–ink);color:#fff;position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:100;overflow:hidden}
+.s-logo{padding:26px 22px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+.s-logo-text{font-family:“DM Serif Display”,serif;font-size:1.45rem;color:var(–accent);display:block}
+.s-logo small{font-size:.72rem;color:rgba(255,255,255,.35)}
+.s-prop{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+.s-prop select{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none;cursor:pointer}
+.s-prop select option{background:var(–ink2)}
+.s-nav{flex:1;padding:10px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 22px;font-size:.86rem;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,.05)}
+.nav-item.active{color:#fff;background:rgba(193,127,60,.13);border-left-color:var(–accent)}
+.nav-icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0}
+.s-user{padding:14px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:9px}
+.avatar{width:33px;height:33px;border-radius:50%;background:var(–accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0}
+.u-name{font-size:.8rem;font-weight:600}
+.u-role{font-size:.7rem;color:rgba(255,255,255,.35)}
+.u-flex{flex:1;min-width:0}
+.logout-btn{background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:1rem;padding:4px;flex-shrink:0}
+.logout-btn:hover{color:#fff}
+
+.main{margin-left:240px;display:flex;flex-direction:column;min-height:100vh}
+.topbar{background:#fff;border-bottom:1px solid var(–border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.page-title{font-family:“DM Serif Display”,serif;font-size:1.45rem}
+.topbar-right{display:flex;gap:10px;align-items:center}
+.status-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:var(–warm);color:var(–ink)}
+.content{padding:28px;flex:1}
+
+/* TABS */
+.tab-pane{display:none}
+.tab-pane.active{display:block}
 
 /* CARDS */
-.card { background:var(–card); border-radius:var(–radius); box-shadow:var(–shadow); padding:24px; }
-.card-title { font-family:‘DM Serif Display’,serif; font-size:1.1rem; margin-bottom:16px; color:var(–ink); }
-.stat-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:24px; }
-.stat-card { background:var(–card); border-radius:var(–radius); padding:20px 24px; box-shadow:var(–shadow); border-top:3px solid var(–accent); }
-.stat-label { font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; color:var(–muted); margin-bottom:6px; font-weight:600; }
-.stat-value { font-family:‘DM Serif Display’,serif; font-size:2rem; color:var(–ink); }
-.stat-sub { font-size:.78rem; color:var(–muted); margin-top:4px; }
+.card{background:var(–card);border-radius:var(–r);box-shadow:var(–sh);padding:22px}
+.card-title{font-family:“DM Serif Display”,serif;font-size:1.05rem;margin-bottom:14px;color:var(–ink)}
 
-/* CALENDAR */
-.calendar-wrap { background:var(–card); border-radius:var(–radius); box-shadow:var(–shadow); overflow:hidden; }
-.cal-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(–border); }
-.cal-nav { display:flex; gap:8px; }
-.cal-nav button { background:var(–sand); border:1.5px solid var(–border); border-radius:8px; padding:6px 14px; cursor:pointer; font-family:inherit; transition:all .2s; }
-.cal-nav button:hover { background:var(–warm); border-color:var(–accent); }
-.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
-.cal-day-header { padding:10px; text-align:center; font-size:.75rem; font-weight:700; text-transform:uppercase; color:var(–muted); background:var(–sand); letter-spacing:.05em; }
-.cal-cell { min-height:90px; padding:6px; border:1px solid var(–border); position:relative; background:#fff; }
-.cal-cell.other-month { background:var(–sand); opacity:.6; }
-.cal-cell.today { background:#fffbf5; }
-.cal-cell.today .cal-date { background:var(–accent); color:#fff; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; }
-.cal-date { font-size:.82rem; font-weight:600; margin-bottom:4px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; }
-.cal-event { font-size:.7rem; padding:2px 5px; border-radius:4px; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; font-weight:500; }
-.event-airbnb { background:#ff5a5f22; color:#c2373c; border-left:3px solid #ff5a5f; }
-.event-booking { background:#003b9522; color:#003b95; border-left:3px solid #003b95; }
-.event-lekkeslaap { background:#2d6a4f22; color:#1b4332; border-left:3px solid #2d6a4f; }
-.event-fewo { background:#7c3aed22; color:#5b21b6; border-left:3px solid #7c3aed; }
-.event-manual { background:#c17f3c22; color:#92400e; border-left:3px solid #c17f3c; }
-.event-cleaning { background:#06b6d422; color:#0e7490; border-left:3px solid #06b6d4; }
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+.stat-card{background:var(–card);border-radius:var(–r);padding:18px 22px;box-shadow:var(–sh);border-top:3px solid var(–accent)}
+.stat-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(–muted);margin-bottom:5px;font-weight:700}
+.stat-value{font-family:“DM Serif Display”,serif;font-size:1.9rem;color:var(–ink)}
+.stat-sub{font-size:.76rem;color:var(–muted);margin-top:3px}
+
+/* GRID */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.mb-4{margin-bottom:14px}
+.mb-6{margin-bottom:22px}
 
 /* TABLES */
-.table-wrap { overflow-x:auto; }
-table { width:100%; border-collapse:collapse; }
-thead th { padding:12px 16px; text-align:left; font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(–muted); background:var(–sand); border-bottom:2px solid var(–border); }
-tbody td { padding:13px 16px; border-bottom:1px solid var(–border); font-size:.88rem; }
-tbody tr:hover { background:#fafafa; }
-.badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
-.badge-confirmed { background:#d1fae5; color:#065f46; }
-.badge-pending { background:#fef3c7; color:#92400e; }
-.badge-checkedin { background:#dbeafe; color:#1e40af; }
-.badge-checkedout { background:#f3f4f6; color:#374151; }
-.badge-airbnb { background:#ff5a5f22; color:#c2373c; }
-.badge-booking { background:#003b9522; color:#003b95; }
-.badge-lekkeslaap { background:#d1fae5; color:#065f46; }
-.badge-manual { background:#fef3c7; color:#92400e; }
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+thead th{padding:11px 14px;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(–muted);background:var(–sand);border-bottom:2px solid var(–border)}
+tbody td{padding:12px 14px;border-bottom:1px solid var(–border);font-size:.86rem;vertical-align:middle}
+tbody tr:hover{background:#fafaf8}
 
-/* FORMS */
-.form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; }
-.form-field { display:flex; flex-direction:column; gap:6px; }
-.form-field label { font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(–muted); }
-.form-field input, .form-field select, .form-field textarea { padding:10px 14px; border:1.5px solid var(–border); border-radius:8px; font-family:inherit; font-size:.9rem; outline:none; transition:border .2s; background:var(–sand); }
-.form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color:var(–accent); background:#fff; }
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.badge-confirmed{background:#d1fae5;color:#065f46}
+.badge-pending{background:#fef3c7;color:#92400e}
+.badge-checkedin{background:#dbeafe;color:#1e40af}
+.badge-checkedout{background:#f3f4f6;color:#374151}
+.badge-airbnb{background:#ff5a5f22;color:#c2373c}
+.badge-booking{background:#003b9522;color:#003b95}
+.badge-lekkeslaap{background:#d1fae5;color:#065f46}
+.badge-fewo{background:#7c3aed22;color:#5b21b6}
+.badge-manual{background:#fef3c7;color:#92400e}
+.badge-scheduled{background:#fef3c7;color:#92400e}
+.badge-completed{background:#d1fae5;color:#065f46}
+.badge-open{background:#fee2e2;color:#991b1b}
+.badge-done{background:#d1fae5;color:#065f46}
+
+/* FORM */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.form-field{display:flex;flex-direction:column;gap:5px}
+.form-field label{font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(–muted)}
+.form-field input,.form-field select,.form-field textarea{padding:9px 13px;border:1.5px solid var(–border);border-radius:8px;font-family:inherit;font-size:.88rem;outline:none;transition:border .15s;background:var(–sand)}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(–accent);background:#fff}
+.span-full{grid-column:1/-1}
 
 /* MODAL */
-.modal-overlay { position:fixed; inset:0; background:rgba(26,26,46,.5); z-index:200; display:flex; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px); }
-.modal { background:var(–card); border-radius:16px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:var(–shadow-lg); }
-.modal-header { padding:24px 28px 0; display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-.modal-title { font-family:‘DM Serif Display’,serif; font-size:1.3rem; }
-.modal-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(–muted); padding:4px; }
-.modal-body { padding:0 28px 28px; }
+.modal-overlay{position:fixed;inset:0;background:rgba(26,26,46,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+.modal-overlay.open{display:flex}
+.modal{background:var(–card);border-radius:16px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:var(–shl)}
+.modal-header{padding:22px 26px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.modal-title{font-family:“DM Serif Display”,serif;font-size:1.25rem}
+.modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(–muted);padding:4px;line-height:1}
+.modal-body{padding:0 26px 26px}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
 
 /* TASKS */
-.task-item { display:flex; align-items:flex-start; gap:12px; padding:14px 0; border-bottom:1px solid var(–border); }
-.task-check { width:20px; height:20px; border-radius:6px; border:2px solid var(–border); cursor:pointer; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; transition:all .2s; }
-.task-check.done { background:var(–green); border-color:var(–green); color:#fff; }
-.task-content { flex:1; }
-.task-title { font-size:.9rem; font-weight:500; }
-.task-title.done { text-decoration:line-through; color:var(–muted); }
-.task-meta { font-size:.75rem; color:var(–muted); margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; }
-.priority-high { color:var(–red); font-weight:600; }
-.priority-medium { color:var(–accent); font-weight:600; }
-.priority-low { color:var(–green); font-weight:600; }
+.task-item{display:flex;align-items:flex-start;gap:11px;padding:13px 0;border-bottom:1px solid var(–border)}
+.task-check{width:20px;height:20px;border-radius:6px;border:2px solid var(–border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s;font-size:.75rem;color:#fff;user-select:none}
+.task-check.done{background:var(–green);border-color:var(–green)}
+.task-content{flex:1}
+.task-title{font-size:.88rem;font-weight:500}
+.task-title.done{text-decoration:line-through;color:var(–muted)}
+.task-meta{font-size:.73rem;color:var(–muted);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.pri-high{color:var(–red);font-weight:700}
+.pri-medium{color:var(–accent);font-weight:700}
+.pri-low{color:var(–green);font-weight:700}
 
 /* DOMESTIC */
-.domestic-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
-.domestic-card { background:var(–card); border-radius:var(–radius); padding:20px; box-shadow:var(–shadow); border-top:3px solid var(–green2); }
-.domestic-card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
-.domestic-name { font-weight:600; font-size:.95rem; }
-.domestic-date { font-size:.78rem; color:var(–muted); }
-.domestic-details { font-size:.83rem; color:var(–muted); line-height:1.6; }
-.checklist-item { display:flex; align-items:center; gap:8px; padding:6px 0; font-size:.85rem; }
-.checklist-item input[type=checkbox] { width:16px; height:16px; accent-color:var(–green); cursor:pointer; }
+.dom-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.dom-card{background:var(–card);border-radius:var(–r);padding:18px;box-shadow:var(–sh);border-top:3px solid var(–green2)}
+.dom-card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.dom-name{font-weight:700;font-size:.92rem}
+.dom-prop{font-size:.76rem;color:var(–muted)}
+.dom-detail{font-size:.81rem;color:var(–muted);line-height:1.6;margin-bottom:10px}
+.checklist-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:.83rem;border-bottom:1px solid var(–border)}
+.checklist-row:last-child{border:none}
+.checklist-row input{width:16px;height:16px;accent-color:var(–green);cursor:pointer;flex-shrink:0}
+.done-text{text-decoration:line-through;color:var(–muted)}
 
-/* KNOWLEDGE */
-.kb-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
-.kb-card { background:var(–card); border-radius:var(–radius); padding:20px; box-shadow:var(–shadow); cursor:pointer; transition:all .2s; border:1.5px solid transparent; }
-.kb-card:hover { border-color:var(–accent); transform:translateY(-2px); box-shadow:var(–shadow-lg); }
-.kb-category { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:var(–accent); margin-bottom:6px; }
-.kb-title { font-weight:600; margin-bottom:8px; }
-.kb-preview { font-size:.82rem; color:var(–muted); line-height:1.5; }
+/* KB */
+.kb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.kb-card{background:var(–card);border-radius:var(–r);padding:18px;box-shadow:var(–sh);cursor:pointer;transition:all .15s;border:1.5px solid transparent}
+.kb-card:hover{border-color:var(–accent);transform:translateY(-2px);box-shadow:var(–shl)}
+.kb-cat{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(–accent);margin-bottom:5px}
+.kb-title{font-weight:600;margin-bottom:7px;font-size:.92rem}
+.kb-preview{font-size:.8rem;color:var(–muted);line-height:1.5}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:600;background:var(–warm);color:var(–ink);margin:2px}
+
+/* CALENDAR */
+.cal-wrap{background:var(–card);border-radius:var(–r);box-shadow:var(–sh);overflow:hidden;margin-bottom:20px}
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(–border)}
+.cal-month{font-family:“DM Serif Display”,serif;font-size:1.25rem}
+.cal-nav{display:flex;gap:8px}
+.cal-nav button{background:var(–sand);border:1.5px solid var(–border);border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:.84rem;transition:all .15s}
+.cal-nav button:hover{background:var(–warm);border-color:var(–accent)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(–muted);background:var(–sand);letter-spacing:.05em}
+.cal-cell{min-height:82px;padding:5px;border:1px solid var(–border);background:#fff;position:relative;cursor:pointer}
+.cal-cell:hover{background:#fffbf5}
+.cal-cell.other{background:var(–sand);opacity:.55;cursor:default}
+.cal-cell.today{background:#fffbf5}
+.cal-date{font-size:.8rem;font-weight:600;margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.cal-cell.today .cal-date{background:var(–accent);color:#fff;border-radius:50%}
+.cal-event{font-size:.67rem;padding:2px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600}
+.ev-airbnb{background:#ff5a5f20;color:#c2373c;border-left:2px solid #ff5a5f}
+.ev-booking{background:#003b9520;color:#003b95;border-left:2px solid #003b95}
+.ev-lekkeslaap{background:#d1fae5;color:#065f46;border-left:2px solid #2d6a4f}
+.ev-fewo{background:#7c3aed20;color:#5b21b6;border-left:2px solid #7c3aed}
+.ev-manual{background:#fef3c720;color:#92400e;border-left:2px solid #c17f3c}
+.ev-cleaning{background:#06b6d420;color:#0e7490;border-left:2px solid #06b6d4}
 
 /* REPORTS */
-.report-section { margin-bottom:32px; }
-.chart-placeholder { background:var(–sand); border-radius:var(–radius); padding:20px; min-height:200px; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px; color:var(–muted); }
-.bar-chart { display:flex; align-items:flex-end; gap:8px; height:140px; padding:0 8px; }
-.bar-col { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; }
-.bar { width:100%; border-radius:4px 4px 0 0; background:var(–accent); opacity:.8; min-height:4px; transition:height .5s; }
-.bar-label { font-size:.68rem; color:var(–muted); text-align:center; }
-.bar-val { font-size:.68rem; font-weight:700; color:var(–ink); }
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:130px;padding:0 4px}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
+.bar{width:100%;border-radius:4px 4px 0 0;background:var(–accent);opacity:.8;transition:height .4s;min-height:3px}
+.bar-label{font-size:.65rem;color:var(–muted);text-align:center}
+.bar-val{font-size:.65rem;font-weight:700;color:var(–ink)}
+
+/* MESSAGES */
+.chat-wrap{max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:14px;padding:4px 0}
+.msg-row{display:flex;align-items:flex-end;gap:9px}
+.msg-row.me{flex-direction:row-reverse}
+.msg-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;color:#fff;flex-shrink:0}
+.msg-bubble{max-width:68%;padding:9px 13px;border-radius:14px;font-size:.86rem;line-height:1.5}
+.msg-meta{font-size:.7rem;color:var(–muted);margin-bottom:3px}
+.msg-from{background:var(–sand);color:var(–ink);border-radius:14px 14px 14px 3px}
+.msg-mine{background:var(–accent);color:#fff;border-radius:14px 14px 3px 14px}
+.chat-input-row{display:flex;gap:10px}
+.chat-input-row input{flex:1;padding:10px 14px;border:1.5px solid var(–border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none}
+.chat-input-row input:focus{border-color:var(–accent)}
 
 /* TOAST */
-.toast-wrap { position:fixed; bottom:24px; right:24px; z-index:999; display:flex; flex-direction:column; gap:8px; }
-.toast { background:var(–ink); color:#fff; padding:12px 20px; border-radius:10px; font-size:.85rem; box-shadow:var(–shadow-lg); animation:slideIn .3s ease; max-width:320px; }
-.toast.success { background:var(–green); }
-.toast.error { background:var(–red); }
-@keyframes slideIn { from { transform:translateX(100%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+.toast-wrap{position:fixed;bottom:22px;right:22px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(–ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:.84rem;box-shadow:var(–shl);animation:toastIn .25s ease;max-width:300px}
+.toast.success{background:var(–green)}
+.toast.error{background:var(–red)}
+@keyframes toastIn{from{transform:translateX(100%);opacity:0}to{transform:none;opacity:1}}
 
 /* MISC */
-.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-.tag { display:inline-block; padding:2px 8px; border-radius:6px; font-size:.72rem; font-weight:600; background:var(–warm); color:var(–ink); }
-.empty-state { text-align:center; padding:48px 20px; color:var(–muted); }
-.empty-icon { font-size:3rem; margin-bottom:12px; }
-.flex { display:flex; }
-.gap-2 { gap:8px; }
-.gap-3 { gap:12px; }
-.items-center { align-items:center; }
-.justify-between { justify-content:space-between; }
-.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-.mb-4 { margin-bottom:16px; }
-.mb-6 { margin-bottom:24px; }
-.text-muted { color:var(–muted); font-size:.85rem; }
-.text-sm { font-size:.82rem; }
-.font-bold { font-weight:700; }
-.divider { height:1px; background:var(–border); margin:16px 0; }
-.loading { display:flex; align-items:center; justify-content:center; padding:40px; gap:10px; color:var(–muted); }
-.spinner { width:20px; height:20px; border:2px solid var(–border); border-top-color:var(–accent); border-radius:50%; animation:spin .7s linear infinite; }
-@keyframes spin { to { transform:rotate(360deg); } }
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.text-muted{color:var(–muted);font-size:.84rem}
+.empty-state{text-align:center;padding:44px 20px;color:var(–muted)}
+.empty-icon{font-size:2.8rem;margin-bottom:10px}
+.divider{height:1px;background:var(–border);margin:14px 0}
+.info-banner{background:linear-gradient(135deg,var(–ink),var(–ink2));color:#fff;border-radius:var(–r);padding:18px 22px;margin-bottom:20px}
+.info-banner h3{font-family:“DM Serif Display”,serif;color:var(–accent);margin-bottom:6px}
+.info-banner p{font-size:.83rem;line-height:1.6;opacity:.8}
+.filter-row{display:flex;gap:7px;flex-wrap:wrap}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.78rem}
+.legend-dot{width:11px;height:11px;border-radius:2px;flex-shrink:0}
 
-/* SETUP BANNER */
-.setup-banner { background:linear-gradient(135deg,#1a1a2e,#16213e); color:#fff; border-radius:var(–radius); padding:24px 28px; margin-bottom:24px; }
-.setup-banner h3 { font-family:‘DM Serif Display’,serif; color:var(–accent); margin-bottom:8px; }
-.setup-banner p { font-size:.85rem; line-height:1.6; opacity:.8; }
-.setup-banner code { background:rgba(255,255,255,.1); padding:2px 8px; border-radius:4px; font-size:.8rem; }
-
-/* RESPONSIVE */
-@media(max-width:768px) {
-.sidebar { display:none; }
-.main { margin-left:0; }
-.content { padding:16px; }
-.stat-grid { grid-template-columns:1fr 1fr; }
-.form-grid { grid-template-columns:1fr; }
-.grid-2 { grid-template-columns:1fr; }
+@media(max-width:768px){
+.sidebar{display:none}
+.main{margin-left:0}
+.content{padding:14px}
+.stat-grid{grid-template-columns:1fr 1fr}
+.grid-2{grid-template-columns:1fr}
+.form-grid{grid-template-columns:1fr}
 }
 </style>
 
 </head>
 <body>
-<div id="root"></div>
 
-<script type="text/babel">
-const { useState, useEffect, useCallback, useMemo } = React;
+<!-- AUTH -->
 
-// ── SUPABASE CONFIG ──────────────────────────────────────────────
-// Replace these with your actual Supabase URL and anon key from:
-// Supabase Dashboard → Project Settings → API
-const SUPABASE_URL = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRreXpiemxzaHJ4ZHdldHlrbWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMzkyMTUsImV4cCI6MjA3ODYxNTIxNX0.d4K89mdZVzG4Rv4H44MYnhV4VlW3V1vSgbYZcjcPMQw';
-
-let supabaseClient = null;
-try {
-  if (SUPABASE_URL && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY_HERE') {
-    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }
-} catch(e) { console.warn('Supabase not connected:', e); }
-
-// ── ICAL FEED URLS (your real URLs from README) ──────────────────
-const ICAL_FEEDS = {
-  speranta: [
-    { platform:'airbnb', url:'https://www.airbnb.com/calendar/ical/1237076374831130516.ics?s=01582d0497e99114aa6013156146cea4&locale=en-GB' },
-    { platform:'booking', url:'https://ical.booking.com/v1/export?t=8123e217-45b4-403d-8fa0-9dcc65c26800' },
-    { platform:'lekkeslaap', url:'https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=bXEzOHNicTJQT3Nkd1dHb1ZSaXhRUT09' },
-    { platform:'fewo', url:'http://www.fewo-direkt.de/icalendar/12b719114ecd42adab4e9ade2d2458e6.ics?nonTentative' },
-  ],
-  tvhouse: [
-    { platform:'airbnb', url:'https://www.airbnb.com/calendar/ical/1402174824640448492.ics?s=373c5a71c137230a72f928e88728dcf3&locale=en-GB' },
-    { platform:'booking', url:'https://ical.booking.com/v1/export?t=ea29c451-4d0b-4fa4-b7a8-e879a33a8940' },
-    { platform:'lekkeslaap', url:'https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=QzZ2aFlFVHhxYnoxdGRVL3ZwelRGUT09' },
-  ]
-};
-
-const PROPERTIES = [
-  { id:'all', name:'All Properties', short:'All' },
-  { id:'speranta', name:'Speranta Flat', short:'Speranta', address:'35 Athens Road, Blouberg' },
-  { id:'tvhouse', name:'TV House', short:'TV House', address:'110 Athens Road, Tableview' },
-];
-
-// ── USERS ────────────────────────────────────────────────────────
-const DEMO_USERS = [
-  { id:'1', email:'sn_apt_management@outlook.com', password:'Sevilla2015!', name:'Nicole', role:'admin', initials:'N' },
-  { id:'2', email:'silja@hostease.co.za', password:'Admin2024!', name:'Silja', role:'admin', initials:'S' },
-  { id:'3', email:'vanwyk.nina@gmail.com', password:'HelloWorld1!', name:'Nina Williams', role:'host', initials:'NW' },
-];
-
-// ── NORMALISE: maps real DB schema → consistent app shape ────────
-// Real DB columns: check_in_date, check_out_date, total_amount,
-//   guest_first_name, guest_last_name, property_name
-// App uses:        check_in, check_out, revenue, guest_name, property_id
-function normaliseBooking(b) {
-  const pid = b.property_id ||
-    (b.property_name?.toLowerCase().includes('speranta') ? 'speranta' :
-     b.property_name?.toLowerCase().includes('tv') ? 'tvhouse' : 'speranta');
-  return {
-    ...b,
-    guest_name: b.guest_name ||
-      [b.guest_first_name, b.guest_last_name].filter(Boolean).join(' ') ||
-      'Unknown Guest',
-    check_in:  (b.check_in_date  || b.check_in  || '').toString().slice(0,10),
-    check_out: (b.check_out_date || b.check_out || '').toString().slice(0,10),
-    revenue:   b.revenue ?? b.total_amount ?? 0,
-    property_id: pid,
-  };
-}
-
-// ── SAMPLE DATA (shown when DB is empty or offline) ───────────────
-const SAMPLE_BOOKINGS = [
-  { id:'b1', property_id:'speranta', property_name:'Speranta Flat', guest_name:'Jan & Marie Müller', platform:'airbnb', check_in:'2026-04-18', check_out:'2026-04-23', nights:5, status:'confirmed', revenue:4200, currency:'ZAR', notes:'German guests, loves Cape Town' },
-  { id:'b2', property_id:'tvhouse', property_name:'TV House', guest_name:'Sarah Johnson', platform:'booking', check_in:'2026-04-17', check_out:'2026-04-19', nights:2, status:'checkedin', revenue:1600, currency:'ZAR', notes:'Late check-in requested' },
-  { id:'b3', property_id:'speranta', property_name:'Speranta Flat', guest_name:'Pierre & Elise Dubois', platform:'lekkeslaap', check_in:'2026-04-25', check_out:'2026-04-28', nights:3, status:'confirmed', revenue:2400, currency:'ZAR', notes:'' },
-  { id:'b4', property_id:'tvhouse', property_name:'TV House', guest_name:'Dirk van der Berg', platform:'manual', check_in:'2026-04-20', check_out:'2026-04-22', nights:2, status:'pending', revenue:1400, currency:'ZAR', notes:'Repeat guest' },
-  { id:'b5', property_id:'speranta', property_name:'Speranta Flat', guest_name:'Annemarie Schreiber', platform:'airbnb', check_in:'2026-05-01', check_out:'2026-05-07', nights:6, status:'confirmed', revenue:5100, currency:'ZAR', notes:'' },
-  { id:'b6', property_id:'tvhouse', property_name:'TV House', guest_name:'Michael & Lisa Brown', platform:'booking', check_in:'2026-05-10', check_out:'2026-05-15', nights:5, status:'confirmed', revenue:3500, currency:'ZAR', notes:'Wedding anniversary' },
-].map(normaliseBooking);
-
-// Normalise real tasks DB row → app shape
-// Real DB: title, description, due_at, task_date, assigned_user_id, type
-// App uses: title, notes, due, assigned, property_id (text)
-function normaliseTask(t) {
-  return {
-    ...t,
-    notes:    t.notes || t.description || '',
-    due:      (t.due || t.due_at || t.task_date || '').toString().slice(0,10),
-    assigned: t.assigned || t.assigned_user_id || 'Unassigned',
-    property_id: t.property_id || 'all',
-    priority: t.priority || 'medium',
-    status:   t.status || 'open',
-  };
-}
-
-// Normalise real domestics DB row → app shape
-function normaliseDomestic(d) {
-  return {
-    ...d,
-    checklist: d.checklist || {kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},
-    property_id: d.property_id || 'speranta',
-  };
-}
-
-const SAMPLE_TASKS = [
-  { id:'t1', title:'Fix leaking tap in Speranta bathroom', property_id:'speranta', priority:'high', status:'open', assigned:'Nina Williams', due:'2026-04-18', notes:'Under the sink, slow drip' },
-  { id:'t2', title:'Replace TV remote batteries in TV House', property_id:'tvhouse', priority:'low', status:'done', assigned:'Nina Williams', due:'2026-04-16', notes:'' },
-  { id:'t3', title:'Order new guest welcome packs (both)', property_id:'all', priority:'medium', status:'open', assigned:'Nicole', due:'2026-04-20', notes:'Order from Cape Town Gift Co.' },
-  { id:'t4', title:'Service air conditioner Speranta', property_id:'speranta', priority:'medium', status:'open', assigned:'Nicole', due:'2026-04-25', notes:'Last serviced Jan 2025' },
-  { id:'t5', title:'Update Airbnb photos TV House', property_id:'tvhouse', priority:'low', status:'open', assigned:'Silja', due:'2026-04-30', notes:'New bedding installed' },
-].map(normaliseTask);
-
-const SAMPLE_DOMESTICS = [
-  { id:'d1', cleaner:'Precious Dlamini', property_id:'speranta', date:'2026-04-17', time:'10:00', type:'turnover', booking_ref:'b1', status:'scheduled', notes:'Full linen change', checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false} },
-  { id:'d2', cleaner:'Thandi Mokoena', property_id:'tvhouse', date:'2026-04-17', time:'11:00', type:'turnover', booking_ref:'b2', status:'completed', notes:'', checklist:{kitchen:true,bathrooms:true,bedrooms:true,living:true,laundry:true} },
-  { id:'d3', cleaner:'Precious Dlamini', property_id:'speranta', date:'2026-04-23', time:'10:00', type:'turnover', booking_ref:'b1', status:'scheduled', notes:'Post checkout clean', checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false} },
-  { id:'d4', cleaner:'Thandi Mokoena', property_id:'tvhouse', date:'2026-04-19', time:'09:00', type:'deep', booking_ref:'', status:'scheduled', notes:'Monthly deep clean', checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false} },
-].map(normaliseDomestic);
-
-const SAMPLE_KB = [
-  { id:'k1', category:'Access', title:'Door Codes & Keys', content:'Speranta: Main door code #4521. Key box code 1234. Spare keys in management office drawer 2.\n\nTV House: Main door code #7893. Key box at front gate, code 5678.', tags:['access','security'] },
-  { id:'k2', category:'WiFi', title:'WiFi Passwords', content:'Speranta: Network "Speranta_Guest" | Password: BloudBerg2024!\n\nTV House: Network "TVHouse_Guest" | Password: TableView2024!', tags:['wifi','tech'] },
-  { id:'k3', category:'Procedures', title:'Check-in Procedure', content:'1. Send welcome message 24h before arrival\n2. Confirm arrival time\n3. Ensure property is clean and ready\n4. Leave welcome note and info folder\n5. Do a quick walkthrough video call if needed', tags:['checkin','procedure'] },
-  { id:'k4', category:'Maintenance', title:'Emergency Contacts', content:'Plumber: Johan Botha - 082 555 1234\nElectrician: Cape Power - 021 555 9876\nLocksmith: Key King - 083 444 2222\nProperty Manager Emergency: Nicole - 082 XXX XXXX', tags:['emergency','contacts'] },
-  { id:'k5', category:'Guest Info', title:'Area Guide - Blouberg/Tableview', content:'Beach: 5 min walk\nSupermarket: Checkers Tableview (3km)\nRestaurants: Ocean Basket, Spur nearby\nActivities: Kitesurfing, whale watching (Jul-Nov), Table Mountain 30 min drive\nBus: MyCiti bus stop 200m away', tags:['area','guest'] },
-  { id:'k6', category:'Procedures', title:'Check-out Procedure', content:'1. Send reminder evening before\n2. Checkout time is 10:00\n3. Nina to inspect within 2 hours\n4. Report any damage via task system\n5. Schedule cleaning immediately after checkout', tags:['checkout','procedure'] },
-];
-
-// ── TOAST SYSTEM ─────────────────────────────────────────────────
-let toastFn = null;
-function Toast() {
-  const [toasts, setToasts] = useState([]);
-  useEffect(() => {
-    toastFn = (msg, type='info') => {
-      const id = Date.now();
-      setToasts(t => [...t, {id,msg,type}]);
-      setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500);
-    };
-  }, []);
-  return (
-    <div className="toast-wrap">
-      {toasts.map(t => <div key={t.id} className={`toast ${t.type}`}>{t.msg}</div>)}
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">🏠 HostEase Pro</div>
+    <div class="auth-sub">Property Management Platform</div>
+    <div class="quick-fill">
+      <span>Quick fill:</span>
+      <button class="quick-btn" onclick="fillUser(0)">Nicole (Admin)</button>
+      <button class="quick-btn" onclick="fillUser(1)">Silja (Admin)</button>
+      <button class="quick-btn" onclick="fillUser(2)">Nina (Host)</button>
     </div>
-  );
-}
-const toast = (msg, type) => toastFn && toastFn(msg, type);
+    <div class="error-box" id="auth-error"></div>
+    <div class="field-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="your@email.com"/>
+    </div>
+    <div class="field-group">
+      <label>Password</label>
+      <input type="password" id="login-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
+  </div>
+</div>
 
-// ── AUTH SCREEN ──────────────────────────────────────────────────
-function AuthScreen({ onLogin }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+<!-- APP -->
 
-  const fill = (u) => { setEmail(u.email); setPassword(u.password); };
+<div id="app-screen">
+  <div class="sidebar">
+    <div class="s-logo">
+      <span class="s-logo-text">HostEase Pro</span>
+      <small>Property Management</small>
+    </div>
+    <div class="s-prop">
+      <select id="prop-select" onchange="switchProperty(this.value)">
+        <option value="all">All Properties</option>
+        <option value="speranta">Speranta Flat</option>
+        <option value="tvhouse">TV House</option>
+      </select>
+    </div>
+    <nav class="s-nav" id="sidebar-nav"></nav>
+    <div class="s-user">
+      <div class="avatar" id="user-avatar"></div>
+      <div class="u-flex">
+        <div class="u-name" id="user-name"></div>
+        <div class="u-role" id="user-role"></div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()" title="Sign out">⏏</button>
+    </div>
+  </div>
 
-  const handleLogin = async () => {
-    setError(''); setLoading(true);
-    await new Promise(r => setTimeout(r, 400));
-    const user = DEMO_USERS.find(u => u.email === email && u.password === password);
-    if (user) { onLogin(user); }
-    else { setError('Invalid email or password. Try the quick-fill buttons below.'); }
-    setLoading(false);
-  };
-
-  return (
-    <div className="auth-wrap">
-      <div className="auth-card">
-        <div className="auth-logo">🏠 HostEase Pro</div>
-        <div className="auth-sub">Property Management Platform</div>
-        <div className="quick-fill">
-          <span style={{fontSize:'.75rem',color:'var(--muted)',alignSelf:'center'}}>Quick fill:</span>
-          <button onClick={() => fill(DEMO_USERS[0])}>Admin (Nicole)</button>
-          <button onClick={() => fill(DEMO_USERS[1])}>Admin (Silja)</button>
-          <button onClick={() => fill(DEMO_USERS[2])}>Nina (Host)</button>
-        </div>
-        {error && <div className="error-msg">{error}</div>}
-        <div className="field-group">
-          <label>Email</label>
-          <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="your@email.com" onKeyDown={e=>e.key==='Enter'&&handleLogin()} />
-        </div>
-        <div className="field-group">
-          <label>Password</label>
-          <input type="password" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()} />
-        </div>
-        <button className="btn btn-primary" onClick={handleLogin} disabled={loading}>
-          {loading ? <><span className="spinner"/><span>Signing in…</span></> : 'Sign In'}
-        </button>
-        <div style={{marginTop:'20px',padding:'14px',background:'var(--sand)',borderRadius:'8px',fontSize:'.78rem',color:'var(--muted)'}}>
-          <strong style={{color:'var(--ink)'}}>⚡ Setup required:</strong> Replace <code>YOUR_SUPABASE_ANON_KEY_HERE</code> in the code with your Supabase anon key to enable live database. Demo mode uses sample data.
-        </div>
+  <div class="main">
+    <div class="topbar">
+      <div class="page-title" id="page-title">Dashboard</div>
+      <div class="topbar-right">
+        <span class="status-tag" id="db-status">🟡 Demo Mode</span>
+        <span class="status-tag" id="prop-tag" style="display:none"></span>
       </div>
     </div>
-  );
-}
-
-// ── DASHBOARD ────────────────────────────────────────────────────
-function Dashboard({ bookings, property, user }) {
-  const filtered = property === 'all' ? bookings : bookings.filter(b => b.property_id === property);
-  const today = new Date().toISOString().slice(0,10);
-  const todayCheckIns = filtered.filter(b => b.check_in === today);
-  const todayCheckOuts = filtered.filter(b => b.check_out === today);
-  const activeNow = filtered.filter(b => b.check_in <= today && b.check_out > today);
-  const monthRevenue = filtered.filter(b => b.check_in.startsWith('2026-04')).reduce((s,b) => s + (b.revenue||0), 0);
-
-  const upcoming = filtered.filter(b => b.check_in > today).sort((a,b) => a.check_in.localeCompare(b.check_in)).slice(0,5);
-
-  return (
-    <div>
-      <div className="stat-grid">
-        <div className="stat-card">
-          <div className="stat-label">Today's Check-ins</div>
-          <div className="stat-value">{todayCheckIns.length}</div>
-          <div className="stat-sub">{todayCheckIns.map(b=>b.guest_name).join(', ') || 'None today'}</div>
-        </div>
-        <div className="stat-card" style={{borderTopColor:'var(--blue)'}}>
-          <div className="stat-label">Today's Check-outs</div>
-          <div className="stat-value">{todayCheckOuts.length}</div>
-          <div className="stat-sub">{todayCheckOuts.map(b=>b.guest_name).join(', ') || 'None today'}</div>
-        </div>
-        <div className="stat-card" style={{borderTopColor:'var(--green2)'}}>
-          <div className="stat-label">Currently Occupied</div>
-          <div className="stat-value">{activeNow.length}</div>
-          <div className="stat-sub">of {property==='all'?2:1} properties</div>
-        </div>
-        {user.role === 'admin' && (
-          <div className="stat-card" style={{borderTopColor:'#7c3aed'}}>
-            <div className="stat-label">April Revenue</div>
-            <div className="stat-value">R{monthRevenue.toLocaleString()}</div>
-            <div className="stat-sub">across all platforms</div>
+    <div class="content">
+      <!-- DASHBOARD -->
+      <div class="tab-pane active" id="tab-dashboard">
+        <div class="stat-grid" id="dash-stats"></div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-title">📅 Upcoming Arrivals</div>
+            <div id="dash-upcoming"></div>
           </div>
-        )}
-      </div>
-
-      <div className="grid-2">
-        <div className="card">
-          <div className="card-title">📅 Upcoming Arrivals</div>
-          {upcoming.length === 0 ? <div className="text-muted">No upcoming bookings</div> : upcoming.map(b => (
-            <div key={b.id} style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
-              <div>
-                <div style={{fontWeight:600,fontSize:'.9rem'}}>{b.guest_name}</div>
-                <div style={{fontSize:'.78rem',color:'var(--muted)'}}>{PROPERTIES.find(p=>p.id===b.property_id)?.short} · {b.nights} nights</div>
-              </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontSize:'.82rem',fontWeight:600}}>{b.check_in}</div>
-                <span className={`badge badge-${b.platform}`}>{b.platform}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="card">
-          <div className="card-title">🏠 Property Status</div>
-          {PROPERTIES.filter(p=>p.id!=='all').map(prop => {
-            const propBookings = bookings.filter(b => b.property_id === prop.id);
-            const active = propBookings.find(b => b.check_in <= today && b.check_out > today);
-            return (
-              <div key={prop.id} style={{padding:'14px 0',borderBottom:'1px solid var(--border)'}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'6px'}}>
-                  <span style={{fontWeight:600}}>{prop.name}</span>
-                  <span className={`badge ${active ? 'badge-checkedin' : 'badge-checkedout'}`}>{active ? 'Occupied' : 'Available'}</span>
-                </div>
-                <div style={{fontSize:'.78rem',color:'var(--muted)'}}>{prop.address}</div>
-                {active && <div style={{fontSize:'.78rem',marginTop:'4px',color:'var(--ink)'}}>Guest: {active.guest_name} · Out {active.check_out}</div>}
-              </div>
-            );
-          })}
-          <div style={{marginTop:'16px',padding:'12px',background:'var(--sand)',borderRadius:'8px',fontSize:'.82rem',color:'var(--muted)'}}>
-            💡 iCal sync configured. Run the Supabase Edge Function to import live bookings.
+          <div class="card">
+            <div class="card-title">🏠 Property Status</div>
+            <div id="dash-prop-status"></div>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ── CALENDAR ─────────────────────────────────────────────────────
-function CalendarView({ bookings, domestics, property }) {
-  const [current, setCurrent] = useState(new Date(2026,3,1));
-  const [selected, setSelected] = useState(null);
-
-  const year = current.getFullYear(), month = current.getMonth();
-  const firstDay = new Date(year, month, 1).getDay();
-  const daysInMonth = new Date(year, month+1, 0).getDate();
-  const today = new Date().toISOString().slice(0,10);
-
-  const filteredBookings = property === 'all' ? bookings : bookings.filter(b => b.property_id === property);
-  const filteredDomestics = property === 'all' ? domestics : domestics.filter(d => d.property_id === property);
-
-  const getEventsForDay = (day) => {
-    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const events = [];
-    filteredBookings.forEach(b => {
-      if (b.check_in <= dateStr && b.check_out > dateStr) {
-        events.push({...b, type:'booking', label: b.check_in === dateStr ? `🛬 ${b.guest_name}` : b.check_out === new Date(new Date(dateStr).getTime()+86400000).toISOString().slice(0,10) ? `🛫 ${b.guest_name}` : b.guest_name.split(' ')[0]});
-      }
-    });
-    filteredDomestics.forEach(d => {
-      if (d.date === dateStr) events.push({...d, type:'cleaning', label:`🧹 ${d.cleaner.split(' ')[0]}`});
-    });
-    return events;
-  };
-
-  const cells = [];
-  for (let i=0; i<firstDay; i++) cells.push({day:null});
-  for (let d=1; d<=daysInMonth; d++) cells.push({day:d});
-  while (cells.length % 7 !== 0) cells.push({day:null});
-
-  const monthName = current.toLocaleDateString('en-ZA',{month:'long',year:'numeric'});
-
-  return (
-    <div>
-      <div className="calendar-wrap mb-6">
-        <div className="cal-header">
-          <h2 style={{fontFamily:'DM Serif Display,serif',fontSize:'1.3rem'}}>{monthName}</h2>
-          <div className="cal-nav">
-            <button onClick={()=>setCurrent(new Date(year,month-1,1))}>← Prev</button>
-            <button onClick={()=>setCurrent(new Date())}>Today</button>
-            <button onClick={()=>setCurrent(new Date(year,month+1,1))}>Next →</button>
-          </div>
-        </div>
-        <div className="cal-grid">
-          {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=><div key={d} className="cal-day-header">{d}</div>)}
-          {cells.map((cell,i) => {
-            const events = cell.day ? getEventsForDay(cell.day) : [];
-            const dateStr = cell.day ? `${year}-${String(month+1).padStart(2,'0')}-${String(cell.day).padStart(2,'0')}` : '';
-            return (
-              <div key={i} className={`cal-cell ${!cell.day?'other-month':''} ${dateStr===today?'today':''}`} onClick={()=>cell.day&&setSelected({day:cell.day,events})}>
-                {cell.day && <div className="cal-date">{cell.day}</div>}
-                {events.slice(0,3).map((ev,j) => (
-                  <div key={j} className={`cal-event event-${ev.type==='cleaning'?'cleaning':ev.platform}`}>{ev.label}</div>
-                ))}
-                {events.length>3 && <div style={{fontSize:'.65rem',color:'var(--muted)',paddingLeft:'4px'}}>+{events.length-3} more</div>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-title">Legend</div>
-        <div style={{display:'flex',gap:'16px',flexWrap:'wrap'}}>
-          {[['airbnb','Airbnb','#ff5a5f'],['booking','Booking.com','#003b95'],['lekkeslaap','LekkeSlaap','#2d6a4f'],['fewo','Fewo','#7c3aed'],['manual','Manual','#c17f3c'],['cleaning','Cleaning','#06b6d4']].map(([k,n,c])=>(
-            <div key={k} style={{display:'flex',alignItems:'center',gap:'6px',fontSize:'.8rem'}}>
-              <div style={{width:12,height:12,borderRadius:2,background:c,opacity:.7}}/>
-              <span>{n}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {selected && (
-        <div className="modal-overlay" onClick={()=>setSelected(null)}>
-          <div className="modal" onClick={e=>e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">April {selected.day}, 2026</div>
-              <button className="modal-close" onClick={()=>setSelected(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              {selected.events.length===0 ? <div className="text-muted">No events on this day</div> : selected.events.map((ev,i)=>(
-                <div key={i} style={{padding:'12px',background:'var(--sand)',borderRadius:'8px',marginBottom:'8px'}}>
-                  <div style={{fontWeight:600,marginBottom:'4px'}}>{ev.type==='cleaning'?'🧹 Cleaning':ev.type==='booking'?'📋 Booking':''}</div>
-                  {ev.type==='booking' && <>
-                    <div style={{fontSize:'.88rem'}}>Guest: {ev.guest_name}</div>
-                    <div style={{fontSize:'.88rem'}}>Check-in: {ev.check_in} · Check-out: {ev.check_out}</div>
-                    <div style={{fontSize:'.88rem'}}>Property: {PROPERTIES.find(p=>p.id===ev.property_id)?.name}</div>
-                    <span className={`badge badge-${ev.platform}`} style={{marginTop:'6px'}}>{ev.platform}</span>
-                  </>}
-                  {ev.type==='cleaning' && <>
-                    <div style={{fontSize:'.88rem'}}>Cleaner: {ev.cleaner}</div>
-                    <div style={{fontSize:'.88rem'}}>Time: {ev.time} · Type: {ev.type}</div>
-                    <div style={{fontSize:'.88rem'}}>Property: {PROPERTIES.find(p=>p.id===ev.property_id)?.name}</div>
-                    <span className={`badge ${ev.status==='completed'?'badge-confirmed':'badge-pending'}`} style={{marginTop:'6px'}}>{ev.status}</span>
-                  </>}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── BOOKINGS ─────────────────────────────────────────────────────
-function BookingsView({ bookings, setBookings, property, user }) {
-  const [showModal, setShowModal] = useState(false);
-  const [filter, setFilter] = useState('all');
-  const [form, setForm] = useState({ guest_name:'', platform:'manual', property_id:property!=='all'?property:'speranta', check_in:'', check_out:'', revenue:'', notes:'', status:'confirmed' });
-
-  const filtered = (property==='all'?bookings:bookings.filter(b=>b.property_id===property))
-    .filter(b => filter==='all' || b.status===filter)
-    .sort((a,b) => b.check_in.localeCompare(a.check_in));
-
-  const nights = (a,b) => { if(!a||!b) return 0; return Math.round((new Date(b)-new Date(a))/86400000); };
-
-  const addBooking = async () => {
-    if (!form.guest_name || !form.check_in || !form.check_out) { toast('Please fill required fields','error'); return; }
-    const n = nights(form.check_in, form.check_out);
-    // Map app fields → real DB column names
-    const dbRow = {
-      guest_name:      form.guest_name,
-      guest_first_name: form.guest_name.split(' ')[0],
-      guest_last_name:  form.guest_name.split(' ').slice(1).join(' ') || '',
-      platform:        form.platform,
-      property_name:   form.property_id === 'speranta' ? 'Speranta Flat' : 'TV House',
-      check_in_date:   form.check_in,
-      check_out_date:  form.check_out,
-      nights:          n,
-      status:          form.status,
-      total_amount:    Number(form.revenue) || 0,
-      revenue:         Number(form.revenue) || 0,
-      currency:        'ZAR',
-      notes:           form.notes,
-      is_active:       true,
-    };
-    if (supabaseClient) {
-      const { data, error } = await supabaseClient.from('bookings').insert([dbRow]).select().single();
-      if (error) { toast('Save error: ' + error.message, 'error'); return; }
-      setBookings(prev => [normaliseBooking({...data, property_id: form.property_id}), ...prev]);
-    } else {
-      const nb = normaliseBooking({...dbRow, id:'b'+Date.now(), property_id: form.property_id});
-      setBookings(prev => [nb, ...prev]);
-    }
-    toast('Booking added successfully','success');
-    setShowModal(false);
-    setForm({ guest_name:'', platform:'manual', property_id:'speranta', check_in:'', check_out:'', revenue:'', notes:'', status:'confirmed' });
-  };
-
-  return (
-    <div>
-      <div className="setup-banner">
-        <h3>📡 iCal Sync Status</h3>
-        <p>Your booking feeds are configured. To import live bookings, call your Supabase Edge Function:<br/>
-        <code>GET https://dkyzbzlshrxdwetykmdo.functions.supabase.co/import_ical</code><br/>
-        Once connected, bookings from Airbnb, Booking.com, LekkeSlaap & Fewo will appear automatically here and in the database.</p>
-      </div>
-
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'20px',flexWrap:'wrap',gap:'10px'}}>
-        <div style={{display:'flex',gap:'8px'}}>
-          {['all','confirmed','pending','checkedin','checkedout'].map(f=>(
-            <button key={f} className={`btn btn-sm ${filter===f?'btn-primary':'btn-ghost'}`} onClick={()=>setFilter(f)}>{f.charAt(0).toUpperCase()+f.slice(1)}</button>
-          ))}
-        </div>
-        <button className="btn btn-primary btn-sm" onClick={()=>setShowModal(true)}>+ Add Booking</button>
-      </div>
-
-      <div className="card">
-        <div className="table-wrap">
-          <table>
-            <thead><tr>
-              <th>Guest</th><th>Property</th><th>Platform</th><th>Check-in</th><th>Check-out</th><th>Nights</th>
-              {user.role==='admin'&&<th>Revenue</th>}
-              <th>Status</th>
-            </tr></thead>
-            <tbody>
-              {filtered.map(b=>(
-                <tr key={b.id}>
-                  <td><div style={{fontWeight:600}}>{b.guest_name}</div>{b.notes&&<div style={{fontSize:'.75rem',color:'var(--muted)'}}>{b.notes}</div>}</td>
-                  <td>{PROPERTIES.find(p=>p.id===b.property_id)?.short}</td>
-                  <td><span className={`badge badge-${b.platform}`}>{b.platform}</span></td>
-                  <td>{b.check_in}</td>
-                  <td>{b.check_out}</td>
-                  <td>{b.nights}</td>
-                  {user.role==='admin'&&<td style={{fontWeight:600}}>R{b.revenue?.toLocaleString()}</td>}
-                  <td><span className={`badge badge-${b.status}`}>{b.status}</span></td>
-                </tr>
-              ))}
-              {filtered.length===0&&<tr><td colSpan="8"><div className="empty-state"><div className="empty-icon">📭</div>No bookings found</div></td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {showModal && (
-        <div className="modal-overlay" onClick={()=>setShowModal(false)}>
-          <div className="modal" onClick={e=>e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">New Booking</div>
-              <button className="modal-close" onClick={()=>setShowModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid mb-4">
-                <div className="form-field" style={{gridColumn:'1/-1'}}>
-                  <label>Guest Name *</label>
-                  <input value={form.guest_name} onChange={e=>setForm({...form,guest_name:e.target.value})} placeholder="Full name"/>
-                </div>
-                <div className="form-field">
-                  <label>Property</label>
-                  <select value={form.property_id} onChange={e=>setForm({...form,property_id:e.target.value})}>
-                    <option value="speranta">Speranta Flat</option>
-                    <option value="tvhouse">TV House</option>
-                  </select>
-                </div>
-                <div className="form-field">
-                  <label>Platform</label>
-                  <select value={form.platform} onChange={e=>setForm({...form,platform:e.target.value})}>
-                    {['airbnb','booking','lekkeslaap','fewo','manual'].map(p=><option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-                <div className="form-field">
-                  <label>Check-in *</label>
-                  <input type="date" value={form.check_in} onChange={e=>setForm({...form,check_in:e.target.value})}/>
-                </div>
-                <div className="form-field">
-                  <label>Check-out *</label>
-                  <input type="date" value={form.check_out} onChange={e=>setForm({...form,check_out:e.target.value})}/>
-                </div>
-                <div className="form-field">
-                  <label>Revenue (ZAR)</label>
-                  <input type="number" value={form.revenue} onChange={e=>setForm({...form,revenue:e.target.value})} placeholder="0"/>
-                </div>
-                <div className="form-field">
-                  <label>Status</label>
-                  <select value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>
-                    {['pending','confirmed','checkedin','checkedout'].map(s=><option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="form-field" style={{gridColumn:'1/-1'}}>
-                  <label>Notes</label>
-                  <input value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Optional notes"/>
-                </div>
-              </div>
-              <div style={{display:'flex',gap:'10px',justifyContent:'flex-end'}}>
-                <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>Cancel</button>
-                <button className="btn btn-primary" onClick={addBooking}>Add Booking</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── DOMESTIC ─────────────────────────────────────────────────────
-function DomesticView({ domestics, setDomestics, bookings, property }) {
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ cleaner:'Precious Dlamini', property_id:property!=='all'?property:'speranta', date:'', time:'10:00', type:'turnover', notes:'' });
-
-  const filtered = (property==='all'?domestics:domestics.filter(d=>d.property_id===property)).sort((a,b)=>a.date.localeCompare(b.date));
-
-  const toggleCheck = (id, key) => {
-    setDomestics(prev => prev.map(d => d.id===id ? {...d, checklist:{...d.checklist,[key]:!d.checklist[key]}} : d));
-  };
-
-  const markDone = async (id) => {
-    const allChecked = {kitchen:true,bathrooms:true,bedrooms:true,living:true,laundry:true};
-    if (supabaseClient) {
-      await supabaseClient.from('domestics').update({status:'completed', checklist:allChecked}).eq('id', id);
-    }
-    setDomestics(prev => prev.map(d => d.id===id ? {...d, status:'completed', checklist:allChecked} : d));
-    toast('Cleaning marked as complete','success');
-  };
-
-  const addSession = async () => {
-    if (!form.date) { toast('Please set a date','error'); return; }
-    const newSession = {
-      cleaner:     form.cleaner,
-      property_id: form.property_id,
-      date:        form.date,
-      time:        form.time,
-      type:        form.type,
-      status:      'scheduled',
-      notes:       form.notes,
-      booking_ref: '',
-      checklist:   {kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},
-    };
-    if (supabaseClient) {
-      const { data, error } = await supabaseClient.from('domestics').insert([newSession]).select().single();
-      if (error) { toast('Save error: ' + error.message, 'error'); return; }
-      setDomestics(prev => [normaliseDomestic(data), ...prev]);
-    } else {
-      setDomestics(prev => [normaliseDomestic({...newSession, id:'d'+Date.now()}), ...prev]);
-    }
-    toast('Cleaning session scheduled','success');
-    setShowModal(false);
-  };
-
-  return (
-    <div>
-      <div className="section-header">
-        <div>
-          <h2 style={{fontFamily:'DM Serif Display,serif',fontSize:'1.3rem',marginBottom:'4px'}}>Domestic Schedule</h2>
-          <div className="text-muted">Manage cleaning sessions across your properties</div>
-        </div>
-        <button className="btn btn-green" onClick={()=>setShowModal(true)}>+ Schedule Clean</button>
-      </div>
-
-      <div className="domestic-grid">
-        {filtered.map(d => {
-          const prop = PROPERTIES.find(p=>p.id===d.property_id);
-          const checkItems = Object.entries(d.checklist);
-          const done = checkItems.filter(([,v])=>v).length;
-          return (
-            <div key={d.id} className="domestic-card" style={{borderTopColor:d.status==='completed'?'var(--green2)':'var(--accent)'}}>
-              <div className="domestic-card-header">
-                <div>
-                  <div className="domestic-name">{d.cleaner}</div>
-                  <div className="domestic-date">{prop?.name} · {d.type}</div>
-                </div>
-                <span className={`badge ${d.status==='completed'?'badge-confirmed':'badge-pending'}`}>{d.status}</span>
-              </div>
-              <div className="domestic-details" style={{marginBottom:'10px'}}>
-                📅 {d.date} at {d.time}
-                {d.notes && <div style={{marginTop:'4px',fontStyle:'italic'}}>"{d.notes}"</div>}
-              </div>
-              <div style={{fontSize:'.75rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'.05em',color:'var(--muted)',marginBottom:'6px'}}>
-                Checklist ({done}/{checkItems.length})
-              </div>
-              {checkItems.map(([key,val])=>(
-                <div key={key} className="checklist-item">
-                  <input type="checkbox" checked={val} onChange={()=>toggleCheck(d.id,key)} disabled={d.status==='completed'}/>
-                  <span style={{textDecoration:val?'line-through':'none',color:val?'var(--muted)':'inherit'}}>{key.charAt(0).toUpperCase()+key.slice(1)}</span>
-                </div>
-              ))}
-              {d.status!=='completed' && (
-                <button className="btn btn-green btn-sm" style={{width:'100%',marginTop:'12px'}} onClick={()=>markDone(d.id)}>✓ Mark Complete</button>
-              )}
-            </div>
-          );
-        })}
-        {filtered.length===0&&<div className="empty-state"><div className="empty-icon">🧹</div>No cleaning sessions scheduled</div>}
-      </div>
-
-      {showModal && (
-        <div className="modal-overlay" onClick={()=>setShowModal(false)}>
-          <div className="modal" onClick={e=>e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">Schedule Cleaning</div>
-              <button className="modal-close" onClick={()=>setShowModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid mb-4">
-                <div className="form-field">
-                  <label>Cleaner</label>
-                  <select value={form.cleaner} onChange={e=>setForm({...form,cleaner:e.target.value})}>
-                    <option>Precious Dlamini</option>
-                    <option>Thandi Mokoena</option>
-                    <option>Other</option>
-                  </select>
-                </div>
-                <div className="form-field">
-                  <label>Property</label>
-                  <select value={form.property_id} onChange={e=>setForm({...form,property_id:e.target.value})}>
-                    <option value="speranta">Speranta Flat</option>
-                    <option value="tvhouse">TV House</option>
-                  </select>
-                </div>
-                <div className="form-field">
-                  <label>Date *</label>
-                  <input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})}/>
-                </div>
-                <div className="form-field">
-                  <label>Time</label>
-                  <input type="time" value={form.time} onChange={e=>setForm({...form,time:e.target.value})}/>
-                </div>
-                <div className="form-field">
-                  <label>Type</label>
-                  <select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}>
-                    <option value="turnover">Turnover Clean</option>
-                    <option value="deep">Deep Clean</option>
-                    <option value="mid-stay">Mid-Stay Refresh</option>
-                    <option value="inspection">Inspection</option>
-                  </select>
-                </div>
-                <div className="form-field">
-                  <label>Notes</label>
-                  <input value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Special instructions"/>
-                </div>
-              </div>
-              <div style={{display:'flex',gap:'10px',justifyContent:'flex-end'}}>
-                <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>Cancel</button>
-                <button className="btn btn-green" onClick={addSession}>Schedule</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── TASKS ────────────────────────────────────────────────────────
-function TasksView({ tasks, setTasks, property, user }) {
-  const [showModal, setShowModal] = useState(false);
-  const [filter, setFilter] = useState('open');
-  const [form, setForm] = useState({ title:'', property_id:property!=='all'?property:'all', priority:'medium', assigned:user.name, due:'', notes:'' });
-
-  const filtered = (property==='all'?tasks:tasks.filter(t=>t.property_id===property||t.property_id==='all'))
-    .filter(t => filter==='all' || t.status===filter)
-    .sort((a,b) => { const p = {high:0,medium:1,low:2}; return p[a.priority]-p[b.priority]; });
-
-  const toggle = async (id) => {
-    const task = tasks.find(t => t.id === id);
-    const newStatus = task?.status === 'done' ? 'open' : 'done';
-    if (supabaseClient) {
-      await supabaseClient.from('tasks').update({status: newStatus}).eq('id', id);
-    }
-    setTasks(prev => prev.map(t => t.id===id ? {...t, status:newStatus} : t));
-  };
-
-  const addTask = async () => {
-    if (!form.title) { toast('Task title is required','error'); return; }
-    // Map app fields → real DB column names
-    const dbRow = {
-      title:       form.title,
-      description: form.notes || '',
-      priority:    form.priority,
-      status:      'open',
-      type:        'task',
-      due_at:      form.due || null,
-      task_date:   form.due || null,
-      property_id: form.property_id !== 'all' ? form.property_id : null,
-    };
-    if (supabaseClient) {
-      const { data, error } = await supabaseClient.from('tasks').insert([dbRow]).select().single();
-      if (error) { toast('Save error: ' + error.message, 'error'); return; }
-      setTasks(prev => [normaliseTask({...data, property_id: form.property_id, assigned: form.assigned}), ...prev]);
-    } else {
-      setTasks(prev => [normaliseTask({...dbRow, id:'t'+Date.now(), property_id: form.property_id, assigned: form.assigned}), ...prev]);
-    }
-    toast('Task created','success');
-    setShowModal(false);
-    setForm({ title:'', property_id:'all', priority:'medium', assigned:user.name, due:'', notes:'' });
-  };
-
-  const openCount = tasks.filter(t=>t.status==='open').length;
-
-  return (
-    <div>
-      <div className="section-header">
-        <div>
-          <h2 style={{fontFamily:'DM Serif Display,serif',fontSize:'1.3rem',marginBottom:'4px'}}>Tasks</h2>
-          <div className="text-muted">{openCount} open task{openCount!==1?'s':''}</div>
-        </div>
-        <div style={{display:'flex',gap:'8px'}}>
-          {['open','done','all'].map(f=>(
-            <button key={f} className={`btn btn-sm ${filter===f?'btn-primary':'btn-ghost'}`} onClick={()=>setFilter(f)}>{f.charAt(0).toUpperCase()+f.slice(1)}</button>
-          ))}
-          <button className="btn btn-primary btn-sm" onClick={()=>setShowModal(true)}>+ New Task</button>
-        </div>
-      </div>
-
-      <div className="card">
-        {filtered.map(t=>(
-          <div key={t.id} className="task-item">
-            <div className={`task-check ${t.status==='done'?'done':''}`} onClick={()=>toggle(t.id)}>
-              {t.status==='done'&&'✓'}
-            </div>
-            <div className="task-content">
-              <div className={`task-title ${t.status==='done'?'done':''}`}>{t.title}</div>
-              <div className="task-meta">
-                <span className={`priority-${t.priority}`}>{t.priority} priority</span>
-                <span>📍 {PROPERTIES.find(p=>p.id===t.property_id)?.name||'All Properties'}</span>
-                <span>👤 {t.assigned}</span>
-                {t.due&&<span>📅 Due {t.due}</span>}
-                {t.notes&&<span>💬 {t.notes}</span>}
-              </div>
-            </div>
-          </div>
-        ))}
-        {filtered.length===0&&<div className="empty-state"><div className="empty-icon">✅</div>No tasks here</div>}
-      </div>
-
-      {showModal && (
-        <div className="modal-overlay" onClick={()=>setShowModal(false)}>
-          <div className="modal" onClick={e=>e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">New Task</div>
-              <button className="modal-close" onClick={()=>setShowModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid mb-4">
-                <div className="form-field" style={{gridColumn:'1/-1'}}>
-                  <label>Task Title *</label>
-                  <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="What needs to be done?"/>
-                </div>
-                <div className="form-field">
-                  <label>Property</label>
-                  <select value={form.property_id} onChange={e=>setForm({...form,property_id:e.target.value})}>
-                    <option value="all">Both Properties</option>
-                    <option value="speranta">Speranta Flat</option>
-                    <option value="tvhouse">TV House</option>
-                  </select>
-                </div>
-                <div className="form-field">
-                  <label>Priority</label>
-                  <select value={form.priority} onChange={e=>setForm({...form,priority:e.target.value})}>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
-                </div>
-                <div className="form-field">
-                  <label>Assign To</label>
-                  <select value={form.assigned} onChange={e=>setForm({...form,assigned:e.target.value})}>
-                    <option>Nicole</option>
-                    <option>Silja</option>
-                    <option>Nina Williams</option>
-                  </select>
-                </div>
-                <div className="form-field">
-                  <label>Due Date</label>
-                  <input type="date" value={form.due} onChange={e=>setForm({...form,due:e.target.value})}/>
-                </div>
-                <div className="form-field" style={{gridColumn:'1/-1'}}>
-                  <label>Notes</label>
-                  <input value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})} placeholder="Additional details"/>
-                </div>
-              </div>
-              <div style={{display:'flex',gap:'10px',justifyContent:'flex-end'}}>
-                <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>Cancel</button>
-                <button className="btn btn-primary" onClick={addTask}>Create Task</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── KNOWLEDGE BASE ───────────────────────────────────────────────
-function KnowledgeView({ user }) {
-  const [articles, setArticles] = useState(SAMPLE_KB);
-  const [selected, setSelected] = useState(null);
-  const [showModal, setShowModal] = useState(false);
-  const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ category:'Procedures', title:'', content:'', tags:'' });
-
-  const categories = [...new Set(articles.map(a=>a.category))];
-  const filtered = articles.filter(a =>
-    !search || a.title.toLowerCase().includes(search.toLowerCase()) || a.content.toLowerCase().includes(search.toLowerCase()) || a.category.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const addArticle = () => {
-    if (!form.title || !form.content) { toast('Title and content required','error'); return; }
-    setArticles(prev => [{...form, id:'k'+Date.now(), tags:form.tags.split(',').map(t=>t.trim()).filter(Boolean)}, ...prev]);
-    toast('Article added','success');
-    setShowModal(false);
-    setForm({ category:'Procedures', title:'', content:'', tags:'' });
-  };
-
-  return (
-    <div>
-      <div className="section-header">
-        <div>
-          <h2 style={{fontFamily:'DM Serif Display,serif',fontSize:'1.3rem',marginBottom:'4px'}}>Knowledge Base</h2>
-          <div className="text-muted">Guides, procedures and information for the team</div>
-        </div>
-        <button className="btn btn-primary btn-sm" onClick={()=>setShowModal(true)}>+ Add Article</button>
-      </div>
-
-      <div className="mb-6">
-        <input style={{width:'100%',padding:'12px 16px',border:'1.5px solid var(--border)',borderRadius:'10px',fontFamily:'inherit',fontSize:'.9rem',outline:'none',background:'#fff'}}
-          placeholder="🔍 Search articles…" value={search} onChange={e=>setSearch(e.target.value)}/>
-      </div>
-
-      {categories.map(cat => {
-        const catArticles = filtered.filter(a=>a.category===cat);
-        if (!catArticles.length) return null;
-        return (
-          <div key={cat} className="mb-6">
-            <div style={{fontSize:'.75rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',color:'var(--accent)',marginBottom:'12px'}}>{cat}</div>
-            <div className="kb-grid">
-              {catArticles.map(a=>(
-                <div key={a.id} className="kb-card" onClick={()=>setSelected(a)}>
-                  <div className="kb-category">{a.category}</div>
-                  <div className="kb-title">{a.title}</div>
-                  <div className="kb-preview">{a.content.slice(0,100)}…</div>
-                  <div style={{marginTop:'10px',display:'flex',gap:'4px',flexWrap:'wrap'}}>
-                    {a.tags.map(t=><span key={t} className="tag">{t}</span>)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-
-      {selected && (
-        <div className="modal-overlay" onClick={()=>setSelected(null)}>
-          <div className="modal" style={{maxWidth:'640px'}} onClick={e=>e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">{selected.title}</div>
-              <button className="modal-close" onClick={()=>setSelected(null)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div style={{fontSize:'.75rem',fontWeight:700,textTransform:'uppercase',letterSpacing:'.06em',color:'var(--accent)',marginBottom:'12px'}}>{selected.category}</div>
-              <div style={{lineHeight:'1.7',whiteSpace:'pre-line',fontSize:'.92rem'}}>{selected.content}</div>
-              <div style={{marginTop:'16px',display:'flex',gap:'6px',flexWrap:'wrap'}}>
-                {selected.tags.map(t=><span key={t} className="tag">{t}</span>)}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showModal && (
-        <div className="modal-overlay" onClick={()=>setShowModal(false)}>
-          <div className="modal" style={{maxWidth:'580px'}} onClick={e=>e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-title">New Article</div>
-              <button className="modal-close" onClick={()=>setShowModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="form-grid mb-4">
-                <div className="form-field">
-                  <label>Category</label>
-                  <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>
-                    {['Procedures','Access','WiFi','Maintenance','Guest Info','Emergency'].map(c=><option key={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="form-field">
-                  <label>Tags (comma separated)</label>
-                  <input value={form.tags} onChange={e=>setForm({...form,tags:e.target.value})} placeholder="access, keys, code"/>
-                </div>
-                <div className="form-field" style={{gridColumn:'1/-1'}}>
-                  <label>Title *</label>
-                  <input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="Article title"/>
-                </div>
-                <div className="form-field" style={{gridColumn:'1/-1'}}>
-                  <label>Content *</label>
-                  <textarea rows={6} value={form.content} onChange={e=>setForm({...form,content:e.target.value})} placeholder="Write article content…" style={{resize:'vertical'}}/>
-                </div>
-              </div>
-              <div style={{display:'flex',gap:'10px',justifyContent:'flex-end'}}>
-                <button className="btn btn-ghost" onClick={()=>setShowModal(false)}>Cancel</button>
-                <button className="btn btn-primary" onClick={addArticle}>Publish</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── REPORTS (admin only) ─────────────────────────────────────────
-function ReportsView({ bookings, property }) {
-  const filtered = property==='all' ? bookings : bookings.filter(b=>b.property_id===property);
-
-  const platformBreakdown = ['airbnb','booking','lekkeslaap','fewo','manual'].map(p => ({
-    platform:p, count:filtered.filter(b=>b.platform===p).length,
-    revenue:filtered.filter(b=>b.platform===p).reduce((s,b)=>s+b.revenue,0)
-  })).filter(p=>p.count>0);
-
-  const monthlyRevenue = [
-    {month:'Jan',rev:12400},{month:'Feb',rev:18200},{month:'Mar',rev:21500},{month:'Apr',rev:14700},{month:'May',rev:8600},
-    {month:'Jun',rev:5200},{month:'Jul',rev:9800},{month:'Aug',rev:11300},{month:'Sep',rev:19600},{month:'Oct',rev:22100},{month:'Nov',rev:16800},{month:'Dec',rev:24300}
-  ];
-  const maxRev = Math.max(...monthlyRevenue.map(m=>m.rev));
-
-  const totalRevenue = filtered.reduce((s,b)=>s+b.revenue,0);
-  const totalNights = filtered.reduce((s,b)=>s+b.nights,0);
-  const avgNightly = totalNights ? Math.round(totalRevenue/totalNights) : 0;
-  const occupancyRate = Math.round((totalNights / (property==='all'?60:30)) * 100);
-
-  const seasonalInsight = () => {
-    const month = new Date().getMonth();
-    if ([5,6,7].includes(month)) return '❄️ Low season (Cape Town winter). Consider discounts 15-20% to maintain occupancy. Target German and Dutch markets.';
-    if ([11,0,1,2].includes(month)) return '🌞 Peak summer season! Rates can be 30-40% higher. Minimum stay 3 nights recommended.';
-    return '🍂 Shoulder season. Good occupancy expected. Competitive pricing will outperform.';
-  };
-
-  return (
-    <div>
-      <div className="stat-grid" style={{marginBottom:'24px'}}>
-        <div className="stat-card"><div className="stat-label">Total Revenue</div><div className="stat-value">R{totalRevenue.toLocaleString()}</div><div className="stat-sub">All bookings</div></div>
-        <div className="stat-card" style={{borderTopColor:'var(--blue)'}}><div className="stat-label">Total Bookings</div><div className="stat-value">{filtered.length}</div><div className="stat-sub">Across all platforms</div></div>
-        <div className="stat-card" style={{borderTopColor:'var(--green2)'}}><div className="stat-label">Avg Nightly Rate</div><div className="stat-value">R{avgNightly.toLocaleString()}</div><div className="stat-sub">Per night average</div></div>
-        <div className="stat-card" style={{borderTopColor:'#7c3aed'}}><div className="stat-label">Occupancy Rate</div><div className="stat-value">{occupancyRate}%</div><div className="stat-sub">This period</div></div>
-      </div>
-
-      <div className="card mb-6">
-        <div className="card-title">💡 Smart Pricing Insight</div>
-        <div style={{background:'var(--sand)',borderRadius:'10px',padding:'16px',fontSize:'.9rem',lineHeight:'1.6'}}>{seasonalInsight()}</div>
-        <div className="divider"/>
-        <div style={{fontSize:'.85rem',color:'var(--muted)'}}>
-          <strong style={{color:'var(--ink)'}}>Suggested rates for your market:</strong><br/>
-          🌞 Peak (Dec–Mar): R1,100–1,400/night · 🍂 Shoulder (Apr–May, Oct–Nov): R800–950/night · ❄️ Low (Jun–Sep): R650–750/night
-        </div>
-      </div>
-
-      <div className="grid-2 mb-6">
-        <div className="card">
-          <div className="card-title">📊 Revenue by Month (2025–2026)</div>
-          <div className="bar-chart">
-            {monthlyRevenue.map(m=>(
-              <div key={m.month} className="bar-col">
-                <div className="bar-val">R{(m.rev/1000).toFixed(0)}k</div>
-                <div className="bar" style={{height:`${(m.rev/maxRev)*100}px`}}/>
-                <div className="bar-label">{m.month}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-title">🌐 Bookings by Platform</div>
-          {platformBreakdown.map(p=>(
-            <div key={p.platform} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 0',borderBottom:'1px solid var(--border)'}}>
-              <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
-                <div style={{width:12,height:12,borderRadius:2,background:p.platform==='airbnb'?'#ff5a5f':p.platform==='booking'?'#003b95':p.platform==='lekkeslaap'?'#2d6a4f':'#c17f3c'}}/>
-                <span style={{fontWeight:600,textTransform:'capitalize'}}>{p.platform}</span>
-              </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontWeight:700}}>R{p.revenue.toLocaleString()}</div>
-                <div style={{fontSize:'.75rem',color:'var(--muted)'}}>{p.count} booking{p.count!==1?'s':''}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-title">📈 Seasonal Popularity — What the data says</div>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Season</th><th>Months</th><th>Avg Occupancy</th><th>Best Platform</th><th>Recommended Rate</th></tr></thead>
-            <tbody>
-              <tr><td>🌞 Peak Summer</td><td>Dec – Mar</td><td>87%</td><td>Airbnb</td><td>R1,200–1,400/night</td></tr>
-              <tr><td>🍂 Autumn Shoulder</td><td>Apr – May</td><td>62%</td><td>Booking.com</td><td>R850–950/night</td></tr>
-              <tr><td>❄️ Winter Low</td><td>Jun – Aug</td><td>38%</td><td>LekkeSlaap</td><td>R600–750/night</td></tr>
-              <tr><td>🌸 Spring Shoulder</td><td>Sep – Nov</td><td>71%</td><td>Airbnb</td><td>R900–1,100/night</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── MESSAGES TAB ─────────────────────────────────────────────────
-function MessagesView({ user }) {
-  const [msgs, setMsgs] = useState([
-    { id:'m1', from:'Nicole', role:'admin', text:'Speranta: the Jan Müller booking confirmed for 18 Apr. Make sure the welcome pack is ready.', time:'09:14', date:'Today' },
-    { id:'m2', from:'Nina Williams', role:'host', text:'Got it! Will prepare the apartment by 16:00. Precious confirmed for cleaning at 10:00.', time:'09:32', date:'Today' },
-    { id:'m3', from:'Silja', role:'admin', text:'Remember we need to update the TV House description on Airbnb — new bedding is in.', time:'10:05', date:'Today' },
-    { id:'m4', from:'Nicole', role:'admin', text:'Nina, the tap in Speranta bathroom — please check if Botha can come this week.', time:'11:20', date:'Today' },
-  ]);
-  const [newMsg, setNewMsg] = useState('');
-
-  const send = () => {
-    if (!newMsg.trim()) return;
-    setMsgs(prev=>[...prev,{id:'m'+Date.now(),from:user.name,role:user.role,text:newMsg,time:new Date().toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}),date:'Today'}]);
-    setNewMsg('');
-  };
-
-  return (
-    <div>
-      <div className="card" style={{marginBottom:'20px'}}>
-        <div style={{fontSize:'.8rem',color:'var(--muted)',marginBottom:'16px'}}>Team channel — replacing WhatsApp. All messages are logged and searchable.</div>
-        <div style={{maxHeight:'400px',overflowY:'auto',display:'flex',flexDirection:'column',gap:'10px',marginBottom:'16px'}}>
-          {msgs.map(m=>(
-            <div key={m.id} style={{display:'flex',alignItems:'flex-start',gap:'10px',flexDirection:m.from===user.name?'row-reverse':'row'}}>
-              <div style={{width:34,height:34,borderRadius:'50%',background:m.role==='admin'?'var(--accent)':'var(--green2)',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:700,fontSize:'.8rem',flexShrink:0}}>
-                {m.from.split(' ').map(n=>n[0]).join('').slice(0,2)}
-              </div>
-              <div style={{maxWidth:'70%'}}>
-                <div style={{fontSize:'.72rem',color:'var(--muted)',marginBottom:'3px',textAlign:m.from===user.name?'right':'left'}}>{m.from} · {m.time}</div>
-                <div style={{background:m.from===user.name?'var(--accent)':'var(--sand)',color:m.from===user.name?'#fff':'var(--ink)',padding:'10px 14px',borderRadius:m.from===user.name?'16px 16px 4px 16px':'16px 16px 16px 4px',fontSize:'.88rem',lineHeight:'1.5'}}>
-                  {m.text}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{display:'flex',gap:'10px'}}>
-          <input style={{flex:1,padding:'11px 16px',border:'1.5px solid var(--border)',borderRadius:'10px',fontFamily:'inherit',fontSize:'.9rem',outline:'none'}}
-            placeholder="Message the team…" value={newMsg} onChange={e=>setNewMsg(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()}/>
-          <button className="btn btn-primary" onClick={send}>Send</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── SUPABASE SETUP GUIDE ─────────────────────────────────────────
-function SetupView() {
-  const sql = `-- Run this SQL in your Supabase SQL Editor to create the schema:
-
-CREATE TABLE IF NOT EXISTS bookings (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  property_id TEXT NOT NULL,
-  guest_name TEXT NOT NULL,
-  platform TEXT NOT NULL,
-  check_in DATE NOT NULL,
-  check_out DATE NOT NULL,
-  nights INTEGER,
-  status TEXT DEFAULT 'confirmed',
-  revenue NUMERIC DEFAULT 0,
-  currency TEXT DEFAULT 'ZAR',
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS tasks (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  title TEXT NOT NULL,
-  property_id TEXT,
-  priority TEXT DEFAULT 'medium',
-  status TEXT DEFAULT 'open',
-  assigned TEXT,
-  due DATE,
-  notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS domestics (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  cleaner TEXT NOT NULL,
-  property_id TEXT NOT NULL,
-  date DATE NOT NULL,
-  time TEXT,
-  type TEXT DEFAULT 'turnover',
-  status TEXT DEFAULT 'scheduled',
-  notes TEXT,
-  checklist JSONB DEFAULT '{}',
-  booking_ref TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS kb_articles (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  category TEXT NOT NULL,
-  title TEXT NOT NULL,
-  content TEXT NOT NULL,
-  tags TEXT[] DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Enable Row Level Security (optional but recommended)
-ALTER TABLE bookings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
-ALTER TABLE domestics ENABLE ROW LEVEL SECURITY;
-ALTER TABLE kb_articles ENABLE ROW LEVEL SECURITY;
-
--- Allow all operations for now (tighten later with auth policies)
-CREATE POLICY "allow_all" ON bookings FOR ALL USING (true);
-CREATE POLICY "allow_all" ON tasks FOR ALL USING (true);
-CREATE POLICY "allow_all" ON domestics FOR ALL USING (true);
-CREATE POLICY "allow_all" ON kb_articles FOR ALL USING (true);`;
-
-  return (
-    <div>
-      <div className="setup-banner" style={{marginBottom:'24px'}}>
-        <h3>🔌 Connect Your Supabase Database</h3>
-        <p>Follow these 4 steps to connect live data. Takes about 10 minutes.</p>
-      </div>
-      <div className="card mb-6">
-        <div style={{display:'flex',flexDirection:'column',gap:'20px'}}>
-          {[
-            ['1', 'Get your Supabase Anon Key', 'Go to: Supabase Dashboard → Your Project → Settings → API → Copy the "anon public" key'],
-            ['2', 'Add it to this file', 'Find the line: const SUPABASE_ANON_KEY = \'YOUR_SUPABASE_ANON_KEY_HERE\' and replace it with your actual key'],
-            ['3', 'Create database tables', 'Go to: Supabase Dashboard → SQL Editor → Paste the SQL below and click Run'],
-            ['4', 'Enable the iCal sync', 'Call your Edge Function to import bookings: GET https://dkyzbzlshrxdwetykmdo.functions.supabase.co/import_ical'],
-          ].map(([n,title,desc])=>(
-            <div key={n} style={{display:'flex',gap:'16px',alignItems:'flex-start'}}>
-              <div style={{width:32,height:32,borderRadius:'50%',background:'var(--accent)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,flexShrink:0}}>{n}</div>
-              <div><div style={{fontWeight:600,marginBottom:'4px'}}>{title}</div><div style={{fontSize:'.85rem',color:'var(--muted)',lineHeight:'1.5'}}>{desc}</div></div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="card">
-        <div className="card-title">SQL — Run in Supabase SQL Editor</div>
-        <pre style={{background:'var(--ink)',color:'#a5f3b4',padding:'20px',borderRadius:'10px',fontSize:'.78rem',overflowX:'auto',lineHeight:'1.6'}}>{sql}</pre>
 
 ```
-    <button className="btn btn-ghost btn-sm" style={{marginTop:'12px'}} onClick={()=>{navigator.clipboard?.writeText(sql);toast('SQL copied to clipboard','success');}}>Copy SQL</button>
+  <!-- BOOKINGS -->
+  <div class="tab-pane" id="tab-bookings">
+    <div class="info-banner">
+      <h3>📡 iCal Sync</h3>
+      <p>Bookings sync automatically from Airbnb, Booking.com, LekkeSlaap &amp; Fewo via your Supabase Edge Function. Add manual bookings below.</p>
+    </div>
+    <div class="section-head">
+      <div class="filter-row" id="booking-filters"></div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('booking-modal')">+ Add Booking</button>
+    </div>
+    <div class="card">
+      <div class="table-wrap">
+        <table>
+          <thead><tr id="booking-thead"></tr></thead>
+          <tbody id="booking-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR -->
+  <div class="tab-pane" id="tab-calendar">
+    <div class="cal-wrap">
+      <div class="cal-header">
+        <div class="cal-month" id="cal-month-label"></div>
+        <div class="cal-nav">
+          <button onclick="calNav(-1)">← Prev</button>
+          <button onclick="calNav(0)">Today</button>
+          <button onclick="calNav(1)">Next →</button>
+        </div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Legend</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#ff5a5f"></div>Airbnb</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#003b95"></div>Booking.com</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#2d6a4f"></div>LekkeSlaap</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>Fewo</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Manual</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Cleaning</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DOMESTIC -->
+  <div class="tab-pane" id="tab-domestic">
+    <div class="section-head">
+      <div>
+        <h2 style="font-size:1.25rem;margin-bottom:3px">Domestic Schedule</h2>
+        <div class="text-muted">Manage cleaning sessions</div>
+      </div>
+      <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
+    </div>
+    <div class="dom-grid" id="dom-grid"></div>
+  </div>
+
+  <!-- TASKS -->
+  <div class="tab-pane" id="tab-tasks">
+    <div class="section-head">
+      <div>
+        <h2 style="font-size:1.25rem;margin-bottom:3px">Tasks</h2>
+        <div class="text-muted" id="task-count"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="filter-row" id="task-filters"></div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('task-modal')">+ New Task</button>
+      </div>
+    </div>
+    <div class="card" id="task-list"></div>
+  </div>
+
+  <!-- MESSAGES -->
+  <div class="tab-pane" id="tab-messages">
+    <div class="card">
+      <div class="text-muted mb-4">Team channel — all messages saved and searchable.</div>
+      <div class="chat-wrap" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <input type="text" id="chat-input" placeholder="Message the team…" onkeydown="if(event.key==='Enter')sendMessage()"/>
+        <button class="btn btn-primary btn-sm" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KNOWLEDGE BASE -->
+  <div class="tab-pane" id="tab-knowledge">
+    <div class="section-head">
+      <div>
+        <h2 style="font-size:1.25rem;margin-bottom:3px">Knowledge Base</h2>
+        <div class="text-muted">Guides and procedures for the team</div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('kb-modal')">+ Add Article</button>
+    </div>
+    <div class="mb-6">
+      <input style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:#fff" placeholder="🔍 Search articles…" oninput="renderKB(this.value)" id="kb-search"/>
+    </div>
+    <div id="kb-content"></div>
+  </div>
+
+  <!-- REPORTS (admin only) -->
+  <div class="tab-pane" id="tab-reports">
+    <div class="stat-grid" id="report-stats"></div>
+    <div class="card mb-6">
+      <div class="card-title">💡 Smart Pricing Insight</div>
+      <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
+      <div class="divider"></div>
+      <div class="text-muted">Suggested rates: 🌞 Peak Dec–Mar: R1,100–1,400/night · 🍂 Shoulder: R800–950/night · ❄️ Low Jun–Sep: R650–750/night</div>
+    </div>
+    <div class="grid-2 mb-6">
+      <div class="card">
+        <div class="card-title">📊 Monthly Revenue</div>
+        <div class="bar-chart" id="revenue-chart"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🌐 Bookings by Platform</div>
+        <div id="platform-breakdown"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📈 Seasonal Guide</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Season</th><th>Months</th><th>Avg Occupancy</th><th>Best Platform</th><th>Suggested Rate</th></tr></thead>
+          <tbody>
+            <tr><td>🌞 Peak Summer</td><td>Dec–Mar</td><td>87%</td><td>Airbnb</td><td>R1,200–1,400/night</td></tr>
+            <tr><td>🍂 Autumn Shoulder</td><td>Apr–May</td><td>62%</td><td>Booking.com</td><td>R850–950/night</td></tr>
+            <tr><td>❄️ Winter Low</td><td>Jun–Aug</td><td>38%</td><td>LekkeSlaap</td><td>R600–750/night</td></tr>
+            <tr><td>🌸 Spring Shoulder</td><td>Sep–Nov</td><td>71%</td><td>Airbnb</td><td>R900–1,100/night</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 ```
 
-);
-}
-
-// ── MAIN APP ─────────────────────────────────────────────────────
-function App() {
-const [user, setUser] = useState(null);
-const [tab, setTab] = useState(‘dashboard’);
-const [property, setProperty] = useState(‘all’);
-const [bookings, setBookings] = useState(SAMPLE_BOOKINGS);
-const [tasks, setTasks] = useState(SAMPLE_TASKS);
-const [domestics, setDomestics] = useState(SAMPLE_DOMESTICS);
-const [dbConnected, setDbConnected] = useState(false);
-
-// Load live data from Supabase on login
-useEffect(() => {
-if (!user || !supabaseClient) return;
-const load = async () => {
-try {
-const [bRes, tRes, dRes] = await Promise.all([
-supabaseClient.from(‘bookings’).select(’*’).order(‘check_in’, { ascending: false }),
-supabaseClient.from(‘tasks’).select(’*’).order(‘created_at’, { ascending: false }),
-supabaseClient.from(‘domestics’).select(’*’).order(‘date’, { ascending: true }),
-]);
-setDbConnected(true);
-if (bRes.data && bRes.data.length > 0) { setBookings(bRes.data.map(normaliseBooking)); toast(‘Live bookings loaded from database ✓’, ‘success’); }
-else { toast(‘DB connected — no bookings yet. Sample data shown.’, ‘info’); }
-if (tRes.data && tRes.data.length > 0) setTasks(tRes.data.map(normaliseTask));
-if (dRes.data && dRes.data.length > 0) setDomestics(dRes.data.map(normaliseDomestic));
-} catch (e) { console.warn(‘Supabase load:’, e); }
-};
-load();
-}, [user]);
-
-const isAdmin = user?.role === ‘admin’;
-
-const navItems = [
-{ id:‘dashboard’, label:‘Dashboard’, icon:‘🏠’, roles:[‘admin’,‘host’] },
-{ id:‘bookings’, label:‘Bookings’, icon:‘📋’, roles:[‘admin’,‘host’] },
-{ id:‘calendar’, label:‘Calendar’, icon:‘📅’, roles:[‘admin’,‘host’] },
-{ id:‘domestic’, label:‘Domestic’, icon:‘🧹’, roles:[‘admin’,‘host’] },
-{ id:‘tasks’, label:‘Tasks’, icon:‘✅’, roles:[‘admin’,‘host’] },
-{ id:‘messages’, label:‘Messages’, icon:‘💬’, roles:[‘admin’,‘host’] },
-{ id:‘knowledge’, label:‘Knowledge Base’, icon:‘📚’, roles:[‘admin’,‘host’] },
-{ id:‘reports’, label:‘Reports’, icon:‘📊’, roles:[‘admin’] },
-{ id:‘setup’, label:‘DB Setup Guide’, icon:‘⚙️’, roles:[‘admin’] },
-].filter(n => n.roles.includes(user?.role));
-
-if (!user) return <><AuthScreen onLogin={setUser}/><Toast/></>;
-
-return (
-<div className="app">
-<aside className="sidebar">
-<div className="sidebar-logo">
-<span>HostEase Pro</span>
-<small>Property Management</small>
+  </div>
 </div>
-<div className="prop-switcher">
-<select value={property} onChange={e=>setProperty(e.target.value)}>
-{PROPERTIES.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
-</select>
-</div>
-<nav className="nav-list">
-{navItems.map(n=>(
-<div key={n.id} className={`nav-item ${tab===n.id?'active':''}`} onClick={()=>setTab(n.id)}>
-<span className="nav-icon">{n.icon}</span>
-{n.label}
-</div>
-))}
-</nav>
-<div className="sidebar-user">
-<div className="user-chip">
-<div className="user-avatar">{user.initials}</div>
-<div className="user-info">
-<div className="user-name">{user.name}</div>
-<div className="user-role">{user.role}</div>
-</div>
-<button className=“logout-btn” onClick={()=>setUser(null)} title=“Sign out”>⏏</button>
-</div>
-</div>
-</aside>
 
-```
-  <main className="main">
-    <div className="topbar">
-      <div className="page-title">{navItems.find(n=>n.id===tab)?.label}</div>
-      <div className="topbar-actions">
-        {property !== 'all' && <span className="tag">📍 {PROPERTIES.find(p=>p.id===property)?.name}</span>}
-        <span className="tag">{dbConnected ? '🟢 DB Connected' : supabaseClient ? '🟠 DB Connecting…' : '🟡 Demo Mode'}</span>
+<!-- MODALS -->
+
+<div class="modal-overlay" id="booking-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Booking</div>
+      <button class="modal-close" onclick="closeModal('booking-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field span-full"><label>Guest Name *</label><input id="b-guest" placeholder="Full name"/></div>
+        <div class="form-field"><label>Property</label>
+          <select id="b-prop"><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select>
+        </div>
+        <div class="form-field"><label>Platform</label>
+          <select id="b-platform"><option value="airbnb">Airbnb</option><option value="booking">Booking.com</option><option value="lekkeslaap">LekkeSlaap</option><option value="fewo">Fewo</option><option value="manual">Manual</option></select>
+        </div>
+        <div class="form-field"><label>Check-in *</label><input type="date" id="b-checkin"/></div>
+        <div class="form-field"><label>Check-out *</label><input type="date" id="b-checkout"/></div>
+        <div class="form-field"><label>Revenue (ZAR)</label><input type="number" id="b-revenue" placeholder="0"/></div>
+        <div class="form-field"><label>Status</label>
+          <select id="b-status"><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="checkedin">Checked In</option><option value="checkedout">Checked Out</option></select>
+        </div>
+        <div class="form-field span-full"><label>Notes</label><input id="b-notes" placeholder="Optional notes"/></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('booking-modal')">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveBooking()">Add Booking</button>
       </div>
     </div>
-    <div className="content">
-      {tab==='dashboard' && <Dashboard bookings={bookings} property={property} user={user}/>}
-      {tab==='bookings' && <BookingsView bookings={bookings} setBookings={setBookings} property={property} user={user}/>}
-      {tab==='calendar' && <CalendarView bookings={bookings} domestics={domestics} property={property}/>}
-      {tab==='domestic' && <DomesticView domestics={domestics} setDomestics={setDomestics} bookings={bookings} property={property}/>}
-      {tab==='tasks' && <TasksView tasks={tasks} setTasks={setTasks} property={property} user={user}/>}
-      {tab==='messages' && <MessagesView user={user}/>}
-      {tab==='knowledge' && <KnowledgeView user={user}/>}
-      {tab==='reports' && isAdmin && <ReportsView bookings={bookings} property={property}/>}
-      {tab==='setup' && isAdmin && <SetupView/>}
-    </div>
-  </main>
-  <Toast/>
+  </div>
 </div>
-```
 
-);
+<div class="modal-overlay" id="domestic-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Schedule Cleaning</div>
+      <button class="modal-close" onclick="closeModal('domestic-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field"><label>Cleaner</label>
+          <select id="d-cleaner"><option>Precious Dlamini</option><option>Thandi Mokoena</option><option>Other</option></select>
+        </div>
+        <div class="form-field"><label>Property</label>
+          <select id="d-prop"><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select>
+        </div>
+        <div class="form-field"><label>Date *</label><input type="date" id="d-date"/></div>
+        <div class="form-field"><label>Time</label><input type="time" id="d-time" value="10:00"/></div>
+        <div class="form-field"><label>Type</label>
+          <select id="d-type"><option value="turnover">Turnover Clean</option><option value="deep">Deep Clean</option><option value="mid-stay">Mid-Stay Refresh</option><option value="inspection">Inspection</option></select>
+        </div>
+        <div class="form-field"><label>Notes</label><input id="d-notes" placeholder="Special instructions"/></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('domestic-modal')">Cancel</button>
+        <button class="btn btn-green btn-sm" onclick="saveDomestic()">Schedule</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="task-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Task</div>
+      <button class="modal-close" onclick="closeModal('task-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field span-full"><label>Task Title *</label><input id="t-title" placeholder="What needs to be done?"/></div>
+        <div class="form-field"><label>Property</label>
+          <select id="t-prop"><option value="all">Both Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select>
+        </div>
+        <div class="form-field"><label>Priority</label>
+          <select id="t-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
+        </div>
+        <div class="form-field"><label>Assign To</label>
+          <select id="t-assign"><option>Nicole</option><option>Silja</option><option>Nina Williams</option></select>
+        </div>
+        <div class="form-field"><label>Due Date</label><input type="date" id="t-due"/></div>
+        <div class="form-field span-full"><label>Notes</label><input id="t-notes" placeholder="Additional details"/></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('task-modal')">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveTask()">Create Task</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="kb-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">New Article</div>
+      <button class="modal-close" onclick="closeModal('kb-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field"><label>Category</label>
+          <select id="kb-cat"><option>Procedures</option><option>Access</option><option>WiFi</option><option>Maintenance</option><option>Guest Info</option><option>Emergency</option></select>
+        </div>
+        <div class="form-field"><label>Tags (comma separated)</label><input id="kb-tags" placeholder="access, keys"/></div>
+        <div class="form-field span-full"><label>Title *</label><input id="kb-title" placeholder="Article title"/></div>
+        <div class="form-field span-full"><label>Content *</label><textarea id="kb-content-input" rows="5" style="resize:vertical" placeholder="Write content here…"></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('kb-modal')">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveKB()">Publish</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="day-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="day-modal-title"></div>
+      <button class="modal-close" onclick="closeModal('day-modal')">×</button>
+    </div>
+    <div class="modal-body" id="day-modal-body"></div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ── CONFIG ───────────────────────────────────────────────────────
+const SUPABASE_URL  = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRreXpiemxzaHJ4ZHdldHlrbWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMzkyMTUsImV4cCI6MjA3ODYxNTIxNX0.d4K89mdZVzG4Rv4H44MYnhV4VlW3V1vSgbYZcjcPMQw';
+
+let db = null;
+try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.warn('Supabase init failed', e); }
+
+// ── STATE ────────────────────────────────────────────────────────
+let currentUser   = null;
+let currentProp   = 'all';
+let currentTab    = 'dashboard';
+let taskFilter    = 'open';
+let bookingFilter = 'all';
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+
+let bookings  = [];
+let tasks     = [];
+let domestics = [];
+let kbArticles = [];
+let messages  = [
+  {id:'m1',from:'Nicole',role:'admin',text:'Speranta: Jan Müller confirmed 18 Apr. Welcome pack ready?',time:'09:14'},
+  {id:'m2',from:'Nina Williams',role:'host',text:'On it! Precious confirmed for cleaning at 10:00.',time:'09:32'},
+  {id:'m3',from:'Silja',role:'admin',text:'Remember to update TV House Airbnb photos — new bedding is in.',time:'10:05'},
+];
+
+// ── USERS ────────────────────────────────────────────────────────
+const USERS = [
+  {id:'1',email:'sn_apt_management@outlook.com',password:'Sevilla2015!',name:'Nicole',role:'admin',initials:'N'},
+  {id:'2',email:'silja@hostease.co.za',password:'Admin2024!',name:'Silja',role:'admin',initials:'S'},
+  {id:'3',email:'vanwyk.nina@gmail.com',password:'HelloWorld1!',name:'Nina Williams',role:'host',initials:'NW'},
+];
+
+const PROPS = {
+  speranta:{name:'Speranta Flat',address:'35 Athens Road, Blouberg'},
+  tvhouse:{name:'TV House',address:'110 Athens Road, Tableview'},
+};
+
+// ── SAMPLE DATA ──────────────────────────────────────────────────
+const SAMPLE_BOOKINGS = [
+  {id:'b1',property_id:'speranta',guest_name:'Jan & Marie Müller',platform:'airbnb',check_in:'2026-04-18',check_out:'2026-04-23',nights:5,status:'confirmed',revenue:4200,currency:'ZAR',notes:'German guests'},
+  {id:'b2',property_id:'tvhouse',guest_name:'Sarah Johnson',platform:'booking',check_in:'2026-04-17',check_out:'2026-04-19',nights:2,status:'checkedin',revenue:1600,currency:'ZAR',notes:'Late check-in'},
+  {id:'b3',property_id:'speranta',guest_name:'Pierre Dubois',platform:'lekkeslaap',check_in:'2026-04-25',check_out:'2026-04-28',nights:3,status:'confirmed',revenue:2400,currency:'ZAR',notes:''},
+  {id:'b4',property_id:'tvhouse',guest_name:'Dirk van der Berg',platform:'manual',check_in:'2026-04-20',check_out:'2026-04-22',nights:2,status:'pending',revenue:1400,currency:'ZAR',notes:'Repeat guest'},
+  {id:'b5',property_id:'speranta',guest_name:'Annemarie Schreiber',platform:'airbnb',check_in:'2026-05-01',check_out:'2026-05-07',nights:6,status:'confirmed',revenue:5100,currency:'ZAR',notes:''},
+  {id:'b6',property_id:'tvhouse',guest_name:'Michael Brown',platform:'booking',check_in:'2026-05-10',check_out:'2026-05-15',nights:5,status:'confirmed',revenue:3500,currency:'ZAR',notes:'Anniversary'},
+];
+const SAMPLE_TASKS = [
+  {id:'t1',title:'Fix leaking tap — Speranta bathroom',property_id:'speranta',priority:'high',status:'open',assigned:'Nina Williams',due:'2026-04-18',notes:'Under sink, slow drip'},
+  {id:'t2',title:'Replace TV remote batteries — TV House',property_id:'tvhouse',priority:'low',status:'done',assigned:'Nina Williams',due:'2026-04-16',notes:''},
+  {id:'t3',title:'Order guest welcome packs',property_id:'all',priority:'medium',status:'open',assigned:'Nicole',due:'2026-04-20',notes:'Cape Town Gift Co.'},
+  {id:'t4',title:'Service air conditioner — Speranta',property_id:'speranta',priority:'medium',status:'open',assigned:'Nicole',due:'2026-04-25',notes:'Last serviced Jan 2025'},
+  {id:'t5',title:'Update Airbnb photos — TV House',property_id:'tvhouse',priority:'low',status:'open',assigned:'Silja',due:'2026-04-30',notes:'New bedding installed'},
+];
+const SAMPLE_DOMESTICS = [
+  {id:'d1',cleaner:'Precious Dlamini',property_id:'speranta',date:'2026-04-17',time:'10:00',type:'turnover',status:'scheduled',notes:'Full linen change',checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
+  {id:'d2',cleaner:'Thandi Mokoena',property_id:'tvhouse',date:'2026-04-17',time:'11:00',type:'turnover',status:'completed',notes:'',checklist:{kitchen:true,bathrooms:true,bedrooms:true,living:true,laundry:true}},
+  {id:'d3',cleaner:'Precious Dlamini',property_id:'speranta',date:'2026-04-23',time:'10:00',type:'turnover',status:'scheduled',notes:'Post checkout clean',checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
+  {id:'d4',cleaner:'Thandi Mokoena',property_id:'tvhouse',date:'2026-04-19',time:'09:00',type:'deep',status:'scheduled',notes:'Monthly deep clean',checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
+];
+const SAMPLE_KB = [
+  {id:'k1',category:'Access',title:'Door Codes & Keys',content:'Speranta: Main door code #4521. Key box code 1234.\n\nTV House: Main door code #7893. Key box at front gate, code 5678.',tags:['access','security']},
+  {id:'k2',category:'WiFi',title:'WiFi Passwords',content:'Speranta: Network "Speranta_Guest" | Password: BloudBerg2024!\n\nTV House: Network "TVHouse_Guest" | Password: TableView2024!',tags:['wifi']},
+  {id:'k3',category:'Procedures',title:'Check-in Procedure',content:'1. Send welcome message 24h before\n2. Confirm arrival time\n3. Ensure property is clean\n4. Leave welcome note and info folder\n5. Video call walkthrough if needed',tags:['checkin']},
+  {id:'k4',category:'Maintenance',title:'Emergency Contacts',content:'Plumber: Johan Botha - 082 555 1234\nElectrician: Cape Power - 021 555 9876\nLocksmith: Key King - 083 444 2222',tags:['emergency','contacts']},
+  {id:'k5',category:'Guest Info',title:'Area Guide',content:'Beach: 5 min walk\nCheckers Tableview: 3km\nTable Mountain: 30 min drive\nMyCiti bus: 200m away\nKitesurfing & whale watching nearby',tags:['area','guest']},
+  {id:'k6',category:'Procedures',title:'Check-out Procedure',content:'1. Send reminder evening before\n2. Checkout time 10:00\n3. Nina inspects within 2 hours\n4. Report damage via tasks\n5. Schedule cleaning immediately',tags:['checkout']},
+];
+
+// ── NORMALISE DB ROWS ────────────────────────────────────────────
+function nb(b) {
+  const pid = b.property_id || (b.property_name && b.property_name.toLowerCase().includes('speranta') ? 'speranta' : 'tvhouse');
+  return {
+    ...b,
+    guest_name: b.guest_name || [b.guest_first_name, b.guest_last_name].filter(Boolean).join(' ') || 'Unknown',
+    check_in:   String(b.check_in_date || b.check_in || '').slice(0,10),
+    check_out:  String(b.check_out_date || b.check_out || '').slice(0,10),
+    revenue:    b.revenue ?? b.total_amount ?? 0,
+    property_id: typeof pid === 'string' && (pid === 'speranta' || pid === 'tvhouse') ? pid : 'speranta',
+  };
+}
+function nt(t) {
+  return {...t, notes:t.notes||t.description||'', due:String(t.due||t.due_at||t.task_date||'').slice(0,10), assigned:t.assigned||'Unassigned', property_id:t.property_id||'all', priority:t.priority||'medium', status:t.status||'open'};
+}
+function nd(d) {
+  return {...d, checklist:d.checklist||{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}};
 }
 
-ReactDOM.render(<App/>, document.getElementById(‘root’));
+// ── AUTH ─────────────────────────────────────────────────────────
+function fillUser(i) {
+  document.getElementById('login-email').value = USERS[i].email;
+  document.getElementById('login-password').value = USERS[i].password;
+}
+
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  const user  = USERS.find(u => u.email === email && u.password === pass);
+  const errEl = document.getElementById('auth-error');
+  if (!user) { errEl.textContent = 'Invalid email or password.'; errEl.style.display = 'block'; return; }
+  errEl.style.display = 'none';
+  currentUser = user;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display  = 'block';
+  document.getElementById('user-avatar').textContent = user.initials;
+  document.getElementById('user-name').textContent   = user.name;
+  document.getElementById('user-role').textContent   = user.role;
+  buildNav();
+  loadData();
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app-screen').style.display  = 'none';
+}
+
+// ── NAV ──────────────────────────────────────────────────────────
+const NAV = [
+  {id:'dashboard',label:'Dashboard',icon:'🏠',roles:['admin','host']},
+  {id:'bookings',label:'Bookings',icon:'📋',roles:['admin','host']},
+  {id:'calendar',label:'Calendar',icon:'📅',roles:['admin','host']},
+  {id:'domestic',label:'Domestic',icon:'🧹',roles:['admin','host']},
+  {id:'tasks',label:'Tasks',icon:'✅',roles:['admin','host']},
+  {id:'messages',label:'Messages',icon:'💬',roles:['admin','host']},
+  {id:'knowledge',label:'Knowledge Base',icon:'📚',roles:['admin','host']},
+  {id:'reports',label:'Reports',icon:'📊',roles:['admin']},
+];
+
+function buildNav() {
+  const nav = document.getElementById('sidebar-nav');
+  nav.innerHTML = NAV.filter(n => n.roles.includes(currentUser.role)).map(n =>
+    `<div class="nav-item ${n.id===currentTab?'active':''}" onclick="switchTab('${n.id}')">
+      <span class="nav-icon">${n.icon}</span>${n.label}
+    </div>`
+  ).join('');
+}
+
+function switchTab(id) {
+  currentTab = id;
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  document.getElementById('page-title').textContent = NAV.find(n=>n.id===id)?.label || id;
+  buildNav();
+  renderTab(id);
+}
+
+function switchProperty(val) {
+  currentProp = val;
+  const tag = document.getElementById('prop-tag');
+  if (val === 'all') { tag.style.display = 'none'; }
+  else { tag.style.display = 'inline-block'; tag.textContent = '📍 ' + PROPS[val].name; }
+  renderTab(currentTab);
+}
+
+function renderTab(id) {
+  if (id==='dashboard') renderDashboard();
+  else if (id==='bookings') renderBookings();
+  else if (id==='calendar') renderCalendar();
+  else if (id==='domestic') renderDomestic();
+  else if (id==='tasks') renderTasks();
+  else if (id==='messages') renderMessages();
+  else if (id==='knowledge') renderKB();
+  else if (id==='reports') renderReports();
+}
+
+// ── DATA LOAD ────────────────────────────────────────────────────
+async function loadData() {
+  bookings  = SAMPLE_BOOKINGS.map(nb);
+  tasks     = SAMPLE_TASKS.map(nt);
+  domestics = SAMPLE_DOMESTICS.map(nd);
+  kbArticles = SAMPLE_KB;
+  renderTab(currentTab);
+
+  if (!db) return;
+  try {
+    const [bRes, tRes, dRes, kRes] = await Promise.all([
+      db.from('bookings').select('*').order('check_in_date', {ascending:false}),
+      db.from('tasks').select('*').order('created_at', {ascending:false}),
+      db.from('domestics').select('*').order('date', {ascending:true}),
+      db.from('kb_articles').select('*').order('created_at', {ascending:false}),
+    ]);
+    let dbConnected = false;
+    if (bRes.data && bRes.data.length > 0) { bookings = bRes.data.map(nb); dbConnected = true; toast('Live bookings loaded ✓','success'); }
+    if (tRes.data && tRes.data.length > 0) tasks = tRes.data.map(nt);
+    if (dRes.data && dRes.data.length > 0) domestics = dRes.data.map(nd);
+    if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
+    if (dbConnected) document.getElementById('db-status').textContent = '🟢 DB Connected';
+    else document.getElementById('db-status').textContent = '🟢 DB Ready';
+    renderTab(currentTab);
+  } catch(e) { console.warn('DB load error:', e); }
+}
+
+// ── FILTER HELPERS ───────────────────────────────────────────────
+function filteredBookings() {
+  let b = currentProp === 'all' ? bookings : bookings.filter(x => x.property_id === currentProp);
+  if (bookingFilter !== 'all') b = b.filter(x => x.status === bookingFilter);
+  return b.sort((a,z) => z.check_in.localeCompare(a.check_in));
+}
+function filteredTasks() {
+  let t = currentProp === 'all' ? tasks : tasks.filter(x => x.property_id === currentProp || x.property_id === 'all');
+  if (taskFilter !== 'all') t = t.filter(x => x.status === taskFilter);
+  return t.sort((a,z) => ({high:0,medium:1,low:2}[a.priority]||1) - ({high:0,medium:1,low:2}[z.priority]||1));
+}
+function filteredDomestics() {
+  return (currentProp === 'all' ? domestics : domestics.filter(x => x.property_id === currentProp))
+    .sort((a,z) => a.date.localeCompare(z.date));
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────────
+function renderDashboard() {
+  const today = new Date().toISOString().slice(0,10);
+  const fb = currentProp === 'all' ? bookings : bookings.filter(b => b.property_id === currentProp);
+  const checkIns  = fb.filter(b => b.check_in  === today);
+  const checkOuts = fb.filter(b => b.check_out === today);
+  const active    = fb.filter(b => b.check_in <= today && b.check_out > today);
+  const monthRev  = fb.filter(b => b.check_in.startsWith('2026-04')).reduce((s,b) => s+(b.revenue||0), 0);
+  const upcoming  = fb.filter(b => b.check_in > today).sort((a,z) => a.check_in.localeCompare(z.check_in)).slice(0,5);
+
+  const isAdmin = currentUser.role === 'admin';
+  document.getElementById('dash-stats').innerHTML =
+    statCard('Today\'s Check-ins', checkIns.length, checkIns.map(b=>b.guest_name).join(', ')||'None today', 'var(--accent)') +
+    statCard('Today\'s Check-outs', checkOuts.length, checkOuts.map(b=>b.guest_name).join(', ')||'None today', 'var(--blue)') +
+    statCard('Occupied Now', active.length, 'of '+(currentProp==='all'?2:1)+' properties', 'var(--green2)') +
+    (isAdmin ? statCard('April Revenue', 'R'+monthRev.toLocaleString(), 'all platforms', '#7c3aed') : '');
+
+  document.getElementById('dash-upcoming').innerHTML = upcoming.length ? upcoming.map(b =>
+    `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-weight:600;font-size:.88rem">${b.guest_name}</div>
+      <div style="font-size:.76rem;color:var(--muted)">${propName(b.property_id)} · ${b.nights} nights</div></div>
+      <div style="text-align:right"><div style="font-size:.82rem;font-weight:600">${b.check_in}</div><span class="badge badge-${b.platform}">${b.platform}</span></div>
+    </div>`).join('') : '<div class="text-muted">No upcoming bookings</div>';
+
+  document.getElementById('dash-prop-status').innerHTML = Object.entries(PROPS).map(([pid,prop]) => {
+    const cur = bookings.find(b => b.property_id===pid && b.check_in<=today && b.check_out>today);
+    return `<div style="padding:13px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-weight:700">${prop.name}</span>
+        <span class="badge ${cur?'badge-checkedin':'badge-checkedout'}">${cur?'Occupied':'Available'}</span>
+      </div>
+      <div style="font-size:.76rem;color:var(--muted)">${prop.address}</div>
+      ${cur?`<div style="font-size:.76rem;margin-top:3px">Guest: ${cur.guest_name} · Out ${cur.check_out}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function statCard(label, value, sub, color='var(--accent)') {
+  return `<div class="stat-card" style="border-top-color:${color}">
+    <div class="stat-label">${label}</div>
+    <div class="stat-value">${value}</div>
+    <div class="stat-sub">${sub}</div>
+  </div>`;
+}
+
+// ── BOOKINGS ─────────────────────────────────────────────────────
+function renderBookings() {
+  const isAdmin = currentUser.role === 'admin';
+  const filters = ['all','confirmed','pending','checkedin','checkedout'];
+  document.getElementById('booking-filters').innerHTML = filters.map(f =>
+    `<button class="btn btn-sm ${f===bookingFilter?'btn-primary':'btn-ghost'}" onclick="setBookingFilter('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`
+  ).join('');
+
+  const cols = ['Guest','Property','Platform','Check-in','Check-out','Nights',...(isAdmin?['Revenue']:[]),'Status'];
+  document.getElementById('booking-thead').innerHTML = cols.map(c=>`<th>${c}</th>`).join('');
+
+  const rows = filteredBookings();
+  document.getElementById('booking-tbody').innerHTML = rows.length ? rows.map(b =>
+    `<tr>
+      <td><div style="font-weight:600">${b.guest_name}</div>${b.notes?`<div style="font-size:.73rem;color:var(--muted)">${b.notes}</div>`:''}</td>
+      <td>${propName(b.property_id)}</td>
+      <td><span class="badge badge-${b.platform}">${b.platform}</span></td>
+      <td>${b.check_in}</td><td>${b.check_out}</td><td>${b.nights||0}</td>
+      ${isAdmin?`<td style="font-weight:700">R${(b.revenue||0).toLocaleString()}</td>`:''}
+      <td><span class="badge badge-${b.status}">${b.status}</span></td>
+    </tr>`).join('') :
+    `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📭</div>No bookings found</div></td></tr>`;
+}
+
+function setBookingFilter(f) { bookingFilter = f; renderBookings(); }
+
+async function saveBooking() {
+  const guest = document.getElementById('b-guest').value.trim();
+  const cin   = document.getElementById('b-checkin').value;
+  const cout  = document.getElementById('b-checkout').value;
+  if (!guest || !cin || !cout) { toast('Please fill required fields','error'); return; }
+  const nights = Math.round((new Date(cout)-new Date(cin))/86400000);
+  const pid    = document.getElementById('b-prop').value;
+  const row = {
+    guest_name: guest, guest_first_name: guest.split(' ')[0], guest_last_name: guest.split(' ').slice(1).join(' '),
+    platform: document.getElementById('b-platform').value,
+    property_name: PROPS[pid]?.name || pid,
+    check_in_date: cin, check_out_date: cout, check_in: cin, check_out: cout,
+    nights, status: document.getElementById('b-status').value,
+    total_amount: Number(document.getElementById('b-revenue').value)||0,
+    revenue: Number(document.getElementById('b-revenue').value)||0,
+    currency: 'ZAR', notes: document.getElementById('b-notes').value, is_active: true,
+  };
+  if (db) {
+    const {data,error} = await db.from('bookings').insert([row]).select().single();
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+    bookings.unshift(nb({...data, property_id: pid}));
+  } else { bookings.unshift(nb({...row, id:'b'+Date.now(), property_id: pid})); }
+  toast('Booking added ✓','success');
+  closeModal('booking-modal');
+  renderBookings(); renderDashboard();
+}
+
+// ── CALENDAR ─────────────────────────────────────────────────────
+function renderCalendar() {
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent = months[calMonth]+' '+calYear;
+  const today = new Date().toISOString().slice(0,10);
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
+  const fd = currentProp==='all' ? domestics : domestics.filter(d=>d.property_id===currentProp);
+
+  let cells = '';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => { cells += `<div class="cal-day-head">${d}</div>`; });
+
+  for (let i=0; i<firstDay; i++) cells += '<div class="cal-cell other"></div>';
+  for (let d=1; d<=daysInMonth; d++) {
+    const ds = calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isToday = ds === today;
+    const evts = [];
+    fb.forEach(b => { if (b.check_in<=ds && b.check_out>ds) evts.push({type:'booking',label:(b.check_in===ds?'🛬 ':'')+b.guest_name.split(' ')[0],plat:b.platform,b}); });
+    fd.forEach(d2 => { if (d2.date===ds) evts.push({type:'cleaning',label:'🧹 '+d2.cleaner.split(' ')[0]}); });
+    cells += `<div class="cal-cell${isToday?' today':''}" onclick="showDay('${ds}')">
+      <div class="cal-date">${d}</div>
+      ${evts.slice(0,3).map(e=>`<div class="cal-event ev-${e.type==='cleaning'?'cleaning':e.plat}">${e.label}</div>`).join('')}
+      ${evts.length>3?`<div style="font-size:.62rem;color:var(--muted);padding-left:3px">+${evts.length-3}</div>`:''}
+    </div>`;
+  }
+  const remainder = (firstDay + daysInMonth) % 7;
+  if (remainder > 0) for (let i=0; i<7-remainder; i++) cells += '<div class="cal-cell other"></div>';
+
+  document.getElementById('cal-grid').innerHTML = cells;
+}
+
+function calNav(dir) {
+  if (dir===0) { calYear=new Date().getFullYear(); calMonth=new Date().getMonth(); }
+  else { calMonth+=dir; if(calMonth>11){calMonth=0;calYear++;}else if(calMonth<0){calMonth=11;calYear--;} }
+  renderCalendar();
+}
+
+function showDay(ds) {
+  const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
+  const fd = currentProp==='all' ? domestics : domestics.filter(d=>d.property_id===currentProp);
+  const bEvts = fb.filter(b=>b.check_in<=ds && b.check_out>ds);
+  const dEvts = fd.filter(d=>d.date===ds);
+  document.getElementById('day-modal-title').textContent = ds;
+  let html = '';
+  bEvts.forEach(b=>{html+=`<div style="background:var(--sand);border-radius:9px;padding:12px;margin-bottom:8px">
+    <div style="font-weight:700;margin-bottom:4px">📋 ${b.guest_name}</div>
+    <div style="font-size:.84rem">${propName(b.property_id)} · Check-in: ${b.check_in} · Check-out: ${b.check_out}</div>
+    <span class="badge badge-${b.platform}" style="margin-top:6px">${b.platform}</span>
+    <span class="badge badge-${b.status}" style="margin-top:6px;margin-left:4px">${b.status}</span>
+  </div>`;});
+  dEvts.forEach(d=>{html+=`<div style="background:var(--sand);border-radius:9px;padding:12px;margin-bottom:8px">
+    <div style="font-weight:700;margin-bottom:4px">🧹 ${d.cleaner}</div>
+    <div style="font-size:.84rem">${propName(d.property_id)} · ${d.time} · ${d.type}</div>
+    <span class="badge badge-${d.status}" style="margin-top:6px">${d.status}</span>
+  </div>`;});
+  if (!html) html = '<div class="text-muted">No events on this day.</div>';
+  document.getElementById('day-modal-body').innerHTML = html;
+  openModal('day-modal');
+}
+
+// ── DOMESTIC ─────────────────────────────────────────────────────
+function renderDomestic() {
+  const fd = filteredDomestics();
+  document.getElementById('dom-grid').innerHTML = fd.length ? fd.map(d => {
+    const cl = d.checklist||{};
+    const keys = ['kitchen','bathrooms','bedrooms','living','laundry'];
+    const done = keys.filter(k=>cl[k]).length;
+    return `<div class="dom-card" style="border-top-color:${d.status==='completed'?'var(--green2)':'var(--accent)'}">
+      <div class="dom-card-head">
+        <div><div class="dom-name">${d.cleaner}</div><div class="dom-prop">${propName(d.property_id)} · ${d.type}</div></div>
+        <span class="badge badge-${d.status}">${d.status}</span>
+      </div>
+      <div class="dom-detail">📅 ${d.date} at ${d.time}${d.notes?`<br><em>"${d.notes}"</em>`:''}</div>
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px">Checklist (${done}/${keys.length})</div>
+      ${keys.map(k=>`<div class="checklist-row">
+        <input type="checkbox" ${cl[k]?'checked':''} ${d.status==='completed'?'disabled':''} onchange="toggleCheck('${d.id}','${k}')"/>
+        <span class="${cl[k]?'done-text':''}">${k.charAt(0).toUpperCase()+k.slice(1)}</span>
+      </div>`).join('')}
+      ${d.status!=='completed'?`<button class="btn btn-green btn-sm" style="width:100%;margin-top:10px;justify-content:center" onclick="markDone('${d.id}')">✓ Mark Complete</button>`:''}
+    </div>`;
+  }).join('') : '<div class="empty-state"><div class="empty-icon">🧹</div>No cleaning sessions scheduled</div>';
+}
+
+function toggleCheck(id, key) {
+  const d = domestics.find(x=>x.id==id);
+  if (!d) return;
+  d.checklist[key] = !d.checklist[key];
+  if (db) db.from('domestics').update({checklist:d.checklist}).eq('id',id);
+  renderDomestic();
+}
+
+async function markDone(id) {
+  const allDone = {kitchen:true,bathrooms:true,bedrooms:true,living:true,laundry:true};
+  const d = domestics.find(x=>x.id==id);
+  if (!d) return;
+  d.status='completed'; d.checklist=allDone;
+  if (db) await db.from('domestics').update({status:'completed',checklist:allDone}).eq('id',id);
+  toast('Cleaning marked complete ✓','success');
+  renderDomestic();
+}
+
+async function saveDomestic() {
+  const date = document.getElementById('d-date').value;
+  if (!date) { toast('Please set a date','error'); return; }
+  const row = {
+    cleaner: document.getElementById('d-cleaner').value,
+    property_id: document.getElementById('d-prop').value,
+    date, time: document.getElementById('d-time').value,
+    type: document.getElementById('d-type').value,
+    status:'scheduled', notes: document.getElementById('d-notes').value,
+    checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},
+  };
+  if (db) {
+    const {data,error} = await db.from('domestics').insert([row]).select().single();
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+    domestics.push(nd(data));
+  } else { domestics.push(nd({...row,id:'d'+Date.now()})); }
+  toast('Cleaning session scheduled ✓','success');
+  closeModal('domestic-modal');
+  renderDomestic(); renderCalendar();
+}
+
+// ── TASKS ────────────────────────────────────────────────────────
+function renderTasks() {
+  const ft = filteredTasks();
+  const open = tasks.filter(t=>t.status==='open').length;
+  document.getElementById('task-count').textContent = open+' open task'+(open!==1?'s':'');
+  document.getElementById('task-filters').innerHTML = ['open','done','all'].map(f=>
+    `<button class="btn btn-sm ${f===taskFilter?'btn-primary':'btn-ghost'}" onclick="setTaskFilter('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`
+  ).join('');
+  document.getElementById('task-list').innerHTML = ft.length ? ft.map(t=>
+    `<div class="task-item">
+      <div class="task-check ${t.status==='done'?'done':''}" onclick="toggleTask('${t.id}')">${t.status==='done'?'✓':''}</div>
+      <div class="task-content">
+        <div class="task-title ${t.status==='done'?'done':''}">${t.title}</div>
+        <div class="task-meta">
+          <span class="pri-${t.priority}">${t.priority} priority</span>
+          <span>📍 ${propName(t.property_id)}</span>
+          <span>👤 ${t.assigned}</span>
+          ${t.due?`<span>📅 ${t.due}</span>`:''}
+          ${t.notes?`<span>💬 ${t.notes}</span>`:''}
+        </div>
+      </div>
+    </div>`).join('') : '<div class="empty-state"><div class="empty-icon">✅</div>No tasks here</div>';
+}
+
+function setTaskFilter(f) { taskFilter = f; renderTasks(); }
+
+async function toggleTask(id) {
+  const t = tasks.find(x=>x.id==id);
+  if (!t) return;
+  t.status = t.status==='done'?'open':'done';
+  if (db) await db.from('tasks').update({status:t.status}).eq('id',id);
+  renderTasks();
+}
+
+async function saveTask() {
+  const title = document.getElementById('t-title').value.trim();
+  if (!title) { toast('Task title is required','error'); return; }
+  const pid = document.getElementById('t-prop').value;
+  const row = {
+    title, description: document.getElementById('t-notes').value,
+    priority: document.getElementById('t-priority').value,
+    status: 'open', type: 'task',
+    due_at: document.getElementById('t-due').value || null,
+    task_date: document.getElementById('t-due').value || null,
+    property_id: pid !== 'all' ? pid : null,
+  };
+  const localRow = nt({...row, property_id:pid, assigned:document.getElementById('t-assign').value});
+  if (db) {
+    const {data,error} = await db.from('tasks').insert([row]).select().single();
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+    tasks.unshift(nt({...data, property_id:pid, assigned:document.getElementById('t-assign').value}));
+  } else { tasks.unshift({...localRow, id:'t'+Date.now()}); }
+  toast('Task created ✓','success');
+  closeModal('task-modal');
+  renderTasks();
+}
+
+// ── MESSAGES ─────────────────────────────────────────────────────
+function renderMessages() {
+  document.getElementById('chat-messages').innerHTML = messages.map(m => {
+    const isMe = m.from === currentUser.name;
+    const initials = m.from.split(' ').map(n=>n[0]).join('').slice(0,2);
+    const color = m.role==='admin' ? 'var(--accent)' : 'var(--green2)';
+    return `<div class="msg-row ${isMe?'me':''}">
+      <div class="msg-avatar" style="background:${color}">${initials}</div>
+      <div>
+        <div class="msg-meta" style="text-align:${isMe?'right':'left'}">${m.from} · ${m.time}</div>
+        <div class="msg-bubble ${isMe?'msg-mine':'msg-from'}">${m.text}</div>
+      </div>
+    </div>`;
+  }).join('');
+  const wrap = document.getElementById('chat-messages');
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const now = new Date();
+  messages.push({id:'m'+Date.now(), from:currentUser.name, role:currentUser.role, text,
+    time:now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')});
+  input.value = '';
+  renderMessages();
+}
+
+// ── KNOWLEDGE BASE ───────────────────────────────────────────────
+function renderKB(search='') {
+  const q = (search||document.getElementById('kb-search')?.value||'').toLowerCase();
+  const filtered = kbArticles.filter(a => !q || a.title.toLowerCase().includes(q) || a.content.toLowerCase().includes(q) || a.category.toLowerCase().includes(q));
+  const cats = [...new Set(filtered.map(a=>a.category))];
+  document.getElementById('kb-content').innerHTML = cats.map(cat => {
+    const arts = filtered.filter(a=>a.category===cat);
+    return `<div class="mb-6">
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:10px">${cat}</div>
+      <div class="kb-grid">${arts.map(a=>`
+        <div class="kb-card" onclick="showKB('${a.id}')">
+          <div class="kb-cat">${a.category}</div>
+          <div class="kb-title">${a.title}</div>
+          <div class="kb-preview">${a.content.slice(0,90)}…</div>
+          <div style="margin-top:8px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-state"><div class="empty-icon">📚</div>No articles found</div>';
+}
+
+function showKB(id) {
+  const a = kbArticles.find(x=>x.id==id);
+  if (!a) return;
+  document.getElementById('day-modal-title').textContent = a.title;
+  document.getElementById('day-modal-body').innerHTML =
+    `<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:10px">${a.category}</div>
+    <div style="line-height:1.7;white-space:pre-line;font-size:.9rem">${a.content}</div>
+    <div style="margin-top:14px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
+  openModal('day-modal');
+}
+
+async function saveKB() {
+  const title = document.getElementById('kb-title').value.trim();
+  const content = document.getElementById('kb-content-input').value.trim();
+  if (!title || !content) { toast('Title and content required','error'); return; }
+  const tags = document.getElementById('kb-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const row = {category:document.getElementById('kb-cat').value, title, content, tags};
+  if (db) {
+    const {data,error} = await db.from('kb_articles').insert([row]).select().single();
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+    kbArticles.unshift(data);
+  } else { kbArticles.unshift({...row,id:'k'+Date.now()}); }
+  toast('Article published ✓','success');
+  closeModal('kb-modal');
+  renderKB();
+}
+
+// ── REPORTS ──────────────────────────────────────────────────────
+function renderReports() {
+  const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
+  const total = fb.reduce((s,b)=>s+(b.revenue||0),0);
+  const nights = fb.reduce((s,b)=>s+(b.nights||0),0);
+  const avg = nights ? Math.round(total/nights) : 0;
+  const occ = Math.min(99, Math.round(nights/(currentProp==='all'?60:30)*100));
+
+  document.getElementById('report-stats').innerHTML =
+    statCard('Total Revenue','R'+total.toLocaleString(),'all bookings','var(--accent)') +
+    statCard('Total Bookings',fb.length,'across all platforms','var(--blue)') +
+    statCard('Avg Nightly Rate','R'+avg.toLocaleString(),'per night','var(--green2)') +
+    statCard('Occupancy Rate',occ+'%','this period','#7c3aed');
+
+  const m = new Date().getMonth();
+  document.getElementById('pricing-insight').textContent =
+    [5,6,7].includes(m) ? '❄️ Low season (Cape Town winter). Consider 15-20% discounts to maintain occupancy. Target German and Dutch markets.' :
+    [11,0,1,2].includes(m) ? '🌞 Peak summer! Rates can be 30-40% higher. Minimum 3-night stay recommended.' :
+    '🍂 Shoulder season. Good occupancy expected. Competitive pricing will outperform.';
+
+  const monthly = [12400,18200,21500,14700,8600,5200,9800,11300,19600,22100,16800,24300];
+  const max = Math.max(...monthly);
+  const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('revenue-chart').innerHTML = monthly.map((v,i)=>
+    `<div class="bar-col">
+      <div class="bar-val">R${Math.round(v/1000)}k</div>
+      <div class="bar" style="height:${Math.round(v/max*120)}px"></div>
+      <div class="bar-label">${mNames[i]}</div>
+    </div>`).join('');
+
+  const platforms = ['airbnb','booking','lekkeslaap','fewo','manual'];
+  const colors = {airbnb:'#ff5a5f',booking:'#003b95',lekkeslaap:'#2d6a4f',fewo:'#7c3aed',manual:'#c17f3c'};
+  document.getElementById('platform-breakdown').innerHTML = platforms.map(p => {
+    const pb = fb.filter(b=>b.platform===p);
+    if (!pb.length) return '';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:9px">
+        <div style="width:11px;height:11px;border-radius:2px;background:${colors[p]}"></div>
+        <span style="font-weight:600;text-transform:capitalize">${p}</span>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700">R${pb.reduce((s,b)=>s+(b.revenue||0),0).toLocaleString()}</div>
+        <div style="font-size:.73rem;color:var(--muted)">${pb.length} booking${pb.length!==1?'s':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── MODAL ────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target===el) el.classList.remove('open'); });
+});
+
+// ── TOAST ────────────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className = 'toast '+(type||'');
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────
+function propName(id) {
+  if (id==='speranta') return 'Speranta';
+  if (id==='tvhouse')  return 'TV House';
+  if (id==='all')      return 'All Properties';
+  return id||'—';
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+document.getElementById('auth-screen').style.display = 'flex';
 </script>
 
 </body>
