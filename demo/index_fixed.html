@@ -900,102 +900,164 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
   const today       = new Date().toISOString().slice(0,10);
   const firstDay    = new Date(year,month,1).getDay();
   const daysInMonth = new Date(year,month+1,0).getDate();
+  const showPropTag = bkgs.filter(x=>!isCaretaker(x)&&x.property_id==='speranta').length > 0 &&
+                      bkgs.filter(x=>!isCaretaker(x)&&x.property_id==='tvhouse').length > 0;
   const birthdays   = CLEANERS.map(c => {
     const bday = c.birthday?.slice(5);
     return bday ? {date:String(year)+'-'+bday, label:'🎂 '+c.name} : null;
   }).filter(Boolean);
-  const showPropTag = bkgs.filter(x=>!isCaretaker(x)).some(b=>b.property_id==='speranta') &&
-                     bkgs.filter(x=>!isCaretaker(x)).some(b=>b.property_id==='tvhouse');
 
-  // Build day lookup for quick access
-  const dayData = {};
-  for (let d=1;d<=daysInMonth;d++) {
+  // Build full grid of days (padded to complete weeks)
+  const totalPad = firstDay;
+  const totalCells = Math.ceil((totalPad + daysInMonth) / 7) * 7;
+  const weeks = Math.ceil((totalPad + daysInMonth) / 7);
+
+  // For each booking assign a fixed lane (0,1,2) so it stays on same row across weeks
+  const laneAssignments = {}; // bookingId -> lane
+  const activeLanes = [null, null, null]; // which booking is in each lane
+  for (let d = 1; d <= daysInMonth; d++) {
     const ds = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    dayData[ds] = {bookings:[], cleans:[], birthdays:[]};
-  }
-  bkgs.forEach(b => {
-    if (b.status==='cancelled') return;
-    for (let d=1;d<=daysInMonth;d++) {
-      const ds = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      if (isCaretaker(b)) { if (b.check_in===ds) dayData[ds]?.bookings.push({...b,_caretaker:true}); return; }
-      if (b.check_in<=ds && b.check_out>ds) dayData[ds]?.bookings.push(b);
+    // On each day, expire lanes whose booking ended
+    for (let l = 0; l < 3; l++) {
+      if (activeLanes[l] && activeLanes[l].check_out <= ds) activeLanes[l] = null;
     }
-  });
-  doms.forEach(d2 => { if (dayData[d2.date]) dayData[d2.date].cleans.push(d2); });
-  birthdays.forEach(b => { if (dayData[b.date]) dayData[b.date].birthdays.push(b); });
+    // Assign lanes to bookings starting today
+    bkgs.forEach(b => {
+      if (b.status==='cancelled' || isCaretaker(b)) return;
+      if (b.check_in === ds) {
+        // Find a free lane
+        let lane = activeLanes.findIndex(l => l === null);
+        if (lane === -1) lane = 0; // fallback
+        activeLanes[lane] = b;
+        laneAssignments[b.id] = lane;
+      }
+    });
+  }
 
   const el = document.getElementById(gridId);
   el.innerHTML = '';
 
-  // Header row
+  // Header
   ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
-    const h=document.createElement('div'); h.className='cal-day-head'; h.textContent=d; el.appendChild(h);
+    const h = document.createElement('div');
+    h.className = 'cal-day-head'; h.textContent = d; el.appendChild(h);
   });
 
-  // Empty cells before month start
-  for (let i=0;i<firstDay;i++) { const c=document.createElement('div'); c.className='cal-cell other'; el.appendChild(c); }
-
-  // Day cells
-  for (let d=1;d<=daysInMonth;d++) {
-    const ds = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const dd = dayData[ds];
-    const isToday = ds===today;
-    const cell = document.createElement('div');
-    cell.className = 'cal-cell'+(isToday?' today':'');
-    cell.onclick = () => window[clickFn](ds);
-
-    // Date number
-    const dateEl = document.createElement('div');
-    dateEl.className = 'cal-date'; dateEl.textContent = d;
-    cell.appendChild(dateEl);
-
-    // Booking bars
-    let slotCount = 0;
-    dd.bookings.forEach(b => {
-      if (slotCount >= 3) return;
-      const isOwner = isOwnerStay(b);
-      const isCare  = b._caretaker;
-      const cls = isCare ? 'ev-caretaker' : isOwner ? 'ev-owner' : 'ev-'+b.platform;
-      const propTag = showPropTag ? ' ['+(b.property_id==='speranta'?'SP':'TV')+']' : '';
-      const isStart = b.check_in===ds;
-      const tomorrow = new Date(new Date(ds).getTime()+86400000).toISOString().slice(0,10);
-      const isEnd   = b.check_out===tomorrow;
-      // Determine if this starts in a previous week row (don't show label unless start or Monday)
-      const dow = new Date(ds).getDay();
-      const showLabel = isStart || dow===0;
-      const blk = isCare||isStart&&isEnd ? 'blk blk-solo' : isStart||dow===0 ? 'blk blk-start' : isEnd||dow===6 ? 'blk blk-end' : 'blk';
-      const label = (isStart?'🛬 ':showLabel?'':'​')+(showLabel?(isCare?'🏡 Tino':(b.guest_name||b.platform))+propTag:'');
-      const ev=document.createElement('div');
-      ev.className='cal-event '+cls+' '+blk;
-      ev.title=(b.guest_name||b.platform)+' — '+propName(b.property_id);
-      ev.textContent=label;
-      cell.appendChild(ev); slotCount++;
-    });
-    // Cleaning events — always show property
-    dd.cleans.forEach(d2 => {
-      if (slotCount >= 4) return;
-      const propTag = ' ['+(d2.property_id==='speranta'?'SP':'TV')+']';
-      const ev=document.createElement('div');
-      ev.className='cal-event ev-cleaning';
-      ev.title='🧹 '+d2.cleaner+' — '+propName(d2.property_id);
-      ev.textContent='🧹 '+d2.cleaner.split(' ')[0]+propTag;
-      cell.appendChild(ev); slotCount++;
-    });
-    // Birthdays
-    dd.birthdays.forEach(b => {
-      if (slotCount >= 4) return;
-      const ev=document.createElement('div'); ev.className='cal-event ev-birthday'; ev.textContent=b.label;
-      cell.appendChild(ev); slotCount++;
-    });
-    if (dd.bookings.length+dd.cleans.length+dd.birthdays.length > 4) {
-      const more=document.createElement('div'); more.style.cssText='font-size:.6rem;color:var(--muted);padding-left:3px';
-      more.textContent='+'+(dd.bookings.length+dd.cleans.length+dd.birthdays.length-4)+' more';
-      cell.appendChild(more);
+  // Build week by week so we can render lane-aware rows
+  for (let week = 0; week < weeks; week++) {
+    const weekDays = [];
+    for (let dow = 0; dow < 7; dow++) {
+      const cellIndex = week * 7 + dow;
+      const d = cellIndex - totalPad + 1;
+      if (d < 1 || d > daysInMonth) { weekDays.push(null); continue; }
+      const ds = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      weekDays.push({d, ds});
     }
-    el.appendChild(cell);
+
+    for (let dow = 0; dow < 7; dow++) {
+      const dayInfo = weekDays[dow];
+      if (!dayInfo) {
+        const c = document.createElement('div');
+        c.className = 'cal-cell other'; el.appendChild(c); continue;
+      }
+      const {d, ds} = dayInfo;
+      const isToday = ds === today;
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell' + (isToday ? ' today' : '');
+      cell.onclick = () => window[clickFn](ds);
+
+      // Date number
+      const dateEl = document.createElement('div');
+      dateEl.className = 'cal-date'; dateEl.textContent = d;
+      cell.appendChild(dateEl);
+
+      // Lane-based booking rows (lanes 0, 1, 2)
+      for (let lane = 0; lane < 3; lane++) {
+        // Find booking in this lane active on this day
+        const b = bkgs.find(bk => {
+          if (bk.status==='cancelled'||isCaretaker(bk)) return false;
+          return laneAssignments[bk.id] === lane && bk.check_in <= ds && bk.check_out > ds;
+        });
+
+        if (!b) {
+          // Empty lane spacer — only if there are bookings below this lane on this day
+          const hasLower = bkgs.some(bk => {
+            if (bk.status==='cancelled'||isCaretaker(bk)) return false;
+            return (laneAssignments[bk.id]||0) > lane && bk.check_in <= ds && bk.check_out > ds;
+          });
+          if (hasLower) {
+            const spacer = document.createElement('div');
+            spacer.style.cssText = 'height:18px;margin-bottom:2px';
+            cell.appendChild(spacer);
+          }
+          continue;
+        }
+
+        const isOwner = isOwnerStay(b);
+        const cls = isOwner ? 'ev-owner' : 'ev-'+b.platform;
+        const propTag = showPropTag ? '[' + (b.property_id==='speranta'?'SP':'TV') + '] ' : '';
+        const isStart = b.check_in === ds || dow === 0; // start of booking OR start of week row
+        const isEnd   = (() => {
+          const tomorrow = new Date(new Date(ds).getTime()+86400000).toISOString().slice(0,10);
+          return b.check_out === tomorrow || dow === 6;
+        })();
+        const isRealStart = b.check_in === ds;
+
+        // Border radius based on position
+        let borderRadius = '0';
+        if (isRealStart && isEnd) borderRadius = '4px';
+        else if (isRealStart) borderRadius = '4px 0 0 4px';
+        else if (dow === 0 && isEnd) borderRadius = '4px 4px 4px 4px'; // row-start to end
+        else if (dow === 0) borderRadius = '4px 0 0 4px'; // row continues right
+        else if (isEnd) borderRadius = '0 4px 4px 0';
+
+        const label = isStart
+          ? propTag + (isRealStart ? '🛬 ' : '') + (b.guest_name || b.platform)
+          : ''; // empty label for middle of booking
+
+        const ev = document.createElement('div');
+        ev.style.cssText = `background:${(PLAT_COLORS[isOwner?'owner':b.platform]||'#c17f3c')};color:#fff;font-size:.66rem;padding:2px 5px;margin:0 -1px 2px -1px;border-radius:${borderRadius};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;min-height:18px;cursor:pointer`;
+        ev.title = (b.guest_name||b.platform) + ' — ' + propName(b.property_id);
+        ev.textContent = label;
+        cell.appendChild(ev);
+      }
+
+      // Caretaker — single day event
+      bkgs.forEach(b => {
+        if (!isCaretaker(b)) return;
+        if (b.check_in === ds) {
+          const ev = document.createElement('div');
+          ev.className = 'cal-event ev-caretaker';
+          ev.textContent = '🏡 Tino';
+          cell.appendChild(ev);
+        }
+      });
+
+      // Cleaning events
+      let cleanSlot = 0;
+      doms.filter(d2=>d2.date===ds).forEach(d2 => {
+        if (cleanSlot >= 2) return;
+        const propTag = '[' + (d2.property_id==='speranta'?'SP':'TV') + '] ';
+        const ev = document.createElement('div');
+        ev.className = 'cal-event ev-cleaning';
+        ev.title = '🧹 ' + d2.cleaner + ' — ' + propName(d2.property_id);
+        ev.textContent = '🧹 ' + propTag + d2.cleaner.split(' ')[0];
+        cell.appendChild(ev); cleanSlot++;
+      });
+
+      // Birthdays
+      birthdays.forEach(bday => {
+        if (bday.date === ds) {
+          const ev = document.createElement('div');
+          ev.className = 'cal-event ev-birthday';
+          ev.textContent = bday.label;
+          cell.appendChild(ev);
+        }
+      });
+
+      el.appendChild(cell);
+    }
   }
-  const rem=(firstDay+daysInMonth)%7;
-  for (let i=0;i<(rem>0?7-rem:0);i++) { const c=document.createElement('div'); c.className='cal-cell other'; el.appendChild(c); }
 }
 
 function renderCalendar() {
