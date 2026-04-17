@@ -150,8 +150,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-event.blk-solo{border-radius:4px}
 .ev-airbnb{background:#ff5a5f;color:#fff}
 .ev-booking{background:#1d4ed8;color:#fff}
-.ev-lekkeslaap{background:#2d6a4f;color:#fff}
-.ev-fewo{background:#7c3aed;color:#fff}
+.ev-lekkeslaap{background:#d97706;color:#fff}
 .ev-manual{background:#c17f3c;color:#fff}
 .ev-owner{background:#64748b;color:#fff}
 .ev-caretaker{background:#94a3b8;color:#fff}
@@ -217,8 +216,31 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .divider{height:1px;background:var(--border);margin:14px 0}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
 @media(max-width:768px){
-  .sidebar{display:none}.main{margin-left:0}.content{padding:14px}
+  .sidebar{display:none}.main{margin-left:0}.content{padding:12px}
   .stat-grid{grid-template-columns:1fr 1fr}.grid-2{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}
+  .topbar{padding:12px 16px}.page-title{font-size:1.2rem}
+  .cal-cell{min-height:60px;padding:3px}.cal-date{font-size:.7rem;width:18px;height:18px}
+  .cal-event{font-size:.58rem;padding:1px 3px}
+  .cal-day-head{font-size:.62rem;padding:6px 2px}
+  .card{padding:14px}.stat-card{padding:14px 16px}
+  .stat-value{font-size:1.5rem}
+  table{font-size:.78rem}thead th{padding:8px 10px}tbody td{padding:9px 10px}
+  .btn{padding:9px 16px;font-size:.82rem}.btn-sm{padding:5px 10px;font-size:.76rem}
+  .modal{max-width:100%!important;margin:10px}.modal-body{padding:0 16px 20px}.modal-header{padding:16px 16px 0}
+  .toggle-bar button{font-size:.7rem;padding:4px 10px}
+  .filter-row{gap:5px}.filter-row .btn-sm{padding:4px 8px;font-size:.72rem}
+}
+/* Mobile bottom nav */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--ink);z-index:200;padding:6px 0 8px;border-top:1px solid rgba(255,255,255,.1)}
+.mobile-nav-inner{display:flex;justify-content:space-around;align-items:center}
+.mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 8px;border-radius:8px;min-width:44px;transition:all .15s}
+.mob-nav-item.active{background:rgba(193,127,60,.2)}
+.mob-nav-item span:first-child{font-size:1.1rem}
+.mob-nav-item span:last-child{font-size:.6rem;color:rgba(255,255,255,.5);font-weight:500}
+.mob-nav-item.active span:last-child{color:var(--accent)}
+@media(max-width:768px){
+  .mobile-nav{display:block}
+  .main{padding-bottom:64px}
 }
 </style>
 </head>
@@ -315,11 +337,9 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
       <div class="legend">
         <div class="legend-item"><div class="legend-dot" style="background:#ff5a5f"></div>Airbnb</div>
         <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div>Booking.com</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#2d6a4f"></div>LekkeSlaap</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>Fewo</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Manual</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>LekkeSlaap</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Manual/Direct</div>
         <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>Caretaker</div>
         <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Cleaning</div>
         <div class="legend-item"><div class="legend-dot" style="background:#d946ef"></div>Birthday</div>
       </div>
@@ -368,7 +388,10 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   <!-- MESSAGES -->
   <div class="tab-pane" id="tab-messages">
     <div class="card">
-      <div class="text-muted mb-4">Team channel — all messages logged.</div>
+      <div style="background:var(--sand);border-radius:9px;padding:12px 14px;margin-bottom:14px;font-size:.83rem;line-height:1.6">
+        <strong>💬 Team Channel</strong> — messages are logged here for the team.<br>
+        <span style="color:var(--muted)">💡 <em>WhatsApp integration:</em> For now, use this for internal team notes. WhatsApp Business API integration is on the roadmap — it will let guests message directly into this platform. For now, copy important WhatsApp updates here so everything is in one place.</span>
+      </div>
       <div class="chat-wrap" id="chat-messages"></div>
       <div style="display:flex;gap:10px">
         <input type="text" id="chat-input" placeholder="Message the team…" onkeydown="if(event.key==='Enter')sendMessage()" style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none"/>
@@ -385,6 +408,14 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
     </div>
     <div class="mb-6"><input style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:#fff" placeholder="🔍 Search…" oninput="renderKB(this.value)"/></div>
     <div id="kb-content"></div>
+  </div>
+
+  <!-- TEAM (admin only) -->
+  <div class="tab-pane" id="tab-team">
+    <div class="section-head">
+      <div><h2 style="font-size:1.25rem;margin-bottom:3px">Team</h2><div class="text-muted">Staff, cleaners & contacts</div></div>
+    </div>
+    <div id="team-content"></div>
   </div>
 
   <!-- REPORTS (admin only) -->
@@ -511,6 +542,12 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   </div>
 </div>
 
+<!-- MOBILE BOTTOM NAV -->
+
+<div class="mobile-nav" id="mobile-nav">
+  <div class="mobile-nav-inner" id="mob-nav-items"></div>
+</div>
+
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
@@ -535,7 +572,7 @@ const CLEANERS = [
   {name:'Patricia', properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450}, birthday:'1985-11-05'},
   {name:'Spiwe',    properties:['speranta'],           rate:350, birthday:'1990-09-18'},
 ];
-const PLAT_COLORS = {airbnb:'#ff5a5f',booking:'#1d4ed8',lekkeslaap:'#2d6a4f',fewo:'#7c3aed',manual:'#c17f3c',owner:'#64748b',caretaker:'#94a3b8'};
+const PLAT_COLORS = {airbnb:'#ff5a5f',booking:'#1d4ed8',lekkeslaap:'#d97706',manual:'#c17f3c',owner:'#64748b',caretaker:'#94a3b8'};
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -669,7 +706,7 @@ function doLogin() {
   document.getElementById('user-avatar').textContent=user.initials;
   document.getElementById('user-name').textContent=user.name;
   document.getElementById('user-role').textContent=user.role;
-  buildNav(); loadData();
+  buildNav(); buildMobileNav(); loadData();
 }
 function doLogout() { currentUser=null; document.getElementById('auth-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
 
@@ -682,6 +719,7 @@ const NAV = [
   {id:'tasks',    label:'Tasks',        icon:'✅',roles:['admin','host']},
   {id:'messages', label:'Messages',     icon:'💬',roles:['admin','host']},
   {id:'knowledge',label:'Knowledge Base',icon:'📚',roles:['admin','host']},
+  {id:'team',     label:'Team',         icon:'👥',roles:['admin']},
   {id:'reports',  label:'Reports',      icon:'📊',roles:['admin']},
 ];
 function buildNav() {
@@ -694,7 +732,7 @@ function switchTab(id) {
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   document.getElementById('page-title').textContent=NAV.find(n=>n.id===id)?.label||id;
-  buildNav(); renderTab(id);
+  buildNav(); buildMobileNav(); renderTab(id);
 }
 function switchProperty(val) {
   currentProp=val;
@@ -711,6 +749,7 @@ function renderTab(id) {
   else if (id==='tasks')     renderTasks();
   else if (id==='messages')  renderMessages();
   else if (id==='knowledge') renderKB();
+  else if (id==='team')      renderTeam();
   else if (id==='reports')   renderReports();
 }
 
@@ -762,17 +801,18 @@ function filteredDomestics() {
 function renderDashboard() {
   const today = new Date().toISOString().slice(0,10);
   const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
-  const active = fb.filter(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled');
+  const active    = fb.filter(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b));
   const checkIns  = fb.filter(b=>b.check_in===today&&b.status!=='cancelled');
   const checkOuts = fb.filter(b=>b.check_out===today&&b.status!=='cancelled');
   const monthRev  = fb.filter(b=>b.check_in.startsWith('2026-04')).reduce((s,b)=>s+(b.revenue||0),0);
   const upcoming  = fb.filter(b=>b.check_in>today&&b.status!=='cancelled').sort((a,z)=>a.check_in.localeCompare(z.check_in)).slice(0,6);
   const isAdmin = currentUser.role==='admin';
+  const checkInLabels  = checkIns.map(b=>b.display_name+' ('+propName(b.property_id)+')').join(', ') || 'None today';
+  const checkOutLabels = checkOuts.map(b=>b.display_name+' ('+propName(b.property_id)+')').join(', ') || 'None today';
   document.getElementById('dash-stats').innerHTML =
-    statCard("Today's Check-ins", checkIns.length, checkIns.map(b=>b.display_name).join(', ')||'None today', 'var(--accent)') +
-    statCard("Today's Check-outs", checkOuts.length, checkOuts.map(b=>b.display_name).join(', ')||'None today', 'var(--blue)') +
-    statCard('Occupied Now', active.length, 'of '+(currentProp==='all'?2:1)+' properties', 'var(--green2)') +
-    (isAdmin ? statCard('April Revenue','R'+monthRev.toLocaleString(),'all platforms','#7c3aed') : '');
+    statCard("Today's Check-ins",  checkIns.length,  checkInLabels,  'var(--accent)') +
+    statCard("Today's Check-outs", checkOuts.length, checkOutLabels, 'var(--blue)') +
+    statCard('Occupied Now', active.length, 'of '+(currentProp==='all'?2:1)+' properties', 'var(--green2)');
   document.getElementById('dash-upcoming').innerHTML = upcoming.length ? upcoming.map(b=>
     `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
       <div><div style="font-weight:600;font-size:.88rem">${b.display_name}</div>
@@ -781,7 +821,7 @@ function renderDashboard() {
       <span class="badge badge-${b.platform}" style="margin-top:3px">${b.platform}</span></div>
     </div>`).join('') : '<div class="text-muted">No upcoming bookings</div>';
   document.getElementById('dash-prop-status').innerHTML = Object.entries(PROPS).map(([pid,prop])=>{
-    const cur = bookings.find(b=>b.property_id===pid&&b.check_in<=today&&b.check_out>today&&b.status!=='cancelled');
+    const cur = bookings.find(b=>b.property_id===pid&&b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b));
     return `<div style="padding:13px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <span style="font-weight:700">${prop.name}</span>
@@ -931,10 +971,10 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
       ev.textContent=label;
       cell.appendChild(ev); slotCount++;
     });
-    // Cleaning events with property label
+    // Cleaning events — always show property
     dd.cleans.forEach(d2 => {
       if (slotCount >= 4) return;
-      const propTag = showPropTag ? ' ['+(d2.property_id==='speranta'?'SP':'TV')+']' : '';
+      const propTag = ' ['+(d2.property_id==='speranta'?'SP':'TV')+']';
       const ev=document.createElement('div');
       ev.className='cal-event ev-cleaning';
       ev.title='🧹 '+d2.cleaner+' — '+propName(d2.property_id);
@@ -1380,6 +1420,86 @@ function toast(msg,type='info'){
   const wrap=document.getElementById('toast-wrap');
   const t=document.createElement('div');t.className='toast '+(type||'');t.textContent=msg;
   wrap.appendChild(t);setTimeout(()=>t.remove(),3500);
+}
+
+// ── TEAM ─────────────────────────────────────────────────────
+const TEAM_MEMBERS = [
+  {name:'Nicole',      role:'Owner / Admin',     phone:'+27 82 XXX XXXX', email:'sn_apt_management@outlook.com', initials:'N',  color:'var(--accent)',   note:'Co-owner, manages bookings & finances'},
+  {name:'Silja',       role:'Owner / Admin',     phone:'+27 XX XXX XXXX', email:'silja@hostease.co.za',          initials:'S',  color:'#7c3aed',         note:'Co-owner, TV House'},
+  {name:'Nina Williams',role:'Host Expert',      phone:'+27 83 702 2421', email:'vanwyk.nina@gmail.com',         initials:'NW', color:'var(--green2)',   note:'On-ground host — check-ins, check-outs, keys'},
+];
+const CLEANERS_TEAM = [
+  {name:'Blessing',  role:'Cleaner — Speranta',      phone:'',rate:'R350/clean', birthday:'14 March',    properties:['speranta'], note:'Regular Speranta cleaner'},
+  {name:'Fatima',    role:'Cleaner — Speranta & TV', phone:'',rate:'R350/clean', birthday:'22 July',     properties:['speranta','tvhouse'], note:'Covers both properties when needed'},
+  {name:'Patricia',  role:'Cleaner — Speranta & TV', phone:'',rate:'R350 SP / R450 TV', birthday:'5 November', properties:['speranta','tvhouse'], note:'Primary TV House cleaner, also covers Speranta'},
+  {name:'Spiwe',     role:'Cleaner — Speranta',      phone:'',rate:'R350/clean', birthday:'18 September', properties:['speranta'], note:'Regular Speranta cleaner'},
+];
+
+function renderTeam() {
+  const el = document.getElementById('team-content'); if(!el) return;
+  const CLEAN_COLORS = {Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+  // Staff section
+  const staffHTML = `<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:12px">Management Team</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:28px">
+    ${TEAM_MEMBERS.map(m=>`<div class="card" style="border-top:3px solid ${m.color};padding:18px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="width:40px;height:40px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:.88rem;flex-shrink:0">${m.initials}</div>
+        <div><div style="font-weight:700;font-size:.95rem">${m.name}</div><div style="font-size:.75rem;color:var(--muted)">${m.role}</div></div>
+      </div>
+      ${m.phone?`<div style="font-size:.83rem;margin-bottom:4px">📱 ${m.phone}</div>`:''}
+      ${m.email?`<div style="font-size:.83rem;margin-bottom:6px">✉️ ${m.email}</div>`:''}
+      <div style="font-size:.8rem;color:var(--muted);font-style:italic">${m.note}</div>
+    </div>`).join('')}
+  </div>`;
+
+  // Cleaners section
+  const cleanersHTML = `<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:12px">Domestic Staff</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
+    ${CLEANERS_TEAM.map(c=>{
+      const color = CLEAN_COLORS[c.name]||'var(--accent)';
+      const today = new Date();
+      const bdayParts = c.birthday.split(' ');
+      const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      const bdayMonth = mNames.indexOf(bdayParts[1]);
+      const bdayDay   = parseInt(bdayParts[0]);
+      const daysUntil = (() => {
+        const next = new Date(today.getFullYear(), bdayMonth, bdayDay);
+        if (next < today) next.setFullYear(today.getFullYear()+1);
+        return Math.round((next-today)/86400000);
+      })();
+      const bdayAlert = daysUntil <= 7 ? `<div style="background:#f0abfc20;border:1px solid #d946ef;border-radius:6px;padding:5px 8px;font-size:.75rem;color:#86198f;margin-top:6px">🎂 Birthday in ${daysUntil} day${daysUntil!==1?'s':''}!</div>` : '';
+      return `<div class="card" style="border-top:3px solid ${color};padding:18px">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="width:40px;height:40px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:.88rem;flex-shrink:0">${c.name[0]}</div>
+          <div><div style="font-weight:700;font-size:.95rem">${c.name}</div><div style="font-size:.75rem;color:var(--muted)">${c.role}</div></div>
+        </div>
+        <div style="font-size:.83rem;margin-bottom:3px">💰 Rate: <strong>${c.rate}</strong></div>
+        <div style="font-size:.83rem;margin-bottom:3px">🎂 Birthday: ${c.birthday}</div>
+        <div style="font-size:.83rem;margin-bottom:6px">🏠 Properties: ${c.properties.map(p=>p==='speranta'?'Speranta':'TV House').join(', ')}</div>
+        <div style="font-size:.8rem;color:var(--muted);font-style:italic">${c.note}</div>
+        ${bdayAlert}
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  el.innerHTML = staffHTML + cleanersHTML;
+}
+
+// ── MOBILE NAV ────────────────────────────────────────────────
+const MOB_NAV = [
+  {id:'dashboard',icon:'🏠',label:'Home'},
+  {id:'calendar', icon:'📅',label:'Calendar'},
+  {id:'bookings', icon:'📋',label:'Bookings'},
+  {id:'domestic', icon:'🧹',label:'Domestic'},
+  {id:'tasks',    icon:'✅',label:'Tasks'},
+];
+function buildMobileNav() {
+  const el = document.getElementById('mob-nav-items'); if (!el) return;
+  el.innerHTML = MOB_NAV.map(n=>
+    `<div class="mob-nav-item ${currentTab===n.id?'active':''}" onclick="switchTab('${n.id}')">
+      <span>${n.icon}</span><span>${n.label}</span>
+    </div>`
+  ).join('');
 }
 
 // ── INIT ──────────────────────────────────────────────────────
