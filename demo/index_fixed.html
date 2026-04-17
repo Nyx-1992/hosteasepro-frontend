@@ -217,41 +217,43 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .divider{height:1px;background:var(--border);margin:14px 0}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
 /* Mobile bottom nav — always defined */
-.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--ink);z-index:9999;padding:8px 0 10px;border-top:1px solid rgba(255,255,255,.12);box-shadow:0 -4px 20px rgba(0,0,0,.3)}
-.mobile-nav-inner{display:flex;justify-content:space-around;align-items:center;max-width:500px;margin:0 auto}
-.mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 12px;border-radius:10px;min-width:52px;transition:all .15s;-webkit-tap-highlight-color:transparent}
-.mob-nav-item.active{background:rgba(193,127,60,.25)}
-.mob-nav-item span:first-child{font-size:1.3rem;line-height:1}
-.mob-nav-item span:last-child{font-size:.58rem;color:rgba(255,255,255,.45);font-weight:600;letter-spacing:.02em}
-.mob-nav-item.active span:last-child{color:var(--accent)}
-/* Topbar hamburger for mobile */
-.mob-menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;font-size:1.3rem;color:var(--ink)}
-
+.mobile-nav{position:fixed;bottom:0;left:0;right:0;background:var(--ink);z-index:9999;padding:8px 0 max(10px,env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.12);display:none;box-shadow:0 -2px 20px rgba(0,0,0,.25)}
+.mobile-nav-inner{display:flex;justify-content:space-around;align-items:center}
+.mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 10px;border-radius:10px;min-width:54px;-webkit-tap-highlight-color:transparent}
+.mob-nav-icon{font-size:1.2rem;line-height:1.3}
+.mob-nav-label{font-size:.58rem;color:rgba(255,255,255,.45);font-weight:600;letter-spacing:.02em}
+.mob-nav-item.active .mob-nav-label{color:var(--accent)}
+.mob-drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000}
+.mob-drawer-overlay.open{display:block}
+.mob-drawer{position:fixed;left:-265px;top:0;bottom:0;width:265px;background:var(--ink);z-index:9001;transition:left .28s ease;display:flex;flex-direction:column;overflow:hidden}
+.mob-drawer.open{left:0}
 @media(max-width:768px){
-.sidebar{display:none!important}
-.main{margin-left:0!important;padding-bottom:72px}
-.content{padding:12px}
-.mobile-nav{display:block!important}
-.mob-menu-btn{display:flex;align-items:center;justify-content:center}
-.topbar{padding:10px 16px}
-.page-title{font-size:1.15rem}
-.stat-grid{grid-template-columns:1fr 1fr}
-.grid-2{grid-template-columns:1fr}
-.form-grid{grid-template-columns:1fr}
-.cal-cell{min-height:56px}
-.cal-date{font-size:.68rem;width:18px;height:18px}
-.cal-day-head{font-size:.6rem;padding:6px 2px;letter-spacing:0}
-.card{padding:14px}.stat-card{padding:12px 14px}
-.stat-value{font-size:1.4rem}
-table{font-size:.76rem}thead th{padding:7px 8px}tbody td{padding:8px}
-.btn{padding:8px 14px;font-size:.82rem}.btn-sm{padding:5px 10px;font-size:.76rem}
-.modal{max-width:calc(100vw - 20px)!important;margin:10px auto}.modal-body{padding:0 14px 18px}.modal-header{padding:14px 14px 0}
-.toggle-bar button{font-size:.7rem;padding:4px 10px}
-.section-head{flex-direction:column;align-items:flex-start}
-.filter-row{gap:4px;flex-wrap:wrap}
-.filter-row .btn-sm{padding:4px 8px;font-size:.7rem}
-.dom-grid{grid-template-columns:1fr}
-.kb-grid{grid-template-columns:1fr}
+  .sidebar{display:none!important}
+  .main{margin-left:0!important;padding-bottom:72px}
+  .content{padding:12px}
+  .mobile-nav{display:block!important}
+  #mob-menu-btn{display:flex!important;align-items:center}
+  .topbar{padding:10px 14px}
+  .page-title{font-size:1.1rem}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .grid-2{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .cal-cell{min-height:54px}
+  .cal-bar{font-size:.56rem;height:16px;line-height:12px;padding:2px 3px}
+  .cal-event{font-size:.56rem;padding:2px 3px}
+  .cal-date{font-size:.66rem;width:18px;height:18px}
+  .cal-day-head{font-size:.58rem;padding:6px 2px}
+  .cal-nav button{padding:5px 8px;font-size:.75rem}
+  .card{padding:14px}.stat-card{padding:12px 14px}
+  .stat-value{font-size:1.4rem}
+  table{font-size:.76rem}thead th{padding:7px 8px}tbody td{padding:8px}
+  .btn{padding:8px 14px;font-size:.82rem}.btn-sm{padding:6px 11px;font-size:.77rem}
+  .modal{border-radius:12px}.modal-body{padding:0 16px 20px}.modal-header{padding:16px 16px 0}
+  .toggle-bar button{font-size:.68rem;padding:4px 10px}
+  .filter-row .btn-sm{padding:5px 9px;font-size:.72rem}
+  .dom-grid{grid-template-columns:1fr}
+  .kb-grid{grid-template-columns:1fr}
+  .section-head{flex-direction:column;align-items:flex-start}
 }
 
 /* Mobile sidebar drawer */
@@ -303,6 +305,7 @@ table{font-size:.76rem}thead th{padding:7px 8px}tbody td{padding:8px}
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:10px">
         <button class="mob-menu-btn" onclick="toggleMobSidebar()" title="Menu">☰</button>
+        <button style="display:none;background:none;border:none;cursor:pointer;padding:6px 8px;font-size:1.4rem;color:var(--ink);line-height:1" id="mob-menu-btn" onclick="openDrawer()">☰</button>
         <div class="page-title" id="page-title">Dashboard</div>
       </div>
       <div class="topbar-right">
@@ -566,7 +569,23 @@ table{font-size:.76rem}thead th{padding:7px 8px}tbody td{padding:8px}
 <!-- MOBILE BOTTOM NAV -->
 
 <div class="mobile-nav" id="mobile-nav">
-  <div class="mobile-nav-inner" id="mob-nav-items"></div>
+  <div class="mobile-nav-inner" id="mob-nav-inner"></div>
+</div>
+<!-- MOBILE DRAWER -->
+<div class="mob-drawer-overlay" id="mob-overlay" onclick="closeDrawer()"></div>
+<div class="mob-drawer" id="mob-drawer">
+  <div class="s-logo" style="padding:24px 20px 16px;flex-shrink:0"><span class="s-logo-text">HostEase Pro</span><small>S&N Apt Management</small></div>
+  <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0">
+    <select onchange="switchProperty(this.value);closeDrawer()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none">
+      <option value="all">All Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option>
+    </select>
+  </div>
+  <nav id="mob-nav-list" style="flex:1;overflow-y:auto;padding:10px 0"></nav>
+  <div style="padding:14px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:9px;flex-shrink:0">
+    <div class="avatar" id="mob-avatar"></div>
+    <div style="flex:1;min-width:0"><div style="font-size:.8rem;font-weight:600;color:#fff" id="mob-name"></div><div style="font-size:.7rem;color:rgba(255,255,255,.4)" id="mob-role"></div></div>
+    <button style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:1rem;padding:6px" onclick="doLogout()">⏏</button>
+  </div>
 </div>
 
 <!-- MOBILE SIDEBAR DRAWER -->
@@ -616,10 +635,10 @@ const PROPS = {
   tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5'},
 };
 const CLEANERS = [
-  {name:'Blessing', properties:['speranta'],           rate:350, birthday:'1988-03-14'},
-  {name:'Fatima',   properties:['speranta','tvhouse'], rate:350, birthday:'1992-07-22'},
-  {name:'Patricia', properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450}, birthday:'1985-11-05'},
-  {name:'Spiwe',    properties:['speranta'],           rate:350, birthday:'1990-09-18'},
+  {name:'Blessing', phone:'062 532 2932', payment:'ewallet via Spiwe', properties:['speranta'],           rate:350, birthday:'1988-03-14', note:'Speranta cleaner. Paid via Spiwe ewallet.'},
+  {name:'Fatima',   phone:'063 175 8111', payment:'ewallet',           properties:['speranta','tvhouse'], rate:350, birthday:'1992-07-22', note:'Covers both properties.'},
+  {name:'Patricia', phone:'063 735 3892', payment:'eft',               properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450}, birthday:'1985-11-05', note:'Patricia Mutizwa. Primary TV House cleaner.'},
+  {name:'Spiwe',    phone:'084 915 0894', payment:'ewallet',           properties:['speranta'],           rate:350, birthday:'1990-09-18', note:'Spiwe Gwingwizna. Also collects Blessing payment via ewallet.'},
 ];
 const PLAT_COLORS = {airbnb:'#ff5a5f',booking:'#1d4ed8',lekkeslaap:'#d97706',manual:'#c17f3c',owner:'#64748b',caretaker:'#94a3b8'};
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -635,7 +654,7 @@ const NINA_BOOKING_TASKS = [
 
 const USERS = [
   {id:'1',email:'sn_apt_management@outlook.com',password:'Sevilla2015!', name:'Nicole',       role:'admin',initials:'N'},
-  {id:'2',email:'silja@hostease.co.za',          password:'Admin2024!',   name:'Silja',        role:'admin',initials:'S'},
+  {id:'2',email:'s.faltin@tischlerei-faltin.de',          password:'Admin2024!',   name:'Silja',        role:'admin',initials:'S'},
   {id:'3',email:'vanwyk.nina@gmail.com',          password:'HelloWorld1!', name:'Nina Williams',role:'host', initials:'NW'},
 ];
 
@@ -755,7 +774,7 @@ function doLogin() {
   document.getElementById('user-avatar').textContent=user.initials;
   document.getElementById('user-name').textContent=user.name;
   document.getElementById('user-role').textContent=user.role;
-  buildNav(); buildMobileNav(); buildMobSidebarNav(); loadData();
+  buildNav(); buildMobileNav(); loadData();
 }
 function doLogout() { currentUser=null; document.getElementById('auth-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
 
@@ -781,7 +800,7 @@ function switchTab(id) {
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   document.getElementById('page-title').textContent=NAV.find(n=>n.id===id)?.label||id;
-  buildNav(); buildMobileNav(); renderTab(id);
+  buildNav(); if(typeof buildMobileNav==='function')buildMobileNav(); renderTab(id);
 }
 function switchProperty(val) {
   currentProp=val;
@@ -794,7 +813,7 @@ function renderTab(id) {
   if (id==='dashboard') renderDashboard();
   else if (id==='bookings')  renderBookings();
   else if (id==='calendar')  renderCalendar();
-  else if (id==='domestic')  { renderDomesticCalendar(); renderDomEarnings(); renderDomestic(); }
+  else if (id==='domestic')  { renderDomCal(); renderDomEarnings(); renderDomestic(); }
   else if (id==='tasks')     renderTasks();
   else if (id==='messages')  renderMessages();
   else if (id==='knowledge') renderKB();
@@ -946,180 +965,98 @@ function setCalProp(prop, btn) {
 
 function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
   if (labelId) document.getElementById(labelId).textContent = MONTHS[month]+' '+year;
-  const today       = new Date().toISOString().slice(0,10);
-  const firstDay    = new Date(year,month,1).getDay();
-  const daysInMonth = new Date(year,month+1,0).getDate();
-  const showPropTag = bkgs.filter(x=>!isCaretaker(x)&&x.property_id==='speranta').length > 0 &&
-                      bkgs.filter(x=>!isCaretaker(x)&&x.property_id==='tvhouse').length > 0;
-  const birthdays   = CLEANERS.map(c => {
-    const bday = c.birthday?.slice(5);
-    return bday ? {date:String(year)+'-'+bday, label:'🎂 '+c.name} : null;
-  }).filter(Boolean);
+  const today = new Date().toISOString().slice(0,10);
+  const firstDay = new Date(year,month,1).getDay();
+  const dim = new Date(year,month+1,0).getDate();
+  const weeks = Math.ceil((firstDay+dim)/7);
+  const showProp = bkgs.filter(x=>!isCaretaker(x)&&x.property_id==='speranta').length>0 &&
+                   bkgs.filter(x=>!isCaretaker(x)&&x.property_id==='tvhouse').length>0;
+  const birthdays = CLEANERS.map(c=>{const b=c.birthday?.slice(5);return b?{date:String(year)+'-'+b,name:c.name}:null;}).filter(Boolean);
 
-  // Build full grid of days (padded to complete weeks)
-  const totalPad = firstDay;
-  const totalCells = Math.ceil((totalPad + daysInMonth) / 7) * 7;
-  const weeks = Math.ceil((totalPad + daysInMonth) / 7);
-
-  // For each booking assign a fixed lane (0,1,2) so it stays on same row across weeks
-  const laneAssignments = {}; // bookingId -> lane
-  const activeLanes = [null, null, null]; // which booking is in each lane
-  for (let d = 1; d <= daysInMonth; d++) {
+  // Assign each booking a fixed lane (0,1,2) for the whole month
+  const laneOf = {};
+  const laneEnd = [null,null,null];
+  for (let d=1; d<=dim; d++) {
     const ds = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    // On each day, expire lanes whose booking ended
-    for (let l = 0; l < 3; l++) {
-      if (activeLanes[l] && activeLanes[l].check_out <= ds) activeLanes[l] = null;
-    }
-    // Assign lanes to bookings starting today
+    for (let l=0; l<3; l++) if (laneEnd[l] && laneEnd[l]<=ds) laneEnd[l]=null;
     bkgs.forEach(b => {
-      if (b.status==='cancelled' || isCaretaker(b)) return;
-      if (b.check_in === ds) {
-        // Find a free lane
-        let lane = activeLanes.findIndex(l => l === null);
-        if (lane === -1) lane = 0; // fallback
-        activeLanes[lane] = b;
-        laneAssignments[b.id] = lane;
+      if (b.status==='cancelled'||isCaretaker(b)) return;
+      if (b.check_in===ds) {
+        let lane = laneEnd.findIndex(l=>l===null);
+        if (lane===-1) lane=0;
+        laneOf[b.id] = lane;
+        laneEnd[lane] = b.check_out;
       }
     });
   }
 
-  const el = document.getElementById(gridId);
-  el.innerHTML = '';
-
-  // Header
-  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => {
-    const h = document.createElement('div');
-    h.className = 'cal-day-head'; h.textContent = d; el.appendChild(h);
+  const el = document.getElementById(gridId); el.innerHTML='';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>{
+    const h=document.createElement('div'); h.className='cal-day-head'; h.textContent=d; el.appendChild(h);
   });
 
-  // Build week by week so we can render lane-aware rows
-  for (let week = 0; week < weeks; week++) {
-    const weekDays = [];
-    for (let dow = 0; dow < 7; dow++) {
-      const cellIndex = week * 7 + dow;
-      const d = cellIndex - totalPad + 1;
-      if (d < 1 || d > daysInMonth) { weekDays.push(null); continue; }
-      const ds = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-      weekDays.push({d, ds});
-    }
-
-    for (let dow = 0; dow < 7; dow++) {
-      const dayInfo = weekDays[dow];
-      if (!dayInfo) {
-        const c = document.createElement('div');
-        c.className = 'cal-cell other'; el.appendChild(c); continue;
-      }
-      const {d, ds} = dayInfo;
-      const isToday = ds === today;
+  for (let week=0; week<weeks; week++) {
+    for (let dow=0; dow<7; dow++) {
+      const d = week*7+dow - firstDay + 1;
       const cell = document.createElement('div');
-      cell.className = 'cal-cell' + (isToday ? ' today' : '');
-      cell.onclick = () => window[clickFn](ds);
+      if (d<1||d>dim) { cell.className='cal-cell other'; el.appendChild(cell); continue; }
+      const ds = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      cell.className = 'cal-cell'+(ds===today?' today':'');
+      cell.onclick = ()=>window[clickFn](ds);
 
-      // Date number
-      const dateEl = document.createElement('div');
-      dateEl.className = 'cal-date'; dateEl.textContent = d;
-      cell.appendChild(dateEl);
+      const dn = document.createElement('div');
+      dn.className='cal-date'; dn.textContent=d; cell.appendChild(dn);
 
-      // Lane-based booking rows — always render all used lanes with no gaps
-      const maxLane = bkgs.reduce((max, bk) => {
-        if (bk.status==='cancelled'||isCaretaker(bk)) return max;
-        if (bk.check_in <= ds && bk.check_out > ds) return Math.max(max, laneAssignments[bk.id]||0);
-        return max;
-      }, -1);
+      // Max active lane this day
+      let maxLane=-1;
+      bkgs.forEach(b=>{if(b.status!=='cancelled'&&!isCaretaker(b)&&b.check_in<=ds&&b.check_out>ds) maxLane=Math.max(maxLane,laneOf[b.id]||0);});
 
-      for (let lane = 0; lane <= maxLane; lane++) {
-        const b = bkgs.find(bk => {
-          if (bk.status==='cancelled'||isCaretaker(bk)) return false;
-          return laneAssignments[bk.id] === lane && bk.check_in <= ds && bk.check_out > ds;
-        });
-
+      for (let lane=0; lane<=maxLane; lane++) {
+        const b = bkgs.find(bk=>!isCaretaker(bk)&&bk.status!=='cancelled'&&laneOf[bk.id]===lane&&bk.check_in<=ds&&bk.check_out>ds);
         if (!b) {
-          // Empty slot — transparent spacer to maintain alignment
-          const spacer = document.createElement('div');
-          spacer.style.cssText = 'height:18px;margin-bottom:2px;background:transparent;width:100%;display:block';
-          cell.appendChild(spacer);
-          continue;
+          // Transparent spacer keeps lane alignment
+          const sp=document.createElement('div');
+          sp.style.cssText='height:18px;margin-bottom:2px;background:transparent;display:block;width:100%';
+          cell.appendChild(sp); continue;
         }
-
         const isOwner = isOwnerStay(b);
-        const color = PLAT_COLORS[isOwner?'owner':b.platform] || '#c17f3c';
-        const propTag = showPropTag ? '[' + (b.property_id==='speranta'?'SP':'TV') + '] ' : '';
-        const isRealStart = b.check_in === ds;
-        const isWeekStart = dow === 0;
+        const color = PLAT_COLORS[isOwner?'owner':b.platform]||'#c17f3c';
+        const propTag = showProp ? '['+(b.property_id==='speranta'?'SP':'TV')+'] ' : '';
+        const isRealStart = b.check_in===ds;
+        const isWeekStart = dow===0;
         const tomorrow = new Date(new Date(ds).getTime()+86400000).toISOString().slice(0,10);
-        const isRealEnd   = b.check_out === tomorrow;
-        const isWeekEnd   = dow === 6;
-
-        // Margin to create continuous appearance — no gaps between days
-        // Left margin: 0 if this is the real start or week start, else -1px overlap
-        // Right margin: 0 if real end or week end, else -1px overlap
-        const ml = '0';
-        const mr = '0';
-
-        // Border radius — round only true start/end edges
-        const rl = (isRealStart) ? '4px' : '0';
-        const rr = (isRealEnd)   ? '4px' : '0';
-        const borderRadius = `${rl} ${rr} ${rr} ${rl}`;
-
-        // Show label only at real start or start of each new week row
-        const showLabel = isRealStart || isWeekStart;
-        const label = showLabel
-          ? propTag + (isRealStart ? '🛬 ' : '↳ ') + (b.guest_name || b.platform)
-          : '';
-
-        const ev = document.createElement('div');
-        ev.style.cssText = [
-          `background:${color}`,
-          `color:#fff`,
-          `font-size:.66rem`,
-          `padding:2px 6px`,
-          `margin:0 0 2px 0`,
-          `border-radius:${borderRadius}`,
-          `white-space:nowrap`,
-          `overflow:hidden`,
-          `text-overflow:ellipsis`,
-          `font-weight:600`,
-          `min-height:18px`,
-          `cursor:pointer`,
-          `display:block`,
-          `width:100%`,
-        ].join(';');
-        ev.title = (b.guest_name||b.platform) + ' — ' + propName(b.property_id);
-        ev.textContent = label;
-        cell.appendChild(ev);
+        const isRealEnd = b.check_out===tomorrow;
+        // Round left edge on real start, right edge on real end only
+        const rl = isRealStart ? '4px':'0';
+        const rr = isRealEnd   ? '4px':'0';
+        const showLabel = isRealStart||isWeekStart;
+        const icon = isRealStart ? '🛬 ' : isWeekStart ? '↳ ' : '';
+        const label = showLabel ? propTag+icon+(b.guest_name||b.platform) : '';
+        const bar = document.createElement('div');
+        bar.className='cal-bar';
+        bar.style.cssText='background:'+color+';border-radius:'+rl+' '+rr+' '+rr+' '+rl+';color:#fff';
+        bar.title = (b.guest_name||b.platform)+' — '+propName(b.property_id)+' | '+fmtDate(b.check_in)+' → '+fmtDate(b.check_out);
+        bar.textContent = label;
+        cell.appendChild(bar);
       }
 
-      // Caretaker — single day event
-      bkgs.forEach(b => {
-        if (!isCaretaker(b)) return;
-        if (b.check_in === ds) {
-          const ev = document.createElement('div');
-          ev.className = 'cal-event ev-caretaker';
-          ev.textContent = '🏡 Tino';
-          cell.appendChild(ev);
-        }
+      // Caretaker: single block on move-in day only
+      bkgs.filter(b=>isCaretaker(b)&&b.check_in===ds).forEach(()=>{
+        const ev=document.createElement('div'); ev.className='cal-event ev-caretaker'; ev.textContent='🏡 Tino'; cell.appendChild(ev);
       });
 
-      // Cleaning events
-      let cleanSlot = 0;
-      doms.filter(d2=>d2.date===ds).forEach(d2 => {
-        if (cleanSlot >= 2) return;
-        const propTag = '[' + (d2.property_id==='speranta'?'SP':'TV') + '] ';
-        const ev = document.createElement('div');
-        ev.className = 'cal-event ev-cleaning';
-        ev.title = '🧹 ' + d2.cleaner + ' — ' + propName(d2.property_id);
-        ev.textContent = '🧹 ' + propTag + d2.cleaner.split(' ')[0];
-        cell.appendChild(ev); cleanSlot++;
+      // Cleaning — always show property tag
+      doms.filter(d2=>d2.date===ds).forEach(d2=>{
+        const pt='['+(d2.property_id==='speranta'?'SP':'TV')+'] ';
+        const ev=document.createElement('div'); ev.className='cal-event ev-cleaning';
+        ev.title='🧹 '+d2.cleaner+' — '+propName(d2.property_id);
+        ev.textContent='🧹 '+pt+d2.cleaner.split(' ')[0];
+        cell.appendChild(ev);
       });
 
       // Birthdays
-      birthdays.forEach(bday => {
-        if (bday.date === ds) {
-          const ev = document.createElement('div');
-          ev.className = 'cal-event ev-birthday';
-          ev.textContent = bday.label;
-          cell.appendChild(ev);
-        }
+      birthdays.forEach(b=>{
+        if (b.date===ds) { const ev=document.createElement('div'); ev.className='cal-event ev-birthday'; ev.textContent='🎂 '+b.name.split(' ')[0]; cell.appendChild(ev); }
       });
 
       el.appendChild(cell);
@@ -1200,14 +1137,14 @@ async function saveGuestName(bookingId) {
 }
 
 // ── DOMESTIC CALENDAR ─────────────────────────────────────────
-function renderDomesticCalendar() {
+function renderDomCal() {
   const fd = currentProp==='all' ? domestics : domestics.filter(d=>d.property_id===currentProp);
   buildCalGrid(domCalYear, domCalMonth, [], fd, 'dom-cal-grid', 'dom-cal-month-label', 'showDomDay');
 }
 function domCalNav(dir) {
   if (dir===0){domCalYear=new Date().getFullYear();domCalMonth=new Date().getMonth();}
   else{domCalMonth+=dir;if(domCalMonth>11){domCalMonth=0;domCalYear++;}else if(domCalMonth<0){domCalMonth=11;domCalYear--;}}
-  renderDomesticCalendar(); renderDomEarnings();
+  renderDomCal(); renderDomEarnings();
 }
 function showDomDay(ds) {
   const dEvts = domestics.filter(d=>d.date===ds);
@@ -1290,7 +1227,7 @@ async function markDone(id) {
   const d=domestics.find(x=>x.id==id); if(!d)return;
   d.status='completed'; d.checklist=allDone;
   if(db) await db.from('domestics').update({status:'completed',checklist:allDone}).eq('id',id);
-  toast('Cleaning marked complete ✓','success'); renderDomestic(); renderDomesticCalendar(); renderDomEarnings();
+  toast('Cleaning marked complete ✓','success'); renderDomestic(); renderDomCal(); renderDomEarnings();
 }
 async function saveDomestic() {
   const date = document.getElementById('d-date').value;
@@ -1300,7 +1237,7 @@ async function saveDomestic() {
   const row = {cleaner,property_id:pid,date,time:document.getElementById('d-time').value,type:document.getElementById('d-type').value,status:'scheduled',notes:document.getElementById('d-notes').value,checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},amount_paid:getCleanerRate(cleaner,pid)};
   if (db) { const{data,error}=await db.from('domestics').insert([row]).select().single(); if(error){toast('Save error: '+error.message,'error');return;} domestics.unshift(nd(data)); }
   else { domestics.unshift(nd({...row,id:'d'+Date.now()})); }
-  toast('Cleaning scheduled ✓','success'); closeModal('domestic-modal'); renderDomestic(); renderDomesticCalendar(); renderDomEarnings();
+  toast('Cleaning scheduled ✓','success'); closeModal('domestic-modal'); renderDomestic(); renderDomCal(); renderDomEarnings();
 }
 function exportDomestics() {
   const fd = filteredDomestics();
@@ -1550,110 +1487,106 @@ function toast(msg,type='info'){
   const t=document.createElement('div');t.className='toast '+(type||'');t.textContent=msg;
   wrap.appendChild(t);setTimeout(()=>t.remove(),3500);
 }
-
-// ── TEAM ─────────────────────────────────────────────────────
-const TEAM_MEMBERS = [
-  {name:'Nicole',      role:'Owner / Admin',     phone:'+27 82 XXX XXXX', email:'sn_apt_management@outlook.com', initials:'N',  color:'var(--accent)',   note:'Co-owner, manages bookings & finances'},
-  {name:'Silja',       role:'Owner / Admin',     phone:'+27 XX XXX XXXX', email:'silja@hostease.co.za',          initials:'S',  color:'#7c3aed',         note:'Co-owner, TV House'},
-  {name:'Nina Williams',role:'Host Expert',      phone:'+27 83 702 2421', email:'vanwyk.nina@gmail.com',         initials:'NW', color:'var(--green2)',   note:'On-ground host — check-ins, check-outs, keys'},
-];
-const CLEANERS_TEAM = [
-  {name:'Blessing',  role:'Cleaner — Speranta',      phone:'',rate:'R350/clean', birthday:'14 March',    properties:['speranta'], note:'Regular Speranta cleaner'},
-  {name:'Fatima',    role:'Cleaner — Speranta & TV', phone:'',rate:'R350/clean', birthday:'22 July',     properties:['speranta','tvhouse'], note:'Covers both properties when needed'},
-  {name:'Patricia',  role:'Cleaner — Speranta & TV', phone:'',rate:'R350 SP / R450 TV', birthday:'5 November', properties:['speranta','tvhouse'], note:'Primary TV House cleaner, also covers Speranta'},
-  {name:'Spiwe',     role:'Cleaner — Speranta',      phone:'',rate:'R350/clean', birthday:'18 September', properties:['speranta'], note:'Regular Speranta cleaner'},
-];
-
-function renderTeam() {
-  const el = document.getElementById('team-content'); if(!el) return;
-  const CLEAN_COLORS = {Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
-  // Staff section
-  const staffHTML = `<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:12px">Management Team</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:28px">
-    ${TEAM_MEMBERS.map(m=>`<div class="card" style="border-top:3px solid ${m.color};padding:18px">
+function renderTeam(){
+  const el=document.getElementById('team-content');if(!el)return;
+  const CLR={Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+  const today=new Date();
+  const STAFF=[
+    {name:'Nicole',role:'Co-Owner / Admin',phone:'+27 63 602 1847',email:'sn_apt_management@outlook.com',initials:'N',color:'var(--accent)',note:'Co-founder S&N Apt Management. Manages bookings, finances & operations. Business WhatsApp: +27 79 977 9455'},
+    {name:'Silja',role:'Co-Owner / Admin',phone:'',email:'s.faltin@tischlerei-faltin.de',initials:'S',color:'#7c3aed',note:'Co-founder. TV House owner liaison.'},
+    {name:'Nina Williams',role:'Host Expert',phone:'+27 79 977 9455',email:'vanwyk.nina@gmail.com',initials:'NW',color:'var(--green2)',note:'On-ground host manager. Uses business WhatsApp for all guest contact.'},
+  ];
+  const CARETAKERS=[
+    {name:'Takudzwa Dumbura',role:'Caretaker (Tino)',dob:'13 July 1996',note:'Lives in TV House granny flat with wife Keithy.'},
+    {name:'Keithy Ngwenya',role:"Caretaker's Wife",dob:'9 February 1997',note:'Lives in TV House granny flat.'},
+  ];
+  el.innerHTML=`
+  <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:12px">Management Team</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;margin-bottom:28px">
+    ${STAFF.map(m=>`<div class="card" style="border-top:3px solid ${m.color};padding:18px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-        <div style="width:40px;height:40px;border-radius:50%;background:${m.color};display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:.88rem;flex-shrink:0">${m.initials}</div>
-        <div><div style="font-weight:700;font-size:.95rem">${m.name}</div><div style="font-size:.75rem;color:var(--muted)">${m.role}</div></div>
+        <div class="avatar" style="background:${m.color};width:40px;height:40px;font-size:.88rem;flex-shrink:0">${m.initials}</div>
+        <div><div style="font-weight:700">${m.name}</div><div style="font-size:.75rem;color:var(--muted)">${m.role}</div></div>
       </div>
-      ${m.phone?`<div style="font-size:.83rem;margin-bottom:4px">📱 ${m.phone}</div>`:''}
-      ${m.email?`<div style="font-size:.83rem;margin-bottom:6px">✉️ ${m.email}</div>`:''}
+      ${m.phone?`<div style="font-size:.83rem;margin-bottom:3px">📱 ${m.phone}</div>`:''}
+      <div style="font-size:.83rem;margin-bottom:6px">✉️ ${m.email}</div>
       <div style="font-size:.8rem;color:var(--muted);font-style:italic">${m.note}</div>
     </div>`).join('')}
-  </div>`;
-
-  // Cleaners section
-  const cleanersHTML = `<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:12px">Domestic Staff</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
-    ${CLEANERS_TEAM.map(c=>{
-      const color = CLEAN_COLORS[c.name]||'var(--accent)';
-      const today = new Date();
-      const bdayParts = c.birthday.split(' ');
-      const mNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-      const bdayMonth = mNames.indexOf(bdayParts[1]);
-      const bdayDay   = parseInt(bdayParts[0]);
-      const daysUntil = (() => {
-        const next = new Date(today.getFullYear(), bdayMonth, bdayDay);
-        if (next < today) next.setFullYear(today.getFullYear()+1);
-        return Math.round((next-today)/86400000);
-      })();
-      const bdayAlert = daysUntil <= 7 ? `<div style="background:#f0abfc20;border:1px solid #d946ef;border-radius:6px;padding:5px 8px;font-size:.75rem;color:#86198f;margin-top:6px">🎂 Birthday in ${daysUntil} day${daysUntil!==1?'s':''}!</div>` : '';
-      return `<div class="card" style="border-top:3px solid ${color};padding:18px">
+  </div>
+  <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:12px">Domestic Staff</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-bottom:28px">
+    ${CLEANERS.map(c=>{
+      const bdate=new Date(c.birthday);
+      const bdayStr=bdate.getDate()+' '+MONTHS[bdate.getMonth()];
+      const next=new Date(today.getFullYear(),bdate.getMonth(),bdate.getDate());
+      if(next<today)next.setFullYear(today.getFullYear()+1);
+      const days=Math.round((next-today)/86400000);
+      const alert=days<=7?`<div style="background:#f0abfc20;border:1px solid #d946ef;border-radius:6px;padding:4px 8px;font-size:.74rem;color:#86198f;margin-top:6px">🎂 Birthday in ${days} day${days!==1?'s':''}!</div>`:'';
+      const rateStr=typeof c.rate==='object'?`SP: R${c.rate.speranta} / TV: R${c.rate.tvhouse}`:`R${c.rate}/clean`;
+      return`<div class="card" style="border-top:3px solid ${CLR[c.name]||'var(--accent)'};padding:18px">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-          <div style="width:40px;height:40px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:.88rem;flex-shrink:0">${c.name[0]}</div>
-          <div><div style="font-weight:700;font-size:.95rem">${c.name}</div><div style="font-size:.75rem;color:var(--muted)">${c.role}</div></div>
+          <div class="avatar" style="background:${CLR[c.name]||'var(--accent)'};width:40px;height:40px;font-size:.88rem;flex-shrink:0">${c.name[0]}</div>
+          <div><div style="font-weight:700">${c.name}</div><div style="font-size:.75rem;color:var(--muted)">${rateStr}</div></div>
         </div>
-        <div style="font-size:.83rem;margin-bottom:3px">💰 Rate: <strong>${c.rate}</strong></div>
-        <div style="font-size:.83rem;margin-bottom:3px">🎂 Birthday: ${c.birthday}</div>
-        <div style="font-size:.83rem;margin-bottom:6px">🏠 Properties: ${c.properties.map(p=>p==='speranta'?'Speranta':'TV House').join(', ')}</div>
+        <div style="font-size:.83rem;margin-bottom:3px">📱 ${c.phone}</div>
+        <div style="font-size:.83rem;margin-bottom:3px">💳 Paid via: ${c.payment}</div>
+        <div style="font-size:.83rem;margin-bottom:3px">🎂 Birthday: ${bdayStr}</div>
+        <div style="font-size:.83rem;margin-bottom:4px">🏠 ${c.properties.map(p=>propName(p)).join(', ')}</div>
         <div style="font-size:.8rem;color:var(--muted);font-style:italic">${c.note}</div>
-        ${bdayAlert}
+        ${alert}
       </div>`;
     }).join('')}
+  </div>
+  <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:12px">Caretaker — TV House Granny Flat</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px">
+    ${CARETAKERS.map(c=>`<div class="card" style="border-top:3px solid #94a3b8;padding:18px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div class="avatar" style="background:#94a3b8;width:40px;height:40px;font-size:.8rem;flex-shrink:0">${c.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</div>
+        <div><div style="font-weight:700">${c.name}</div><div style="font-size:.75rem;color:var(--muted)">${c.role}</div></div>
+      </div>
+      <div style="font-size:.83rem;margin-bottom:3px">🎂 DOB: ${c.dob}</div>
+      <div style="font-size:.8rem;color:var(--muted);font-style:italic">${c.note}</div>
+    </div>`).join('')}
   </div>`;
-
-  el.innerHTML = staffHTML + cleanersHTML;
 }
 
-// ── MOBILE NAV ────────────────────────────────────────────────
-const MOB_NAV = [
+// ── MOBILE NAV & DRAWER ────────────────────────────────────────────────────
+const MOB_NAV=[
   {id:'dashboard',icon:'🏠',label:'Home'},
-  {id:'calendar', icon:'📅',label:'Calendar'},
-  {id:'bookings', icon:'📋',label:'Bookings'},
-  {id:'domestic', icon:'🧹',label:'Domestic'},
-  {id:'tasks',    icon:'✅',label:'Tasks'},
+  {id:'calendar',icon:'📅',label:'Calendar'},
+  {id:'bookings',icon:'📋',label:'Bookings'},
+  {id:'domestic',icon:'🧹',label:'Domestic'},
+  {id:'tasks',icon:'✅',label:'Tasks'},
 ];
 function buildMobileNav() {
-  const el = document.getElementById('mob-nav-items'); if (!el) return;
+  const el = document.getElementById('mob-nav-inner'); if (!el) return;
   el.innerHTML = MOB_NAV.map(n=>
     `<div class="mob-nav-item ${currentTab===n.id?'active':''}" onclick="switchTab('${n.id}')">
-      <span>${n.icon}</span><span>${n.label}</span>
-    </div>`
-  ).join('');
+      <div class="mob-nav-icon">${n.icon}</div><div class="mob-nav-label">${n.label}</div>
+    </div>`).join('');
+  const av=document.getElementById('mob-avatar'); if(av&&currentUser) av.textContent=currentUser.initials;
+  const nm=document.getElementById('mob-name');   if(nm&&currentUser) nm.textContent=currentUser.name;
+  const rl=document.getElementById('mob-role');   if(rl&&currentUser) rl.textContent=currentUser.role;
+  buildDrawerNav();
 }
-function toggleMobSidebar() {
-  const s = document.getElementById('mob-sidebar');
-  if (!s) return;
-  s.classList.toggle('open');
-  // Rebuild nav items each time
-  if (s.classList.contains('open')) buildMobSidebarNav();
-}
-function buildMobSidebarNav() {
-  const el = document.getElementById('mob-sidebar-nav'); if (!el) return;
-  // Update avatar
-  const av = document.getElementById('mob-user-avatar');
-  const nm = document.getElementById('mob-user-name');
-  const rl = document.getElementById('mob-user-role');
-  if (av && currentUser) { av.textContent=currentUser.initials; av.style.background='var(--accent)'; av.style.width='33px'; av.style.height='33px'; av.style.borderRadius='50%'; av.style.display='flex'; av.style.alignItems='center'; av.style.justifyContent='center'; av.style.fontWeight='700'; av.style.fontSize='.82rem'; av.style.color='#fff'; }
-  if (nm && currentUser) nm.textContent = currentUser.name;
-  if (rl && currentUser) rl.textContent = currentUser.role;
-  el.innerHTML = NAV.filter(n=>n.roles.includes(currentUser?.role||'host')).map(n=>
-    `<div style="display:flex;align-items:center;gap:10px;padding:12px 22px;font-size:.88rem;color:${n.id===currentTab?'#fff':'rgba(255,255,255,.55)'};cursor:pointer;border-left:3px solid ${n.id===currentTab?'var(--accent)':'transparent'};background:${n.id===currentTab?'rgba(193,127,60,.13)':'transparent'}" onclick="switchTab('${n.id}');toggleMobSidebar()">
+function buildDrawerNav() {
+  const nl = document.getElementById('mob-nav-list'); if (!nl||!currentUser) return;
+  nl.innerHTML = NAV.filter(n=>n.roles.includes(currentUser.role)).map(n=>
+    `<div style="display:flex;align-items:center;gap:10px;padding:12px 22px;font-size:.88rem;color:${n.id===currentTab?'#fff':'rgba(255,255,255,.55)'};cursor:pointer;border-left:3px solid ${n.id===currentTab?'var(--accent)':'transparent'};background:${n.id===currentTab?'rgba(193,127,60,.13)':'transparent'}" onclick="switchTab('${n.id}');closeDrawer()">
       <span style="font-size:1rem;width:20px;text-align:center">${n.icon}</span>${n.label}
-    </div>`
-  ).join('');
+    </div>`).join('');
+}
+function openDrawer() {
+  document.getElementById('mob-drawer').classList.add('open');
+  document.getElementById('mob-overlay').classList.add('open');
+  buildDrawerNav();
+}
+function closeDrawer() {
+  document.getElementById('mob-drawer').classList.remove('open');
+  document.getElementById('mob-overlay').classList.remove('open');
 }
 
-// ── INIT ──────────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────────────────────────────────────
 document.getElementById('auth-screen').style.display='flex';
 </script>
 
