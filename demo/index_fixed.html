@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -18,93 +17,76 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"DM Sans",sans-serif;background:var(--sand);color:var(--ink);min-height:100vh}
 h2,h3{font-family:"DM Serif Display",serif}
-
-/* AUTH */
-#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(–ink),var(–ink2))}
-.auth-card{background:#fff;border-radius:20px;padding:48px 40px;width:100%;max-width:420px;box-shadow:var(–shl)}
-.auth-logo{font-family:“DM Serif Display”,serif;font-size:2rem;color:var(–accent);margin-bottom:4px}
-.auth-sub{color:var(–muted);font-size:.9rem;margin-bottom:28px}
+#auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--ink),var(--ink2))}
+.auth-card{background:#fff;border-radius:20px;padding:48px 40px;width:100%;max-width:420px;box-shadow:var(--shl)}
+.auth-logo{font-family:"DM Serif Display",serif;font-size:2rem;color:var(--accent);margin-bottom:4px}
+.auth-sub{color:var(--muted);font-size:.9rem;margin-bottom:28px}
 .quick-fill{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center}
-.quick-fill span{font-size:.75rem;color:var(–muted)}
-.quick-btn{font-size:.78rem;padding:5px 11px;border-radius:8px;border:1.5px solid var(–border);background:var(–sand);cursor:pointer;font-family:inherit;transition:all .15s}
-.quick-btn:hover{background:var(–warm);border-color:var(–accent)}
+.quick-fill span{font-size:.75rem;color:var(--muted)}
+.quick-btn{font-size:.78rem;padding:5px 11px;border-radius:8px;border:1.5px solid var(--border);background:var(--sand);cursor:pointer;font-family:inherit;transition:all .15s}
+.quick-btn:hover{background:var(--warm);border-color:var(--accent)}
 .field-group{margin-bottom:18px}
-.field-group label{display:block;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(–muted);margin-bottom:5px}
-.field-group input{width:100%;padding:11px 14px;border:1.5px solid var(–border);border-radius:9px;font-size:.93rem;font-family:inherit;outline:none;background:var(–sand);transition:border .15s}
-.field-group input:focus{border-color:var(–accent);background:#fff}
-.error-box{background:#fef2f2;color:var(–red);border-radius:8px;padding:10px 14px;font-size:.84rem;margin-bottom:14px;display:none}
-
-/* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border-radius:9px;font-family:inherit;font-size:.88rem;font-weight:500;cursor:pointer;border:none;transition:all .15s;text-decoration:none}
+.field-group label{display:block;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:5px}
+.field-group input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-size:.93rem;font-family:inherit;outline:none;background:var(--sand);transition:border .15s}
+.field-group input:focus{border-color:var(--accent);background:#fff}
+.error-box{background:#fef2f2;color:var(--red);border-radius:8px;padding:10px 14px;font-size:.84rem;margin-bottom:14px;display:none}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 22px;border-radius:9px;font-family:inherit;font-size:.88rem;font-weight:500;cursor:pointer;border:none;transition:all .15s}
 .btn-full{width:100%;justify-content:center}
-.btn-primary{background:var(–accent);color:#fff}.btn-primary:hover{background:var(–accent2)}
-.btn-ghost{background:transparent;color:var(–ink);border:1.5px solid var(–border)}.btn-ghost:hover{background:var(–warm)}
-.btn-green{background:var(–green);color:#fff}.btn-green:hover{background:#1b4332}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--border)}.btn-ghost:hover{background:var(--warm)}
+.btn-green{background:var(--green);color:#fff}.btn-green:hover{background:#1b4332}
 .btn-sm{padding:6px 13px;font-size:.8rem}
-.btn-danger{background:var(–red);color:#fff}
-
-/* APP LAYOUT */
+.btn-danger{background:var(--red);color:#fff}
 #app-screen{display:none;min-height:100vh}
-.sidebar{width:240px;background:var(–ink);color:#fff;position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:100;overflow:hidden}
+.sidebar{width:240px;background:var(--ink);color:#fff;position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:100;overflow:hidden}
 .s-logo{padding:26px 22px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
-.s-logo-text{font-family:“DM Serif Display”,serif;font-size:1.45rem;color:var(–accent);display:block}
+.s-logo-text{font-family:"DM Serif Display",serif;font-size:1.45rem;color:var(--accent);display:block}
 .s-logo small{font-size:.72rem;color:rgba(255,255,255,.35)}
 .s-prop{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
 .s-prop select{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none;cursor:pointer}
-.s-prop select option{background:var(–ink2)}
+.s-prop select option{background:var(--ink2)}
 .s-nav{flex:1;padding:10px 0;overflow-y:auto}
 .nav-item{display:flex;align-items:center;gap:10px;padding:11px 22px;font-size:.86rem;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;border-left:3px solid transparent}
 .nav-item:hover{color:#fff;background:rgba(255,255,255,.05)}
-.nav-item.active{color:#fff;background:rgba(193,127,60,.13);border-left-color:var(–accent)}
+.nav-item.active{color:#fff;background:rgba(193,127,60,.13);border-left-color:var(--accent)}
 .nav-icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0}
 .s-user{padding:14px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:9px}
-.avatar{width:33px;height:33px;border-radius:50%;background:var(–accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0}
+.avatar{width:33px;height:33px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0}
 .u-name{font-size:.8rem;font-weight:600}
 .u-role{font-size:.7rem;color:rgba(255,255,255,.35)}
 .u-flex{flex:1;min-width:0}
 .logout-btn{background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:1rem;padding:4px;flex-shrink:0}
 .logout-btn:hover{color:#fff}
-
 .main{margin-left:240px;display:flex;flex-direction:column;min-height:100vh}
-.topbar{background:#fff;border-bottom:1px solid var(–border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-.page-title{font-family:“DM Serif Display”,serif;font-size:1.45rem}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.page-title{font-family:"DM Serif Display",serif;font-size:1.45rem}
 .topbar-right{display:flex;gap:10px;align-items:center}
-.status-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:var(–warm);color:var(–ink)}
+.status-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:var(--warm);color:var(--ink)}
 .content{padding:28px;flex:1}
-
-/* TABS */
 .tab-pane{display:none}
 .tab-pane.active{display:block}
-
-/* CARDS */
-.card{background:var(–card);border-radius:var(–r);box-shadow:var(–sh);padding:22px}
-.card-title{font-family:“DM Serif Display”,serif;font-size:1.05rem;margin-bottom:14px;color:var(–ink)}
-
-/* STATS */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:22px}
+.card-title{font-family:"DM Serif Display",serif;font-size:1.05rem;margin-bottom:14px;color:var(--ink)}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
-.stat-card{background:var(–card);border-radius:var(–r);padding:18px 22px;box-shadow:var(–sh);border-top:3px solid var(–accent)}
-.stat-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(–muted);margin-bottom:5px;font-weight:700}
-.stat-value{font-family:“DM Serif Display”,serif;font-size:1.9rem;color:var(–ink)}
-.stat-sub{font-size:.76rem;color:var(–muted);margin-top:3px}
-
-/* GRID */
+.stat-card{background:var(--card);border-radius:var(--r);padding:18px 22px;box-shadow:var(--sh);border-top:3px solid var(--accent)}
+.stat-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;font-weight:700}
+.stat-value{font-family:"DM Serif Display",serif;font-size:1.9rem;color:var(--ink)}
+.stat-sub{font-size:.76rem;color:var(--muted);margin-top:3px}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .mb-4{margin-bottom:14px}
 .mb-6{margin-bottom:22px}
-
-/* TABLES */
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
-thead th{padding:11px 14px;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(–muted);background:var(–sand);border-bottom:2px solid var(–border)}
-tbody td{padding:12px 14px;border-bottom:1px solid var(–border);font-size:.86rem;vertical-align:middle}
+thead th{padding:11px 14px;text-align:left;font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--sand);border-bottom:2px solid var(--border)}
+tbody td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:.86rem;vertical-align:middle}
 tbody tr:hover{background:#fafaf8}
-
-/* BADGES */
+tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand)}
 .badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .badge-confirmed{background:#d1fae5;color:#065f46}
 .badge-pending{background:#fef3c7;color:#92400e}
-.badge-checkedin{background:#dbeafe;color:#1e40af}
-.badge-checkedout{background:#f3f4f6;color:#374151}
+.badge-checked-in{background:#dbeafe;color:#1e40af}
+.badge-checked-out{background:#f3f4f6;color:#374151}
+.badge-cancelled{background:#fee2e2;color:#991b1b}
 .badge-airbnb{background:#ff5a5f22;color:#c2373c}
 .badge-booking{background:#003b9522;color:#003b95}
 .badge-lekkeslaap{background:#d1fae5;color:#065f46}
@@ -114,73 +96,61 @@ tbody tr:hover{background:#fafaf8}
 .badge-completed{background:#d1fae5;color:#065f46}
 .badge-open{background:#fee2e2;color:#991b1b}
 .badge-done{background:#d1fae5;color:#065f46}
-
-/* FORM */
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
 .form-field{display:flex;flex-direction:column;gap:5px}
-.form-field label{font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(–muted)}
-.form-field input,.form-field select,.form-field textarea{padding:9px 13px;border:1.5px solid var(–border);border-radius:8px;font-family:inherit;font-size:.88rem;outline:none;transition:border .15s;background:var(–sand)}
-.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(–accent);background:#fff}
+.form-field label{font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.form-field input,.form-field select,.form-field textarea{padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.88rem;outline:none;transition:border .15s;background:var(--sand)}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--accent);background:#fff}
 .span-full{grid-column:1/-1}
-
-/* MODAL */
 .modal-overlay{position:fixed;inset:0;background:rgba(26,26,46,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
 .modal-overlay.open{display:flex}
-.modal{background:var(–card);border-radius:16px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:var(–shl)}
+.modal{background:var(--card);border-radius:16px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:var(--shl)}
 .modal-header{padding:22px 26px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
-.modal-title{font-family:“DM Serif Display”,serif;font-size:1.25rem}
-.modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(–muted);padding:4px;line-height:1}
+.modal-title{font-family:"DM Serif Display",serif;font-size:1.25rem}
+.modal-close{background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);padding:4px;line-height:1}
 .modal-body{padding:0 26px 26px}
 .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
-
-/* TASKS */
-.task-item{display:flex;align-items:flex-start;gap:11px;padding:13px 0;border-bottom:1px solid var(–border)}
-.task-check{width:20px;height:20px;border-radius:6px;border:2px solid var(–border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s;font-size:.75rem;color:#fff;user-select:none}
-.task-check.done{background:var(–green);border-color:var(–green)}
+.task-item{display:flex;align-items:flex-start;gap:11px;padding:13px 0;border-bottom:1px solid var(--border)}
+.task-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;transition:all .15s;font-size:.75rem;color:#fff;user-select:none}
+.task-check.done{background:var(--green);border-color:var(--green)}
 .task-content{flex:1}
 .task-title{font-size:.88rem;font-weight:500}
-.task-title.done{text-decoration:line-through;color:var(–muted)}
-.task-meta{font-size:.73rem;color:var(–muted);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
-.pri-high{color:var(–red);font-weight:700}
-.pri-medium{color:var(–accent);font-weight:700}
-.pri-low{color:var(–green);font-weight:700}
-
-/* DOMESTIC */
+.task-title.done{text-decoration:line-through;color:var(--muted)}
+.task-meta{font-size:.73rem;color:var(--muted);margin-top:3px;display:flex;gap:10px;flex-wrap:wrap}
+.pri-high{color:var(--red);font-weight:700}
+.pri-medium{color:var(--accent);font-weight:700}
+.pri-low{color:var(--green);font-weight:700}
 .dom-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
-.dom-card{background:var(–card);border-radius:var(–r);padding:18px;box-shadow:var(–sh);border-top:3px solid var(–green2)}
+.dom-card{background:var(--card);border-radius:var(--r);padding:18px;box-shadow:var(--sh);border-top:3px solid var(--green2)}
 .dom-card-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
 .dom-name{font-weight:700;font-size:.92rem}
-.dom-prop{font-size:.76rem;color:var(–muted)}
-.dom-detail{font-size:.81rem;color:var(–muted);line-height:1.6;margin-bottom:10px}
-.checklist-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:.83rem;border-bottom:1px solid var(–border)}
+.dom-prop{font-size:.76rem;color:var(--muted)}
+.dom-detail{font-size:.81rem;color:var(--muted);line-height:1.6;margin-bottom:10px}
+.checklist-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:.83rem;border-bottom:1px solid var(--border)}
 .checklist-row:last-child{border:none}
-.checklist-row input{width:16px;height:16px;accent-color:var(–green);cursor:pointer;flex-shrink:0}
-.done-text{text-decoration:line-through;color:var(–muted)}
-
-/* KB */
+.checklist-row input{width:16px;height:16px;accent-color:var(--green);cursor:pointer;flex-shrink:0}
+.done-text{text-decoration:line-through;color:var(--muted)}
 .kb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
-.kb-card{background:var(–card);border-radius:var(–r);padding:18px;box-shadow:var(–sh);cursor:pointer;transition:all .15s;border:1.5px solid transparent}
-.kb-card:hover{border-color:var(–accent);transform:translateY(-2px);box-shadow:var(–shl)}
-.kb-cat{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(–accent);margin-bottom:5px}
+.kb-card{background:var(--card);border-radius:var(--r);padding:18px;box-shadow:var(--sh);cursor:pointer;transition:all .15s;border:1.5px solid transparent}
+.kb-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shl)}
+.kb-cat{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--accent);margin-bottom:5px}
 .kb-title{font-weight:600;margin-bottom:7px;font-size:.92rem}
-.kb-preview{font-size:.8rem;color:var(–muted);line-height:1.5}
-.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:600;background:var(–warm);color:var(–ink);margin:2px}
-
-/* CALENDAR */
-.cal-wrap{background:var(–card);border-radius:var(–r);box-shadow:var(–sh);overflow:hidden;margin-bottom:20px}
-.cal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(–border)}
-.cal-month{font-family:“DM Serif Display”,serif;font-size:1.25rem}
+.kb-preview{font-size:.8rem;color:var(--muted);line-height:1.5}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:600;background:var(--warm);color:var(--ink);margin:2px}
+.cal-wrap{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:20px}
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.cal-month{font-family:"DM Serif Display",serif;font-size:1.25rem}
 .cal-nav{display:flex;gap:8px}
-.cal-nav button{background:var(–sand);border:1.5px solid var(–border);border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:.84rem;transition:all .15s}
-.cal-nav button:hover{background:var(–warm);border-color:var(–accent)}
+.cal-nav button{background:var(--sand);border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:.84rem;transition:all .15s}
+.cal-nav button:hover{background:var(--warm);border-color:var(--accent)}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
-.cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(–muted);background:var(–sand);letter-spacing:.05em}
-.cal-cell{min-height:82px;padding:5px;border:1px solid var(–border);background:#fff;position:relative;cursor:pointer}
+.cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);background:var(--sand);letter-spacing:.05em}
+.cal-cell{min-height:82px;padding:5px;border:1px solid var(--border);background:#fff;position:relative;cursor:pointer}
 .cal-cell:hover{background:#fffbf5}
-.cal-cell.other{background:var(–sand);opacity:.55;cursor:default}
+.cal-cell.other{background:var(--sand);opacity:.55;cursor:default}
 .cal-cell.today{background:#fffbf5}
 .cal-date{font-size:.8rem;font-weight:600;margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
-.cal-cell.today .cal-date{background:var(–accent);color:#fff;border-radius:50%}
+.cal-cell.today .cal-date{background:var(--accent);color:#fff;border-radius:50%}
 .cal-event{font-size:.67rem;padding:2px 4px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600}
 .ev-airbnb{background:#ff5a5f20;color:#c2373c;border-left:2px solid #ff5a5f}
 .ev-booking{background:#003b9520;color:#003b95;border-left:2px solid #003b95}
@@ -188,62 +158,49 @@ tbody tr:hover{background:#fafaf8}
 .ev-fewo{background:#7c3aed20;color:#5b21b6;border-left:2px solid #7c3aed}
 .ev-manual{background:#fef3c720;color:#92400e;border-left:2px solid #c17f3c}
 .ev-cleaning{background:#06b6d420;color:#0e7490;border-left:2px solid #06b6d4}
-
-/* REPORTS */
+.ev-birthday{background:#f0abfc20;color:#86198f;border-left:2px solid #d946ef}
+.ev-owner{background:#94a3b820;color:#475569;border-left:2px solid #94a3b8}
 .bar-chart{display:flex;align-items:flex-end;gap:6px;height:130px;padding:0 4px}
 .bar-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
-.bar{width:100%;border-radius:4px 4px 0 0;background:var(–accent);opacity:.8;transition:height .4s;min-height:3px}
-.bar-label{font-size:.65rem;color:var(–muted);text-align:center}
-.bar-val{font-size:.65rem;font-weight:700;color:var(–ink)}
-
-/* MESSAGES */
+.bar{width:100%;border-radius:4px 4px 0 0;background:var(--accent);opacity:.8;transition:height .4s;min-height:3px}
+.bar-label{font-size:.65rem;color:var(--muted);text-align:center}
+.bar-val{font-size:.65rem;font-weight:700;color:var(--ink)}
 .chat-wrap{max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:14px;padding:4px 0}
 .msg-row{display:flex;align-items:flex-end;gap:9px}
 .msg-row.me{flex-direction:row-reverse}
 .msg-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;color:#fff;flex-shrink:0}
 .msg-bubble{max-width:68%;padding:9px 13px;border-radius:14px;font-size:.86rem;line-height:1.5}
-.msg-meta{font-size:.7rem;color:var(–muted);margin-bottom:3px}
-.msg-from{background:var(–sand);color:var(–ink);border-radius:14px 14px 14px 3px}
-.msg-mine{background:var(–accent);color:#fff;border-radius:14px 14px 3px 14px}
-.chat-input-row{display:flex;gap:10px}
-.chat-input-row input{flex:1;padding:10px 14px;border:1.5px solid var(–border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none}
-.chat-input-row input:focus{border-color:var(–accent)}
-
-/* TOAST */
+.msg-meta{font-size:.7rem;color:var(--muted);margin-bottom:3px}
+.msg-from{background:var(--sand);color:var(--ink);border-radius:14px 14px 14px 3px}
+.msg-mine{background:var(--accent);color:#fff;border-radius:14px 14px 3px 14px}
 .toast-wrap{position:fixed;bottom:22px;right:22px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{background:var(–ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:.84rem;box-shadow:var(–shl);animation:toastIn .25s ease;max-width:300px}
-.toast.success{background:var(–green)}
-.toast.error{background:var(–red)}
+.toast{background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:.84rem;box-shadow:var(--shl);animation:toastIn .25s ease;max-width:300px}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
 @keyframes toastIn{from{transform:translateX(100%);opacity:0}to{transform:none;opacity:1}}
-
-/* MISC */
 .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
-.text-muted{color:var(–muted);font-size:.84rem}
-.empty-state{text-align:center;padding:44px 20px;color:var(–muted)}
+.text-muted{color:var(--muted);font-size:.84rem}
+.empty-state{text-align:center;padding:44px 20px;color:var(--muted)}
 .empty-icon{font-size:2.8rem;margin-bottom:10px}
-.divider{height:1px;background:var(–border);margin:14px 0}
-.info-banner{background:linear-gradient(135deg,var(–ink),var(–ink2));color:#fff;border-radius:var(–r);padding:18px 22px;margin-bottom:20px}
-.info-banner h3{font-family:“DM Serif Display”,serif;color:var(–accent);margin-bottom:6px}
+.divider{height:1px;background:var(--border);margin:14px 0}
+.info-banner{background:linear-gradient(135deg,var(--ink),var(--ink2));color:#fff;border-radius:var(--r);padding:18px 22px;margin-bottom:20px}
+.info-banner h3{font-family:"DM Serif Display",serif;color:var(--accent);margin-bottom:6px}
 .info-banner p{font-size:.83rem;line-height:1.6;opacity:.8}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
 .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:.78rem}
 .legend-dot{width:11px;height:11px;border-radius:2px;flex-shrink:0}
-
 @media(max-width:768px){
-.sidebar{display:none}
-.main{margin-left:0}
-.content{padding:14px}
-.stat-grid{grid-template-columns:1fr 1fr}
-.grid-2{grid-template-columns:1fr}
-.form-grid{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .main{margin-left:0}
+  .content{padding:14px}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .grid-2{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
 }
 </style>
-
 </head>
 <body>
-
-<!-- AUTH -->
 
 <div id="auth-screen">
   <div class="auth-card">
@@ -256,19 +213,11 @@ tbody tr:hover{background:#fafaf8}
       <button class="quick-btn" onclick="fillUser(2)">Nina (Host)</button>
     </div>
     <div class="error-box" id="auth-error"></div>
-    <div class="field-group">
-      <label>Email</label>
-      <input type="email" id="login-email" placeholder="your@email.com"/>
-    </div>
-    <div class="field-group">
-      <label>Password</label>
-      <input type="password" id="login-password" onkeydown="if(event.key==='Enter')doLogin()"/>
-    </div>
+    <div class="field-group"><label>Email</label><input type="email" id="login-email" placeholder="your@email.com"/></div>
+    <div class="field-group"><label>Password</label><input type="password" id="login-password" onkeydown="if(event.key==='Enter')doLogin()"/></div>
     <button class="btn btn-primary btn-full" onclick="doLogin()">Sign In</button>
   </div>
 </div>
-
-<!-- APP -->
 
 <div id="app-screen">
   <div class="sidebar">
@@ -303,185 +252,156 @@ tbody tr:hover{background:#fafaf8}
       </div>
     </div>
     <div class="content">
-      <!-- DASHBOARD -->
+
       <div class="tab-pane active" id="tab-dashboard">
         <div class="stat-grid" id="dash-stats"></div>
         <div class="grid-2">
-          <div class="card">
-            <div class="card-title">📅 Upcoming Arrivals</div>
-            <div id="dash-upcoming"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">🏠 Property Status</div>
-            <div id="dash-prop-status"></div>
+          <div class="card"><div class="card-title">📅 Upcoming Arrivals</div><div id="dash-upcoming"></div></div>
+          <div class="card"><div class="card-title">🏠 Property Status</div><div id="dash-prop-status"></div></div>
+        </div>
+      </div>
+
+      <div class="tab-pane" id="tab-bookings">
+        <div class="section-head">
+          <div class="filter-row" id="booking-filters"></div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('booking-modal')">+ Add Booking</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table><thead><tr id="booking-thead"></tr></thead><tbody id="booking-tbody"></tbody></table>
           </div>
         </div>
       </div>
 
-```
-  <!-- BOOKINGS -->
-  <div class="tab-pane" id="tab-bookings">
-    <div class="info-banner">
-      <h3>📡 iCal Sync</h3>
-      <p>Bookings sync automatically from Airbnb, Booking.com, LekkeSlaap &amp; Fewo via your Supabase Edge Function. Add manual bookings below.</p>
-    </div>
-    <div class="section-head">
-      <div class="filter-row" id="booking-filters"></div>
-      <button class="btn btn-primary btn-sm" onclick="openModal('booking-modal')">+ Add Booking</button>
-    </div>
-    <div class="card">
-      <div class="table-wrap">
-        <table>
-          <thead><tr id="booking-thead"></tr></thead>
-          <tbody id="booking-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- CALENDAR -->
-  <div class="tab-pane" id="tab-calendar">
-    <div class="cal-wrap">
-      <div class="cal-header">
-        <div class="cal-month" id="cal-month-label"></div>
-        <div class="cal-nav">
-          <button onclick="calNav(-1)">← Prev</button>
-          <button onclick="calNav(0)">Today</button>
-          <button onclick="calNav(1)">Next →</button>
+      <div class="tab-pane" id="tab-calendar">
+        <div class="cal-wrap">
+          <div class="cal-header">
+            <div class="cal-month" id="cal-month-label"></div>
+            <div class="cal-nav">
+              <button onclick="calNav(-1)">← Prev</button>
+              <button onclick="calNav(0)">Today</button>
+              <button onclick="calNav(1)">Next →</button>
+            </div>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Legend</div>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#ff5a5f"></div>Airbnb</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#003b95"></div>Booking.com</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#2d6a4f"></div>LekkeSlaap</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>Fewo</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Manual</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Cleaning</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#d946ef"></div>Birthday</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>Owner/Caretaker</div>
+          </div>
         </div>
       </div>
-      <div class="cal-grid" id="cal-grid"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Legend</div>
-      <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#ff5a5f"></div>Airbnb</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#003b95"></div>Booking.com</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#2d6a4f"></div>LekkeSlaap</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>Fewo</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Manual</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Cleaning</div>
-      </div>
-    </div>
-  </div>
 
-  <!-- DOMESTIC -->
-  <div class="tab-pane" id="tab-domestic">
-    <div class="section-head">
-      <div>
-        <h2 style="font-size:1.25rem;margin-bottom:3px">Domestic Schedule</h2>
-        <div class="text-muted">Manage cleaning sessions</div>
+      <div class="tab-pane" id="tab-domestic">
+        <div class="section-head">
+          <div>
+            <h2 style="font-size:1.25rem;margin-bottom:3px">Domestic Schedule</h2>
+            <div class="text-muted">Manage cleaning sessions</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ Export CSV</button>
+            <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
+          </div>
+        </div>
+        <div class="dom-grid" id="dom-grid"></div>
       </div>
-      <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
-    </div>
-    <div class="dom-grid" id="dom-grid"></div>
-  </div>
 
-  <!-- TASKS -->
-  <div class="tab-pane" id="tab-tasks">
-    <div class="section-head">
-      <div>
-        <h2 style="font-size:1.25rem;margin-bottom:3px">Tasks</h2>
-        <div class="text-muted" id="task-count"></div>
+      <div class="tab-pane" id="tab-tasks">
+        <div class="section-head">
+          <div>
+            <h2 style="font-size:1.25rem;margin-bottom:3px">Tasks</h2>
+            <div class="text-muted" id="task-count"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div class="filter-row" id="task-filters"></div>
+            <button class="btn btn-primary btn-sm" onclick="openModal('task-modal')">+ New Task</button>
+          </div>
+        </div>
+        <div class="card" id="task-list"></div>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <div class="filter-row" id="task-filters"></div>
-        <button class="btn btn-primary btn-sm" onclick="openModal('task-modal')">+ New Task</button>
-      </div>
-    </div>
-    <div class="card" id="task-list"></div>
-  </div>
 
-  <!-- MESSAGES -->
-  <div class="tab-pane" id="tab-messages">
-    <div class="card">
-      <div class="text-muted mb-4">Team channel — all messages saved and searchable.</div>
-      <div class="chat-wrap" id="chat-messages"></div>
-      <div class="chat-input-row">
-        <input type="text" id="chat-input" placeholder="Message the team…" onkeydown="if(event.key==='Enter')sendMessage()"/>
-        <button class="btn btn-primary btn-sm" onclick="sendMessage()">Send</button>
+      <div class="tab-pane" id="tab-messages">
+        <div class="card">
+          <div class="text-muted mb-4">Team channel — all messages saved and searchable.</div>
+          <div class="chat-wrap" id="chat-messages"></div>
+          <div style="display:flex;gap:10px">
+            <input type="text" id="chat-input" placeholder="Message the team…" onkeydown="if(event.key==='Enter')sendMessage()" style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none"/>
+            <button class="btn btn-primary btn-sm" onclick="sendMessage()">Send</button>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- KNOWLEDGE BASE -->
-  <div class="tab-pane" id="tab-knowledge">
-    <div class="section-head">
-      <div>
-        <h2 style="font-size:1.25rem;margin-bottom:3px">Knowledge Base</h2>
-        <div class="text-muted">Guides and procedures for the team</div>
+      <div class="tab-pane" id="tab-knowledge">
+        <div class="section-head">
+          <div>
+            <h2 style="font-size:1.25rem;margin-bottom:3px">Knowledge Base</h2>
+            <div class="text-muted">Guides and procedures for the team</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('kb-modal')">+ Add Article</button>
+        </div>
+        <div class="mb-6">
+          <input style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:#fff" placeholder="🔍 Search articles…" oninput="renderKB(this.value)"/>
+        </div>
+        <div id="kb-content"></div>
       </div>
-      <button class="btn btn-primary btn-sm" onclick="openModal('kb-modal')">+ Add Article</button>
-    </div>
-    <div class="mb-6">
-      <input style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:#fff" placeholder="🔍 Search articles…" oninput="renderKB(this.value)" id="kb-search"/>
-    </div>
-    <div id="kb-content"></div>
-  </div>
 
-  <!-- REPORTS (admin only) -->
-  <div class="tab-pane" id="tab-reports">
-    <div class="stat-grid" id="report-stats"></div>
-    <div class="card mb-6">
-      <div class="card-title">💡 Smart Pricing Insight</div>
-      <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
-      <div class="divider"></div>
-      <div class="text-muted">Suggested rates: 🌞 Peak Dec–Mar: R1,100–1,400/night · 🍂 Shoulder: R800–950/night · ❄️ Low Jun–Sep: R650–750/night</div>
-    </div>
-    <div class="grid-2 mb-6">
-      <div class="card">
-        <div class="card-title">📊 Monthly Revenue</div>
-        <div class="bar-chart" id="revenue-chart"></div>
+      <div class="tab-pane" id="tab-reports">
+        <div class="stat-grid" id="report-stats"></div>
+        <div class="card mb-6">
+          <div class="card-title">💡 Smart Pricing Insight</div>
+          <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
+          <div class="divider"></div>
+          <div class="text-muted">Suggested rates: 🌞 Peak Dec–Mar: R1,100–1,400/night · 🍂 Shoulder: R800–950/night · ❄️ Low Jun–Sep: R650–750/night</div>
+        </div>
+        <div class="grid-2 mb-6">
+          <div class="card"><div class="card-title">📊 Monthly Revenue</div><div class="bar-chart" id="revenue-chart"></div></div>
+          <div class="card"><div class="card-title">🌐 Bookings by Platform</div><div id="platform-breakdown"></div></div>
+        </div>
+        <div class="card mb-6">
+          <div class="card-title">🧹 Domestic Staff Earnings</div>
+          <div id="cleaner-earnings"><div class="text-muted">Loading earnings data…</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">📈 Seasonal Guide</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Season</th><th>Months</th><th>Avg Occupancy</th><th>Best Platform</th><th>Suggested Rate</th></tr></thead>
+              <tbody>
+                <tr><td>🌞 Peak Summer</td><td>Dec–Mar</td><td>87%</td><td>Airbnb</td><td>R1,200–1,400/night</td></tr>
+                <tr><td>🍂 Autumn Shoulder</td><td>Apr–May</td><td>62%</td><td>Booking.com</td><td>R850–950/night</td></tr>
+                <tr><td>❄️ Winter Low</td><td>Jun–Aug</td><td>38%</td><td>LekkeSlaap</td><td>R600–750/night</td></tr>
+                <tr><td>🌸 Spring Shoulder</td><td>Sep–Nov</td><td>71%</td><td>Airbnb</td><td>R900–1,100/night</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <div class="card">
-        <div class="card-title">🌐 Bookings by Platform</div>
-        <div id="platform-breakdown"></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">📈 Seasonal Guide</div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Season</th><th>Months</th><th>Avg Occupancy</th><th>Best Platform</th><th>Suggested Rate</th></tr></thead>
-          <tbody>
-            <tr><td>🌞 Peak Summer</td><td>Dec–Mar</td><td>87%</td><td>Airbnb</td><td>R1,200–1,400/night</td></tr>
-            <tr><td>🍂 Autumn Shoulder</td><td>Apr–May</td><td>62%</td><td>Booking.com</td><td>R850–950/night</td></tr>
-            <tr><td>❄️ Winter Low</td><td>Jun–Aug</td><td>38%</td><td>LekkeSlaap</td><td>R600–750/night</td></tr>
-            <tr><td>🌸 Spring Shoulder</td><td>Sep–Nov</td><td>71%</td><td>Airbnb</td><td>R900–1,100/night</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-```
 
+    </div>
   </div>
 </div>
 
 <!-- MODALS -->
-
 <div class="modal-overlay" id="booking-modal">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">New Booking</div>
-      <button class="modal-close" onclick="closeModal('booking-modal')">×</button>
-    </div>
+    <div class="modal-header"><div class="modal-title">New Booking</div><button class="modal-close" onclick="closeModal('booking-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-field span-full"><label>Guest Name *</label><input id="b-guest" placeholder="Full name"/></div>
-        <div class="form-field"><label>Property</label>
-          <select id="b-prop"><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select>
-        </div>
-        <div class="form-field"><label>Platform</label>
-          <select id="b-platform"><option value="airbnb">Airbnb</option><option value="booking">Booking.com</option><option value="lekkeslaap">LekkeSlaap</option><option value="fewo">Fewo</option><option value="manual">Manual</option></select>
-        </div>
+        <div class="form-field"><label>Property</label><select id="b-prop"><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select></div>
+        <div class="form-field"><label>Platform</label><select id="b-platform"><option value="airbnb">Airbnb</option><option value="booking">Booking.com</option><option value="lekkeslaap">LekkeSlaap</option><option value="fewo">Fewo</option><option value="manual">Manual</option></select></div>
         <div class="form-field"><label>Check-in *</label><input type="date" id="b-checkin"/></div>
         <div class="form-field"><label>Check-out *</label><input type="date" id="b-checkout"/></div>
         <div class="form-field"><label>Revenue (ZAR)</label><input type="number" id="b-revenue" placeholder="0"/></div>
-        <div class="form-field"><label>Status</label>
-          <select id="b-status"><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="checkedin">Checked In</option><option value="checkedout">Checked Out</option></select>
-        </div>
+        <div class="form-field"><label>Guests</label><input type="number" id="b-guests" value="1" min="1"/></div>
         <div class="form-field span-full"><label>Notes</label><input id="b-notes" placeholder="Optional notes"/></div>
       </div>
       <div class="modal-footer">
@@ -494,23 +414,14 @@ tbody tr:hover{background:#fafaf8}
 
 <div class="modal-overlay" id="domestic-modal">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Schedule Cleaning</div>
-      <button class="modal-close" onclick="closeModal('domestic-modal')">×</button>
-    </div>
+    <div class="modal-header"><div class="modal-title">Schedule Cleaning</div><button class="modal-close" onclick="closeModal('domestic-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-field"><label>Cleaner</label>
-          <select id="d-cleaner"><option>Precious Dlamini</option><option>Thandi Mokoena</option><option>Other</option></select>
-        </div>
-        <div class="form-field"><label>Property</label>
-          <select id="d-prop"><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select>
-        </div>
+        <div class="form-field"><label>Cleaner</label><select id="d-cleaner"><option>Blessing</option><option>Fatima</option><option>Patricia</option><option>Spiwe</option></select></div>
+        <div class="form-field"><label>Property</label><select id="d-prop"><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select></div>
         <div class="form-field"><label>Date *</label><input type="date" id="d-date"/></div>
         <div class="form-field"><label>Time</label><input type="time" id="d-time" value="10:00"/></div>
-        <div class="form-field"><label>Type</label>
-          <select id="d-type"><option value="turnover">Turnover Clean</option><option value="deep">Deep Clean</option><option value="mid-stay">Mid-Stay Refresh</option><option value="inspection">Inspection</option></select>
-        </div>
+        <div class="form-field"><label>Type</label><select id="d-type"><option value="turnover">Turnover Clean</option><option value="deep">Deep Clean</option><option value="mid-stay">Mid-Stay Refresh</option><option value="inspection">Inspection</option></select></div>
         <div class="form-field"><label>Notes</label><input id="d-notes" placeholder="Special instructions"/></div>
       </div>
       <div class="modal-footer">
@@ -523,22 +434,13 @@ tbody tr:hover{background:#fafaf8}
 
 <div class="modal-overlay" id="task-modal">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">New Task</div>
-      <button class="modal-close" onclick="closeModal('task-modal')">×</button>
-    </div>
+    <div class="modal-header"><div class="modal-title">New Task</div><button class="modal-close" onclick="closeModal('task-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-field span-full"><label>Task Title *</label><input id="t-title" placeholder="What needs to be done?"/></div>
-        <div class="form-field"><label>Property</label>
-          <select id="t-prop"><option value="all">Both Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select>
-        </div>
-        <div class="form-field"><label>Priority</label>
-          <select id="t-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select>
-        </div>
-        <div class="form-field"><label>Assign To</label>
-          <select id="t-assign"><option>Nicole</option><option>Silja</option><option>Nina Williams</option></select>
-        </div>
+        <div class="form-field"><label>Property</label><select id="t-prop"><option value="all">Both Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select></div>
+        <div class="form-field"><label>Priority</label><select id="t-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
+        <div class="form-field"><label>Assign To</label><select id="t-assign"><option>Nicole</option><option>Silja</option><option>Nina Williams</option></select></div>
         <div class="form-field"><label>Due Date</label><input type="date" id="t-due"/></div>
         <div class="form-field span-full"><label>Notes</label><input id="t-notes" placeholder="Additional details"/></div>
       </div>
@@ -552,15 +454,10 @@ tbody tr:hover{background:#fafaf8}
 
 <div class="modal-overlay" id="kb-modal">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">New Article</div>
-      <button class="modal-close" onclick="closeModal('kb-modal')">×</button>
-    </div>
+    <div class="modal-header"><div class="modal-title">New Article</div><button class="modal-close" onclick="closeModal('kb-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-field"><label>Category</label>
-          <select id="kb-cat"><option>Procedures</option><option>Access</option><option>WiFi</option><option>Maintenance</option><option>Guest Info</option><option>Emergency</option></select>
-        </div>
+        <div class="form-field"><label>Category</label><select id="kb-cat"><option>Procedures</option><option>Access</option><option>WiFi</option><option>Maintenance</option><option>Guest Info</option><option>Emergency</option></select></div>
         <div class="form-field"><label>Tags (comma separated)</label><input id="kb-tags" placeholder="access, keys"/></div>
         <div class="form-field span-full"><label>Title *</label><input id="kb-title" placeholder="Article title"/></div>
         <div class="form-field span-full"><label>Content *</label><textarea id="kb-content-input" rows="5" style="resize:vertical" placeholder="Write content here…"></textarea></div>
@@ -575,10 +472,7 @@ tbody tr:hover{background:#fafaf8}
 
 <div class="modal-overlay" id="day-modal">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="day-modal-title"></div>
-      <button class="modal-close" onclick="closeModal('day-modal')">×</button>
-    </div>
+    <div class="modal-header"><div class="modal-title" id="day-modal-title"></div><button class="modal-close" onclick="closeModal('day-modal')">×</button></div>
     <div class="modal-body" id="day-modal-body"></div>
   </div>
 </div>
@@ -586,125 +480,90 @@ tbody tr:hover{background:#fafaf8}
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
-// ── CONFIG ───────────────────────────────────────────────────────
-const SUPABASE_URL  = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
-const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRreXpiemxzaHJ4ZHdldHlrbWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMzkyMTUsImV4cCI6MjA3ODYxNTIxNX0.d4K89mdZVzG4Rv4H44MYnhV4VlW3V1vSgbYZcjcPMQw';
-
+const SUPABASE_URL = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRreXpiemxzaHJ4ZHdldHlrbWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMzkyMTUsImV4cCI6MjA3ODYxNTIxNX0.d4K89mdZVzG4Rv4H44MYnhV4VlW3V1vSgbYZcjcPMQw';
 let db = null;
-try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.warn('Supabase init failed', e); }
+try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) { console.warn('Supabase init failed',e); }
 
-// ── STATE ────────────────────────────────────────────────────────
-let currentUser   = null;
-let currentProp   = 'all';
-let currentTab    = 'dashboard';
-let taskFilter    = 'open';
-let bookingFilter = 'all';
-let calYear = new Date().getFullYear();
-let calMonth = new Date().getMonth();
-
-let bookings  = [];
-let tasks     = [];
-let domestics = [];
-let kbArticles = [];
-let messages  = [
-  {id:'m1',from:'Nicole',role:'admin',text:'Speranta: Jan Müller confirmed 18 Apr. Welcome pack ready?',time:'09:14'},
-  {id:'m2',from:'Nina Williams',role:'host',text:'On it! Precious confirmed for cleaning at 10:00.',time:'09:32'},
-  {id:'m3',from:'Silja',role:'admin',text:'Remember to update TV House Airbnb photos — new bedding is in.',time:'10:05'},
+const UUID_MAP = {
+  'e9737638-d83a-4947-940a-8746789e4d9f':'speranta',
+  '83b2a84a-5451-4be5-a84f-2efc0d2602d5':'tvhouse',
+};
+const PROPS = {
+  speranta:{name:'Speranta Flat',short:'Speranta',address:'35 Athens Road, Blouberg',uuid:'e9737638-d83a-4947-940a-8746789e4d9f'},
+  tvhouse:{name:'TV House',short:'TV House',address:'110 Athens Road, Tableview',uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5'},
+};
+const CLEANERS = [
+  {name:'Blessing',properties:['speranta'],rate:350,birthday:'1988-03-14'},
+  {name:'Fatima',properties:['speranta','tvhouse'],rate:350,birthday:'1992-07-22'},
+  {name:'Patricia',properties:['speranta','tvhouse'],rate:{speranta:350,tvhouse:450},birthday:'1985-11-05'},
+  {name:'Spiwe',properties:['speranta'],rate:350,birthday:'1990-09-18'},
 ];
-
-// ── USERS ────────────────────────────────────────────────────────
 const USERS = [
   {id:'1',email:'sn_apt_management@outlook.com',password:'Sevilla2015!',name:'Nicole',role:'admin',initials:'N'},
   {id:'2',email:'silja@hostease.co.za',password:'Admin2024!',name:'Silja',role:'admin',initials:'S'},
   {id:'3',email:'vanwyk.nina@gmail.com',password:'HelloWorld1!',name:'Nina Williams',role:'host',initials:'NW'},
 ];
 
-const PROPS = {
-  speranta:{name:'Speranta Flat',address:'35 Athens Road, Blouberg'},
-  tvhouse:{name:'TV House',address:'110 Athens Road, Tableview'},
-};
+let currentUser=null,currentProp='all',currentTab='dashboard',taskFilter='open',bookingFilter='all';
+let calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
+let bookings=[],tasks=[],domestics=[],kbArticles=[],messages=[
+  {id:'m1',from:'Nicole',role:'admin',text:'Speranta: Jan Müller confirmed 18 Apr. Welcome pack ready?',time:'09:14'},
+  {id:'m2',from:'Nina Williams',role:'host',text:'On it! Blessing confirmed for cleaning at 10:00.',time:'09:32'},
+  {id:'m3',from:'Silja',role:'admin',text:'Remember to update TV House Airbnb photos — new bedding is in.',time:'10:05'},
+];
 
-// ── SAMPLE DATA ──────────────────────────────────────────────────
-const SAMPLE_BOOKINGS = [
-  {id:'b1',property_id:'speranta',guest_name:'Jan & Marie Müller',platform:'airbnb',check_in:'2026-04-18',check_out:'2026-04-23',nights:5,status:'confirmed',revenue:4200,currency:'ZAR',notes:'German guests'},
-  {id:'b2',property_id:'tvhouse',guest_name:'Sarah Johnson',platform:'booking',check_in:'2026-04-17',check_out:'2026-04-19',nights:2,status:'checkedin',revenue:1600,currency:'ZAR',notes:'Late check-in'},
-  {id:'b3',property_id:'speranta',guest_name:'Pierre Dubois',platform:'lekkeslaap',check_in:'2026-04-25',check_out:'2026-04-28',nights:3,status:'confirmed',revenue:2400,currency:'ZAR',notes:''},
-  {id:'b4',property_id:'tvhouse',guest_name:'Dirk van der Berg',platform:'manual',check_in:'2026-04-20',check_out:'2026-04-22',nights:2,status:'pending',revenue:1400,currency:'ZAR',notes:'Repeat guest'},
-  {id:'b5',property_id:'speranta',guest_name:'Annemarie Schreiber',platform:'airbnb',check_in:'2026-05-01',check_out:'2026-05-07',nights:6,status:'confirmed',revenue:5100,currency:'ZAR',notes:''},
-  {id:'b6',property_id:'tvhouse',guest_name:'Michael Brown',platform:'booking',check_in:'2026-05-10',check_out:'2026-05-15',nights:5,status:'confirmed',revenue:3500,currency:'ZAR',notes:'Anniversary'},
-];
-const SAMPLE_TASKS = [
-  {id:'t1',title:'Fix leaking tap — Speranta bathroom',property_id:'speranta',priority:'high',status:'open',assigned:'Nina Williams',due:'2026-04-18',notes:'Under sink, slow drip'},
-  {id:'t2',title:'Replace TV remote batteries — TV House',property_id:'tvhouse',priority:'low',status:'done',assigned:'Nina Williams',due:'2026-04-16',notes:''},
-  {id:'t3',title:'Order guest welcome packs',property_id:'all',priority:'medium',status:'open',assigned:'Nicole',due:'2026-04-20',notes:'Cape Town Gift Co.'},
-  {id:'t4',title:'Service air conditioner — Speranta',property_id:'speranta',priority:'medium',status:'open',assigned:'Nicole',due:'2026-04-25',notes:'Last serviced Jan 2025'},
-  {id:'t5',title:'Update Airbnb photos — TV House',property_id:'tvhouse',priority:'low',status:'open',assigned:'Silja',due:'2026-04-30',notes:'New bedding installed'},
-];
-const SAMPLE_DOMESTICS = [
-  {id:'d1',cleaner:'Precious Dlamini',property_id:'speranta',date:'2026-04-17',time:'10:00',type:'turnover',status:'scheduled',notes:'Full linen change',checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
-  {id:'d2',cleaner:'Thandi Mokoena',property_id:'tvhouse',date:'2026-04-17',time:'11:00',type:'turnover',status:'completed',notes:'',checklist:{kitchen:true,bathrooms:true,bedrooms:true,living:true,laundry:true}},
-  {id:'d3',cleaner:'Precious Dlamini',property_id:'speranta',date:'2026-04-23',time:'10:00',type:'turnover',status:'scheduled',notes:'Post checkout clean',checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
-  {id:'d4',cleaner:'Thandi Mokoena',property_id:'tvhouse',date:'2026-04-19',time:'09:00',type:'deep',status:'scheduled',notes:'Monthly deep clean',checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
-];
-const SAMPLE_KB = [
+const SAMPLE_BOOKINGS=[
+  {id:'b1',property_id:'speranta',guest_name:'Joe Ladlow',platform:'airbnb',check_in:'2026-04-14',check_out:'2026-04-16',nights:2,status:'checked-out',revenue:0,currency:'ZAR',notes:''},
+  {id:'b2',property_id:'tvhouse',guest_name:'Hamza Kazee',platform:'airbnb',check_in:'2026-04-07',check_out:'2026-04-13',nights:6,status:'checked-out',revenue:0,currency:'ZAR',notes:''},
+].map(nb);
+const SAMPLE_TASKS=[
+  {id:'t1',title:'Fix leaking tap — Speranta bathroom',property_id:'speranta',priority:'high',status:'open',assigned:'Nina Williams',due:'2026-04-18',notes:'Under sink'},
+  {id:'t2',title:'Service air conditioner — Speranta',property_id:'speranta',priority:'medium',status:'open',assigned:'Nicole',due:'2026-04-25',notes:'Last serviced Jan 2025'},
+  {id:'t3',title:'Update Airbnb photos — TV House',property_id:'tvhouse',priority:'low',status:'open',assigned:'Silja',due:'2026-04-30',notes:'New bedding installed'},
+].map(nt);
+const SAMPLE_DOMESTICS=[
+  {id:'d1',cleaner:'Blessing',property_id:'speranta',date:'2026-04-18',time:'10:00',type:'turnover',status:'scheduled',notes:'Post checkout',checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
+  {id:'d2',cleaner:'Patricia',property_id:'tvhouse',date:'2026-04-19',time:'09:00',type:'turnover',status:'scheduled',notes:'',checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
+].map(nd);
+const SAMPLE_KB=[
   {id:'k1',category:'Access',title:'Door Codes & Keys',content:'Speranta: Main door code #4521. Key box code 1234.\n\nTV House: Main door code #7893. Key box at front gate, code 5678.',tags:['access','security']},
   {id:'k2',category:'WiFi',title:'WiFi Passwords',content:'Speranta: Network "Speranta_Guest" | Password: BloudBerg2024!\n\nTV House: Network "TVHouse_Guest" | Password: TableView2024!',tags:['wifi']},
   {id:'k3',category:'Procedures',title:'Check-in Procedure',content:'1. Send welcome message 24h before\n2. Confirm arrival time\n3. Ensure property is clean\n4. Leave welcome note and info folder\n5. Video call walkthrough if needed',tags:['checkin']},
   {id:'k4',category:'Maintenance',title:'Emergency Contacts',content:'Plumber: Johan Botha - 082 555 1234\nElectrician: Cape Power - 021 555 9876\nLocksmith: Key King - 083 444 2222',tags:['emergency','contacts']},
-  {id:'k5',category:'Guest Info',title:'Area Guide',content:'Beach: 5 min walk\nCheckers Tableview: 3km\nTable Mountain: 30 min drive\nMyCiti bus: 200m away\nKitesurfing & whale watching nearby',tags:['area','guest']},
+  {id:'k5',category:'Guest Info',title:'Area Guide',content:'Beach: 5 min walk\nCheckers Tableview: 3km\nTable Mountain: 30 min drive\nMyCiti bus: 200m away',tags:['area','guest']},
   {id:'k6',category:'Procedures',title:'Check-out Procedure',content:'1. Send reminder evening before\n2. Checkout time 10:00\n3. Nina inspects within 2 hours\n4. Report damage via tasks\n5. Schedule cleaning immediately',tags:['checkout']},
 ];
 
-// ── NORMALISE DB ROWS ────────────────────────────────────────────
-function nb(b) {
-  const pid = b.property_id || (b.property_name && b.property_name.toLowerCase().includes('speranta') ? 'speranta' : 'tvhouse');
-  return {
-    ...b,
-    guest_name: b.guest_name || [b.guest_first_name, b.guest_last_name].filter(Boolean).join(' ') || 'Unknown',
-    check_in:   String(b.check_in_date || b.check_in || '').slice(0,10),
-    check_out:  String(b.check_out_date || b.check_out || '').slice(0,10),
-    revenue:    b.revenue ?? b.total_amount ?? 0,
-    property_id: typeof pid === 'string' && (pid === 'speranta' || pid === 'tvhouse') ? pid : 'speranta',
-  };
+function nb(b){
+  let pid=b.property_id||'';
+  if(UUID_MAP[pid])pid=UUID_MAP[pid];
+  else if(b.property_name){const pn=b.property_name.toLowerCase();pid=pn.includes('speranta')?'speranta':pn.includes('tv')?'tvhouse':'speranta';}
+  if(pid!=='speranta'&&pid!=='tvhouse')pid='speranta';
+  const gn=b.guest_name||[b.guest_first_name,b.guest_last_name].filter(Boolean).join(' ')||null;
+  return{...b,guest_name:gn,display_name:gn||(b.platform?b.platform.charAt(0).toUpperCase()+b.platform.slice(1)+' Guest':'Guest'),check_in:String(b.check_in_date||b.check_in||'').slice(0,10),check_out:String(b.check_out_date||b.check_out||'').slice(0,10),revenue:b.revenue??b.total_amount??0,property_id:pid};
 }
-function nt(t) {
-  return {...t, notes:t.notes||t.description||'', due:String(t.due||t.due_at||t.task_date||'').slice(0,10), assigned:t.assigned||'Unassigned', property_id:t.property_id||'all', priority:t.priority||'medium', status:t.status||'open'};
-}
-function nd(d) {
-  return {...d, checklist:d.checklist||{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}};
-}
+function nt(t){return{...t,notes:t.notes||t.description||'',due:String(t.due||t.due_at||t.task_date||'').slice(0,10),assigned:t.assigned||'Unassigned',property_id:t.property_id||'all',priority:t.priority||'medium',status:t.status||'open'};}
+function nd(d){return{...d,checklist:d.checklist||{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}};}
 
-// ── AUTH ─────────────────────────────────────────────────────────
-function fillUser(i) {
-  document.getElementById('login-email').value = USERS[i].email;
-  document.getElementById('login-password').value = USERS[i].password;
+function fillUser(i){document.getElementById('login-email').value=USERS[i].email;document.getElementById('login-password').value=USERS[i].password;}
+function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-password').value;
+  const user=USERS.find(u=>u.email===email&&u.password===pass);
+  const errEl=document.getElementById('auth-error');
+  if(!user){errEl.textContent='Invalid email or password.';errEl.style.display='block';return;}
+  errEl.style.display='none';currentUser=user;
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  document.getElementById('user-avatar').textContent=user.initials;
+  document.getElementById('user-name').textContent=user.name;
+  document.getElementById('user-role').textContent=user.role;
+  buildNav();loadData();
 }
+function doLogout(){currentUser=null;document.getElementById('auth-screen').style.display='flex';document.getElementById('app-screen').style.display='none';}
 
-function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-password').value;
-  const user  = USERS.find(u => u.email === email && u.password === pass);
-  const errEl = document.getElementById('auth-error');
-  if (!user) { errEl.textContent = 'Invalid email or password.'; errEl.style.display = 'block'; return; }
-  errEl.style.display = 'none';
-  currentUser = user;
-  document.getElementById('auth-screen').style.display = 'none';
-  document.getElementById('app-screen').style.display  = 'block';
-  document.getElementById('user-avatar').textContent = user.initials;
-  document.getElementById('user-name').textContent   = user.name;
-  document.getElementById('user-role').textContent   = user.role;
-  buildNav();
-  loadData();
-}
-
-function doLogout() {
-  currentUser = null;
-  document.getElementById('auth-screen').style.display = 'flex';
-  document.getElementById('app-screen').style.display  = 'none';
-}
-
-// ── NAV ──────────────────────────────────────────────────────────
-const NAV = [
+const NAV=[
   {id:'dashboard',label:'Dashboard',icon:'🏠',roles:['admin','host']},
   {id:'bookings',label:'Bookings',icon:'📋',roles:['admin','host']},
   {id:'calendar',label:'Calendar',icon:'📅',roles:['admin','host']},
@@ -714,317 +573,327 @@ const NAV = [
   {id:'knowledge',label:'Knowledge Base',icon:'📚',roles:['admin','host']},
   {id:'reports',label:'Reports',icon:'📊',roles:['admin']},
 ];
-
-function buildNav() {
-  const nav = document.getElementById('sidebar-nav');
-  nav.innerHTML = NAV.filter(n => n.roles.includes(currentUser.role)).map(n =>
-    `<div class="nav-item ${n.id===currentTab?'active':''}" onclick="switchTab('${n.id}')">
-      <span class="nav-icon">${n.icon}</span>${n.label}
-    </div>`
+function buildNav(){
+  document.getElementById('sidebar-nav').innerHTML=NAV.filter(n=>n.roles.includes(currentUser.role)).map(n=>
+    `<div class="nav-item ${n.id===currentTab?'active':''}" onclick="switchTab('${n.id}')"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
   ).join('');
 }
-
-function switchTab(id) {
-  currentTab = id;
-  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+function switchTab(id){
+  currentTab=id;
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
-  document.getElementById('page-title').textContent = NAV.find(n=>n.id===id)?.label || id;
-  buildNav();
-  renderTab(id);
+  document.getElementById('page-title').textContent=NAV.find(n=>n.id===id)?.label||id;
+  buildNav();renderTab(id);
 }
-
-function switchProperty(val) {
-  currentProp = val;
-  const tag = document.getElementById('prop-tag');
-  if (val === 'all') { tag.style.display = 'none'; }
-  else { tag.style.display = 'inline-block'; tag.textContent = '📍 ' + PROPS[val].name; }
+function switchProperty(val){
+  currentProp=val;
+  const tag=document.getElementById('prop-tag');
+  if(val==='all'){tag.style.display='none';}
+  else{tag.style.display='inline-block';tag.textContent='📍 '+PROPS[val].name;}
   renderTab(currentTab);
 }
-
-function renderTab(id) {
-  if (id==='dashboard') renderDashboard();
-  else if (id==='bookings') renderBookings();
-  else if (id==='calendar') renderCalendar();
-  else if (id==='domestic') renderDomestic();
-  else if (id==='tasks') renderTasks();
-  else if (id==='messages') renderMessages();
-  else if (id==='knowledge') renderKB();
-  else if (id==='reports') renderReports();
+function renderTab(id){
+  if(id==='dashboard')renderDashboard();
+  else if(id==='bookings')renderBookings();
+  else if(id==='calendar')renderCalendar();
+  else if(id==='domestic')renderDomestic();
+  else if(id==='tasks')renderTasks();
+  else if(id==='messages')renderMessages();
+  else if(id==='knowledge')renderKB();
+  else if(id==='reports')renderReports();
 }
 
-// ── DATA LOAD ────────────────────────────────────────────────────
-async function loadData() {
-  bookings  = SAMPLE_BOOKINGS.map(nb);
-  tasks     = SAMPLE_TASKS.map(nt);
-  domestics = SAMPLE_DOMESTICS.map(nd);
-  kbArticles = SAMPLE_KB;
+async function loadData(){
+  bookings=SAMPLE_BOOKINGS;tasks=SAMPLE_TASKS;domestics=SAMPLE_DOMESTICS;kbArticles=SAMPLE_KB;
   renderTab(currentTab);
-
-  if (!db) return;
-  try {
-    const [bRes, tRes, dRes, kRes] = await Promise.all([
-      db.from('bookings').select('*').order('check_in_date', {ascending:false}),
-      db.from('tasks').select('*').order('created_at', {ascending:false}),
-      db.from('domestics').select('*').order('date', {ascending:true}),
-      db.from('kb_articles').select('*').order('created_at', {ascending:false}),
+  if(!db)return;
+  try{
+    const[bRes,tRes,dRes,kRes]=await Promise.all([
+      db.from('bookings').select('*').eq('is_active',true).order('check_in_date',{ascending:false}).limit(500),
+      db.from('tasks').select('*').order('created_at',{ascending:false}),
+      db.from('domestics').select('*').order('date',{ascending:false}),
+      db.from('kb_articles').select('*').order('created_at',{ascending:false}),
     ]);
-    let dbConnected = false;
-    if (bRes.data && bRes.data.length > 0) { bookings = bRes.data.map(nb); dbConnected = true; toast('Live bookings loaded ✓','success'); }
-    if (tRes.data && tRes.data.length > 0) tasks = tRes.data.map(nt);
-    if (dRes.data && dRes.data.length > 0) domestics = dRes.data.map(nd);
-    if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
-    if (dbConnected) document.getElementById('db-status').textContent = '🟢 DB Connected';
-    else document.getElementById('db-status').textContent = '🟢 DB Ready';
+    let connected=false;
+    if(bRes.data&&bRes.data.length>0){bookings=bRes.data.map(nb);connected=true;toast('Live data loaded ✓','success');}
+    if(tRes.data&&tRes.data.length>0)tasks=tRes.data.map(nt);
+    if(dRes.data&&dRes.data.length>0)domestics=dRes.data.map(nd);
+    if(kRes.data&&kRes.data.length>0)kbArticles=kRes.data;
+    document.getElementById('db-status').textContent=connected?'🟢 DB Connected':'🟢 DB Ready';
     renderTab(currentTab);
-  } catch(e) { console.warn('DB load error:', e); }
+  }catch(e){console.warn('DB load:',e);}
 }
 
-// ── FILTER HELPERS ───────────────────────────────────────────────
-function filteredBookings() {
-  let b = currentProp === 'all' ? bookings : bookings.filter(x => x.property_id === currentProp);
-  if (bookingFilter !== 'all') b = b.filter(x => x.status === bookingFilter);
-  return b.sort((a,z) => z.check_in.localeCompare(a.check_in));
+function filteredBookings(){
+  let b=currentProp==='all'?bookings:bookings.filter(x=>x.property_id===currentProp);
+  if(bookingFilter!=='all')b=b.filter(x=>x.status===bookingFilter);
+  return b.sort((a,z)=>z.check_in.localeCompare(a.check_in));
 }
-function filteredTasks() {
-  let t = currentProp === 'all' ? tasks : tasks.filter(x => x.property_id === currentProp || x.property_id === 'all');
-  if (taskFilter !== 'all') t = t.filter(x => x.status === taskFilter);
-  return t.sort((a,z) => ({high:0,medium:1,low:2}[a.priority]||1) - ({high:0,medium:1,low:2}[z.priority]||1));
+function filteredTasks(){
+  let t=currentProp==='all'?tasks:tasks.filter(x=>x.property_id===currentProp||x.property_id==='all');
+  if(taskFilter!=='all')t=t.filter(x=>x.status===taskFilter);
+  return t.sort((a,z)=>({high:0,medium:1,low:2}[a.priority]||1)-({high:0,medium:1,low:2}[z.priority]||1));
 }
-function filteredDomestics() {
-  return (currentProp === 'all' ? domestics : domestics.filter(x => x.property_id === currentProp))
-    .sort((a,z) => a.date.localeCompare(z.date));
+function filteredDomestics(){
+  return(currentProp==='all'?domestics:domestics.filter(x=>x.property_id===currentProp)).sort((a,z)=>z.date.localeCompare(a.date));
 }
 
-// ── DASHBOARD ────────────────────────────────────────────────────
-function renderDashboard() {
-  const today = new Date().toISOString().slice(0,10);
-  const fb = currentProp === 'all' ? bookings : bookings.filter(b => b.property_id === currentProp);
-  const checkIns  = fb.filter(b => b.check_in  === today);
-  const checkOuts = fb.filter(b => b.check_out === today);
-  const active    = fb.filter(b => b.check_in <= today && b.check_out > today);
-  const monthRev  = fb.filter(b => b.check_in.startsWith('2026-04')).reduce((s,b) => s+(b.revenue||0), 0);
-  const upcoming  = fb.filter(b => b.check_in > today).sort((a,z) => a.check_in.localeCompare(z.check_in)).slice(0,5);
-
-  const isAdmin = currentUser.role === 'admin';
-  document.getElementById('dash-stats').innerHTML =
-    statCard('Today\'s Check-ins', checkIns.length, checkIns.map(b=>b.guest_name).join(', ')||'None today', 'var(--accent)') +
-    statCard('Today\'s Check-outs', checkOuts.length, checkOuts.map(b=>b.guest_name).join(', ')||'None today', 'var(--blue)') +
-    statCard('Occupied Now', active.length, 'of '+(currentProp==='all'?2:1)+' properties', 'var(--green2)') +
-    (isAdmin ? statCard('April Revenue', 'R'+monthRev.toLocaleString(), 'all platforms', '#7c3aed') : '');
-
-  document.getElementById('dash-upcoming').innerHTML = upcoming.length ? upcoming.map(b =>
+function renderDashboard(){
+  const today=new Date().toISOString().slice(0,10);
+  const fb=currentProp==='all'?bookings:bookings.filter(b=>b.property_id===currentProp);
+  const checkIns=fb.filter(b=>b.check_in===today);
+  const checkOuts=fb.filter(b=>b.check_out===today);
+  const active=fb.filter(b=>b.check_in<=today&&b.check_out>today);
+  const monthRev=fb.filter(b=>b.check_in.startsWith('2026-04')).reduce((s,b)=>s+(b.revenue||0),0);
+  const upcoming=fb.filter(b=>b.check_in>today).sort((a,z)=>a.check_in.localeCompare(z.check_in)).slice(0,5);
+  const isAdmin=currentUser.role==='admin';
+  document.getElementById('dash-stats').innerHTML=
+    statCard("Today's Check-ins",checkIns.length,checkIns.map(b=>b.display_name||b.guest_name).join(', ')||'None today','var(--accent)')+
+    statCard("Today's Check-outs",checkOuts.length,checkOuts.map(b=>b.display_name||b.guest_name).join(', ')||'None today','var(--blue)')+
+    statCard('Occupied Now',active.length,'of '+(currentProp==='all'?2:1)+' properties','var(--green2)')+
+    (isAdmin?statCard('April Revenue','R'+monthRev.toLocaleString(),'all platforms','#7c3aed'):'');
+  document.getElementById('dash-upcoming').innerHTML=upcoming.length?upcoming.map(b=>
     `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div><div style="font-weight:600;font-size:.88rem">${b.guest_name}</div>
+      <div><div style="font-weight:600;font-size:.88rem">${b.display_name||b.guest_name||'Guest'}</div>
       <div style="font-size:.76rem;color:var(--muted)">${propName(b.property_id)} · ${b.nights} nights</div></div>
       <div style="text-align:right"><div style="font-size:.82rem;font-weight:600">${b.check_in}</div><span class="badge badge-${b.platform}">${b.platform}</span></div>
-    </div>`).join('') : '<div class="text-muted">No upcoming bookings</div>';
-
-  document.getElementById('dash-prop-status').innerHTML = Object.entries(PROPS).map(([pid,prop]) => {
-    const cur = bookings.find(b => b.property_id===pid && b.check_in<=today && b.check_out>today);
-    return `<div style="padding:13px 0;border-bottom:1px solid var(--border)">
+    </div>`).join(''):'<div class="text-muted">No upcoming bookings</div>';
+  document.getElementById('dash-prop-status').innerHTML=Object.entries(PROPS).map(([pid,prop])=>{
+    const cur=bookings.find(b=>b.property_id===pid&&b.check_in<=today&&b.check_out>today);
+    return`<div style="padding:13px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <span style="font-weight:700">${prop.name}</span>
-        <span class="badge ${cur?'badge-checkedin':'badge-checkedout'}">${cur?'Occupied':'Available'}</span>
+        <span class="badge ${cur?'badge-checked-in':'badge-confirmed'}">${cur?'Occupied':'Available'}</span>
       </div>
       <div style="font-size:.76rem;color:var(--muted)">${prop.address}</div>
-      ${cur?`<div style="font-size:.76rem;margin-top:3px">Guest: ${cur.guest_name} · Out ${cur.check_out}</div>`:''}
+      ${cur?`<div style="font-size:.76rem;margin-top:3px">Guest: ${cur.display_name||cur.guest_name||'Guest'} · Out ${cur.check_out}</div>`:''}
     </div>`;
   }).join('');
 }
-
-function statCard(label, value, sub, color='var(--accent)') {
-  return `<div class="stat-card" style="border-top-color:${color}">
-    <div class="stat-label">${label}</div>
-    <div class="stat-value">${value}</div>
-    <div class="stat-sub">${sub}</div>
-  </div>`;
+function statCard(label,value,sub,color='var(--accent)'){
+  return`<div class="stat-card" style="border-top-color:${color}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div><div class="stat-sub">${sub}</div></div>`;
 }
 
-// ── BOOKINGS ─────────────────────────────────────────────────────
-function renderBookings() {
-  const isAdmin = currentUser.role === 'admin';
-  const filters = ['all','confirmed','pending','checkedin','checkedout'];
-  document.getElementById('booking-filters').innerHTML = filters.map(f =>
+function renderBookings(){
+  const isAdmin=currentUser.role==='admin';
+  const filters=['all','confirmed','checked-in','checked-out','pending','cancelled'];
+  document.getElementById('booking-filters').innerHTML=filters.map(f=>
     `<button class="btn btn-sm ${f===bookingFilter?'btn-primary':'btn-ghost'}" onclick="setBookingFilter('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`
   ).join('');
-
-  const cols = ['Guest','Property','Platform','Check-in','Check-out','Nights',...(isAdmin?['Revenue']:[]),'Status'];
-  document.getElementById('booking-thead').innerHTML = cols.map(c=>`<th>${c}</th>`).join('');
-
-  const rows = filteredBookings();
-  document.getElementById('booking-tbody').innerHTML = rows.length ? rows.map(b =>
+  const cols=['Guest','Property','Platform','Check-in','Check-out','Nights',...(isAdmin?['Revenue']:[]),'Status'];
+  document.getElementById('booking-thead').innerHTML=cols.map(c=>`<th>${c}</th>`).join('');
+  const rows=filteredBookings();
+  document.getElementById('booking-tbody').innerHTML=rows.length?rows.map(b=>
     `<tr>
-      <td><div style="font-weight:600">${b.guest_name}</div>${b.notes?`<div style="font-size:.73rem;color:var(--muted)">${b.notes}</div>`:''}</td>
+      <td><div style="font-weight:600">${b.display_name||b.guest_name||'Guest'}</div>${b.notes?`<div style="font-size:.73rem;color:var(--muted)">${b.notes}</div>`:''}</td>
       <td>${propName(b.property_id)}</td>
       <td><span class="badge badge-${b.platform}">${b.platform}</span></td>
       <td>${b.check_in}</td><td>${b.check_out}</td><td>${b.nights||0}</td>
       ${isAdmin?`<td style="font-weight:700">R${(b.revenue||0).toLocaleString()}</td>`:''}
-      <td><span class="badge badge-${b.status}">${b.status}</span></td>
-    </tr>`).join('') :
+      <td><span class="badge badge-${(b.status||'').replace(' ','-')}">${b.status}</span></td>
+    </tr>`).join(''):
     `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📭</div>No bookings found</div></td></tr>`;
 }
+function setBookingFilter(f){bookingFilter=f;renderBookings();}
 
-function setBookingFilter(f) { bookingFilter = f; renderBookings(); }
-
-async function saveBooking() {
-  const guest = document.getElementById('b-guest').value.trim();
-  const cin   = document.getElementById('b-checkin').value;
-  const cout  = document.getElementById('b-checkout').value;
-  if (!guest || !cin || !cout) { toast('Please fill required fields','error'); return; }
-  const nights = Math.round((new Date(cout)-new Date(cin))/86400000);
-  const pid    = document.getElementById('b-prop').value;
-  const row = {
-    guest_name: guest, guest_first_name: guest.split(' ')[0], guest_last_name: guest.split(' ').slice(1).join(' '),
-    platform: document.getElementById('b-platform').value,
-    property_name: PROPS[pid]?.name || pid,
-    check_in_date: cin, check_out_date: cout, check_in: cin, check_out: cout,
-    nights, status: document.getElementById('b-status').value,
-    total_amount: Number(document.getElementById('b-revenue').value)||0,
-    revenue: Number(document.getElementById('b-revenue').value)||0,
-    currency: 'ZAR', notes: document.getElementById('b-notes').value, is_active: true,
+async function saveBooking(){
+  const guest=document.getElementById('b-guest').value.trim();
+  const cin=document.getElementById('b-checkin').value;
+  const cout=document.getElementById('b-checkout').value;
+  if(!guest||!cin||!cout){toast('Please fill required fields','error');return;}
+  const nights=Math.round((new Date(cout)-new Date(cin))/86400000);
+  const pid=document.getElementById('b-prop').value;
+  const row={
+    guest_name:guest,guest_first_name:guest.split(' ')[0],guest_last_name:guest.split(' ').slice(1).join(' '),
+    platform:document.getElementById('b-platform').value,
+    property_name:PROPS[pid]?.name||pid,
+    check_in_date:cin,check_out_date:cout,
+    check_in:cin+' 12:00:00+02',check_out:cout+' 10:00:00+02',
+    nights,number_of_guests:Number(document.getElementById('b-guests').value)||1,
+    status:'confirmed',payment_status:'pending',
+    total_amount:Number(document.getElementById('b-revenue').value)||0,
+    revenue:Number(document.getElementById('b-revenue').value)||0,
+    currency:'ZAR',notes:document.getElementById('b-notes').value,is_active:true,
   };
-  if (db) {
-    const {data,error} = await db.from('bookings').insert([row]).select().single();
-    if (error) { toast('Save error: '+error.message,'error'); return; }
-    bookings.unshift(nb({...data, property_id: pid}));
-  } else { bookings.unshift(nb({...row, id:'b'+Date.now(), property_id: pid})); }
-  toast('Booking added ✓','success');
-  closeModal('booking-modal');
-  renderBookings(); renderDashboard();
+  if(db){
+    const{data,error}=await db.from('bookings').insert([row]).select().single();
+    if(error){toast('Save error: '+error.message,'error');return;}
+    bookings.unshift(nb({...data,property_id:pid}));
+  }else{bookings.unshift(nb({...row,id:'b'+Date.now(),property_id:pid}));}
+  toast('Booking added ✓','success');closeModal('booking-modal');renderBookings();renderDashboard();
 }
 
-// ── CALENDAR ─────────────────────────────────────────────────────
-function renderCalendar() {
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-  document.getElementById('cal-month-label').textContent = months[calMonth]+' '+calYear;
-  const today = new Date().toISOString().slice(0,10);
-  const firstDay = new Date(calYear, calMonth, 1).getDay();
-  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
-  const fd = currentProp==='all' ? domestics : domestics.filter(d=>d.property_id===currentProp);
-
-  let cells = '';
-  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => { cells += `<div class="cal-day-head">${d}</div>`; });
-
-  for (let i=0; i<firstDay; i++) cells += '<div class="cal-cell other"></div>';
-  for (let d=1; d<=daysInMonth; d++) {
-    const ds = calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    const isToday = ds === today;
-    const evts = [];
-    fb.forEach(b => { if (b.check_in<=ds && b.check_out>ds) evts.push({type:'booking',label:(b.check_in===ds?'🛬 ':'')+b.guest_name.split(' ')[0],plat:b.platform,b}); });
-    fd.forEach(d2 => { if (d2.date===ds) evts.push({type:'cleaning',label:'🧹 '+d2.cleaner.split(' ')[0]}); });
-    cells += `<div class="cal-cell${isToday?' today':''}" onclick="showDay('${ds}')">
+function renderCalendar(){
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('cal-month-label').textContent=months[calMonth]+' '+calYear;
+  const today=new Date().toISOString().slice(0,10);
+  const firstDay=new Date(calYear,calMonth,1).getDay();
+  const daysInMonth=new Date(calYear,calMonth+1,0).getDate();
+  const fb=currentProp==='all'?bookings:bookings.filter(b=>b.property_id===currentProp);
+  const fd=currentProp==='all'?domestics:domestics.filter(d=>d.property_id===currentProp);
+  const birthdays=CLEANERS.map(c=>{
+    const bday=c.birthday?c.birthday.slice(5):null;
+    return bday?{date:String(calYear)+'-'+bday,label:'🎂 '+c.name.split(' ')[0],type:'birthday'}:null;
+  }).filter(Boolean);
+  const ownerKeywords=['owner','caretaker','tino'];
+  let cells='';
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d=>{cells+=`<div class="cal-day-head">${d}</div>`;});
+  for(let i=0;i<firstDay;i++)cells+='<div class="cal-cell other"></div>';
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isToday=ds===today;
+    const evts=[];
+    fb.forEach(b=>{
+      if(b.check_in<=ds&&b.check_out>ds){
+        const isOwner=ownerKeywords.some(k=>(b.guest_name||'').toLowerCase().includes(k)||(b.notes||'').toLowerCase().includes(k));
+        const icon=b.check_in===ds?'🛬 ':b.check_out===ds?'🛫 ':'';
+        const label=icon+(b.display_name||b.guest_name||b.platform);
+        evts.push({type:'booking',label,plat:isOwner?'owner':b.platform});
+      }
+    });
+    fd.forEach(d2=>{if(d2.date===ds)evts.push({type:'cleaning',label:'🧹 '+d2.cleaner.split(' ')[0]});});
+    birthdays.forEach(bday=>{if(bday.date===ds)evts.push({type:'birthday',label:bday.label});});
+    cells+=`<div class="cal-cell${isToday?' today':''}" onclick="showDay('${ds}')">
       <div class="cal-date">${d}</div>
-      ${evts.slice(0,3).map(e=>`<div class="cal-event ev-${e.type==='cleaning'?'cleaning':e.plat}">${e.label}</div>`).join('')}
-      ${evts.length>3?`<div style="font-size:.62rem;color:var(--muted);padding-left:3px">+${evts.length-3}</div>`:''}
+      ${evts.slice(0,3).map(e=>`<div class="cal-event ev-${e.type==='cleaning'?'cleaning':e.type==='birthday'?'birthday':e.plat==='owner'?'owner':e.plat}">${e.label}</div>`).join('')}
+      ${evts.length>3?`<div style="font-size:.62rem;color:var(--muted);padding-left:3px">+${evts.length-3} more</div>`:''}
     </div>`;
   }
-  const remainder = (firstDay + daysInMonth) % 7;
-  if (remainder > 0) for (let i=0; i<7-remainder; i++) cells += '<div class="cal-cell other"></div>';
-
-  document.getElementById('cal-grid').innerHTML = cells;
+  const remainder=(firstDay+daysInMonth)%7;
+  if(remainder>0)for(let i=0;i<7-remainder;i++)cells+='<div class="cal-cell other"></div>';
+  document.getElementById('cal-grid').innerHTML=cells;
 }
-
-function calNav(dir) {
-  if (dir===0) { calYear=new Date().getFullYear(); calMonth=new Date().getMonth(); }
-  else { calMonth+=dir; if(calMonth>11){calMonth=0;calYear++;}else if(calMonth<0){calMonth=11;calYear--;} }
+function calNav(dir){
+  if(dir===0){calYear=new Date().getFullYear();calMonth=new Date().getMonth();}
+  else{calMonth+=dir;if(calMonth>11){calMonth=0;calYear++;}else if(calMonth<0){calMonth=11;calYear--;}}
   renderCalendar();
 }
-
-function showDay(ds) {
-  const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
-  const fd = currentProp==='all' ? domestics : domestics.filter(d=>d.property_id===currentProp);
-  const bEvts = fb.filter(b=>b.check_in<=ds && b.check_out>ds);
-  const dEvts = fd.filter(d=>d.date===ds);
-  document.getElementById('day-modal-title').textContent = ds;
-  let html = '';
-  bEvts.forEach(b=>{html+=`<div style="background:var(--sand);border-radius:9px;padding:12px;margin-bottom:8px">
-    <div style="font-weight:700;margin-bottom:4px">📋 ${b.guest_name}</div>
-    <div style="font-size:.84rem">${propName(b.property_id)} · Check-in: ${b.check_in} · Check-out: ${b.check_out}</div>
-    <span class="badge badge-${b.platform}" style="margin-top:6px">${b.platform}</span>
-    <span class="badge badge-${b.status}" style="margin-top:6px;margin-left:4px">${b.status}</span>
-  </div>`;});
-  dEvts.forEach(d=>{html+=`<div style="background:var(--sand);border-radius:9px;padding:12px;margin-bottom:8px">
-    <div style="font-weight:700;margin-bottom:4px">🧹 ${d.cleaner}</div>
-    <div style="font-size:.84rem">${propName(d.property_id)} · ${d.time} · ${d.type}</div>
-    <span class="badge badge-${d.status}" style="margin-top:6px">${d.status}</span>
-  </div>`;});
-  if (!html) html = '<div class="text-muted">No events on this day.</div>';
-  document.getElementById('day-modal-body').innerHTML = html;
+function showDay(ds){
+  const fb=currentProp==='all'?bookings:bookings.filter(b=>b.property_id===currentProp);
+  const fd=currentProp==='all'?domestics:domestics.filter(d=>d.property_id===currentProp);
+  const bEvts=fb.filter(b=>b.check_in<=ds&&b.check_out>ds);
+  const dEvts=fd.filter(d=>d.date===ds);
+  const bdayCleaners=CLEANERS.filter(c=>c.birthday&&c.birthday.slice(5)===ds.slice(5));
+  const fmtDate=d=>{const[y,m,day]=d.split('-');return day+'/'+m+'/'+y;};
+  document.getElementById('day-modal-title').textContent=fmtDate(ds);
+  let html='';
+  bdayCleaners.forEach(c=>{html+=`<div style="background:#f0abfc20;border:1.5px solid #d946ef;border-radius:9px;padding:12px;margin-bottom:8px"><div style="font-weight:700;color:#86198f">🎂 ${c.name}'s Birthday!</div><div style="font-size:.82rem;color:var(--muted);margin-top:3px">Remember to wish her well 🎉</div></div>`;});
+  bEvts.forEach(b=>{
+    const platColors={airbnb:'#ff5a5f',booking:'#003b95',lekkeslaap:'#2d6a4f',fewo:'#7c3aed',manual:'#c17f3c'};
+    const col=platColors[b.platform]||'var(--accent)';
+    const nights=Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
+    html+=`<div style="background:var(--sand);border-radius:9px;padding:14px;margin-bottom:8px;border-left:4px solid ${col}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <span class="badge badge-${b.platform}">${b.platform.toUpperCase()}</span>
+        <span class="badge badge-${(b.status||'').replace(' ','-')}">${b.status}</span>
+      </div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Guest Name</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="gname-${b.id}" value="${b.guest_name||''}" placeholder="Click to add guest name…" style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.86rem;outline:none;background:#fff"/>
+          <button class="btn btn-primary btn-sm" onclick="saveGuestName('${b.id}')">Save</button>
+        </div>
+      </div>
+      <div style="font-size:.84rem;color:var(--muted)">📍 ${propName(b.property_id)} &nbsp;·&nbsp; 📅 ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)} &nbsp;·&nbsp; ${nights} night${nights!==1?'s':''}</div>
+      ${b.revenue?`<div style="font-size:.84rem;font-weight:700;color:var(--green);margin-top:4px">R${Number(b.revenue).toLocaleString()}</div>`:''}
+    </div>`;
+  });
+  dEvts.forEach(d=>{
+    const rate=CLEANERS.find(c=>c.name===d.cleaner)?.rate;
+    const rateVal=rate?(typeof rate==='object'?rate[d.property_id]||350:rate):350;
+    html+=`<div style="background:#06b6d410;border:1.5px solid #06b6d4;border-radius:9px;padding:12px;margin-bottom:8px">
+      <div style="font-weight:700;margin-bottom:4px">🧹 ${d.cleaner}</div>
+      <div style="font-size:.84rem">${propName(d.property_id)} · ${d.time||'—'} · ${d.type}</div>
+      ${d.notes?`<div style="font-size:.8rem;font-style:italic;margin-top:4px">"${d.notes}"</div>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+        <span class="badge badge-${d.status}">${d.status}</span>
+        <span style="font-size:.8rem;font-weight:700;color:var(--green)">R${rateVal}/clean</span>
+      </div>
+    </div>`;
+  });
+  if(!html)html='<div class="empty-state"><div class="empty-icon">📅</div>No events on this day</div>';
+  document.getElementById('day-modal-body').innerHTML=html;
   openModal('day-modal');
 }
+async function saveGuestName(bookingId){
+  const input=document.getElementById('gname-'+bookingId);
+  if(!input)return;
+  const name=input.value.trim();
+  const b=bookings.find(x=>String(x.id)===String(bookingId));
+  if(!b)return;
+  b.guest_name=name;b.display_name=name||b.platform+' Guest';
+  if(db){const{error}=await db.from('bookings').update({guest_name:name}).eq('id',bookingId);if(error){toast('Could not save: '+error.message,'error');return;}}
+  toast('Guest name saved ✓','success');renderCalendar();renderBookings();
+}
 
-// ── DOMESTIC ─────────────────────────────────────────────────────
-function renderDomestic() {
-  const fd = filteredDomestics();
-  document.getElementById('dom-grid').innerHTML = fd.length ? fd.map(d => {
-    const cl = d.checklist||{};
-    const keys = ['kitchen','bathrooms','bedrooms','living','laundry'];
-    const done = keys.filter(k=>cl[k]).length;
-    return `<div class="dom-card" style="border-top-color:${d.status==='completed'?'var(--green2)':'var(--accent)'}">
+function renderDomestic(){
+  const fd=filteredDomestics();
+  document.getElementById('dom-grid').innerHTML=fd.length?fd.map(d=>{
+    const cl=d.checklist||{};
+    const keys=['kitchen','bathrooms','bedrooms','living','laundry'];
+    const done=keys.filter(k=>cl[k]).length;
+    const rate=CLEANERS.find(c=>c.name===d.cleaner)?.rate;
+    const rateVal=rate?(typeof rate==='object'?rate[d.property_id]||350:rate):350;
+    return`<div class="dom-card" style="border-top-color:${d.status==='completed'?'var(--green2)':'var(--accent)'}">
       <div class="dom-card-head">
         <div><div class="dom-name">${d.cleaner}</div><div class="dom-prop">${propName(d.property_id)} · ${d.type}</div></div>
         <span class="badge badge-${d.status}">${d.status}</span>
       </div>
-      <div class="dom-detail">📅 ${d.date} at ${d.time}${d.notes?`<br><em>"${d.notes}"</em>`:''}</div>
-      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px">Checklist (${done}/${keys.length})</div>
-      ${keys.map(k=>`<div class="checklist-row">
-        <input type="checkbox" ${cl[k]?'checked':''} ${d.status==='completed'?'disabled':''} onchange="toggleCheck('${d.id}','${k}')"/>
-        <span class="${cl[k]?'done-text':''}">${k.charAt(0).toUpperCase()+k.slice(1)}</span>
-      </div>`).join('')}
+      <div class="dom-detail">📅 ${d.date} at ${d.time||'—'}${d.notes?`<br><em>"${d.notes}"</em>`:''}</div>
+      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:6px">Checklist (${done}/${keys.length}) · <span style="color:var(--green)">R${rateVal}/clean</span></div>
+      ${keys.map(k=>`<div class="checklist-row"><input type="checkbox" ${cl[k]?'checked':''} ${d.status==='completed'?'disabled':''} onchange="toggleCheck('${d.id}','${k}')"/><span class="${cl[k]?'done-text':''}">${k.charAt(0).toUpperCase()+k.slice(1)}</span></div>`).join('')}
       ${d.status!=='completed'?`<button class="btn btn-green btn-sm" style="width:100%;margin-top:10px;justify-content:center" onclick="markDone('${d.id}')">✓ Mark Complete</button>`:''}
     </div>`;
-  }).join('') : '<div class="empty-state"><div class="empty-icon">🧹</div>No cleaning sessions scheduled</div>';
+  }).join(''):'<div class="empty-state"><div class="empty-icon">🧹</div>No cleaning sessions found</div>';
 }
-
-function toggleCheck(id, key) {
-  const d = domestics.find(x=>x.id==id);
-  if (!d) return;
-  d.checklist[key] = !d.checklist[key];
-  if (db) db.from('domestics').update({checklist:d.checklist}).eq('id',id);
+function toggleCheck(id,key){
+  const d=domestics.find(x=>x.id==id);if(!d)return;
+  d.checklist[key]=!d.checklist[key];
+  if(db)db.from('domestics').update({checklist:d.checklist}).eq('id',id);
   renderDomestic();
 }
-
-async function markDone(id) {
-  const allDone = {kitchen:true,bathrooms:true,bedrooms:true,living:true,laundry:true};
-  const d = domestics.find(x=>x.id==id);
-  if (!d) return;
-  d.status='completed'; d.checklist=allDone;
-  if (db) await db.from('domestics').update({status:'completed',checklist:allDone}).eq('id',id);
-  toast('Cleaning marked complete ✓','success');
-  renderDomestic();
+async function markDone(id){
+  const allDone={kitchen:true,bathrooms:true,bedrooms:true,living:true,laundry:true};
+  const d=domestics.find(x=>x.id==id);if(!d)return;
+  d.status='completed';d.checklist=allDone;
+  if(db)await db.from('domestics').update({status:'completed',checklist:allDone}).eq('id',id);
+  toast('Cleaning marked complete ✓','success');renderDomestic();
+}
+async function saveDomestic(){
+  const date=document.getElementById('d-date').value;
+  if(!date){toast('Please set a date','error');return;}
+  const cleaner=document.getElementById('d-cleaner').value;
+  const pid=document.getElementById('d-prop').value;
+  const rate=CLEANERS.find(c=>c.name===cleaner)?.rate;
+  const rateVal=rate?(typeof rate==='object'?rate[pid]||350:rate):350;
+  const row={cleaner,property_id:pid,date,time:document.getElementById('d-time').value,type:document.getElementById('d-type').value,status:'scheduled',notes:document.getElementById('d-notes').value,checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},amount_paid:rateVal};
+  if(db){const{data,error}=await db.from('domestics').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}domestics.unshift(nd(data));}
+  else{domestics.unshift(nd({...row,id:'d'+Date.now()}));}
+  toast('Cleaning session scheduled ✓','success');closeModal('domestic-modal');renderDomestic();renderCalendar();
+}
+function exportDomestics(){
+  const fd=filteredDomestics();
+  const rows=[['Date','Cleaner','Property','Type','Status','Time','Notes','Amount Paid']];
+  fd.forEach(d=>{
+    const rate=CLEANERS.find(c=>c.name===d.cleaner)?.rate;
+    const rateVal=d.amount_paid||(rate?(typeof rate==='object'?rate[d.property_id]||350:rate):350);
+    rows.push([d.date,d.cleaner,propName(d.property_id),d.type,d.status,d.time||'',d.notes||'','R'+rateVal]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='domestic_schedule_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();toast('Export downloaded ✓','success');
 }
 
-async function saveDomestic() {
-  const date = document.getElementById('d-date').value;
-  if (!date) { toast('Please set a date','error'); return; }
-  const row = {
-    cleaner: document.getElementById('d-cleaner').value,
-    property_id: document.getElementById('d-prop').value,
-    date, time: document.getElementById('d-time').value,
-    type: document.getElementById('d-type').value,
-    status:'scheduled', notes: document.getElementById('d-notes').value,
-    checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},
-  };
-  if (db) {
-    const {data,error} = await db.from('domestics').insert([row]).select().single();
-    if (error) { toast('Save error: '+error.message,'error'); return; }
-    domestics.push(nd(data));
-  } else { domestics.push(nd({...row,id:'d'+Date.now()})); }
-  toast('Cleaning session scheduled ✓','success');
-  closeModal('domestic-modal');
-  renderDomestic(); renderCalendar();
-}
-
-// ── TASKS ────────────────────────────────────────────────────────
-function renderTasks() {
-  const ft = filteredTasks();
-  const open = tasks.filter(t=>t.status==='open').length;
-  document.getElementById('task-count').textContent = open+' open task'+(open!==1?'s':'');
-  document.getElementById('task-filters').innerHTML = ['open','done','all'].map(f=>
+function renderTasks(){
+  const ft=filteredTasks();
+  const open=tasks.filter(t=>t.status==='open').length;
+  document.getElementById('task-count').textContent=open+' open task'+(open!==1?'s':'');
+  document.getElementById('task-filters').innerHTML=['open','done','all'].map(f=>
     `<button class="btn btn-sm ${f===taskFilter?'btn-primary':'btn-ghost'}" onclick="setTaskFilter('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`
   ).join('');
-  document.getElementById('task-list').innerHTML = ft.length ? ft.map(t=>
+  document.getElementById('task-list').innerHTML=ft.length?ft.map(t=>
     `<div class="task-item">
       <div class="task-check ${t.status==='done'?'done':''}" onclick="toggleTask('${t.id}')">${t.status==='done'?'✓':''}</div>
       <div class="task-content">
@@ -1037,49 +906,32 @@ function renderTasks() {
           ${t.notes?`<span>💬 ${t.notes}</span>`:''}
         </div>
       </div>
-    </div>`).join('') : '<div class="empty-state"><div class="empty-icon">✅</div>No tasks here</div>';
+    </div>`).join(''):'<div class="empty-state"><div class="empty-icon">✅</div>No tasks here</div>';
 }
-
-function setTaskFilter(f) { taskFilter = f; renderTasks(); }
-
-async function toggleTask(id) {
-  const t = tasks.find(x=>x.id==id);
-  if (!t) return;
-  t.status = t.status==='done'?'open':'done';
-  if (db) await db.from('tasks').update({status:t.status}).eq('id',id);
+function setTaskFilter(f){taskFilter=f;renderTasks();}
+async function toggleTask(id){
+  const t=tasks.find(x=>x.id==id);if(!t)return;
+  t.status=t.status==='done'?'open':'done';
+  if(db)await db.from('tasks').update({status:t.status}).eq('id',id);
   renderTasks();
 }
-
-async function saveTask() {
-  const title = document.getElementById('t-title').value.trim();
-  if (!title) { toast('Task title is required','error'); return; }
-  const pid = document.getElementById('t-prop').value;
-  const row = {
-    title, description: document.getElementById('t-notes').value,
-    priority: document.getElementById('t-priority').value,
-    status: 'open', type: 'task',
-    due_at: document.getElementById('t-due').value || null,
-    task_date: document.getElementById('t-due').value || null,
-    property_id: pid !== 'all' ? pid : null,
-  };
-  const localRow = nt({...row, property_id:pid, assigned:document.getElementById('t-assign').value});
-  if (db) {
-    const {data,error} = await db.from('tasks').insert([row]).select().single();
-    if (error) { toast('Save error: '+error.message,'error'); return; }
-    tasks.unshift(nt({...data, property_id:pid, assigned:document.getElementById('t-assign').value}));
-  } else { tasks.unshift({...localRow, id:'t'+Date.now()}); }
-  toast('Task created ✓','success');
-  closeModal('task-modal');
-  renderTasks();
+async function saveTask(){
+  const title=document.getElementById('t-title').value.trim();
+  if(!title){toast('Task title is required','error');return;}
+  const pid=document.getElementById('t-prop').value;
+  const row={title,description:document.getElementById('t-notes').value,priority:document.getElementById('t-priority').value,status:'open',type:'task',due_at:document.getElementById('t-due').value||null,task_date:document.getElementById('t-due').value||null,property_id:pid!=='all'?pid:null};
+  const localRow=nt({...row,property_id:pid,assigned:document.getElementById('t-assign').value});
+  if(db){const{data,error}=await db.from('tasks').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}tasks.unshift(nt({...data,property_id:pid,assigned:document.getElementById('t-assign').value}));}
+  else{tasks.unshift({...localRow,id:'t'+Date.now()});}
+  toast('Task created ✓','success');closeModal('task-modal');renderTasks();
 }
 
-// ── MESSAGES ─────────────────────────────────────────────────────
-function renderMessages() {
-  document.getElementById('chat-messages').innerHTML = messages.map(m => {
-    const isMe = m.from === currentUser.name;
-    const initials = m.from.split(' ').map(n=>n[0]).join('').slice(0,2);
-    const color = m.role==='admin' ? 'var(--accent)' : 'var(--green2)';
-    return `<div class="msg-row ${isMe?'me':''}">
+function renderMessages(){
+  document.getElementById('chat-messages').innerHTML=messages.map(m=>{
+    const isMe=m.from===currentUser.name;
+    const initials=m.from.split(' ').map(n=>n[0]).join('').slice(0,2);
+    const color=m.role==='admin'?'var(--accent)':'var(--green2)';
+    return`<div class="msg-row ${isMe?'me':''}">
       <div class="msg-avatar" style="background:${color}">${initials}</div>
       <div>
         <div class="msg-meta" style="text-align:${isMe?'right':'left'}">${m.from} · ${m.time}</div>
@@ -1087,145 +939,134 @@ function renderMessages() {
       </div>
     </div>`;
   }).join('');
-  const wrap = document.getElementById('chat-messages');
-  wrap.scrollTop = wrap.scrollHeight;
+  const wrap=document.getElementById('chat-messages');wrap.scrollTop=wrap.scrollHeight;
+}
+function sendMessage(){
+  const input=document.getElementById('chat-input');const text=input.value.trim();if(!text)return;
+  const now=new Date();
+  messages.push({id:'m'+Date.now(),from:currentUser.name,role:currentUser.role,text,time:now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')});
+  input.value='';renderMessages();
 }
 
-function sendMessage() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if (!text) return;
-  const now = new Date();
-  messages.push({id:'m'+Date.now(), from:currentUser.name, role:currentUser.role, text,
-    time:now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')});
-  input.value = '';
-  renderMessages();
-}
-
-// ── KNOWLEDGE BASE ───────────────────────────────────────────────
-function renderKB(search='') {
-  const q = (search||document.getElementById('kb-search')?.value||'').toLowerCase();
-  const filtered = kbArticles.filter(a => !q || a.title.toLowerCase().includes(q) || a.content.toLowerCase().includes(q) || a.category.toLowerCase().includes(q));
-  const cats = [...new Set(filtered.map(a=>a.category))];
-  document.getElementById('kb-content').innerHTML = cats.map(cat => {
-    const arts = filtered.filter(a=>a.category===cat);
-    return `<div class="mb-6">
+function renderKB(search=''){
+  const q=(search||'').toLowerCase();
+  const filtered=kbArticles.filter(a=>!q||a.title.toLowerCase().includes(q)||a.content.toLowerCase().includes(q)||a.category.toLowerCase().includes(q));
+  const cats=[...new Set(filtered.map(a=>a.category))];
+  document.getElementById('kb-content').innerHTML=cats.map(cat=>{
+    const arts=filtered.filter(a=>a.category===cat);
+    return`<div class="mb-6">
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:10px">${cat}</div>
-      <div class="kb-grid">${arts.map(a=>`
-        <div class="kb-card" onclick="showKB('${a.id}')">
-          <div class="kb-cat">${a.category}</div>
-          <div class="kb-title">${a.title}</div>
-          <div class="kb-preview">${a.content.slice(0,90)}…</div>
-          <div style="margin-top:8px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-        </div>`).join('')}
-      </div>
+      <div class="kb-grid">${arts.map(a=>`<div class="kb-card" onclick="showKB('${a.id}')"><div class="kb-cat">${a.category}</div><div class="kb-title">${a.title}</div><div class="kb-preview">${a.content.slice(0,90)}…</div><div style="margin-top:8px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>`).join('')}</div>
     </div>`;
-  }).join('') || '<div class="empty-state"><div class="empty-icon">📚</div>No articles found</div>';
+  }).join('')||'<div class="empty-state"><div class="empty-icon">📚</div>No articles found</div>';
 }
-
-function showKB(id) {
-  const a = kbArticles.find(x=>x.id==id);
-  if (!a) return;
-  document.getElementById('day-modal-title').textContent = a.title;
-  document.getElementById('day-modal-body').innerHTML =
-    `<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:10px">${a.category}</div>
-    <div style="line-height:1.7;white-space:pre-line;font-size:.9rem">${a.content}</div>
-    <div style="margin-top:14px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
+function showKB(id){
+  const a=kbArticles.find(x=>x.id==id);if(!a)return;
+  document.getElementById('day-modal-title').textContent=a.title;
+  document.getElementById('day-modal-body').innerHTML=`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:10px">${a.category}</div><div style="line-height:1.7;white-space:pre-line;font-size:.9rem">${a.content}</div><div style="margin-top:14px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
   openModal('day-modal');
 }
-
-async function saveKB() {
-  const title = document.getElementById('kb-title').value.trim();
-  const content = document.getElementById('kb-content-input').value.trim();
-  if (!title || !content) { toast('Title and content required','error'); return; }
-  const tags = document.getElementById('kb-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  const row = {category:document.getElementById('kb-cat').value, title, content, tags};
-  if (db) {
-    const {data,error} = await db.from('kb_articles').insert([row]).select().single();
-    if (error) { toast('Save error: '+error.message,'error'); return; }
-    kbArticles.unshift(data);
-  } else { kbArticles.unshift({...row,id:'k'+Date.now()}); }
-  toast('Article published ✓','success');
-  closeModal('kb-modal');
-  renderKB();
+async function saveKB(){
+  const title=document.getElementById('kb-title').value.trim();
+  const content=document.getElementById('kb-content-input').value.trim();
+  if(!title||!content){toast('Title and content required','error');return;}
+  const tags=document.getElementById('kb-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const row={category:document.getElementById('kb-cat').value,title,content,tags};
+  if(db){const{data,error}=await db.from('kb_articles').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}kbArticles.unshift(data);}
+  else{kbArticles.unshift({...row,id:'k'+Date.now()});}
+  toast('Article published ✓','success');closeModal('kb-modal');renderKB();
 }
 
-// ── REPORTS ──────────────────────────────────────────────────────
-function renderReports() {
-  const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
-  const total = fb.reduce((s,b)=>s+(b.revenue||0),0);
-  const nights = fb.reduce((s,b)=>s+(b.nights||0),0);
-  const avg = nights ? Math.round(total/nights) : 0;
-  const occ = Math.min(99, Math.round(nights/(currentProp==='all'?60:30)*100));
-
-  document.getElementById('report-stats').innerHTML =
-    statCard('Total Revenue','R'+total.toLocaleString(),'all bookings','var(--accent)') +
-    statCard('Total Bookings',fb.length,'across all platforms','var(--blue)') +
-    statCard('Avg Nightly Rate','R'+avg.toLocaleString(),'per night','var(--green2)') +
+async function renderReports(){
+  const fb=currentProp==='all'?bookings:bookings.filter(b=>b.property_id===currentProp);
+  const total=fb.reduce((s,b)=>s+(b.revenue||0),0);
+  const nights=fb.reduce((s,b)=>s+(b.nights||0),0);
+  const avg=nights?Math.round(total/nights):0;
+  const occ=Math.min(99,Math.round(nights/(currentProp==='all'?60:30)*100));
+  document.getElementById('report-stats').innerHTML=
+    statCard('Total Revenue','R'+total.toLocaleString(),'all bookings','var(--accent)')+
+    statCard('Total Bookings',fb.length,'across all platforms','var(--blue)')+
+    statCard('Avg Nightly Rate','R'+avg.toLocaleString(),'per night','var(--green2)')+
     statCard('Occupancy Rate',occ+'%','this period','#7c3aed');
-
-  const m = new Date().getMonth();
-  document.getElementById('pricing-insight').textContent =
-    [5,6,7].includes(m) ? '❄️ Low season (Cape Town winter). Consider 15-20% discounts to maintain occupancy. Target German and Dutch markets.' :
-    [11,0,1,2].includes(m) ? '🌞 Peak summer! Rates can be 30-40% higher. Minimum 3-night stay recommended.' :
+  const m=new Date().getMonth();
+  document.getElementById('pricing-insight').textContent=
+    [5,6,7].includes(m)?'❄️ Low season (Cape Town winter). Consider 15-20% discounts. Target German and Dutch markets.':
+    [11,0,1,2].includes(m)?'🌞 Peak summer! Rates can be 30-40% higher. Minimum 3-night stay recommended.':
     '🍂 Shoulder season. Good occupancy expected. Competitive pricing will outperform.';
-
-  const monthly = [12400,18200,21500,14700,8600,5200,9800,11300,19600,22100,16800,24300];
-  const max = Math.max(...monthly);
-  const mNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  document.getElementById('revenue-chart').innerHTML = monthly.map((v,i)=>
-    `<div class="bar-col">
-      <div class="bar-val">R${Math.round(v/1000)}k</div>
-      <div class="bar" style="height:${Math.round(v/max*120)}px"></div>
-      <div class="bar-label">${mNames[i]}</div>
-    </div>`).join('');
-
-  const platforms = ['airbnb','booking','lekkeslaap','fewo','manual'];
-  const colors = {airbnb:'#ff5a5f',booking:'#003b95',lekkeslaap:'#2d6a4f',fewo:'#7c3aed',manual:'#c17f3c'};
-  document.getElementById('platform-breakdown').innerHTML = platforms.map(p => {
-    const pb = fb.filter(b=>b.platform===p);
-    if (!pb.length) return '';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:9px">
-        <div style="width:11px;height:11px;border-radius:2px;background:${colors[p]}"></div>
-        <span style="font-weight:600;text-transform:capitalize">${p}</span>
-      </div>
-      <div style="text-align:right">
-        <div style="font-weight:700">R${pb.reduce((s,b)=>s+(b.revenue||0),0).toLocaleString()}</div>
-        <div style="font-size:.73rem;color:var(--muted)">${pb.length} booking${pb.length!==1?'s':''}</div>
-      </div>
+  const monthly=[12400,18200,21500,14700,8600,5200,9800,11300,19600,22100,16800,24300];
+  const max=Math.max(...monthly);
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('revenue-chart').innerHTML=monthly.map((v,i)=>
+    `<div class="bar-col"><div class="bar-val">R${Math.round(v/1000)}k</div><div class="bar" style="height:${Math.round(v/max*120)}px"></div><div class="bar-label">${mNames[i]}</div></div>`).join('');
+  const platforms=['airbnb','booking','lekkeslaap','fewo','manual'];
+  const colors={airbnb:'#ff5a5f',booking:'#003b95',lekkeslaap:'#2d6a4f',fewo:'#7c3aed',manual:'#c17f3c'};
+  document.getElementById('platform-breakdown').innerHTML=platforms.map(p=>{
+    const pb=fb.filter(b=>b.platform===p);if(!pb.length)return'';
+    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:9px"><div style="width:11px;height:11px;border-radius:2px;background:${colors[p]}"></div><span style="font-weight:600;text-transform:capitalize">${p}</span></div>
+      <div style="text-align:right"><div style="font-weight:700">R${pb.reduce((s,b)=>s+(b.revenue||0),0).toLocaleString()}</div><div style="font-size:.73rem;color:var(--muted)">${pb.length} booking${pb.length!==1?'s':''}</div></div>
     </div>`;
   }).join('');
+  await renderCleanerEarnings();
 }
-
-// ── MODAL ────────────────────────────────────────────────────────
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(el => {
-  el.addEventListener('click', e => { if (e.target===el) el.classList.remove('open'); });
-});
-
-// ── TOAST ────────────────────────────────────────────────────────
-function toast(msg, type='info') {
-  const wrap = document.getElementById('toast-wrap');
-  const t = document.createElement('div');
-  t.className = 'toast '+(type||'');
-  t.textContent = msg;
-  wrap.appendChild(t);
-  setTimeout(()=>t.remove(), 3500);
+async function renderCleanerEarnings(){
+  const el=document.getElementById('cleaner-earnings');if(!el)return;
+  const CLEANER_COLORS={Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+  let data=domestics.filter(d=>d.status==='completed');
+  if(db){
+    try{const res=await db.from('domestics').select('cleaner,date,amount_paid,property_id,status').eq('status','completed').order('date',{ascending:false});if(res.data&&res.data.length>0)data=res.data;}
+    catch(e){console.warn('Earnings fetch:',e);}
+  }
+  const earnings={};
+  data.forEach(d=>{
+    const c=d.cleaner;if(!c)return;
+    const month=(d.date||'').slice(0,7);if(!month)return;
+    if(!earnings[c])earnings[c]={total:0,months:{},cleans:0};
+    const amt=d.amount_paid||(d.property_id==='tvhouse'?450:350);
+    earnings[c].total+=Number(amt);earnings[c].cleans+=1;
+    if(!earnings[c].months[month])earnings[c].months[month]={amount:0,cleans:0};
+    earnings[c].months[month].amount+=Number(amt);earnings[c].months[month].cleans+=1;
+  });
+  const allMonths=[...new Set(Object.values(earnings).flatMap(e=>Object.keys(e.months)))].sort().reverse().slice(0,6);
+  const cleaners=Object.keys(earnings).sort();
+  const grandTotal=cleaners.reduce((s,c)=>s+earnings[c].total,0);
+  el.innerHTML=`
+    <div class="stat-grid" style="margin-bottom:16px">
+      ${cleaners.map(c=>`<div class="stat-card" style="border-top-color:${CLEANER_COLORS[c]||'var(--accent)'}"><div class="stat-label">${c}</div><div class="stat-value" style="font-size:1.4rem">R${earnings[c].total.toLocaleString()}</div><div class="stat-sub">${earnings[c].cleans} cleans</div></div>`).join('')}
+      <div class="stat-card" style="border-top-color:var(--ink)"><div class="stat-label">Total Domestic Cost</div><div class="stat-value" style="font-size:1.4rem">R${grandTotal.toLocaleString()}</div><div class="stat-sub">${data.length} cleans total</div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Month</th>${cleaners.map(c=>`<th style="color:${CLEANER_COLORS[c]||'inherit'}">${c}<br><span style="font-weight:400;font-size:.7rem;text-transform:none">cleans · earned</span></th>`).join('')}<th>Month Total</th></tr></thead>
+        <tbody>${allMonths.map(month=>{
+          const[yr,mo]=month.split('-');
+          const mName=mNames[parseInt(mo)-1];
+          const monthTotal=cleaners.reduce((s,c)=>s+(earnings[c].months[month]?.amount||0),0);
+          return`<tr><td style="font-weight:700">${mName} ${yr}</td>${cleaners.map(c=>{const mx=earnings[c].months[month];return mx?`<td><strong>R${mx.amount.toLocaleString()}</strong> <span style="font-size:.72rem;color:var(--muted)">${mx.cleans}x</span></td>`:'<td style="color:var(--muted)">—</td>';}).join('')}<td style="font-weight:700;color:var(--green)">R${monthTotal.toLocaleString()}</td></tr>`;
+        }).join('')}</tbody>
+        <tfoot><tr style="background:var(--sand)"><td style="font-weight:700">All Time</td>${cleaners.map(c=>`<td style="font-weight:700">R${earnings[c].total.toLocaleString()}</td>`).join('')}<td style="font-weight:700;color:var(--green)">R${grandTotal.toLocaleString()}</td></tr></tfoot>
+      </table>
+    </div>`;
 }
+const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// ── HELPERS ──────────────────────────────────────────────────────
-function propName(id) {
-  if (id==='speranta') return 'Speranta';
-  if (id==='tvhouse')  return 'TV House';
-  if (id==='all')      return 'All Properties';
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
+
+function toast(msg,type='info'){
+  const wrap=document.getElementById('toast-wrap');
+  const t=document.createElement('div');t.className='toast '+(type||'');t.textContent=msg;
+  wrap.appendChild(t);setTimeout(()=>t.remove(),3500);
+}
+function propName(id){
+  if(id==='speranta')return'Speranta';
+  if(id==='tvhouse')return'TV House';
+  if(id==='all')return'All Properties';
   return id||'—';
 }
 
-// ── INIT ─────────────────────────────────────────────────────────
-document.getElementById('auth-screen').style.display = 'flex';
+document.getElementById('auth-screen').style.display='flex';
 </script>
-
 </body>
 </html>
