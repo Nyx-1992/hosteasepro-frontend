@@ -136,11 +136,12 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-nav button:hover{background:var(--warm);border-color:var(--accent)}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
 .cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);background:var(--sand);letter-spacing:.05em}
-.cal-cell{min-height:88px;padding:5px;border:1px solid var(--border);background:#fff;cursor:pointer;overflow:hidden}
+.cal-cell{min-height:88px;padding:5px 0 5px 0;border:1px solid var(--border);background:#fff;cursor:pointer;overflow:hidden}
+.cal-date{padding:0 5px}
 .cal-cell:hover{background:#fffbf5}
 .cal-cell.other{background:var(--sand);opacity:.55;cursor:default}
 .cal-cell.today{background:#fffbf5}
-.cal-date{font-size:.8rem;font-weight:600;margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center}
+.cal-date{font-size:.8rem;font-weight:600;margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-sizing:content-box}
 .cal-cell.today .cal-date{background:var(--accent);color:#fff;border-radius:50%}
 /* Booking blocks — solid colour full width */
 .cal-event{font-size:.66rem;padding:2px 5px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600;border-radius:3px}
@@ -215,34 +216,51 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .empty-icon{font-size:2.8rem;margin-bottom:10px}
 .divider{height:1px;background:var(--border);margin:14px 0}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
-@media(max-width:768px){
-  .sidebar{display:none}.main{margin-left:0}.content{padding:12px}
-  .stat-grid{grid-template-columns:1fr 1fr}.grid-2{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}
-  .topbar{padding:12px 16px}.page-title{font-size:1.2rem}
-  .cal-cell{min-height:60px;padding:3px}.cal-date{font-size:.7rem;width:18px;height:18px}
-  .cal-event{font-size:.58rem;padding:1px 3px}
-  .cal-day-head{font-size:.62rem;padding:6px 2px}
-  .card{padding:14px}.stat-card{padding:14px 16px}
-  .stat-value{font-size:1.5rem}
-  table{font-size:.78rem}thead th{padding:8px 10px}tbody td{padding:9px 10px}
-  .btn{padding:9px 16px;font-size:.82rem}.btn-sm{padding:5px 10px;font-size:.76rem}
-  .modal{max-width:100%!important;margin:10px}.modal-body{padding:0 16px 20px}.modal-header{padding:16px 16px 0}
-  .toggle-bar button{font-size:.7rem;padding:4px 10px}
-  .filter-row{gap:5px}.filter-row .btn-sm{padding:4px 8px;font-size:.72rem}
-}
-/* Mobile bottom nav */
-.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--ink);z-index:200;padding:6px 0 8px;border-top:1px solid rgba(255,255,255,.1)}
-.mobile-nav-inner{display:flex;justify-content:space-around;align-items:center}
-.mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 8px;border-radius:8px;min-width:44px;transition:all .15s}
-.mob-nav-item.active{background:rgba(193,127,60,.2)}
-.mob-nav-item span:first-child{font-size:1.1rem}
-.mob-nav-item span:last-child{font-size:.6rem;color:rgba(255,255,255,.5);font-weight:500}
+/* Mobile bottom nav — always defined */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--ink);z-index:9999;padding:8px 0 10px;border-top:1px solid rgba(255,255,255,.12);box-shadow:0 -4px 20px rgba(0,0,0,.3)}
+.mobile-nav-inner{display:flex;justify-content:space-around;align-items:center;max-width:500px;margin:0 auto}
+.mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 12px;border-radius:10px;min-width:52px;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.mob-nav-item.active{background:rgba(193,127,60,.25)}
+.mob-nav-item span:first-child{font-size:1.3rem;line-height:1}
+.mob-nav-item span:last-child{font-size:.58rem;color:rgba(255,255,255,.45);font-weight:600;letter-spacing:.02em}
 .mob-nav-item.active span:last-child{color:var(--accent)}
+/* Topbar hamburger for mobile */
+.mob-menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;font-size:1.3rem;color:var(--ink)}
+
 @media(max-width:768px){
-  .mobile-nav{display:block}
-  .main{padding-bottom:64px}
+.sidebar{display:none!important}
+.main{margin-left:0!important;padding-bottom:72px}
+.content{padding:12px}
+.mobile-nav{display:block!important}
+.mob-menu-btn{display:flex;align-items:center;justify-content:center}
+.topbar{padding:10px 16px}
+.page-title{font-size:1.15rem}
+.stat-grid{grid-template-columns:1fr 1fr}
+.grid-2{grid-template-columns:1fr}
+.form-grid{grid-template-columns:1fr}
+.cal-cell{min-height:56px}
+.cal-date{font-size:.68rem;width:18px;height:18px}
+.cal-day-head{font-size:.6rem;padding:6px 2px;letter-spacing:0}
+.card{padding:14px}.stat-card{padding:12px 14px}
+.stat-value{font-size:1.4rem}
+table{font-size:.76rem}thead th{padding:7px 8px}tbody td{padding:8px}
+.btn{padding:8px 14px;font-size:.82rem}.btn-sm{padding:5px 10px;font-size:.76rem}
+.modal{max-width:calc(100vw - 20px)!important;margin:10px auto}.modal-body{padding:0 14px 18px}.modal-header{padding:14px 14px 0}
+.toggle-bar button{font-size:.7rem;padding:4px 10px}
+.section-head{flex-direction:column;align-items:flex-start}
+.filter-row{gap:4px;flex-wrap:wrap}
+.filter-row .btn-sm{padding:4px 8px;font-size:.7rem}
+.dom-grid{grid-template-columns:1fr}
+.kb-grid{grid-template-columns:1fr}
 }
+
+/* Mobile sidebar drawer */
+.mob-sidebar{display:none;position:fixed;inset:0;z-index:500}
+.mob-sidebar.open{display:block}
+.mob-sidebar-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+.mob-sidebar-drawer{position:absolute;left:0;top:0;bottom:0;width:260px;background:var(–ink);overflow-y:auto;box-shadow:4px 0 20px rgba(0,0,0,.4);display:flex;flex-direction:column}
 </style>
+
 </head>
 <body>
 
@@ -283,7 +301,10 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
   <div class="main">
     <div class="topbar">
-      <div class="page-title" id="page-title">Dashboard</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="mob-menu-btn" onclick="toggleMobSidebar()" title="Menu">☰</button>
+        <div class="page-title" id="page-title">Dashboard</div>
+      </div>
       <div class="topbar-right">
         <span class="status-tag" id="db-status">🟡 Demo Mode</span>
         <span class="status-tag" id="prop-tag" style="display:none"></span>
@@ -548,6 +569,34 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   <div class="mobile-nav-inner" id="mob-nav-items"></div>
 </div>
 
+<!-- MOBILE SIDEBAR DRAWER -->
+
+<div class="mob-sidebar" id="mob-sidebar">
+  <div class="mob-sidebar-overlay" onclick="toggleMobSidebar()"></div>
+  <div class="mob-sidebar-drawer">
+    <div class="s-logo" style="padding:24px 20px 16px">
+      <span class="s-logo-text">HostEase Pro</span>
+      <small>Property Management</small>
+    </div>
+    <div class="s-prop" style="padding:10px 14px">
+      <select onchange="switchProperty(this.value);toggleMobSidebar()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none">
+        <option value="all">All Properties</option>
+        <option value="speranta">Speranta Flat</option>
+        <option value="tvhouse">TV House</option>
+      </select>
+    </div>
+    <nav id="mob-sidebar-nav" style="padding:10px 0;flex:1"></nav>
+    <div class="s-user" style="padding:14px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:9px">
+      <div class="avatar" id="mob-user-avatar"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.8rem;font-weight:600;color:#fff" id="mob-user-name"></div>
+        <div style="font-size:.7rem;color:rgba(255,255,255,.35)" id="mob-user-role"></div>
+      </div>
+      <button style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:1rem" onclick="doLogout()">⏏</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
@@ -706,7 +755,7 @@ function doLogin() {
   document.getElementById('user-avatar').textContent=user.initials;
   document.getElementById('user-name').textContent=user.name;
   document.getElementById('user-role').textContent=user.role;
-  buildNav(); buildMobileNav(); loadData();
+  buildNav(); buildMobileNav(); buildMobSidebarNav(); loadData();
 }
 function doLogout() { currentUser=null; document.getElementById('auth-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
 
@@ -971,52 +1020,70 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
       dateEl.className = 'cal-date'; dateEl.textContent = d;
       cell.appendChild(dateEl);
 
-      // Lane-based booking rows (lanes 0, 1, 2)
-      for (let lane = 0; lane < 3; lane++) {
-        // Find booking in this lane active on this day
+      // Lane-based booking rows — always render all used lanes with no gaps
+      const maxLane = bkgs.reduce((max, bk) => {
+        if (bk.status==='cancelled'||isCaretaker(bk)) return max;
+        if (bk.check_in <= ds && bk.check_out > ds) return Math.max(max, laneAssignments[bk.id]||0);
+        return max;
+      }, -1);
+
+      for (let lane = 0; lane <= maxLane; lane++) {
         const b = bkgs.find(bk => {
           if (bk.status==='cancelled'||isCaretaker(bk)) return false;
           return laneAssignments[bk.id] === lane && bk.check_in <= ds && bk.check_out > ds;
         });
 
         if (!b) {
-          // Empty lane spacer — only if there are bookings below this lane on this day
-          const hasLower = bkgs.some(bk => {
-            if (bk.status==='cancelled'||isCaretaker(bk)) return false;
-            return (laneAssignments[bk.id]||0) > lane && bk.check_in <= ds && bk.check_out > ds;
-          });
-          if (hasLower) {
-            const spacer = document.createElement('div');
-            spacer.style.cssText = 'height:18px;margin-bottom:2px';
-            cell.appendChild(spacer);
-          }
+          // Empty slot — transparent spacer to maintain alignment
+          const spacer = document.createElement('div');
+          spacer.style.cssText = 'height:18px;margin-bottom:2px;background:transparent;width:100%;display:block';
+          cell.appendChild(spacer);
           continue;
         }
 
         const isOwner = isOwnerStay(b);
-        const cls = isOwner ? 'ev-owner' : 'ev-'+b.platform;
+        const color = PLAT_COLORS[isOwner?'owner':b.platform] || '#c17f3c';
         const propTag = showPropTag ? '[' + (b.property_id==='speranta'?'SP':'TV') + '] ' : '';
-        const isStart = b.check_in === ds || dow === 0; // start of booking OR start of week row
-        const isEnd   = (() => {
-          const tomorrow = new Date(new Date(ds).getTime()+86400000).toISOString().slice(0,10);
-          return b.check_out === tomorrow || dow === 6;
-        })();
         const isRealStart = b.check_in === ds;
+        const isWeekStart = dow === 0;
+        const tomorrow = new Date(new Date(ds).getTime()+86400000).toISOString().slice(0,10);
+        const isRealEnd   = b.check_out === tomorrow;
+        const isWeekEnd   = dow === 6;
 
-        // Border radius based on position
-        let borderRadius = '0';
-        if (isRealStart && isEnd) borderRadius = '4px';
-        else if (isRealStart) borderRadius = '4px 0 0 4px';
-        else if (dow === 0 && isEnd) borderRadius = '4px 4px 4px 4px'; // row-start to end
-        else if (dow === 0) borderRadius = '4px 0 0 4px'; // row continues right
-        else if (isEnd) borderRadius = '0 4px 4px 0';
+        // Margin to create continuous appearance — no gaps between days
+        // Left margin: 0 if this is the real start or week start, else -1px overlap
+        // Right margin: 0 if real end or week end, else -1px overlap
+        const ml = '0';
+        const mr = '0';
 
-        const label = isStart
-          ? propTag + (isRealStart ? '🛬 ' : '') + (b.guest_name || b.platform)
-          : ''; // empty label for middle of booking
+        // Border radius — round only true start/end edges
+        const rl = (isRealStart) ? '4px' : '0';
+        const rr = (isRealEnd)   ? '4px' : '0';
+        const borderRadius = `${rl} ${rr} ${rr} ${rl}`;
+
+        // Show label only at real start or start of each new week row
+        const showLabel = isRealStart || isWeekStart;
+        const label = showLabel
+          ? propTag + (isRealStart ? '🛬 ' : '↳ ') + (b.guest_name || b.platform)
+          : '';
 
         const ev = document.createElement('div');
-        ev.style.cssText = `background:${(PLAT_COLORS[isOwner?'owner':b.platform]||'#c17f3c')};color:#fff;font-size:.66rem;padding:2px 5px;margin:0 -1px 2px -1px;border-radius:${borderRadius};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;min-height:18px;cursor:pointer`;
+        ev.style.cssText = [
+          `background:${color}`,
+          `color:#fff`,
+          `font-size:.66rem`,
+          `padding:2px 6px`,
+          `margin:0 0 2px 0`,
+          `border-radius:${borderRadius}`,
+          `white-space:nowrap`,
+          `overflow:hidden`,
+          `text-overflow:ellipsis`,
+          `font-weight:600`,
+          `min-height:18px`,
+          `cursor:pointer`,
+          `display:block`,
+          `width:100%`,
+        ].join(';');
         ev.title = (b.guest_name||b.platform) + ' — ' + propName(b.property_id);
         ev.textContent = label;
         cell.appendChild(ev);
@@ -1560,6 +1627,28 @@ function buildMobileNav() {
   el.innerHTML = MOB_NAV.map(n=>
     `<div class="mob-nav-item ${currentTab===n.id?'active':''}" onclick="switchTab('${n.id}')">
       <span>${n.icon}</span><span>${n.label}</span>
+    </div>`
+  ).join('');
+}
+function toggleMobSidebar() {
+  const s = document.getElementById('mob-sidebar');
+  if (!s) return;
+  s.classList.toggle('open');
+  // Rebuild nav items each time
+  if (s.classList.contains('open')) buildMobSidebarNav();
+}
+function buildMobSidebarNav() {
+  const el = document.getElementById('mob-sidebar-nav'); if (!el) return;
+  // Update avatar
+  const av = document.getElementById('mob-user-avatar');
+  const nm = document.getElementById('mob-user-name');
+  const rl = document.getElementById('mob-user-role');
+  if (av && currentUser) { av.textContent=currentUser.initials; av.style.background='var(--accent)'; av.style.width='33px'; av.style.height='33px'; av.style.borderRadius='50%'; av.style.display='flex'; av.style.alignItems='center'; av.style.justifyContent='center'; av.style.fontWeight='700'; av.style.fontSize='.82rem'; av.style.color='#fff'; }
+  if (nm && currentUser) nm.textContent = currentUser.name;
+  if (rl && currentUser) rl.textContent = currentUser.role;
+  el.innerHTML = NAV.filter(n=>n.roles.includes(currentUser?.role||'host')).map(n=>
+    `<div style="display:flex;align-items:center;gap:10px;padding:12px 22px;font-size:.88rem;color:${n.id===currentTab?'#fff':'rgba(255,255,255,.55)'};cursor:pointer;border-left:3px solid ${n.id===currentTab?'var(--accent)':'transparent'};background:${n.id===currentTab?'rgba(193,127,60,.13)':'transparent'}" onclick="switchTab('${n.id}');toggleMobSidebar()">
+      <span style="font-size:1rem;width:20px;text-align:center">${n.icon}</span>${n.label}
     </div>`
   ).join('');
 }
