@@ -136,7 +136,9 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-nav button:hover{background:var(--warm);border-color:var(--accent)}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
 .cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);background:var(--sand);letter-spacing:.05em}
-.cal-cell{min-height:88px;padding:5px 0 5px 0;border:1px solid var(--border);background:#fff;cursor:pointer;overflow:hidden}
+.cal-cell{min-height:88px;padding:4px 0;border:1px solid var(--border);background:#fff;cursor:pointer;overflow:hidden;box-sizing:border-box;-webkit-box-sizing:border-box}
+/* cal-bar: full width booking bar — explicit for Safari */
+.cal-bar{display:block;width:100%;box-sizing:border-box;-webkit-box-sizing:border-box;font-size:.63rem;font-weight:600;padding:2px 5px;margin-bottom:2px;height:18px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
 .cal-date{padding:0 5px}
 .cal-cell:hover{background:#fffbf5}
 .cal-cell.other{background:var(--sand);opacity:.55;cursor:default}
@@ -983,11 +985,12 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
     for (let l=0; l<3; l++) if (laneEnd[l] && laneEnd[l]<=ds) laneEnd[l]=null;
     bkgs.forEach(b => {
       if (b.status==='cancelled'||isCaretaker(b)) return;
-      if (b.check_in===ds) {
+      const bci = String(b.check_in||'').slice(0,10);
+      if (bci===ds) {
         let lane = laneEnd.findIndex(l=>l===null);
         if (lane===-1) lane=0;
         laneOf[b.id] = lane;
-        laneEnd[lane] = b.check_out;
+        laneEnd[lane] = String(b.check_out||'').slice(0,10);
       }
     });
   }
@@ -1011,14 +1014,14 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
 
       // Max active lane this day
       let maxLane=-1;
-      bkgs.forEach(b=>{if(b.status!=='cancelled'&&!isCaretaker(b)&&b.check_in<=ds&&b.check_out>ds) maxLane=Math.max(maxLane,laneOf[b.id]||0);});
+      bkgs.forEach(b=>{const ci=String(b.check_in||'').slice(0,10),co=String(b.check_out||'').slice(0,10);if(b.status!=='cancelled'&&!isCaretaker(b)&&ci<=ds&&co>ds) maxLane=Math.max(maxLane,laneOf[b.id]||0);});
 
       for (let lane=0; lane<=maxLane; lane++) {
-        const b = bkgs.find(bk=>!isCaretaker(bk)&&bk.status!=='cancelled'&&laneOf[bk.id]===lane&&bk.check_in<=ds&&bk.check_out>ds);
+        const b = bkgs.find(bk=>{const ci=String(bk.check_in||'').slice(0,10),co=String(bk.check_out||'').slice(0,10);return !isCaretaker(bk)&&bk.status!=='cancelled'&&laneOf[bk.id]===lane&&ci<=ds&&co>ds;});
         if (!b) {
           // Transparent spacer keeps lane alignment
           const sp=document.createElement('div');
-          sp.style.cssText='height:18px;margin-bottom:2px;background:transparent;display:block;width:100%';
+          sp.style.cssText='height:18px;margin-bottom:2px;background:transparent;display:block;width:100%;box-sizing:border-box';
           cell.appendChild(sp); continue;
         }
         const isOwner = isOwnerStay(b);
@@ -1026,17 +1029,35 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const propTag = showProp ? '['+(b.property_id==='speranta'?'SP':'TV')+'] ' : '';
         const isRealStart = b.check_in===ds;
         const isWeekStart = dow===0;
-        const tomorrow = new Date(new Date(ds).getTime()+86400000).toISOString().slice(0,10);
+        // Safari-safe tomorrow calculation using string arithmetic (avoids UTC timezone issues)
+        const [ty,tm,td] = ds.split('-').map(Number);
+        const nextD = new Date(ty, tm-1, td+1);
+        const tomorrow = nextD.getFullYear()+'-'+String(nextD.getMonth()+1).padStart(2,'0')+'-'+String(nextD.getDate()).padStart(2,'0');
         const isRealEnd = b.check_out===tomorrow;
-        // Round left edge on real start, right edge on real end only
         const rl = isRealStart ? '4px':'0';
         const rr = isRealEnd   ? '4px':'0';
         const showLabel = isRealStart||isWeekStart;
         const icon = isRealStart ? '🛬 ' : isWeekStart ? '↳ ' : '';
         const label = showLabel ? propTag+icon+(b.guest_name||b.platform) : '';
         const bar = document.createElement('div');
-        bar.className='cal-bar';
-        bar.style.cssText='background:'+color+';border-radius:'+rl+' '+rr+' '+rr+' '+rl+';color:#fff';
+        // Explicit inline styles for Safari compatibility — no CSS class width inheritance
+        bar.style.cssText = [
+          'display:block',
+          'width:100%',
+          'box-sizing:border-box',
+          'background:'+color,
+          'color:#fff',
+          'font-size:.63rem',
+          'font-weight:600',
+          'padding:2px 5px',
+          'margin-bottom:2px',
+          'height:18px',
+          'line-height:14px',
+          'white-space:nowrap',
+          'overflow:hidden',
+          'text-overflow:ellipsis',
+          'border-radius:'+rl+' '+rr+' '+rr+' '+rl,
+        ].join(';');
         bar.title = (b.guest_name||b.platform)+' — '+propName(b.property_id)+' | '+fmtDate(b.check_in)+' → '+fmtDate(b.check_out);
         bar.textContent = label;
         cell.appendChild(bar);
