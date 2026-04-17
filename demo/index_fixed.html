@@ -484,7 +484,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
       <div class="form-grid">
         <div class="form-field span-full"><label>Guest Name *</label><input id="b-guest" placeholder="Full name"/></div>
         <div class="form-field"><label>Property</label><select id="b-prop"><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select></div>
-        <div class="form-field"><label>Platform</label><select id="b-platform"><option value="airbnb">Airbnb</option><option value="booking">Booking.com</option><option value="lekkeslaap">LekkeSlaap</option><option value="fewo">Fewo</option><option value="manual">Manual/Direct</option></select></div>
+        <div class="form-field"><label>Platform</label><select id="b-platform"><option value="airbnb">Airbnb</option><option value="booking">Booking.com</option><option value="lekkeslaap">LekkeSlaap</option><option value="manual">Manual/Direct</option></select></div>
         <div class="form-field"><label>Check-in *</label><input type="date" id="b-checkin"/></div>
         <div class="form-field"><label>Check-out *</label><input type="date" id="b-checkout"/></div>
         <div class="form-field"><label>Revenue (ZAR)</label><input type="number" id="b-revenue" placeholder="0"/></div>
@@ -721,13 +721,16 @@ const SAMPLE_DOMESTICS = [
 ];
 
 const SAMPLE_KB = [
-  {id:'k1',category:'Access',    title:'Door Codes & Keys',      content:'Speranta: Main door code #4521. Key box code 1234.\n\nTV House: Main door code #7893. Key box at front gate, code 5678.',tags:['access','security']},
-  {id:'k2',category:'WiFi',      title:'WiFi Passwords',          content:'Speranta: Network "Speranta_Guest" | Password: BloudBerg2024!\n\nTV House: Network "TVHouse_Guest" | Password: TableView2024!',tags:['wifi']},
-  {id:'k3',category:'Procedures',title:'Check-in Procedure',      content:'1. Send welcome message 24h before arrival with access codes\n2. Confirm arrival time with guest\n3. Ensure property is clean and ready\n4. Leave welcome note and info folder\n5. Do quick video call walkthrough if needed',tags:['checkin']},
-  {id:'k4',category:'Procedures',title:'Check-out Procedure',     content:'1. Send reminder evening before checkout\n2. Checkout time is 10:00\n3. Inspect property within 2 hours\n4. Report any damage via tasks\n5. Schedule cleaning immediately\n6. Send follow-up message inviting direct rebooking',tags:['checkout']},
-  {id:'k5',category:'Maintenance',title:'Emergency Contacts',     content:'Plumber: Johan Botha - 082 555 1234\nElectrician: Cape Power - 021 555 9876\nLocksmith: Key King - 083 444 2222',tags:['emergency','contacts']},
-  {id:'k6',category:'Guest Info', title:'Area Guide — Blouberg',  content:'Beach: 5 min walk\nCheckers Tableview: 3km\nTable Mountain: 30 min drive\nMyCiti bus: 200m away\nKitesurfing & whale watching (Jul–Nov) nearby',tags:['area','guest']},
-  {id:'k7',category:'Procedures', title:'Nina Booking Checklist', content:'For every booking Nina must:\n1. Send check-in message 24h before arrival with access codes & house rules\n2. Book domestic/cleaning session after checkout date\n3. Process checkout — inspect property, log any issues as tasks\n4. Send follow-up message to guest inviting them to rebook directly via our website (coming soon)',tags:['nina','checklist','procedure']},
+  {id:'k1',category:'Access',title:'Door Codes & Keys',content:'Speranta: Main door code #4521. Key box code 1234.\n\nTV House: Main door code #7893. Key box at front gate, code 5678.',tags:['access','security']},
+  {id:'k2',category:'WiFi',title:'WiFi Passwords',content:'Speranta: Network "Speranta_Guest" | Password: BloudBerg2024!\n\nTV House: Network "TVHouse_Guest" | Password: TableView2024!',tags:['wifi']},
+  {id:'k3',category:'Procedures',title:'Check-in Procedure',content:'1. Send welcome message 24h before arrival with access codes\n2. Confirm arrival time with guest\n3. Ensure property is clean and ready\n4. Leave welcome note and info folder\n5. Do quick video call walkthrough if needed',tags:['checkin']},
+  {id:'k4',category:'Procedures',title:'Check-out Procedure',content:'1. Send reminder evening before checkout\n2. Checkout time is 10:00\n3. Inspect property within 2 hours\n4. Report any damage via tasks\n5. Schedule cleaning immediately\n6. Send follow-up message inviting direct rebooking',tags:['checkout']},
+  {id:'k5',category:'Maintenance',title:'Emergency Contacts',content:'Plumber: Johan Botha - 082 555 1234\nElectrician: Cape Power - 021 555 9876\nLocksmith: Key King - 083 444 2222\nBusiness WhatsApp: +27 79 977 9455',tags:['emergency','contacts']},
+  {id:'k6',category:'Guest Info',title:'Area Guide',content:'Beach: 5 min walk\nCheckers Tableview: 3km\nTable Mountain: 30 min drive\nMyCiti bus: 200m away\nKitesurfing & whale watching (Jul-Nov)',tags:['area','guest']},
+  {id:'k7',category:'Procedures',title:'Nina Booking Checklist',content:'For every booking Nina must:\n1. Send check-in message 24h before arrival with access codes & house rules\n2. Book domestic/cleaning session after checkout date\n3. Process checkout - inspect property, log any issues as tasks\n4. Send follow-up message to guest inviting them to rebook directly via our website (coming soon)',tags:['nina','checklist','procedure']},
+  {id:'k8',category:'Finance',title:'TV House - Owner Management',content:'Owners: Mirka & Antonin\nManagement fee: R6,000/month (billed monthly to owners)\nPool company managed by S&N - included in monthly bill\nAll property needs coordinated by Nicole & Silja\nMonthly report sent to owners with bookings & income overview',tags:['tvhouse','owners','finance']},
+  {id:'k9',category:'Finance',title:'Nina Williams - Management Fee',content:'Nina Williams - Host Expert\nMonthly management fee: R4,000/month\nNina submits monthly invoice including any out-of-pocket expenses\nPayment via business account\nInvoices to be uploaded to platform for record keeping',tags:['nina','finance','salary']},
+  {id:'k10',category:'Finance',title:'Cleaner Payment Methods',content:'Blessing: R350/clean - paid via ewallet through Spiwe\nFatima: R350/clean - paid via ewallet directly\nPatricia: R350 (Speranta) / R450 (TV House) - paid via EFT\nSpiwe: R350/clean - paid via ewallet\nEaster/holiday rate: R450 for all cleaners\nPatricia combined TV+granny: R600',tags:['cleaners','finance','payment']},
 ];
 
 // ── HELPERS ───────────────────────────────────────────────────
