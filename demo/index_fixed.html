@@ -232,7 +232,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   .main{margin-left:0!important;padding-bottom:72px}
   .content{padding:12px}
   .mobile-nav{display:block!important}
-  #mob-menu-btn{display:flex!important;align-items:center}
+  #mob-menu-btn{display:flex!important;align-items:center;background:none;border:none;cursor:pointer;padding:6px 8px;font-size:1.5rem;color:var(--ink);line-height:1;-webkit-tap-highlight-color:transparent}
   .topbar{padding:10px 14px}
   .page-title{font-size:1.1rem}
   .stat-grid{grid-template-columns:1fr 1fr}
@@ -304,8 +304,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   <div class="main">
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:10px">
-        <button class="mob-menu-btn" onclick="toggleMobSidebar()" title="Menu">☰</button>
-        <button style="display:none;background:none;border:none;cursor:pointer;padding:6px 8px;font-size:1.4rem;color:var(--ink);line-height:1" id="mob-menu-btn" onclick="openDrawer()">☰</button>
+        <button id="mob-menu-btn" onclick="openDrawer()">☰</button>
         <div class="page-title" id="page-title">Dashboard</div>
       </div>
       <div class="topbar-right">
@@ -1576,6 +1575,7 @@ function buildDrawerNav() {
       <span style="font-size:1rem;width:20px;text-align:center">${n.icon}</span>${n.label}
     </div>`).join('');
 }
+function toggleMobSidebar(){openDrawer();}
 function openDrawer() {
   document.getElementById('mob-drawer').classList.add('open');
   document.getElementById('mob-overlay').classList.add('open');
