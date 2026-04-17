@@ -448,6 +448,44 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   </div>
 
   <!-- REPORTS (admin only) -->
+  <div class="tab-pane" id="tab-finance">
+    <div class="section-head">
+      <div><h2 style="font-size:1.2rem;margin-bottom:3px">Finance</h2><div class="text-muted">P&L from Nedbank statements Sep 2024 – Dec 2025</div>
+      <div style="background:#fef3c7;border-radius:8px;padding:8px 14px;font-size:.78rem;margin-top:8px;color:#92400e">
+        ⚠️ <strong>Note:</strong> Only Speranta levies are our expense. TV House levies are paid by Mirka & Antonin. February 2025 high income = delayed Airbnb/Payoneer payouts (document verification delay).
+      </div></div>
+    </div>
+    <div class="stat-grid" id="finance-stats"></div>
+    <div class="card mb-6">
+      <div class="card-title">📊 Monthly Income vs Expenses</div>
+      <div style="overflow-x:auto"><div id="finance-chart" style="display:flex;align-items:flex-end;gap:3px;height:140px;padding:4px 0;min-width:600px"></div></div>
+      <div style="display:flex;gap:16px;margin-top:10px;font-size:.76rem">
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:var(--green2);border-radius:2px;display:inline-block"></span>Income</span>
+        <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:#f87171;border-radius:2px;display:inline-block"></span>Expenses</span>
+      </div>
+    </div>
+    <div class="grid-2 mb-6">
+      <div class="card">
+        <div class="card-title">💳 Income by Platform</div>
+        <div id="finance-platform"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📤 Expense Breakdown</div>
+        <div id="finance-expenses"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 Monthly Detail</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Airbnb</th><th>Booking</th><th>LekkeSlaap</th><th>TV Mgmt Fee</th><th>Cleaning</th><th>Nina</th></tr></thead>
+          <tbody id="finance-table"></tbody>
+          <tfoot><tr id="finance-totals"></tr></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="tab-pane" id="tab-reports">
     <div class="stat-grid" id="report-stats"></div>
     <div class="card mb-6">
@@ -826,6 +864,7 @@ function renderTab(id) {
   else if (id==='messages')  renderMessages();
   else if (id==='knowledge') renderKB();
   else if (id==='team')      renderTeam();
+  else if (id==='finance')   renderFinance();
   else if (id==='reports')   renderReports();
 }
 
@@ -1613,6 +1652,269 @@ function closeDrawer() {
   document.getElementById('mob-drawer').classList.remove('open');
   document.getElementById('mob-overlay').classList.remove('open');
 }
+
+
+// ── FINANCE — pulls live from Supabase finance_transactions ─────────────────
+// Verified DB totals (327 transactions, Sep 2024 – Dec 2025):
+// Sep24→Oct25 loaded from statements. Dec2025 = most recent.
+
+async function renderFinance() {
+  const el_stats    = document.getElementById('finance-stats');
+  const el_chart    = document.getElementById('finance-chart');
+  const el_platform = document.getElementById('finance-platform');
+  const el_expenses = document.getElementById('finance-expenses');
+  const el_table    = document.getElementById('finance-table');
+  const el_totals   = document.getElementById('finance-totals');
+  if (!el_stats) return;
+
+  const fmt = n => 'R' + Math.round(n).toLocaleString('en-ZA');
+  const fmtD = n => n ? fmt(n) : '—';
+
+  // Show loading state
+  el_stats.innerHTML = '<div class="text-muted" style="padding:20px">Loading finance data…</div>';
+
+  // Known DB totals as fallback (from verification query)
+  const FALLBACK = {
+    'Sep 2024':{income:3000,    expenses:2694.88,  airbnb:0,       booking:0,      lekkeslaap:0,      owner_mgmt:0,       cleaning:0,     nina:0,       levies:2387.88, electricity:0,    wifi:0,      maintenance:0,    gardener:0, bank:306.88,  payouts:0,      city:0},
+    'Oct 2024':{income:18520.46,expenses:5320.75,  airbnb:18520.46,booking:0,      lekkeslaap:0,      owner_mgmt:0,       cleaning:350,   nina:0,       levies:2463.72, electricity:400,  wifi:625,    maintenance:0,    gardener:0, bank:590,     payouts:0,      city:1187.03},
+    'Nov 2024':{income:24652.59,expenses:21337.45, airbnb:22968.62,booking:1403.37,lekkeslaap:0,      owner_mgmt:0,       cleaning:1050,  nina:0,       levies:2500,    electricity:501,  wifi:0,      maintenance:2503, gardener:0, bank:295,     payouts:10385,  city:1725},
+    'Dec 2024':{income:37436.15,expenses:9217.20,  airbnb:23984.32,booking:0,      lekkeslaap:0,      owner_mgmt:10451.83,cleaning:2300,  nina:4000,    levies:0,       electricity:1600, wifi:122,    maintenance:850,  gardener:0, bank:295,     payouts:0,      city:0},
+    'Jan 2025':{income:5906,    expenses:30124.88, airbnb:0,       booking:0,      lekkeslaap:0,      owner_mgmt:5906,    cleaning:1150,  nina:4789.99, levies:5733.39, electricity:0,    wifi:356,    maintenance:0,    gardener:0, bank:310,     payouts:17035,  city:0},
+    'Feb 2025':{income:91240.37,expenses:11039.37, airbnb:81570.53,booking:0,      lekkeslaap:0,      owner_mgmt:9669.84, cleaning:1450,  nina:0,       levies:2700.66, electricity:2200, wifi:444,    maintenance:0,    gardener:450,bank:310,     payouts:243,    city:1500},
+    'Mar 2025':{income:23555,   expenses:74744.18, airbnb:14824.30,booking:0,      lekkeslaap:0,      owner_mgmt:8730.70, cleaning:700,   nina:4490,    levies:2877.69, electricity:1200, wifi:444,    maintenance:2313, gardener:450,bank:310,     payouts:60136,  city:1022},
+    'Apr 2025':{income:26608.17,expenses:18026.55, airbnb:12240.70,booking:4019.23,lekkeslaap:0,      owner_mgmt:10348.24,cleaning:2260,  nina:5405,    levies:2979.05, electricity:0,    wifi:444,    maintenance:678,  gardener:450,bank:310,     payouts:5500,   city:0},
+    'May 2025':{income:12432.70,expenses:23217.21, airbnb:3547.24, booking:0,      lekkeslaap:0,      owner_mgmt:8885.46, cleaning:1750,  nina:4000,    levies:2663.75, electricity:0,    wifi:511,    maintenance:13432,gardener:450,bank:310,     payouts:0,      city:0},
+    'Jun 2025':{income:14767.26,expenses:30879.45, airbnb:0,       booking:0,      lekkeslaap:575,    owner_mgmt:14192.26,cleaning:0,     nina:4262,    levies:2450,    electricity:0,    wifi:511,    maintenance:4896, gardener:450,bank:310,     payouts:16500,  city:1500},
+    'Jul 2025':{income:23878.86,expenses:23172.45, airbnb:2177.65, booking:0,      lekkeslaap:12797.5,owner_mgmt:8903.71, cleaning:2714,  nina:4430,    levies:0,       electricity:3600, wifi:511,    maintenance:2179, gardener:900,bank:310,     payouts:5000,   city:0},
+    'Aug 2025':{income:17960.87,expenses:14363.20, airbnb:2438.74, booking:0,      lekkeslaap:2444.33,owner_mgmt:11377.80,cleaning:1730,  nina:4862,    levies:6500,    electricity:0,    wifi:511,    maintenance:0,    gardener:450,bank:310,     payouts:0,      city:0},
+    'Sep 2025':{income:17851.31,expenses:16399.96, airbnb:0,       booking:4662.64,lekkeslaap:5039.26,owner_mgmt:8149.41, cleaning:2764,  nina:4794.96, levies:1856.15, electricity:2800, wifi:511,    maintenance:1913, gardener:900,bank:310,     payouts:0,      city:0},
+    'Oct 2025':{income:40644.38,expenses:29239.29, airbnb:12069.53,booking:9442.58,lekkeslaap:9461.21,owner_mgmt:9647.64, cleaning:3700,  nina:5478.90, levies:3350.63, electricity:0,    wifi:511,    maintenance:3037, gardener:450,bank:310,     payouts:5000,   city:2751},
+    'Nov 2025':{income:18681.64,expenses:17956.80, airbnb:0,       booking:5065.81,lekkeslaap:7355.96,owner_mgmt:3618.98, cleaning:2150,  nina:8639.98, levies:2689.41, electricity:0,    wifi:511,    maintenance:2407, gardener:800,bank:310,     payouts:0,      city:799},
+    'Dec 2025':{income:51192.80,expenses:47472.08, airbnb:16871.01,booking:2225.44,lekkeslaap:6957.68,owner_mgmt:25138.67,cleaning:3050,  nina:4700,    levies:3054.61, electricity:2500, wifi:1086,   maintenance:4734, gardener:950,bank:310,     payouts:21500,  city:730},
+  };
+
+  let rows = [];
+  let useDB = false;
+
+  // Try live DB first
+  if (db) {
+    try {
+      const { data, error } = await db
+        .from('finance_monthly_summary')
+        .select('*')
+        .order('first_date', { ascending: true });
+      if (!error && data && data.length > 0) {
+        rows = data;
+        useDB = true;
+      }
+    } catch(e) {}
+
+    // If view not available try raw table
+    if (!useDB) {
+      try {
+        const { data, error } = await db
+          .from('finance_transactions')
+          .select('month,type,amount,category,platform,date')
+          .order('date', { ascending: true });
+        if (!error && data && data.length > 0) {
+          // Aggregate client-side
+          const agg = {};
+          data.forEach(r => {
+            if (!agg[r.month]) agg[r.month] = {
+              month:r.month, first_date:r.date,
+              total_income:0, total_expenses:0, net:0,
+              airbnb_income:0, booking_income:0, lekkeslaap_income:0, owner_mgmt_fee:0,
+              cleaning:0, nina_management:0, levies:0, electricity:0,
+              wifi_internet:0, maintenance:0, gardener:0, bank_fees:0,
+              owner_payouts:0, city_rates:0
+            };
+            const m = agg[r.month];
+            const amt = Number(r.amount);
+            if (r.type === 'income') {
+              m.total_income += amt; m.net += amt;
+              if (r.category === 'rental_income') {
+                if (r.platform === 'airbnb')      m.airbnb_income += amt;
+                else if (r.platform === 'booking') m.booking_income += amt;
+                else if (r.platform === 'lekkeslaap') m.lekkeslaap_income += amt;
+              }
+              if (r.category === 'owner_mgmt_fee') m.owner_mgmt_fee += amt;
+            } else {
+              m.total_expenses += amt; m.net -= amt;
+              if (r.category === 'cleaning')          m.cleaning += amt;
+              else if (r.category === 'nina_management') m.nina_management += amt;
+              else if (r.category === 'levies')       m.levies += amt;
+              else if (r.category === 'electricity')  m.electricity += amt;
+              else if (r.category === 'wifi_internet')m.wifi_internet += amt;
+              else if (r.category === 'maintenance')  m.maintenance += amt;
+              else if (r.category === 'gardener')     m.gardener += amt;
+              else if (r.category === 'bank_fees')    m.bank_fees += amt;
+              else if (r.category === 'owner_payout') m.owner_payouts += amt;
+              else if (r.category === 'city_rates')   m.city_rates += amt;
+            }
+          });
+          rows = Object.values(agg).sort((a,b) => a.first_date.localeCompare(b.first_date));
+          useDB = true;
+        }
+      } catch(e) {}
+    }
+  }
+
+  // Use fallback if DB unavailable
+  if (!useDB) {
+    rows = Object.entries(FALLBACK).map(([month, d]) => ({
+      month,
+      first_date: month,
+      total_income: d.income,
+      total_expenses: d.expenses,
+      net: d.income - d.expenses,
+      airbnb_income: d.airbnb,
+      booking_income: d.booking,
+      lekkeslaap_income: d.lekkeslaap,
+      owner_mgmt_fee: d.owner_mgmt,
+      cleaning: d.cleaning,
+      nina_management: d.nina,
+      levies: d.levies,
+      electricity: d.electricity,
+      wifi_internet: d.wifi,
+      maintenance: d.maintenance,
+      gardener: d.gardener,
+      bank_fees: d.bank,
+      owner_payouts: d.payouts,
+      city_rates: d.city,
+    }));
+  }
+
+  // Totals
+  const T = rows.reduce((acc, r) => {
+    acc.income     += r.total_income    || 0;
+    acc.expenses   += r.total_expenses  || 0;
+    acc.airbnb     += r.airbnb_income   || 0;
+    acc.booking    += r.booking_income  || 0;
+    acc.lekkeslaap += r.lekkeslaap_income || 0;
+    acc.owner_mgmt += r.owner_mgmt_fee  || 0;
+    acc.cleaning   += r.cleaning        || 0;
+    acc.nina       += r.nina_management || 0;
+    acc.levies     += r.levies          || 0;
+    acc.electricity+= r.electricity     || 0;
+    acc.wifi       += r.wifi_internet   || 0;
+    acc.maintenance+= r.maintenance     || 0;
+    acc.gardener   += r.gardener        || 0;
+    acc.bank       += r.bank_fees       || 0;
+    acc.payouts    += r.owner_payouts   || 0;
+    acc.city       += r.city_rates      || 0;
+    return acc;
+  }, {income:0,expenses:0,airbnb:0,booking:0,lekkeslaap:0,owner_mgmt:0,cleaning:0,nina:0,levies:0,electricity:0,wifi:0,maintenance:0,gardener:0,bank:0,payouts:0,city:0});
+
+  const net = T.income - T.expenses;
+  const rentalOnly = T.airbnb + T.booking + T.lekkeslaap;
+  const avgNet = net / rows.length;
+  const source = useDB ? '🟢 Live from database' : '🟠 Cached data';
+
+  // ── STAT CARDS ──
+  el_stats.innerHTML =
+    sCard('Rental Income', fmt(rentalOnly), 'Airbnb + Booking + LekkeSlaap', 'var(--green2)') +
+    sCard('TV House Mgmt Fees', fmt(T.owner_mgmt), 'Monthly fees from Mirka & Antonin', 'var(--blue)') +
+    sCard('Total Expenses', fmt(T.expenses), 'All operating costs', 'var(--red)') +
+    sCard('Net (after payouts)', fmt(net), source, net >= 0 ? 'var(--accent)' : 'var(--red)');
+
+  // ── BAR CHART ──
+  const maxVal = Math.max(...rows.map(r => Math.max(r.total_income || 0, r.total_expenses || 0)));
+  el_chart.innerHTML = rows.map(r => {
+    const ih = maxVal > 0 ? Math.round((r.total_income || 0) / maxVal * 130) : 0;
+    const eh = maxVal > 0 ? Math.round((r.total_expenses || 0) / maxVal * 130) : 0;
+    const lbl = r.month.slice(0,3) + r.month.slice(-2);
+    const netCol = (r.net || 0) >= 0 ? 'var(--green)' : 'var(--red)';
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;min-width:32px" title="${r.month}: Income ${fmt(r.total_income)} / Expenses ${fmt(r.total_expenses)}">
+      <div style="display:flex;align-items:flex-end;gap:2px;height:130px">
+        <div style="width:9px;height:${ih}px;background:var(--green2);border-radius:2px 2px 0 0"></div>
+        <div style="width:9px;height:${eh}px;background:#f87171;border-radius:2px 2px 0 0"></div>
+      </div>
+      <div style="font-size:.52rem;color:var(--muted);text-align:center;white-space:nowrap">${lbl}</div>
+      <div style="font-size:.52rem;font-weight:700;color:${netCol}">${(r.net||0)>=0?'+':''}${Math.round((r.net||0)/1000)}k</div>
+    </div>`;
+  }).join('');
+
+  // ── INCOME BY PLATFORM ──
+  const pData = [
+    {name:'Airbnb',         val:T.airbnb,     color:'#ff5a5f'},
+    {name:'Booking.com',    val:T.booking,    color:'#1d4ed8'},
+    {name:'LekkeSlaap',     val:T.lekkeslaap, color:'#d97706'},
+    {name:'TV House Mgmt',  val:T.owner_mgmt, color:'var(--green2)'},
+  ].filter(p => p.val > 0).sort((a,b) => b.val - a.val);
+  const totalInc = pData.reduce((s,p) => s + p.val, 0);
+  el_platform.innerHTML = pData.map(p => `
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:.84rem;margin-bottom:3px">
+        <span style="display:flex;align-items:center;gap:6px">
+          <span style="width:10px;height:10px;border-radius:2px;background:${p.color};display:inline-block"></span>${p.name}
+        </span>
+        <span style="font-weight:700">${fmt(p.val)} <span style="font-weight:400;color:var(--muted);font-size:.76rem">${Math.round(p.val/totalInc*100)}%</span></span>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px">
+        <div style="height:6px;width:${Math.round(p.val/totalInc*100)}%;background:${p.color};border-radius:3px"></div>
+      </div>
+    </div>`).join('');
+
+  // ── EXPENSE BREAKDOWN ──
+  const eData = [
+    {name:'Owner Payouts',      val:T.payouts,     color:'#94a3b8'},
+    {name:'Nina Management',    val:T.nina,        color:'var(--green2)'},
+    {name:'Levies (Speranta)',  val:T.levies,      color:'#7c3aed'},
+    {name:'Maintenance',        val:T.maintenance, color:'#f59e0b'},
+    {name:'Cleaning',           val:T.cleaning,    color:'#06b6d4'},
+    {name:'Electricity',        val:T.electricity, color:'#f97316'},
+    {name:'Gardener',           val:T.gardener,    color:'var(--green)'},
+    {name:'City Rates',         val:T.city,        color:'#64748b'},
+    {name:'WiFi & Internet',    val:T.wifi,        color:'#64748b'},
+    {name:'Bank Fees',          val:T.bank,        color:'#9ca3af'},
+  ].filter(e => e.val > 0).sort((a,b) => b.val - a.val);
+  const totalExp = eData.reduce((s,e) => s + e.val, 0);
+  el_expenses.innerHTML = eData.map(e => `
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:2px">
+        <span style="display:flex;align-items:center;gap:5px">
+          <span style="width:9px;height:9px;border-radius:2px;background:${e.color};display:inline-block"></span>${e.name}
+        </span>
+        <span style="font-weight:700">${fmt(e.val)} <span style="color:var(--muted);font-weight:400;font-size:.74rem">${Math.round(e.val/totalExp*100)}%</span></span>
+      </div>
+      <div style="height:5px;background:var(--border);border-radius:3px">
+        <div style="height:5px;width:${Math.round(e.val/totalExp*100)}%;background:${e.color};border-radius:3px"></div>
+      </div>
+    </div>`).join('');
+
+  // ── MONTHLY TABLE ──
+  el_table.innerHTML = rows.map(r => {
+    const n = r.net || 0;
+    const netCol = n >= 0 ? 'var(--green)' : 'var(--red)';
+    return `<tr>
+      <td style="font-weight:600;white-space:nowrap">${r.month}</td>
+      <td style="color:var(--green);font-weight:700">${fmt(r.total_income)}</td>
+      <td style="color:var(--red)">${fmt(r.total_expenses)}</td>
+      <td style="font-weight:700;color:${netCol}">${n>=0?'+':''}${fmt(n)}</td>
+      <td>${fmtD(r.airbnb_income)}</td>
+      <td>${fmtD(r.booking_income)}</td>
+      <td>${fmtD(r.lekkeslaap_income)}</td>
+      <td>${fmtD(r.owner_mgmt_fee)}</td>
+      <td>${fmtD(r.cleaning)}</td>
+      <td>${fmtD(r.nina_management)}</td>
+      <td>${fmtD(r.levies)}</td>
+    </tr>`;
+  }).join('');
+
+  el_totals.innerHTML = `
+    <td style="font-weight:700">TOTAL (${rows.length} months)</td>
+    <td style="color:var(--green);font-weight:700">${fmt(T.income)}</td>
+    <td style="color:var(--red);font-weight:700">${fmt(T.expenses)}</td>
+    <td style="font-weight:700;color:${net>=0?'var(--green)':'var(--red)'}">${net>=0?'+':''}${fmt(net)}</td>
+    <td>${fmt(T.airbnb)}</td>
+    <td>${fmt(T.booking)}</td>
+    <td>${fmt(T.lekkeslaap)}</td>
+    <td>${fmt(T.owner_mgmt)}</td>
+    <td>${fmt(T.cleaning)}</td>
+    <td>${fmt(T.nina)}</td>
+    <td>${fmt(T.levies)}</td>`;
+}
+
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 document.getElementById('auth-screen').style.display='flex';
