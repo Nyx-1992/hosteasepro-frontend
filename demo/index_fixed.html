@@ -898,7 +898,6 @@ const NAV = [
   {id:'dashboard',label:'Dashboard',    icon:'🏠',roles:['admin','host']},
   {id:'bookings', label:'Bookings',     icon:'📋',roles:['admin','host']},
   {id:'calendar', label:'Calendar',     icon:'📅',roles:['admin','host']},
-  {id:'domestic', label:'Domestic',     icon:'🧹',roles:['admin','host']},
   {id:'tasks',    label:'Tasks',        icon:'✅',roles:['admin','host']},
   {id:'messages', label:'Messages',     icon:'💬',roles:['admin','host']},
   {id:'knowledge',label:'Knowledge Base',icon:'📚',roles:['admin','host']},
@@ -927,14 +926,24 @@ function switchProperty(val) {
 function renderTab(id) {
   if (id==='dashboard') renderDashboard();
   else if (id==='bookings')  renderBookings();
-  else if (id==='calendar')  renderCalendar();
-  else if (id==='domestic')  { renderDomCal(); renderDomEarnings(); renderDomestic(); }
+  else if (id==='calendar')  { renderCalendar(); if(showCleaningOverlay) renderDomesticEarnings(); }
+  else if (id==='domestic')  switchTab('calendar'); // redirect — domestic merged into calendar
   else if (id==='tasks')     renderTasks();
   else if (id==='messages')  renderMessages();
   else if (id==='knowledge') renderKB();
   else if (id==='team')      renderTeam();
   else if (id==='finance')   renderFinance();
   else if (id==='reports')   renderReports();
+}
+
+function renderDomesticEarnings() {
+  // Render earnings summary and sessions list in the calendar tab panel
+  const earnEl = document.getElementById('dom-earnings-summary');
+  const gridEl = document.getElementById('dom-grid');
+  if (!earnEl || !gridEl) return;
+  // reuse existing domestic render functions
+  if (typeof renderDomEarnings === 'function') renderDomEarnings();
+  if (typeof renderDomestic   === 'function') renderDomestic();
 }
 
 // ── DATA LOAD ─────────────────────────────────────────────────
@@ -1410,11 +1419,193 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
   }
 }
 
+// Cleaning overlay state
+let showCleaningOverlay = false;
+let showKPIPanel = false;
+
+function toggleCleaningOverlay(btn) {
+  showCleaningOverlay = !showCleaningOverlay;
+  btn.textContent = showCleaningOverlay ? '🧹 Hide Cleaning' : '🧹 Show Cleaning';
+  btn.className = showCleaningOverlay ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost';
+  const panel = document.getElementById('domestic-sessions-panel');
+  if (panel) panel.style.display = showCleaningOverlay ? 'block' : 'none';
+  renderCalendar();
+  if (showCleaningOverlay) renderDomesticEarnings();
+}
+
+function toggleKPIPanel() {
+  showKPIPanel = !showKPIPanel;
+  const btn = document.getElementById('kpi-toggle-btn');
+  if (btn) btn.className = showKPIPanel ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost';
+  renderKPIPanel();
+}
+
+function renderKPIPanel() {
+  const el = document.getElementById('cleaning-kpi-panel');
+  if (!el) return;
+  if (!showKPIPanel) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+
+  const today = new Date().toISOString().slice(0,10);
+  const last90 = new Date(); last90.setDate(last90.getDate()-90);
+  const l90str = last90.toISOString().slice(0,10);
+
+  // Sessions in last 90 days
+  const recentSessions = domestics.filter(d => d.date >= l90str && d.status==='completed');
+  const totalPaid = recentSessions.reduce((s,d) => s+(Number(d.amount_paid)||0), 0);
+  const avgPay = recentSessions.length ? Math.round(totalPaid/recentSessions.length) : 0;
+
+  // Check each checkout has a cleaning within 2 days
+  const checkouts = bookings.filter(b => b.check_out >= l90str && b.status !== 'cancelled');
+  let linked = 0, unlinked = 0;
+  checkouts.forEach(b => {
+    const coDate = b.check_out_date || b.check_out?.slice(0,10);
+    const hasClean = domestics.some(d => {
+      const dd = d.date;
+      return d.property_id===b.property_id && dd >= coDate &&
+        Math.abs(new Date(dd)-new Date(coDate)) <= 2*86400000;
+    });
+    hasClean ? linked++ : unlinked++;
+  });
+  const coverageRate = checkouts.length ? Math.round(linked/checkouts.length*100) : 100;
+
+  // Per-cleaner stats
+  const cleanerStats = {};
+  recentSessions.forEach(d => {
+    const name = d.cleaner_name || d.cleaner || 'Unknown';
+    if (!cleanerStats[name]) cleanerStats[name] = {sessions:0, total:0};
+    cleanerStats[name].sessions++;
+    cleanerStats[name].total += Number(d.amount_paid)||0;
+  });
+
+  el.innerHTML = `
+    <div style="background:var(--card-bg);border-radius:14px;border:1.5px solid var(--border);padding:18px 20px">
+      <div style="font-weight:700;font-size:.9rem;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+        📊 Cleaning KPIs <span style="font-size:.72rem;font-weight:400;color:var(--muted)">Last 90 days</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px">
+        ${[
+          ['Sessions completed', recentSessions.length, '#06b6d4'],
+          ['Total paid out', 'R'+totalPaid.toLocaleString(), 'var(--green)'],
+          ['Avg per session', 'R'+avgPay, 'var(--accent)'],
+          ['Checkout coverage', coverageRate+'%', coverageRate>=90?'var(--green)':coverageRate>=70?'#f59e0b':'var(--red)'],
+          ['Uncovered checkouts', unlinked, unlinked===0?'var(--green)':'var(--red)'],
+        ].map(([label,val,col]) => `
+          <div style="background:var(--sand);border-radius:10px;padding:12px 14px">
+            <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px">${label}</div>
+            <div style="font-size:1.4rem;font-weight:700;color:${col}">${val}</div>
+          </div>`).join('')}
+      </div>
+      ${Object.keys(cleanerStats).length ? `
+        <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Per cleaner</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${Object.entries(cleanerStats).map(([name,s]) => `
+            <div style="background:var(--sand);border-radius:8px;padding:8px 12px;font-size:.8rem">
+              <strong>${name}</strong> · ${s.sessions} sessions · R${s.total.toLocaleString()}
+            </div>`).join('')}
+        </div>` : ''}
+    </div>`;
+}
+
+function renderCoverageAlert() {
+  const alertEl = document.getElementById('cleaning-coverage-alert');
+  if (!alertEl) return;
+
+  const today = new Date().toISOString().slice(0,10);
+  const next14 = new Date(); next14.setDate(next14.getDate()+14);
+  const next14str = next14.toISOString().slice(0,10);
+
+  // Find upcoming checkouts in next 14 days with no cleaning scheduled
+  const upcomingCheckouts = bookings.filter(b =>
+    b.status !== 'cancelled' &&
+    b.check_out_date >= today &&
+    b.check_out_date <= next14str
+  );
+
+  const uncovered = upcomingCheckouts.filter(b => {
+    const coDate = b.check_out_date || b.check_out?.slice(0,10);
+    return !domestics.some(d =>
+      d.property_id===b.property_id &&
+      d.date >= coDate &&
+      Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000
+    );
+  });
+
+  if (uncovered.length > 0) {
+    alertEl.style.display = 'block';
+    alertEl.innerHTML = `
+      <div style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:1.1rem">🧹</span>
+        <div style="flex:1">
+          <span style="font-weight:700;color:#92400e;font-size:.85rem">
+            ${uncovered.length} upcoming checkout${uncovered.length>1?'s':''} with no cleaning scheduled
+          </span>
+          <div style="font-size:.76rem;color:#a16207;margin-top:2px">
+            ${uncovered.map(b => propName(b.property_id)+' · out '+fmtDate(b.check_out_date||b.check_out)).join(' · ')}
+          </div>
+        </div>
+        <button class="btn btn-sm" style="background:#f59e0b;color:#fff" onclick="toggleCleaningOverlay(document.getElementById('cleaning-toggle-btn'));openModal('domestic-modal')">
+          + Schedule Clean
+        </button>
+      </div>`;
+  } else {
+    alertEl.style.display = 'none';
+  }
+}
+
 function renderCalendar() {
   const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
-  const fd = calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp);
+  const fd = showCleaningOverlay
+    ? (calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp))
+    : [];
   buildCalGrid(calYear, calMonth, fb, fd, 'cal-grid', 'cal-month-label', 'showDay');
+  renderCoverageAlert();
+  if (showKPIPanel) renderKPIPanel();
+  // Annotate checkout days with cleaning status
+  renderCleaningStatusDots();
 }
+
+function renderCleaningStatusDots() {
+  // After buildCalGrid, add cleaning indicator dots to checkout days
+  const today = new Date().toISOString().slice(0,10);
+  const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
+
+  fb.filter(b => b.status!=='cancelled' && !isCaretaker(b)).forEach(b => {
+    const coDate = b.check_out_date || b.check_out?.slice(0,10);
+    if (!coDate) return;
+    const [y,m,d] = coDate.split('-').map(Number);
+    if (m-1 !== calMonth || y !== calYear) return;
+
+    const hasClean = domestics.some(dom =>
+      dom.property_id===b.property_id &&
+      Math.abs(new Date(dom.date)-new Date(coDate)) <= 2*86400000
+    );
+
+    // Find cell for checkout date
+    const cells = document.querySelectorAll('#cal-grid .cal-cell');
+    cells.forEach(cell => {
+      const dateEl = cell.querySelector('.cal-date');
+      if (dateEl && parseInt(dateEl.textContent)===d) {
+        // Only add once per cell
+        if (!cell.querySelector('.clean-dot')) {
+          const dot = document.createElement('div');
+          dot.className = 'clean-dot';
+          dot.title = hasClean ? '✅ Cleaning scheduled' : '⚠ No cleaning scheduled';
+          dot.style.cssText = `
+            width:8px;height:8px;border-radius:50%;
+            background:${hasClean?'#22c55e':'#ef4444'};
+            border:1.5px solid ${hasClean?'#16a34a':'#dc2626'};
+            position:absolute;top:4px;right:4px;
+            cursor:help;flex-shrink:0;
+          `;
+          cell.style.position = 'relative';
+          cell.appendChild(dot);
+        }
+      }
+    });
+  });
+}
+
 function calNav(dir) {
   if (dir===0){calYear=new Date().getFullYear();calMonth=new Date().getMonth();}
   else{calMonth+=dir;if(calMonth>11){calMonth=0;calYear++;}else if(calMonth<0){calMonth=11;calYear--;}}
