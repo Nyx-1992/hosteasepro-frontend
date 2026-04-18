@@ -1086,154 +1086,259 @@ function toggleLaneView(btn) {
 function renderLaneView() {
   const today = new Date().toISOString().slice(0,10);
   const laneEl = document.getElementById('booking-lane-view');
-  laneEl.style.gridTemplateColumns = 'repeat(auto-fit,minmax(340px,1fr))';
+  if (!laneEl) return;
+  laneEl.style.gridTemplateColumns = 'repeat(auto-fit,minmax(360px,1fr))';
+
+  // Filter bookings per filter setting
+  function filterForLane(bks) {
+    if (bookingFilter==='upcoming') return bks.filter(b=>b.check_in>today&&b.status!=='cancelled');
+    if (bookingFilter==='pending')  return bks.filter(b=>b.status==='pending');
+    if (bookingFilter==='past')     return bks.filter(b=>b.check_out<today&&b.status!=='cancelled');
+    return bks.filter(b=>b.status!=='cancelled'); // all
+  }
+
+  const hasClean = b => domestics.some(d => {
+    const coDate = b.check_out_date || b.check_out?.slice(0,10);
+    return d.property_id===b.property_id &&
+      Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000;
+  });
 
   laneEl.innerHTML = Object.entries(PROPS).map(([pid, prop]) => {
-    const propBookings = bookings
-      .filter(b => b.property_id===pid && b.is_active && b.status!=='cancelled')
-      .sort((a,b) => a.check_in.localeCompare(b.check_in));
+    const allProp = bookings.filter(b=>b.property_id===pid && b.is_active);
+    const current = allProp.find(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b));
+    const pending = allProp.filter(b=>b.status==='pending');
+    const shown   = filterForLane(allProp).sort((a,b)=>a.check_in.localeCompare(b.check_in));
+    const upcoming= allProp.filter(b=>b.check_in>today&&b.status!=='cancelled');
 
-    const current  = propBookings.find(b => b.check_in<=today && b.check_out>today);
-    const upcoming = propBookings.filter(b => b.check_in>today).slice(0,10);
-    const pending  = propBookings.filter(b => b.status==='pending');
+    // Occupied status — warm neutral
+    const isOccupied = !!current;
+    const nightsLeft = current ? Math.round((new Date(current.check_out)-new Date())/86400000) : 0;
+    const statusBg   = isOccupied ? '#e0f2fe' : '#f0fdf4';
+    const statusCol  = isOccupied ? '#0369a1' : '#15803d';
+    const statusText = isOccupied ? '🏠 Occupied' : '✓ Available';
 
-    // Cleaning coverage for upcoming
-    const hasClean = b => domestics.some(d =>
-      d.property_id===pid &&
-      Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10)||b.check_out_date)) <= 2*86400000
-    );
+    return `<div style="background:var(--card-bg);border-radius:18px;border:1.5px solid var(--border);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 12px rgba(0,0,0,.06)">
 
-    // Nights until checkout for current guest
-    const nightsLeft = current
-      ? Math.round((new Date(current.check_out)-new Date())/86400000)
-      : 0;
-
-    return `<div style="background:var(--card-bg);border-radius:16px;border:1.5px solid var(--border);overflow:hidden;display:flex;flex-direction:column">
-
-      <!-- ── Lane header ── -->
-      <div style="background:var(--ocean);color:#fff;padding:16px 18px;display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-weight:700;font-size:1rem">${prop.name}</div>
-          <div style="font-size:.72rem;opacity:.65;margin-top:1px">${prop.address}</div>
-        </div>
-        <div style="text-align:right">
-          <span style="background:${current?'#4ade80':'rgba(255,255,255,.18)'};color:${current?'#14532d':'#fff'};font-size:.7rem;font-weight:700;padding:4px 11px;border-radius:20px;display:inline-block">
-            ${current ? '🔴 Occupied' : '🟢 Available'}
+      <!-- ── Header ── -->
+      <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div style="font-weight:700;font-size:1.05rem;color:var(--ink)">${prop.name}</div>
+            <div style="font-size:.73rem;color:var(--muted);margin-top:1px">${prop.address}</div>
+          </div>
+          <span style="background:${statusBg};color:${statusCol};font-size:.74rem;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">
+            ${statusText}
           </span>
-          <div style="font-size:.68rem;opacity:.6;margin-top:4px">${upcoming.length} upcoming</div>
+        </div>
+        <!-- Quick stats row -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${[
+            ['📋', pending.length+' pending',   pending.length?'#fef3c7':'var(--sand)', pending.length?'#92400e':'var(--muted)'],
+            ['📅', upcoming.length+' upcoming',  'var(--sand)', 'var(--muted)'],
+            [isOccupied&&nightsLeft<=1?'🛫':'🌙',
+             isOccupied?(nightsLeft<=0?'Checking out today':nightsLeft===1?'Last night':'Out in '+nightsLeft+'d'):'Next: '+(upcoming[0]?fmtDate(upcoming[0].check_in):'—'),
+             isOccupied&&nightsLeft<=1?'#fef3c7':'var(--sand)',
+             isOccupied&&nightsLeft<=1?'#92400e':'var(--muted)'],
+          ].map(([icon,text,bg,col])=>`
+            <span style="background:${bg};color:${col};font-size:.72rem;font-weight:600;padding:3px 9px;border-radius:10px;display:inline-flex;align-items:center;gap:3px">
+              ${icon} ${text}
+            </span>`).join('')}
         </div>
       </div>
-
-      <!-- ── Pending actions ── -->
-      ${pending.length ? `
-      <div style="background:#fef3c7;padding:12px 16px;border-bottom:2px solid #fde68a">
-        <div style="font-size:.72rem;font-weight:700;color:#92400e;margin-bottom:8px;display:flex;align-items:center;gap:5px">
-          <span>🔔</span> ${pending.length} pending — action required
-        </div>
-        ${pending.map(b => `
-          <div style="background:white;border-radius:10px;padding:10px 12px;margin-bottom:6px;border:1px solid #fde68a">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
-              <div>
-                <div style="font-weight:700;font-size:.85rem">${b.display_name}</div>
-                <div style="font-size:.73rem;color:var(--muted);margin-top:2px">
-                  📅 ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)}
-                </div>
-                <div style="font-size:.73rem;color:var(--muted)">
-                  🌙 ${b.nights||0} nights &nbsp;·&nbsp; 👥 ${b.number_of_guests||1} guests
-                </div>
-                ${b.notes ? `<div style="font-size:.7rem;color:var(--muted);margin-top:2px;font-style:italic">${b.notes.split('|')[0].trim()}</div>` : ''}
-              </div>
-              <span class="badge badge-direct" style="flex-shrink:0">🌐 Direct</span>
-            </div>
-            <div style="display:flex;gap:6px">
-              <button onclick="approveBooking(${b.id})" style="flex:1;background:#16a34a;color:#fff;border:none;border-radius:8px;padding:7px;font-size:.78rem;cursor:pointer;font-weight:700">✓ Approve</button>
-              <button onclick="declineBooking(${b.id})" style="flex:1;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;padding:7px;font-size:.78rem;cursor:pointer;font-weight:600">✗ Decline</button>
-            </div>
-          </div>`).join('')}
-      </div>` : ''}
 
       <!-- ── Current guest ── -->
       ${current ? `
-      <div style="padding:14px 18px;background:#f0fdf4;border-bottom:1.5px solid var(--border)">
-        <div style="font-size:.68rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Currently staying</div>
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div>
-            <div style="font-weight:700;font-size:.92rem">${current.display_name}</div>
-            <div style="font-size:.76rem;color:var(--muted);margin-top:3px">
-              🛬 ${fmtDate(current.check_in)} &nbsp;→&nbsp; 🛫 ${fmtDate(current.check_out)}
+      <div style="padding:14px 20px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-bottom:1px solid #bae6fd">
+        <div style="font-size:.68rem;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Currently staying</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1">
+            <div style="font-weight:700;font-size:.95rem;color:var(--ink);margin-bottom:4px">${current.display_name}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:.76rem;color:var(--muted)">
+              <span>🛬 ${fmtDate(current.check_in)}</span>
+              <span>🛫 ${fmtDate(current.check_out)}</span>
+              <span>🌙 ${current.nights||0} nights</span>
+              <span>👥 ${current.number_of_guests||1}</span>
             </div>
-            <div style="font-size:.76rem;color:var(--muted);margin-top:2px">
-              🌙 ${current.nights||0} nights &nbsp;·&nbsp; 👥 ${current.number_of_guests||1} guests
+            <!-- Stay progress bar -->
+            <div style="margin-top:8px">
+              <div style="height:5px;background:#bae6fd;border-radius:3px;overflow:hidden">
+                <div style="height:5px;background:#0369a1;border-radius:3px;width:${Math.min(100,Math.round(((current.nights||1)-nightsLeft)/Math.max(1,current.nights||1)*100))}%"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:.67rem;color:#0369a1;margin-top:3px">
+                <span>Stay ${Math.min(100,Math.round(((current.nights||1)-nightsLeft)/Math.max(1,current.nights||1)*100))}% complete</span>
+                <span>${nightsLeft<=0?'Checking out today':nightsLeft+'d left'}</span>
+              </div>
             </div>
           </div>
-          <div style="text-align:right;flex-shrink:0">
-            <span class="badge badge-${current.platform}" style="margin-bottom:4px;display:block">${current.platform}</span>
-            <div style="font-size:.72rem;font-weight:700;color:${nightsLeft<=1?'var(--red)':'var(--muted)'}">
-              ${nightsLeft<=0?'Checking out today':nightsLeft===1?'Last night':'Out in '+nightsLeft+'d'}
-            </div>
+          <span class="badge badge-${current.platform}" style="flex-shrink:0">${current.platform==='direct'?'🌐':current.platform}</span>
+        </div>
+        <!-- Cleaning status for current -->
+        <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+          ${hasClean(current)
+            ? `<div style="display:inline-flex;align-items:center;gap:5px;background:#d1fae5;color:#065f46;border-radius:10px;padding:4px 10px;font-size:.74rem;font-weight:600">✅ Cleaning scheduled post-checkout</div>`
+            : `<div style="display:inline-flex;align-items:center;gap:5px;background:#fee2e2;color:#dc2626;border-radius:10px;padding:4px 10px;font-size:.74rem;font-weight:600">⚠ No cleaning scheduled</div>`}
+          <div style="display:flex;gap:5px">
+            ${!hasClean(current)?`<button onclick="bookCleaningForGuest('${pid}','${current.check_out_date||current.check_out?.slice(0,10)}','${current.id}')"
+              style="background:#0369a1;color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:.74rem;cursor:pointer;font-weight:600">+ Add clean</button>`:''}
+            <button onclick="openBookingDetail('${current.id}')"
+              style="background:var(--sand);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:.74rem;cursor:pointer;color:var(--ink)">View ›</button>
           </div>
         </div>
-        <div style="margin-top:8px;height:4px;background:var(--border);border-radius:2px">
-          <div style="height:4px;border-radius:2px;background:var(--green);width:${Math.min(100,Math.round((current.nights-(nightsLeft))/Math.max(1,current.nights)*100))}%"></div>
-        </div>
-        <div style="font-size:.68rem;color:var(--muted);margin-top:3px;text-align:right">
-          Stay progress · ${Math.round((current.nights-(nightsLeft))/Math.max(1,current.nights)*100)}% complete
-        </div>
-        ${hasClean(current) ? '<div style="font-size:.72rem;color:var(--green);margin-top:4px">✅ Cleaning scheduled post-checkout</div>'
-          : '<div style="font-size:.72rem;color:var(--red);margin-top:4px">⚠ No cleaning scheduled yet</div>'}
-      </div>` : `
-      <div style="padding:12px 18px;background:var(--sand);border-bottom:1px solid var(--border)">
-        <div style="font-size:.8rem;color:var(--muted);font-style:italic">Property is available</div>
-      </div>`}
+      </div>` : ''}
 
-      <!-- ── Upcoming bookings ── -->
-      <div style="padding:12px 18px;flex:1">
-        <div style="font-size:.68rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px">Upcoming</div>
-        ${upcoming.length ? upcoming.map((b,i) => {
-          const daysUntil = Math.round((new Date(b.check_in)-new Date())/86400000);
-          const isImminent = daysUntil <= 3;
-          const isSoon     = daysUntil <= 7;
+      <!-- ── Booking cards ── -->
+      <div style="padding:10px 20px;flex:1;overflow-y:auto;max-height:480px">
+        ${shown.filter(b=>b!==current).length===0&&!current ? `
+          <div style="text-align:center;padding:30px 0;color:var(--muted)">
+            <div style="font-size:2rem;margin-bottom:8px">📭</div>
+            <div style="font-size:.84rem">No bookings for this filter</div>
+          </div>` : ''}
+
+        ${shown.filter(b=>b.id!==current?.id).map(b => {
+          const isPending  = b.status==='pending';
+          const isPast     = b.check_out < today;
+          const daysUntil  = Math.round((new Date(b.check_in)-new Date())/86400000);
+          const isImminent = daysUntil>=0 && daysUntil<=3;
+          const isSoon     = daysUntil>=0 && daysUntil<=7;
           const cleanOk    = hasClean(b);
-          return `<div style="padding:10px 0;border-bottom:1px solid var(--border);${i===upcoming.length-1?'border-bottom:none':''}">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          const coDate     = b.check_out_date||b.check_out?.slice(0,10);
+
+          const urgencyBg  = isPending?'#fffbeb':isPast?'var(--sand)':'var(--card-bg)';
+          const borderCol  = isPending?'#f59e0b':isImminent?'#f97316':isPast?'var(--border)':'var(--border)';
+
+          return `<div style="border:1.5px solid ${borderCol};border-radius:14px;padding:13px 15px;margin-bottom:10px;background:${urgencyBg};cursor:pointer;transition:box-shadow .15s"
+            onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
+
+            <!-- Top row: name + badges -->
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
               <div style="flex:1;min-width:0">
-                <div style="font-weight:600;font-size:.84rem;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+                <div style="font-weight:700;font-size:.9rem;color:var(--ink);display:flex;align-items:center;gap:5px;flex-wrap:wrap">
                   ${b.display_name}
-                  ${isImminent ? '<span style="background:#fee2e2;color:#dc2626;font-size:.62rem;padding:1px 6px;border-radius:10px;font-weight:700">In '+daysUntil+'d</span>'
-                    : isSoon  ? '<span style="background:#fef3c7;color:#92400e;font-size:.62rem;padding:1px 6px;border-radius:10px;font-weight:700">In '+daysUntil+'d</span>' : ''}
-                </div>
-                <div style="font-size:.73rem;color:var(--muted);margin-top:3px">
-                  🛬 ${fmtDate(b.check_in)} &nbsp;→&nbsp; ${fmtDate(b.check_out)}
-                </div>
-                <div style="font-size:.72rem;color:var(--muted);margin-top:1px">
-                  🌙 ${b.nights||0} nights &nbsp;·&nbsp; 👥 ${b.number_of_guests||1} guests
-                </div>
-                <div style="font-size:.7rem;margin-top:3px;${cleanOk?'color:var(--green)':'color:var(--red)'}">
-                  ${cleanOk ? '✅ Clean scheduled' : '⚠ No clean'}
+                  ${isPending?'<span style="background:#f59e0b;color:#fff;font-size:.62rem;padding:2px 7px;border-radius:10px;font-weight:700">Pending</span>':''}
+                  ${isImminent&&!isPast?'<span style="background:#fed7aa;color:#c2410c;font-size:.62rem;padding:2px 7px;border-radius:10px;font-weight:700">In '+daysUntil+'d</span>':''}
+                  ${isSoon&&!isImminent&&!isPast?'<span style="background:#fef3c7;color:#92400e;font-size:.62rem;padding:2px 7px;border-radius:10px;font-weight:700">In '+daysUntil+'d</span>':''}
+                  ${isPast?'<span style="background:var(--border);color:var(--muted);font-size:.62rem;padding:2px 7px;border-radius:10px">Past</span>':''}
                 </div>
               </div>
-              <div style="text-align:right;flex-shrink:0">
-                <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform==='direct'?'🌐 Direct':b.platform}</span>
-                <div style="font-size:.7rem;color:var(--muted);margin-top:4px">${b.status}</div>
+              <span class="badge badge-${b.platform}" style="font-size:.68rem;flex-shrink:0">${b.platform==='direct'?'🌐 Direct':b.platform}</span>
+            </div>
+
+            <!-- Date + nights row -->
+            <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:.77rem;color:var(--muted);margin-bottom:8px">
+              <span>🛬 ${fmtDate(b.check_in)}</span>
+              <span>🛫 ${fmtDate(b.check_out)}</span>
+              <span>🌙 ${b.nights||0}n</span>
+              <span>👥 ${b.number_of_guests||1}</span>
+            </div>
+
+            <!-- Cleaning status + actions -->
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+              <div style="font-size:.73rem;font-weight:600;${cleanOk?'color:#065f46':'color:#dc2626'}">
+                ${cleanOk?'✅ Clean scheduled':'⚠ No clean'}
+              </div>
+              <div style="display:flex;gap:5px;flex-wrap:wrap">
+                ${isPending?`
+                  <button onclick="event.stopPropagation();approveBooking(${b.id})"
+                    style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:4px 9px;font-size:.74rem;cursor:pointer;font-weight:700">✓ Approve</button>
+                  <button onclick="event.stopPropagation();declineBooking(${b.id})"
+                    style="background:#fee2e2;color:#dc2626;border:none;border-radius:7px;padding:4px 9px;font-size:.74rem;cursor:pointer">✗</button>`:''}
+                ${!cleanOk&&!isPast?`
+                  <button onclick="event.stopPropagation();bookCleaningForGuest('${pid}','${coDate}','${b.id}')"
+                    style="background:#e0f2fe;color:#0369a1;border:none;border-radius:7px;padding:4px 9px;font-size:.74rem;cursor:pointer;font-weight:600">+ Clean</button>`:''}
+                <button onclick="event.stopPropagation();openBookingDetail('${b.id}')"
+                  style="background:var(--sand);border:1px solid var(--border);border-radius:7px;padding:4px 9px;font-size:.74rem;cursor:pointer;color:var(--ink)">View ›</button>
               </div>
             </div>
           </div>`;
-        }).join('') : '<div style="font-size:.8rem;color:var(--muted);font-style:italic;padding:4px 0">No upcoming bookings</div>'}
+        }).join('')}
       </div>
 
-      <!-- ── Lane footer: quick actions ── -->
-      <div style="padding:10px 18px;border-top:1px solid var(--border);background:var(--sand);display:flex;gap:6px">
-        <button onclick="setBookingFilter('all');renderBookings();document.getElementById('booking-lane-view').style.display='none';laneViewActive=false;document.querySelector('[onclick*=toggleLaneView]').textContent='⬛ Lane View';" 
-          style="flex:1;background:none;border:1px solid var(--border);border-radius:8px;padding:6px;font-size:.74rem;cursor:pointer;color:var(--muted)">
-          ☰ All bookings
-        </button>
+      <!-- ── Footer ── -->
+      <div style="padding:10px 20px;border-top:1px solid var(--border);background:var(--sand);display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:.75rem;color:var(--muted)">${shown.length} booking${shown.length!==1?'s':''} shown</span>
         <button onclick="openModal('booking-modal')"
-          style="flex:1;background:var(--ocean);color:#fff;border:none;border-radius:8px;padding:6px;font-size:.74rem;cursor:pointer;font-weight:600">
+          style="background:var(--ocean);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:.78rem;cursor:pointer;font-weight:600">
           + Add booking
         </button>
       </div>
     </div>`;
   }).join('');
+}
+
+function openBookingDetail(bookingId) {
+  const b = bookings.find(x=>String(x.id)===String(bookingId));
+  if (!b) return;
+  const coDate = b.check_out_date||b.check_out?.slice(0,10);
+  const linkedClean = domestics.find(d=>
+    d.property_id===b.property_id &&
+    Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000
+  );
+  const today = new Date().toISOString().slice(0,10);
+  const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
+  const col = PLAT_COLORS[isOwnerStay(b)?'owner':b.platform]||'#c17f3c';
+
+  document.getElementById('day-modal-title').textContent = b.display_name||'Booking';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div style="border-left:4px solid ${col};background:var(--sand);border-radius:10px;padding:16px;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Guest</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="gname-${b.id}" value="${b.guest_name||''}" placeholder="Add guest name…"
+              style="padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.86rem;outline:none;background:#fff;width:180px"/>
+            <button class="btn btn-primary btn-sm" onclick="saveGuestName('${b.id}')">Save</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <span class="badge badge-${b.platform}">${b.platform==='direct'?'🌐 Direct':b.platform}</span>
+          <span class="badge badge-${(b.status||'').replace(' ','-')}">${b.status}</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.8rem;color:var(--muted)">
+        <div><strong style="color:var(--ink)">📍</strong> ${propName(b.property_id)}</div>
+        <div><strong style="color:var(--ink)">👥</strong> ${b.number_of_guests||1} guests</div>
+        <div><strong style="color:var(--ink)">🛬</strong> ${fmtDate(b.check_in)}</div>
+        <div><strong style="color:var(--ink)">🛫</strong> ${fmtDate(b.check_out)}</div>
+        <div><strong style="color:var(--ink)">🌙</strong> ${nights} nights</div>
+        ${b.revenue?`<div><strong style="color:var(--green)">💰</strong> R${Number(b.revenue).toLocaleString()}</div>`:''}
+      </div>
+      ${b.notes?`<div style="font-size:.76rem;color:var(--muted);margin-top:8px;font-style:italic;border-top:1px solid var(--border);padding-top:8px">${b.notes.replace(/\|/g,'<br>')}</div>`:''}
+    </div>
+
+    <!-- Cleaning section -->
+    <div style="background:${linkedClean?'#f0fdf4':'#fff7ed'};border:1.5px solid ${linkedClean?'#86efac':'#fed7aa'};border-radius:10px;padding:14px">
+      <div style="font-weight:700;font-size:.84rem;margin-bottom:8px;color:${linkedClean?'#166534':'#c2410c'}">
+        ${linkedClean?'✅ Cleaning scheduled':'⚠ No cleaning scheduled'}
+      </div>
+      ${linkedClean?`
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">
+          🧹 ${linkedClean.cleaner} · ${fmtDate(linkedClean.date)} · ${linkedClean.time||'—'} · ${linkedClean.type}
+          <span class="badge badge-${linkedClean.status}" style="margin-left:6px">${linkedClean.status}</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="closeModal('day-modal');editCleaning(${linkedClean.id})"
+            style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:.78rem;cursor:pointer">✏ Edit clean</button>
+          <button onclick="deleteCleaning(${linkedClean.id})"
+            style="background:#fee2e2;color:#dc2626;border:none;border-radius:8px;padding:6px 12px;font-size:.78rem;cursor:pointer">✕ Delete</button>
+        </div>`:`
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">
+          Schedule a cleaning for checkout on ${fmtDate(coDate)}
+        </div>
+        <button onclick="closeModal('day-modal');bookCleaningForGuest('${b.property_id}','${coDate}','${b.id}')"
+          style="background:#0369a1;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.82rem;cursor:pointer;font-weight:600">
+          + Schedule cleaning →
+        </button>`}
+    </div>
+
+    ${b.status==='pending'?`
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="approveBooking(${b.id});closeModal('day-modal')"
+        style="flex:1;background:#16a34a;color:#fff;border:none;border-radius:10px;padding:10px;font-size:.84rem;cursor:pointer;font-weight:700">✓ Approve booking</button>
+      <button onclick="declineBooking(${b.id});closeModal('day-modal')"
+        style="flex:1;background:#fee2e2;color:#dc2626;border:none;border-radius:10px;padding:10px;font-size:.84rem;cursor:pointer;font-weight:600">✗ Decline</button>
+    </div>`:''}
+  `;
+  openModal('day-modal');
 }
 
 async function approveBooking(id) {
@@ -1263,26 +1368,24 @@ async function declineBooking(id) {
 }
 
 function renderBookings() {
-  const isAdmin = currentUser.role==='admin';
-  const today   = new Date().toISOString().slice(0,10);
+  const today = new Date().toISOString().slice(0,10);
 
-  // ── Pending section at top ──
+  // ── Pending direct bookings alert ──
   const pendingDirect = bookings.filter(b => b.platform==='direct' && b.status==='pending' && b.is_active);
   const pendingEl = document.getElementById('pending-alert-section');
   if (pendingEl) {
     if (pendingDirect.length && bookingFilter !== 'past' && bookingFilter !== 'cancelled') {
       pendingEl.innerHTML = `
-        <div style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:14px;padding:16px 20px;margin-bottom:20px">
+        <div style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:14px;padding:16px 20px;margin-bottom:18px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
             <span style="font-size:1.2rem">🔔</span>
-            <span style="font-weight:700;font-size:.9rem;color:#92400e">${pendingDirect.length} direct booking${pendingDirect.length>1?'s':''} awaiting your approval</span>
+            <span style="font-weight:700;font-size:.9rem;color:#92400e">${pendingDirect.length} direct booking${pendingDirect.length>1?'s':''} awaiting approval</span>
           </div>
           ${pendingDirect.map(b=>`
             <div style="display:flex;justify-content:space-between;align-items:center;background:white;border-radius:10px;padding:12px 14px;margin-bottom:8px;gap:10px;flex-wrap:wrap">
               <div>
                 <div style="font-weight:700;font-size:.88rem">${b.display_name}</div>
                 <div style="font-size:.76rem;color:var(--muted)">${propName(b.property_id)} · ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)} · ${b.nights||0} nights</div>
-                ${b.revenue?`<div style="font-size:.78rem;font-weight:700;color:var(--green)">R${Number(b.revenue).toLocaleString()}</div>`:''}
                 ${b.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:2px">${b.notes.split('|')[0]}</div>`:''}
               </div>
               <div style="display:flex;gap:8px;flex-shrink:0">
@@ -1297,46 +1400,17 @@ function renderBookings() {
   }
 
   // ── Filter buttons ──
-  const filters = ['upcoming','pending','confirmed','checked-in','checked-out','past','all','cancelled'];
+  const filters = ['upcoming','pending','past','all'];
   const pendingCount = bookings.filter(b=>b.status==='pending'&&b.is_active).length;
   document.getElementById('booking-filters').innerHTML = filters.map(f => {
-    const isPending = f==='pending';
     const label = f.charAt(0).toUpperCase()+f.slice(1);
-    const badge = isPending && pendingCount ? ` <span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:.65rem;font-weight:700">${pendingCount}</span>` : '';
+    const badge = f==='pending' && pendingCount
+      ? ` <span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:.65rem;font-weight:700;margin-left:2px">${pendingCount}</span>` : '';
     return `<button class="btn btn-sm ${f===bookingFilter?'btn-primary':'btn-ghost'}" onclick="setBookingFilter('${f}')">${label}${badge}</button>`;
   }).join('');
 
-  // ── Table ──
-  const cols = ['Guest','Property','Platform','Check-in','Check-out','Nights',...(isAdmin?['Revenue']:[]),'Status',''];
-  document.getElementById('booking-thead').innerHTML = cols.map(c=>`<th>${c}</th>`).join('');
-  const rows = filteredBookings();
-
-  document.getElementById('booking-tbody').innerHTML = rows.length ? rows.map(b => {
-    const isCancelled = b.status==='cancelled';
-    const isPending   = b.status==='pending';
-    const daysUntil   = Math.round((new Date(b.check_in)-new Date())/86400000);
-    const soonBadge   = daysUntil>=0&&daysUntil<=3 ? `<span style="font-size:.65rem;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:6px;font-weight:700;margin-left:4px">In ${daysUntil}d</span>` : '';
-    const actionBtns  = isPending
-      ? `<td style="white-space:nowrap">
-          <button onclick="approveBooking(${b.id})" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer;font-weight:700;margin-right:4px">✓</button>
-          <button onclick="declineBooking(${b.id})" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer">✗</button>
-        </td>`
-      : `<td></td>`;
-    return `<tr style="${isCancelled?'opacity:.45':''}${isPending?'background:#fffbeb':''}" class="${isPending?'pending-row':''}">
-      <td>
-        <div style="font-weight:600">${b.display_name}${soonBadge}</div>
-        ${b.notes&&!isCancelled?`<div style="font-size:.71rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.notes.split('|')[0]}</div>`:''}
-      </td>
-      <td>${propName(b.property_id)}</td>
-      <td><span class="badge badge-${b.platform}">${b.platform==='direct'?'🌐 Direct':b.platform}</span></td>
-      <td>${fmtDate(b.check_in)}</td>
-      <td>${fmtDate(b.check_out)}</td>
-      <td>${b.nights||0}</td>
-      ${isAdmin?`<td style="font-weight:700;color:var(--green)">${b.revenue?'R'+Number(b.revenue).toLocaleString():'—'}</td>`:''}
-      <td><span class="badge badge-${(b.status||'').replace(' ','-')}">${b.status}</span></td>
-      ${actionBtns}
-    </tr>`;
-  }).join('') : `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📭</div>No bookings found</div></td></tr>`;
+  // ── Lane view ──
+  renderLaneView();
 }
 function setBookingFilter(f) { bookingFilter=f; renderBookings(); }
 
