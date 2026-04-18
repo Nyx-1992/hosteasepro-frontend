@@ -330,31 +330,17 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
       <!-- BOOKINGS -->
       <div class="tab-pane" id="tab-bookings">
-
-        <!-- ── ACTION REQUIRED (pending direct bookings) ── -->
+        <!-- ── Pending alert ── -->
         <div id="pending-alert-section"></div>
 
-        <!-- ── LANE VIEW: Speranta | TV House ── -->
-        <div id="booking-lane-view" style="display:none;gap:16px;margin-bottom:20px"></div>
-
-        <!-- ── DIVIDER + FILTER ROW ── -->
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <span style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">All Bookings</span>
-            <div class="filter-row" id="booking-filters" style="margin:0"></div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <button class="btn btn-sm btn-ghost" onclick="toggleLaneView(this)">⬛ Lane View</button>
-            <button class="btn btn-primary btn-sm" onclick="openModal('booking-modal')">+ Add Booking</button>
-          </div>
+        <!-- ── Top bar ── -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+          <div class="filter-row" id="booking-filters" style="margin:0"></div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('booking-modal')">+ Add Booking</button>
         </div>
 
-        <!-- ── MAIN TABLE ── -->
-        <div class="card" style="padding:0;overflow:hidden">
-          <div class="table-wrap">
-            <table><thead><tr id="booking-thead"></tr></thead><tbody id="booking-tbody"></tbody></table>
-          </div>
-        </div>
+        <!-- ── Permanent lane view ── -->
+        <div id="booking-lane-view" style="display:grid;gap:18px;margin-bottom:20px"></div>
       </div>
 
       <!-- CALENDAR -->
@@ -611,18 +597,38 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
 <div class="modal-overlay" id="domestic-modal">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">Schedule Cleaning</div><button class="modal-close" onclick="closeModal('domestic-modal')">×</button></div>
+    <div class="modal-header">
+      <div class="modal-title" id="domestic-modal-title">Schedule Cleaning</div>
+      <button class="modal-close" onclick="closeModal('domestic-modal');window._editCleanId=null;">×</button>
+    </div>
     <div class="modal-body">
+      <!-- Linked booking badge -->
+      <div id="d-linked-label" style="display:none;background:#e0f2fe;color:#0369a1;border-radius:8px;padding:8px 12px;font-size:.8rem;font-weight:600;margin-bottom:14px"></div>
+      <!-- Hidden linked booking id -->
+      <input type="hidden" id="d-linked-booking" value=""/>
       <div class="form-grid">
         <div class="form-field"><label>Cleaner</label><select id="d-cleaner"><option>Blessing</option><option>Fatima</option><option>Patricia</option><option>Spiwe</option></select></div>
         <div class="form-field"><label>Property</label><select id="d-prop"><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select></div>
         <div class="form-field"><label>Date *</label><input type="date" id="d-date"/></div>
         <div class="form-field"><label>Time</label><input type="time" id="d-time" value="10:00"/></div>
-        <div class="form-field"><label>Type</label><select id="d-type"><option value="turnover">Turnover Clean</option><option value="deep">Deep Clean</option><option value="mid-stay">Mid-Stay Refresh</option><option value="inspection">Inspection</option></select></div>
+        <div class="form-field"><label>Type</label>
+          <select id="d-type">
+            <option value="turnover">Turnover Clean</option>
+            <option value="deep">Deep Clean</option>
+            <option value="mid-stay">Mid-Stay Refresh</option>
+            <option value="inspection">Inspection</option>
+          </select>
+        </div>
+        <div class="form-field span-full">
+          <label>Link to booking (guest checkout)</label>
+          <select id="d-booking-link" onchange="onBookingLinkChange(this)">
+            <option value="">— Independent clean —</option>
+          </select>
+        </div>
         <div class="form-field span-full"><label>Notes</label><input id="d-notes" placeholder="Special instructions"/></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost btn-sm" onclick="closeModal('domestic-modal')">Cancel</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('domestic-modal');window._editCleanId=null;">Cancel</button>
         <button class="btn btn-green btn-sm" onclick="saveDomestic()">Schedule</button>
       </div>
     </div>
@@ -1705,48 +1711,159 @@ function showDay(ds) {
   const dEvts = fd.filter(d=>d.date===ds);
   const bdayCleaners = CLEANERS.filter(c=>c.birthday&&c.birthday.slice(5)===ds.slice(5));
   document.getElementById('day-modal-title').textContent = fmtDate(ds);
-  let html = '';
+  let h = '';
+
+  // Birthdays
   bdayCleaners.forEach(c=>{
-    html+=`<div style="background:#f0abfc20;border:1.5px solid #d946ef;border-radius:9px;padding:12px;margin-bottom:8px">
+    h+=`<div style="background:#f0abfc20;border:1.5px solid #d946ef;border-radius:9px;padding:12px;margin-bottom:8px">
       <div style="font-weight:700;color:#86198f">🎂 ${c.name}'s Birthday!</div>
       <div style="font-size:.82rem;color:var(--muted);margin-top:3px">Remember to wish her well 🎉</div>
     </div>`;
   });
+
+  // Bookings — with cleaning status chip in corner
   bEvts.forEach(b=>{
     const col = PLAT_COLORS[isOwnerStay(b)?'owner':b.platform] || '#c17f3c';
     const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
-    html+=`<div style="background:var(--sand);border-radius:9px;padding:14px;margin-bottom:8px;border-left:4px solid ${col}">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-        <span class="badge badge-${b.platform}">${b.platform.toUpperCase()}</span>
-        <span class="badge badge-${(b.status||'').replace(' ','-')}">${b.status}</span>
+    const coDate = b.check_out_date || b.check_out?.slice(0,10);
+
+    // Find cleaning linked to this booking (within 2 days of checkout)
+    const linkedClean = domestics.find(d=>
+      d.property_id===b.property_id &&
+      Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000
+    );
+
+    const cleanChip = linkedClean
+      ? `<button onclick="editCleaning(${linkedClean.id})"
+          style="display:inline-flex;align-items:center;gap:5px;background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7;border-radius:20px;padding:4px 10px;font-size:.72rem;font-weight:700;cursor:pointer">
+          ✅ Cleaning ${fmtDate(linkedClean.date)}
+          <span onclick="event.stopPropagation();deleteCleaning(${linkedClean.id})" 
+            style="margin-left:3px;background:#065f46;color:#fff;border-radius:50%;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;font-size:.6rem;cursor:pointer;line-height:1">×</span>
+        </button>`
+      : `<button onclick="bookCleaningForGuest('${b.property_id}','${coDate}','${b.id}')"
+          style="display:inline-flex;align-items:center;gap:5px;background:#fee2e2;color:#dc2626;border:1.5px dashed #fca5a5;border-radius:20px;padding:4px 10px;font-size:.72rem;font-weight:700;cursor:pointer">
+          ⚠ No clean — book now →
+        </button>`;
+
+    h+=`<div style="background:var(--sand);border-radius:9px;padding:14px;margin-bottom:8px;border-left:4px solid ${col}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span class="badge badge-${b.platform}">${b.platform.toUpperCase()}</span>
+          <span class="badge badge-${(b.status||'').replace(' ','-')}">${b.status}</span>
+        </div>
+        ${cleanChip}
       </div>
       <div style="margin-bottom:8px">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Guest Name</div>
         <div style="display:flex;gap:6px;align-items:center">
-          <input id="gname-${b.id}" value="${b.guest_name||''}" placeholder="Click to add guest name…" style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.86rem;outline:none;background:#fff"/>
+          <input id="gname-${b.id}" value="${b.guest_name||''}" placeholder="Click to add guest name…"
+            style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.86rem;outline:none;background:#fff"/>
           <button class="btn btn-primary btn-sm" onclick="saveGuestName('${b.id}')">Save</button>
         </div>
       </div>
-      <div style="font-size:.84rem;color:var(--muted)">📍 ${propName(b.property_id)} · 📅 ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)} · ${nights} night${nights!==1?'s':''}</div>
+      <div style="font-size:.84rem;color:var(--muted)">
+        📍 ${propName(b.property_id)} · 📅 ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)} · ${nights} night${nights!==1?'s':''}
+      </div>
       ${b.revenue?`<div style="font-size:.84rem;font-weight:700;color:var(--green);margin-top:4px">R${Number(b.revenue).toLocaleString()}</div>`:''}
     </div>`;
   });
+
+  // Cleaning sessions — with edit/delete
   dEvts.forEach(d=>{
     const rateVal = d.amount_paid || getCleanerRate(d.cleaner, d.property_id);
-    html+=`<div style="background:#06b6d410;border:1.5px solid #06b6d4;border-radius:9px;padding:12px;margin-bottom:8px">
-      <div style="font-weight:700;margin-bottom:4px">🧹 ${d.cleaner}</div>
-      <div style="font-size:.84rem">${propName(d.property_id)} · ${d.time||'—'} · ${d.type}</div>
+    const linkedBooking = d.linked_booking_id
+      ? bookings.find(b=>String(b.id)===String(d.linked_booking_id))
+      : null;
+    h+=`<div style="background:#06b6d410;border:1.5px solid #06b6d4;border-radius:9px;padding:12px;margin-bottom:8px;position:relative">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
+        <div style="font-weight:700;font-size:.9rem">🧹 ${d.cleaner}</div>
+        <div style="display:flex;gap:5px">
+          <button onclick="editCleaning(${d.id})"
+            style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:.72rem;cursor:pointer">✏ Edit</button>
+          <button onclick="deleteCleaning(${d.id})"
+            style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:3px 9px;font-size:.72rem;cursor:pointer">✕ Delete</button>
+        </div>
+      </div>
+      <div style="font-size:.84rem;color:var(--muted)">
+        ${propName(d.property_id)} · ${d.time||'—'} · ${d.type}
+      </div>
+      ${linkedBooking ? `<div style="font-size:.76rem;color:#0369a1;margin-top:4px;background:#e0f2fe;padding:3px 8px;border-radius:6px;display:inline-block">
+        🔗 Linked: ${linkedBooking.display_name||linkedBooking.guest_name} (${fmtDate(linkedBooking.check_out)})
+      </div>` : `<div style="font-size:.75rem;color:var(--muted);margin-top:4px;font-style:italic">Independent clean</div>`}
       ${d.notes?`<div style="font-size:.8rem;font-style:italic;margin-top:4px">"${d.notes}"</div>`:''}
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
         <span class="badge badge-${d.status}">${d.status}</span>
-        <span style="font-size:.8rem;font-weight:700;color:var(--green)">R${rateVal}/clean</span>
+        <span style="font-size:.82rem;font-weight:700;color:var(--green)">R${rateVal}/clean</span>
       </div>
     </div>`;
   });
-  if (!html) html='<div class="empty-state"><div class="empty-icon">📅</div>No events on this day</div>';
-  document.getElementById('day-modal-body').innerHTML = html;
+
+  if (!h) h='<div class="empty-state"><div class="empty-icon">📅</div>No events on this day</div>';
+  document.getElementById('day-modal-body').innerHTML = h;
   openModal('day-modal');
 }
+
+// Pre-fill domestic modal from day modal booking chip
+function bookCleaningForGuest(pid, checkoutDate, bookingId) {
+  closeModal('day-modal');
+  // Pre-fill the domestic modal
+  document.getElementById('d-prop').value = pid;
+  document.getElementById('d-date').value = checkoutDate;
+  document.getElementById('d-time').value = '10:00';
+  document.getElementById('d-type').value = 'turnover';
+  document.getElementById('d-notes').value = '';
+  // Store linked booking id for save
+  document.getElementById('d-linked-booking').value = bookingId;
+  document.getElementById('domestic-modal-title').textContent = 'Schedule Cleaning';
+  document.getElementById('d-linked-label').style.display = 'block';
+  // Find booking name
+  const bk = bookings.find(b=>String(b.id)===String(bookingId));
+  if (bk) document.getElementById('d-linked-label').textContent =
+    '🔗 Linked to: '+( bk.display_name||bk.guest_name)+' · checkout '+fmtDate(checkoutDate);
+  openModal('domestic-modal');
+}
+
+async function editCleaning(id) {
+  const d = domestics.find(x=>x.id===id);
+  if (!d) return;
+  closeModal('day-modal');
+  document.getElementById('d-cleaner').value = d.cleaner || '';
+  document.getElementById('d-prop').value    = d.property_id || 'speranta';
+  document.getElementById('d-date').value    = d.date || '';
+  document.getElementById('d-time').value    = d.time || '10:00';
+  document.getElementById('d-type').value    = d.type || 'turnover';
+  document.getElementById('d-notes').value   = d.notes || '';
+  document.getElementById('d-linked-booking').value = d.linked_booking_id || '';
+  document.getElementById('domestic-modal-title').textContent = 'Edit Cleaning';
+  // Show linked booking label
+  if (d.linked_booking_id) {
+    const bk = bookings.find(b=>String(b.id)===String(d.linked_booking_id));
+    document.getElementById('d-linked-label').style.display = 'block';
+    document.getElementById('d-linked-label').textContent = bk
+      ? '🔗 Linked to: '+(bk.display_name||bk.guest_name)+' · checkout '+fmtDate(bk.check_out)
+      : '🔗 Linked booking #'+d.linked_booking_id;
+  } else {
+    document.getElementById('d-linked-label').style.display = 'none';
+  }
+  // Store edit id
+  window._editCleanId = id;
+  openModal('domestic-modal');
+}
+
+async function deleteCleaning(id) {
+  if (!confirm('Delete this cleaning session?')) return;
+  if (db) {
+    const {error} = await db.from('domestics').delete().eq('id', id);
+    if (error) { toast('Delete error: '+error.message,'error'); return; }
+  }
+  const idx = domestics.findIndex(d=>d.id===id);
+  if (idx>-1) domestics.splice(idx,1);
+  toast('Cleaning deleted','info');
+  closeModal('day-modal');
+  renderCalendar();
+  if (typeof renderDomestic==='function') renderDomestic();
+}
+
 
 async function saveGuestName(bookingId) {
   const input = document.getElementById('gname-'+bookingId);
@@ -1856,11 +1973,74 @@ async function saveDomestic() {
   const date = document.getElementById('d-date').value;
   if (!date) { toast('Please set a date','error'); return; }
   const cleaner = document.getElementById('d-cleaner').value;
-  const pid = document.getElementById('d-prop').value;
-  const row = {cleaner,property_id:pid,date,time:document.getElementById('d-time').value,type:document.getElementById('d-type').value,status:'scheduled',notes:document.getElementById('d-notes').value,checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},amount_paid:getCleanerRate(cleaner,pid)};
-  if (db) { const{data,error}=await db.from('domestics').insert([row]).select().single(); if(error){toast('Save error: '+error.message,'error');return;} domestics.unshift(nd(data)); }
-  else { domestics.unshift(nd({...row,id:'d'+Date.now()})); }
-  toast('Cleaning scheduled ✓','success'); closeModal('domestic-modal'); renderDomestic(); renderDomCal(); renderDomEarnings();
+  const pid     = document.getElementById('d-prop').value;
+  const linkedId= document.getElementById('d-linked-booking').value ||
+                  document.getElementById('d-booking-link').value || null;
+  const row = {
+    cleaner, property_id:pid, date,
+    time:   document.getElementById('d-time').value,
+    type:   document.getElementById('d-type').value,
+    status: 'scheduled',
+    notes:  document.getElementById('d-notes').value,
+    linked_booking_id: linkedId || null,
+    checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},
+    amount_paid: getCleanerRate(cleaner, pid),
+  };
+  const editId = window._editCleanId;
+  if (editId && db) {
+    const {data,error} = await db.from('domestics').update(row).eq('id',editId).select().single();
+    if (error) { toast('Update error: '+error.message,'error'); return; }
+    const idx = domestics.findIndex(d=>d.id===editId);
+    if (idx>-1) domestics[idx] = nd(data);
+    toast('Cleaning updated ✓','success');
+  } else if (editId) {
+    const idx = domestics.findIndex(d=>d.id===editId);
+    if (idx>-1) domestics[idx] = nd({...row,id:editId});
+    toast('Cleaning updated ✓','success');
+  } else if (db) {
+    const{data,error}=await db.from('domestics').insert([row]).select().single();
+    if(error){toast('Save error: '+error.message,'error');return;}
+    domestics.unshift(nd(data));
+    toast('Cleaning scheduled ✓','success');
+  } else {
+    domestics.unshift(nd({...row,id:'d'+Date.now()}));
+    toast('Cleaning scheduled ✓','success');
+  }
+  window._editCleanId = null;
+  closeModal('domestic-modal');
+  renderCalendar();
+  if (typeof renderDomestic==='function') renderDomestic();
+  if (typeof renderDomEarnings==='function') renderDomEarnings();
+}
+
+// Populate booking link dropdown when modal opens
+function populateBookingLinkDropdown(preselect) {
+  const sel = document.getElementById('d-booking-link');
+  if (!sel) return;
+  const today = new Date().toISOString().slice(0,10);
+  const upcoming = bookings
+    .filter(b => b.status!=='cancelled' && b.check_out >= today)
+    .sort((a,b) => a.check_out.localeCompare(b.check_out))
+    .slice(0, 30);
+  sel.innerHTML = '<option value="">— Independent clean —</option>' +
+    upcoming.map(b =>
+      `<option value="${b.id}" ${String(b.id)===String(preselect)?'selected':''}>
+        ${b.display_name||b.guest_name} · ${propName(b.property_id)} · out ${fmtDate(b.check_out)}
+      </option>`
+    ).join('');
+}
+
+function onBookingLinkChange(sel) {
+  const bk = bookings.find(b=>String(b.id)===sel.value);
+  if (bk) {
+    document.getElementById('d-prop').value = bk.property_id;
+    document.getElementById('d-date').value = bk.check_out_date || bk.check_out?.slice(0,10);
+    document.getElementById('d-linked-label').style.display = 'block';
+    document.getElementById('d-linked-label').textContent =
+      '🔗 '+( bk.display_name||bk.guest_name)+' checks out '+fmtDate(bk.check_out);
+  } else {
+    document.getElementById('d-linked-label').style.display = 'none';
+  }
 }
 function exportDomestics() {
   const fd = filteredDomestics();
@@ -2330,7 +2510,19 @@ async function renderCleanerEarningsReport() {
 }
 
 // ── MODAL / TOAST ─────────────────────────────────────────────
-function openModal(id){document.getElementById(id).classList.add('open');}
+function openModal(id){
+  document.getElementById(id).classList.add('open');
+  if (id==='domestic-modal') {
+    populateBookingLinkDropdown(document.getElementById('d-linked-booking').value);
+    if (!window._editCleanId) {
+      document.getElementById('domestic-modal-title').textContent = 'Schedule Cleaning';
+      document.getElementById('d-linked-label').style.display = 'none';
+      document.getElementById('d-booking-link').value = '';
+      document.getElementById('d-linked-booking').value = '';
+      document.getElementById('d-notes').value = '';
+    }
+  }
+}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
 function toast(msg,type='info'){
