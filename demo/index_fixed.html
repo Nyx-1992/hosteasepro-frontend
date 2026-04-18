@@ -1475,6 +1475,7 @@ function filteredDomestics() {
 
 // ── DASHBOARD ─────────────────────────────────────────────────
 function renderDashboard() {
+  if (!currentUser) return; // Guard: don't run before login
   const today = new Date().toISOString().slice(0,10);
   const now   = new Date();
   const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
@@ -2046,6 +2047,7 @@ async function declineBooking(id) {
 }
 
 function renderBookings() {
+  if (!currentUser) return;
   const today = new Date().toISOString().slice(0,10);
 
   // ── Pending direct bookings alert ──
@@ -3743,6 +3745,7 @@ function deleteContact(id) {
 }
 
 function renderTeam() {
+  if (!currentUser) return;
   const el = document.getElementById('team-content');
   if (!el) return;
   const q = (document.getElementById('contact-search')?.value||'').toLowerCase();
