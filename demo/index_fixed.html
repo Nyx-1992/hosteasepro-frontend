@@ -845,7 +845,6 @@ const SAMPLE_BOOKINGS = [
   {id:'s1',  property_id:'speranta',guest_name:'Hedda Wessels',       platform:'booking',    check_in:'2026-04-15',check_out:'2026-04-17',nights:2, status:'checked-out', revenue:0,  currency:'ZAR',notes:''},
   {id:'s2',  property_id:'speranta',guest_name:'Joe Ladlow',          platform:'airbnb',     check_in:'2026-04-17',check_out:'2026-04-21',nights:4, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
   {id:'s3',  property_id:'speranta',guest_name:'Armand Roets',        platform:'booking',    check_in:'2026-04-24',check_out:'2026-04-26',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s4',  property_id:'speranta',guest_name:'Gamede Lindiwe',      platform:'booking',    check_in:'2026-04-30',check_out:'2026-05-03',nights:3, status:'cancelled',   revenue:0,  currency:'ZAR',notes:'Cancelled'},
   {id:'s5',  property_id:'speranta',guest_name:'Carlin Baier',        platform:'booking',    check_in:'2026-05-05',check_out:'2026-05-07',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
   {id:'s6',  property_id:'speranta',guest_name:'Jack Marvellous',     platform:'booking',    check_in:'2026-05-08',check_out:'2026-05-10',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
   {id:'s7',  property_id:'speranta',guest_name:'Nicole & Silja (Owners)',platform:'manual',  check_in:'2026-05-13',check_out:'2026-05-21',nights:8, status:'confirmed',   revenue:0,  currency:'ZAR',notes:'Owner stay'},
@@ -949,7 +948,8 @@ function doLogin() {
 function doLogout() { currentUser=null; // Force mobile nav check on resize (handles orientation changes on iPhone)
 window.addEventListener('resize', () => { buildMobileNav(); });
 // Run on load too - catches Safari's initial render
-window.addEventListener('load', () => { setTimeout(buildMobileNav, 100); setTimeout(buildMobileNav, 500); });
+document.addEventListener('DOMContentLoaded', () => { setTimeout(buildMobileNav, 50); });
+window.addEventListener('load', () => { setTimeout(buildMobileNav, 100); setTimeout(buildMobileNav, 500); setTimeout(buildMobileNav, 1000); });
 document.addEventListener('DOMContentLoaded', () => { setTimeout(buildMobileNav, 50); });
 document.getElementById('auth-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
 
@@ -972,9 +972,14 @@ function buildNav() {
 function switchTab(id) {
   currentTab=id;
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
-  document.getElementById('tab-'+id).classList.add('active');
+  const pane = document.getElementById('tab-'+id);
+  if (pane) pane.classList.add('active');
   document.getElementById('page-title').textContent=NAV.find(n=>n.id===id)?.label||id;
-  buildNav(); if(typeof buildMobileNav==='function')buildMobileNav(); renderTab(id);
+  buildNav();
+  buildMobileNav();
+  renderTab(id);
+  // Scroll to top on tab switch (mobile)
+  window.scrollTo(0,0);
 }
 function switchProperty(val) {
   currentProp=val;
@@ -1212,7 +1217,7 @@ function renderLaneView() {
   });
 
   laneEl.innerHTML = Object.entries(PROPS).map(([pid, prop]) => {
-    const allProp = bookings.filter(b=>b.property_id===pid && b.is_active);
+    const allProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false);
     const current = allProp.find(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b));
     const pending = allProp.filter(b=>b.status==='pending');
     const shown   = filterForLane(allProp).sort((a,b)=>a.check_in.localeCompare(b.check_in));
@@ -2167,6 +2172,7 @@ async function saveDomestic() {
   const pid     = document.getElementById('d-prop').value;
   const linkedId= document.getElementById('d-linked-booking').value ||
                   document.getElementById('d-booking-link').value || null;
+  const computedRate = getCleanerRate(cleaner, pid);
   const row = {
     cleaner, property_id:pid, date,
     time:   document.getElementById('d-time').value,
@@ -2175,7 +2181,7 @@ async function saveDomestic() {
     notes:  document.getElementById('d-notes').value,
     linked_booking_id: linkedId || null,
     checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},
-    amount_paid: getCleanerRate(cleaner, pid),
+    amount_paid: computedRate,
   };
   const editId = window._editCleanId;
   if (editId && db) {
@@ -2311,7 +2317,7 @@ function renderGuestManagement() {
 
   // Show bookings: upcoming (next 14d), current, and recently checked out (last 7d)
   const relevant = bookings.filter(b => {
-    if (b.status==='cancelled' || isCaretaker(b) || isOwnerStay(b)) return false;
+    if (b.status==='cancelled' || isCaretaker(b) || isOwnerStay(b) || b.is_active===false) return false;
     const propMatch = currentProp==='all' || b.property_id===currentProp;
     const daysUntil  = Math.round((new Date(b.check_in)-new Date())/86400000);
     const daysSinceOut = Math.round((new Date()-new Date(b.check_out))/86400000);
@@ -2948,10 +2954,10 @@ function renderTeam(){
 // ── MOBILE NAV & DRAWER ────────────────────────────────────────────────────
 const MOB_NAV=[
   {id:'dashboard',icon:'🏠',label:'Home'},
-  {id:'calendar',icon:'📅',label:'Calendar'},
   {id:'bookings',icon:'📋',label:'Bookings'},
-  {id:'domestic',icon:'🧹',label:'Domestic'},
-  {id:'tasks',icon:'✅',label:'Task Management'},
+  {id:'calendar',icon:'📅',label:'Calendar'},
+  {id:'tasks',icon:'✅',label:'Tasks'},
+  {id:'reports',icon:'📊',label:'Reports'},
 ];
 function buildMobileNav() {
   // Nuclear Safari iOS fix: force visibility via every possible CSS property
@@ -2960,7 +2966,7 @@ function buildMobileNav() {
   const isMobile = window.innerWidth <= 768;
   if (nav) {
     if (isMobile) {
-      nav.setAttribute('style','display:block!important;visibility:visible!important;opacity:1!important;position:fixed!important;bottom:0!important;left:0!important;right:0!important;z-index:9999!important;background:#1a1a2e!important;padding:8px 0 12px!important;border-top:1px solid rgba(255,255,255,.12)!important;-webkit-transform:translateZ(0)!important;transform:translateZ(0)!important');
+      nav.setAttribute('style','display:block!important;visibility:visible!important;opacity:1!important;position:fixed!important;bottom:0!important;left:0!important;right:0!important;z-index:9999!important;background:#16213e!important;padding:8px 0 env(safe-area-inset-bottom,12px)!important;border-top:1px solid rgba(255,255,255,.12)!important;-webkit-transform:translateZ(0)!important;transform:translateZ(0)!important');
     } else {
       nav.setAttribute('style','display:none!important');
     }
@@ -3270,7 +3276,8 @@ async function renderFinance() {
 // Force mobile nav check on resize (handles orientation changes on iPhone)
 window.addEventListener('resize', () => { buildMobileNav(); });
 // Run on load too - catches Safari's initial render
-window.addEventListener('load', () => { setTimeout(buildMobileNav, 100); setTimeout(buildMobileNav, 500); });
+document.addEventListener('DOMContentLoaded', () => { setTimeout(buildMobileNav, 50); });
+window.addEventListener('load', () => { setTimeout(buildMobileNav, 100); setTimeout(buildMobileNav, 500); setTimeout(buildMobileNav, 1000); });
 document.addEventListener('DOMContentLoaded', () => { setTimeout(buildMobileNav, 50); });
 document.getElementById('auth-screen').style.display='flex';
 </script>
