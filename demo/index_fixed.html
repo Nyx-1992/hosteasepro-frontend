@@ -1043,13 +1043,32 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
   const birthdays = CLEANERS.map(c=>{const b=c.birthday?.slice(5);return b?{date:String(year)+'-'+b,name:c.name}:null;}).filter(Boolean);
 
   // Assign each booking a fixed lane (0,1,2) for the whole month
+  // Key fix: bookings that start BEFORE this month also need a lane assigned on day 1
   const laneOf = {};
   const laneEnd = [null,null,null];
+  const monthStart = year+'-'+String(month+1).padStart(2,'0')+'-01';
+
+  // First pass: assign lanes to bookings that START before this month but are still active
+  // These get priority — assign them on day 1 so they hold their lane all month
+  bkgs.filter(b => {
+    if (b.status==='cancelled'||isCaretaker(b)) return false;
+    const bci = String(b.check_in||'').slice(0,10);
+    const bco = String(b.check_out||'').slice(0,10);
+    return bci < monthStart && bco > monthStart; // started before, ends during/after
+  }).forEach(b => {
+    let lane = laneEnd.findIndex(l=>l===null);
+    if (lane===-1) lane=0;
+    laneOf[b.id] = lane;
+    laneEnd[lane] = String(b.check_out||'').slice(0,10);
+  });
+
+  // Second pass: day-by-day for bookings starting within this month
   for (let d=1; d<=dim; d++) {
     const ds = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     for (let l=0; l<3; l++) if (laneEnd[l] && laneEnd[l]<=ds) laneEnd[l]=null;
     bkgs.forEach(b => {
       if (b.status==='cancelled'||isCaretaker(b)) return;
+      if (laneOf[b.id] !== undefined) return; // already assigned above
       const bci = String(b.check_in||'').slice(0,10);
       if (bci===ds) {
         let lane = laneEnd.findIndex(l=>l===null);
@@ -1128,10 +1147,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         cell.appendChild(bar);
       }
 
-      // Caretaker: single block on move-in day only
-      bkgs.filter(b=>isCaretaker(b)&&b.check_in===ds).forEach(()=>{
-        const ev=document.createElement('div'); ev.className='cal-event ev-caretaker'; ev.textContent='🏡 Tino'; cell.appendChild(ev);
-      });
+      // Caretaker (Tino) — hidden from calendar, he is a permanent resident not a guest
 
       // Cleaning — always show property tag
       doms.filter(d2=>d2.date===ds).forEach(d2=>{
