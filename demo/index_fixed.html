@@ -817,12 +817,15 @@ function doLogin() {
   errEl.style.display='none'; currentUser=user;
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
+  setTimeout(() => buildMobileNav(), 50);
   document.getElementById('user-avatar').textContent=user.initials;
   document.getElementById('user-name').textContent=user.name;
   document.getElementById('user-role').textContent=user.role;
   buildNav(); buildMobileNav(); loadData();
 }
-function doLogout() { currentUser=null; document.getElementById('auth-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
+function doLogout() { currentUser=null; // Force mobile nav check on resize (handles orientation changes on iPhone)
+window.addEventListener('resize', () => { if (currentUser) buildMobileNav(); });
+document.getElementById('auth-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
 
 // ── NAV ───────────────────────────────────────────────────────
 const NAV = [
@@ -884,7 +887,21 @@ async function loadData() {
       db.from('kb_articles').select('*').order('created_at',{ascending:false}),
     ]);
     let connected = false;
-    if (bRes.data && bRes.data.length > 0) { bookings = bRes.data.map(nb); connected = true; toast('Live data loaded ✓','success'); }
+    if (bRes.data && bRes.data.length > 0) {
+        let raw = bRes.data.map(nb);
+        // Deduplicate: if same property + overlapping dates, keep the one with better data
+        const seen = {};
+        raw = raw.filter(b => {
+          if (b.status === 'cancelled') return true; // keep all cancelled
+          const key = b.property_id + '|' + b.check_in + '|' + b.check_out;
+          if (seen[key]) return false; // exact duplicate dates - skip
+          seen[key] = true;
+          return true;
+        });
+        bookings = raw;
+        connected = true;
+        toast('Live data loaded ✓', 'success');
+      }
     if (tRes.data && tRes.data.length > 0) tasks = tRes.data.map(nt);
     if (dRes.data && dRes.data.length > 0) domestics = dRes.data.map(nd);
     if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
@@ -1625,6 +1642,20 @@ const MOB_NAV=[
   {id:'tasks',icon:'✅',label:'Tasks'},
 ];
 function buildMobileNav() {
+  // Force mobile nav visible on small screens via JS (bypasses Safari CSS media query issues)
+  const nav = document.getElementById('mobile-nav');
+  const btn = document.getElementById('mob-menu-btn');
+  if (nav) {
+    if (window.innerWidth <= 768) {
+      nav.style.display = 'block';
+      nav.style.visibility = 'visible';
+      nav.style.opacity = '1';
+      if (btn) { btn.style.display = 'flex'; btn.style.visibility = 'visible'; }
+    } else {
+      nav.style.display = 'none';
+      if (btn) btn.style.display = 'none';
+    }
+  }
   const el = document.getElementById('mob-nav-inner'); if (!el) return;
   el.innerHTML = MOB_NAV.map(n=>
     `<div class="mob-nav-item ${currentTab===n.id?'active':''}" onclick="switchTab('${n.id}')">
@@ -1917,6 +1948,8 @@ async function renderFinance() {
 
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
+// Force mobile nav check on resize (handles orientation changes on iPhone)
+window.addEventListener('resize', () => { if (currentUser) buildMobileNav(); });
 document.getElementById('auth-screen').style.display='flex';
 </script>
 
