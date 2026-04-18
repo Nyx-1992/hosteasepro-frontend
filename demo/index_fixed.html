@@ -190,7 +190,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .ev-manual{background:#c17f3c;color:#fff}
 .ev-owner{background:#64748b;color:#fff}
 .ev-caretaker{background:#94a3b8;color:#fff}
-.ev-cleaning{background:#06b6d4;color:#fff}
+.ev-cleaning{background:#06b6d4;color:#fff}.ev-inspection{background:#8b5cf6;color:#fff}
 .ev-birthday{background:#d946ef;color:#fff}
 /* Toggle buttons */
 .toggle-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
@@ -449,14 +449,18 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
       <div class="tab-pane" id="tab-tasks">
         <!-- Sub-tab bar -->
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
-          <div style="display:flex;gap:2px;background:var(--sand);border-radius:10px;padding:3px">
+          <div style="display:flex;gap:2px;background:var(--sand);border-radius:10px;padding:3px;flex-wrap:wrap">
             <button id="subtab-guest-btn" onclick="setTaskSubTab('guest')"
-              style="padding:6px 18px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s">
+              style="padding:6px 14px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s">
               🏠 Guest Management
             </button>
             <button id="subtab-project-btn" onclick="setTaskSubTab('project')"
-              style="padding:6px 18px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
+              style="padding:6px 14px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
               📋 Project Management
+            </button>
+            <button id="subtab-inspection-btn" onclick="setTaskSubTab('inspection')"
+              style="padding:6px 14px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
+              🔍 Monthly Inspection
             </button>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
@@ -473,6 +477,61 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
         <!-- Project Management sub-tab (Kanban) -->
         <div id="subtab-project" style="display:none">
           <div id="kanban-board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px"></div>
+        </div>
+
+        <!-- Monthly Inspection sub-tab -->
+        <div id="subtab-inspection" style="display:none">
+          <!-- New inspection form -->
+          <div class="card" style="margin-bottom:18px">
+            <div class="card-title">🔍 Log New Inspection</div>
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Property *</label>
+                <select id="insp-prop">
+                  <option value="speranta">Speranța Flat</option>
+                  <option value="tvhouse">TV House</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label>Inspection Date *</label>
+                <input type="date" id="insp-date"/>
+              </div>
+              <div class="form-field">
+                <label>Inspector</label>
+                <input id="insp-inspector" value="Nina" placeholder="Name"/>
+              </div>
+              <div class="form-field">
+                <label>Overall Condition</label>
+                <select id="insp-condition">
+                  <option value="excellent">✅ Excellent</option>
+                  <option value="good">👍 Good</option>
+                  <option value="fair">⚠️ Fair — minor issues</option>
+                  <option value="poor">🔴 Poor — action needed</option>
+                </select>
+              </div>
+            </div>
+            <!-- Checklist -->
+            <div style="margin:16px 0 12px;font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Inspection Checklist</div>
+            <div id="insp-checklist-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin-bottom:14px"></div>
+            <!-- Notes -->
+            <div class="form-field" style="margin-bottom:14px">
+              <label>Notes & Issues Found</label>
+              <textarea id="insp-notes" rows="3" placeholder="Describe any issues, maintenance needed, or observations…"></textarea>
+            </div>
+            <!-- Photo upload -->
+            <div class="form-field" style="margin-bottom:16px">
+              <label>Photos (optional)</label>
+              <input type="file" id="insp-photos" multiple accept="image/*" onchange="handleInspPhotos(this)"
+                style="padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:var(--surface-2);cursor:pointer;font-size:.82rem"/>
+              <div id="insp-photo-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary" onclick="saveInspection()">Save Inspection Report</button>
+              <button class="btn btn-ghost btn-sm" onclick="clearInspectionForm()">Clear</button>
+            </div>
+          </div>
+          <!-- Past inspections -->
+          <div id="inspection-history"></div>
         </div>
       </div>
 
@@ -647,6 +706,19 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
         </div>
         <!-- Cleaner earnings -->
         <div class="card mb-6"><div class="card-title">🧹 Domestic Staff Earnings</div><div id="cleaner-earnings"><div class="text-muted">Loading…</div></div></div>
+
+        <!-- ── Property Inspection Reports ── -->
+        <div class="card mb-6">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+            <div class="card-title" style="margin:0">🔍 Property Inspection Reports</div>
+            <div style="display:flex;gap:6px">
+              <button class="btn btn-sm btn-ghost" id="insp-filter-all" onclick="setInspFilter('all',this)" style="background:var(--ocean);color:#fff">All</button>
+              <button class="btn btn-sm btn-ghost" id="insp-filter-speranta" onclick="setInspFilter('speranta',this)">Speranța</button>
+              <button class="btn btn-sm btn-ghost" id="insp-filter-tvhouse" onclick="setInspFilter('tvhouse',this)">TV House</button>
+            </div>
+          </div>
+          <div id="report-inspection-list"></div>
+        </div>
         <div id="report-sp-occ" style="display:none"></div>
         <div class="card">
           <div class="card-title">📈 Seasonal Guide</div>
@@ -1033,6 +1105,242 @@ function switchProperty(val) {
   else { tag.style.display='inline-block'; tag.textContent='📍 '+PROPS[val].name; }
   renderTab(currentTab);
 }
+
+// ── INSPECTION DATA ───────────────────────────────────────────
+const INSP_CHECKLIST = [
+  {key:'entrance',    label:'Entrance & front door'},
+  {key:'living',      label:'Living room'},
+  {key:'kitchen',     label:'Kitchen & appliances'},
+  {key:'bathroom',    label:'Bathroom(s)'},
+  {key:'bedrooms',    label:'Bedroom(s)'},
+  {key:'balcony',     label:'Balcony / outdoor area'},
+  {key:'geyser',      label:'Geyser & hot water'},
+  {key:'electrical',  label:'Lights & plugs'},
+  {key:'wifi',        label:'WiFi & TV working'},
+  {key:'inventory',   label:'Inventory complete'},
+  {key:'maintenance', label:'No maintenance issues'},
+  {key:'cleanliness', label:'General cleanliness'},
+];
+
+const INSP_CONDITION_LABELS = {
+  excellent: {text:'Excellent', color:'#16a34a', bg:'#dcfce7'},
+  good:      {text:'Good',      color:'#2563eb', bg:'#dbeafe'},
+  fair:      {text:'Fair',      color:'#d97706', bg:'#fef3c7'},
+  poor:      {text:'Action needed', color:'#dc2626', bg:'#fee2e2'},
+};
+
+let inspections = JSON.parse(localStorage.getItem('hep_inspections')||'[]');
+let _inspFilter = 'all';
+let _inspPhotoData = []; // base64 photos for current form
+
+function renderInspectionChecklist() {
+  const el = document.getElementById('insp-checklist-grid');
+  if (!el) return;
+  el.innerHTML = INSP_CHECKLIST.map(item => `
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface-2);border-radius:8px;cursor:pointer;font-size:.82rem;border:1px solid var(--border)">
+      <input type="checkbox" id="insp-chk-${item.key}" style="width:16px;height:16px;accent-color:var(--ocean);flex-shrink:0"/>
+      ${item.label}
+    </label>`).join('');
+}
+
+function handleInspPhotos(input) {
+  _inspPhotoData = [];
+  const preview = document.getElementById('insp-photo-preview');
+  if (!preview) return;
+  preview.innerHTML = '';
+  const files = Array.from(input.files||[]).slice(0,8);
+  files.forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      _inspPhotoData[i] = e.target.result;
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer';
+      img.title = file.name;
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function saveInspection() {
+  const date = document.getElementById('insp-date').value;
+  const prop = document.getElementById('insp-prop').value;
+  if (!date || !prop) { toast('Please set property and date','error'); return; }
+
+  const checklist = {};
+  INSP_CHECKLIST.forEach(item => {
+    checklist[item.key] = document.getElementById('insp-chk-'+item.key)?.checked || false;
+  });
+  const passCount = Object.values(checklist).filter(Boolean).length;
+
+  const record = {
+    id:         'insp-' + Date.now(),
+    property_id: prop,
+    date,
+    inspector:  document.getElementById('insp-inspector').value || 'Nina',
+    condition:  document.getElementById('insp-condition').value || 'good',
+    checklist,
+    passCount,
+    totalCount: INSP_CHECKLIST.length,
+    notes:      document.getElementById('insp-notes').value || '',
+    photos:     _inspPhotoData.filter(Boolean),
+    created_at: new Date().toISOString(),
+  };
+
+  inspections.unshift(record);
+  localStorage.setItem('hep_inspections', JSON.stringify(inspections));
+  toast('Inspection report saved ✓','success');
+
+  // Add to calendar as a domestic event
+  const calEntry = {
+    id:          'insp-cal-'+Date.now(),
+    cleaner:     record.inspector,
+    property_id: prop,
+    date,
+    time:        '10:00',
+    type:        'inspection',
+    status:      'completed',
+    notes:       'Monthly inspection — '+INSP_CONDITION_LABELS[record.condition]?.text,
+    linked_booking_id: null,
+    checklist:   {},
+    amount_paid: 0,
+  };
+  domestics.unshift(nd(calEntry));
+
+  clearInspectionForm();
+  renderInspectionHistory();
+  renderReportInspections();
+  renderCalendar();
+}
+
+function clearInspectionForm() {
+  document.getElementById('insp-date').value = '';
+  document.getElementById('insp-notes').value = '';
+  document.getElementById('insp-condition').value = 'good';
+  document.getElementById('insp-inspector').value = 'Nina';
+  INSP_CHECKLIST.forEach(item => {
+    const el = document.getElementById('insp-chk-'+item.key);
+    if (el) el.checked = false;
+  });
+  _inspPhotoData = [];
+  const preview = document.getElementById('insp-photo-preview');
+  if (preview) preview.innerHTML = '';
+  document.getElementById('insp-photos').value = '';
+}
+
+function renderInspectionHistory() {
+  const el = document.getElementById('inspection-history');
+  if (!el) return;
+  if (!inspections.length) {
+    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:24px;font-size:.85rem">No inspection reports yet. Add your first one above.</div>';
+    return;
+  }
+  el.innerHTML = '<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">Past Reports</div>' +
+    inspections.map(r => renderInspectionCard(r, true)).join('');
+}
+
+function renderInspectionCard(r, compact) {
+  const cond = INSP_CONDITION_LABELS[r.condition] || INSP_CONDITION_LABELS.good;
+  const passCount = r.passCount ?? Object.values(r.checklist||{}).filter(Boolean).length;
+  const total = r.totalCount ?? INSP_CHECKLIST.length;
+  const pct = total ? Math.round(passCount/total*100) : 0;
+  const barCol = pct>=90?'#16a34a':pct>=70?'#f59e0b':'#dc2626';
+
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;border-left:4px solid ${cond.color}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <div>
+        <div style="font-weight:700;font-size:.92rem;color:var(--ink)">${propName(r.property_id)} — ${fmtDate(r.date)}</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:2px">Inspector: ${r.inspector} · ${new Date(r.created_at).toLocaleDateString('en-ZA')}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="background:${cond.bg};color:${cond.color};font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:20px">${cond.text}</span>
+        <button onclick="deleteInspection('${r.id}')"
+          style="background:var(--red-light);color:var(--red);border:none;border-radius:6px;padding:3px 8px;font-size:.72rem;cursor:pointer">✕</button>
+      </div>
+    </div>
+    <!-- Score bar -->
+    <div style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;font-size:.74rem;color:var(--muted);margin-bottom:4px">
+        <span>Checklist score</span><span style="font-weight:700;color:${barCol}">${passCount}/${total} passed</span>
+      </div>
+      <div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden">
+        <div style="height:6px;background:${barCol};border-radius:3px;width:${pct}%;transition:width .4s"></div>
+      </div>
+    </div>
+    <!-- Failed items -->
+    ${Object.entries(r.checklist||{}).filter(([k,v])=>!v).length > 0 ? `
+    <div style="margin-bottom:10px">
+      <div style="font-size:.72rem;font-weight:600;color:var(--red);margin-bottom:4px">Issues flagged:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${Object.entries(r.checklist||{}).filter(([k,v])=>!v).map(([k]) => {
+          const item = INSP_CHECKLIST.find(i=>i.key===k);
+          return `<span style="background:var(--red-light);color:var(--red);font-size:.72rem;padding:2px 8px;border-radius:6px">${item?.label||k}</span>`;
+        }).join('')}
+      </div>
+    </div>` : ''}
+    ${r.notes ? `<div style="font-size:.8rem;color:var(--muted);background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-style:italic">"${r.notes}"</div>` : ''}
+    ${r.photos?.length ? `
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${r.photos.map((p,i) => `<img src="${p}" onclick="openPhotoModal('${r.id}',${i})"
+        style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" title="Click to enlarge"/>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
+
+function openPhotoModal(inspId, photoIdx) {
+  const insp = inspections.find(r=>r.id===inspId);
+  if (!insp?.photos?.length) return;
+  document.getElementById('day-modal-title').textContent = propName(insp.property_id)+' — '+fmtDate(insp.date);
+  document.getElementById('day-modal-body').innerHTML = `
+    <div style="text-align:center">
+      <img src="${insp.photos[photoIdx]}" style="max-width:100%;border-radius:10px;margin-bottom:12px"/>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+        ${insp.photos.map((p,i)=>`<img src="${p}" onclick="this.parentElement.previousElementSibling.src='${p}'"
+          style="width:52px;height:52px;object-fit:cover;border-radius:6px;border:${i===photoIdx?'2px solid var(--ocean)':'1px solid var(--border)'};cursor:pointer"/>`).join('')}
+      </div>
+    </div>`;
+  openModal('day-modal');
+}
+
+function deleteInspection(id) {
+  if (!confirm('Delete this inspection report?')) return;
+  inspections = inspections.filter(r=>r.id!==id);
+  localStorage.setItem('hep_inspections', JSON.stringify(inspections));
+  toast('Report deleted','info');
+  renderInspectionHistory();
+  renderReportInspections();
+}
+
+function setInspFilter(filter, btn) {
+  _inspFilter = filter;
+  document.querySelectorAll('[id^=insp-filter-]').forEach(b => {
+    b.style.background = 'transparent'; b.style.color = 'var(--muted)';
+  });
+  if (btn) { btn.style.background = 'var(--ocean)'; btn.style.color = '#fff'; }
+  renderReportInspections();
+}
+
+function renderReportInspections() {
+  const el = document.getElementById('report-inspection-list');
+  if (!el) return;
+  const filtered = _inspFilter==='all' ? inspections : inspections.filter(r=>r.property_id===_inspFilter);
+  if (!filtered.length) {
+    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:24px;font-size:.85rem">No inspection reports yet. Go to Task Management → Monthly Inspection to add one.</div>';
+    return;
+  }
+  // Group by property
+  const byProp = {speranta: filtered.filter(r=>r.property_id==='speranta'), tvhouse: filtered.filter(r=>r.property_id==='tvhouse')};
+  let out = '';
+  ['speranta','tvhouse'].forEach(pid => {
+    const recs = byProp[pid];
+    if (!recs.length) return;
+    out += `<div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;margin-top:${out?'20px':'0'}">${propName(pid)}</div>`;
+    out += recs.map(r => renderInspectionCard(r, false)).join('');
+  });
+  el.innerHTML = out;
+}
+
 function renderTab(id) {
   if (id==='dashboard') renderDashboard();
   else if (id==='bookings')  renderBookings();
@@ -1043,7 +1351,7 @@ function renderTab(id) {
   else if (id==='knowledge') renderKB();
   else if (id==='team')      renderTeam();
   else if (id==='finance')   renderFinance();
-  else if (id==='reports')   renderReports();
+  else if (id==='reports')   { renderReports(); renderReportInspections(); }
 }
 
 function renderDomesticEarnings() {
@@ -1690,18 +1998,20 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const isOwner = isOwnerStay(b);
         const color = PLAT_COLORS[isOwner?'owner':b.platform]||'#c17f3c';
         const propTag = showProp ? '['+(b.property_id==='speranta'?'SP':'TV')+'] ' : '';
-        const isRealStart = b.check_in===ds;
+        const bCheckIn  = String(b.check_in  || b.check_in_date  || '').slice(0,10);
+        const bCheckOut = String(b.check_out || b.check_out_date || '').slice(0,10);
+        const isRealStart = bCheckIn===ds;
         const isWeekStart = dow===0;
-        // Safari-safe tomorrow calculation using string arithmetic (avoids UTC timezone issues)
+        // Safari-safe tomorrow calculation
         const [ty,tm,td] = ds.split('-').map(Number);
         const nextD = new Date(ty, tm-1, td+1);
         const tomorrow = nextD.getFullYear()+'-'+String(nextD.getMonth()+1).padStart(2,'0')+'-'+String(nextD.getDate()).padStart(2,'0');
-        const isRealEnd = b.check_out===tomorrow;
+        const isRealEnd = bCheckOut===tomorrow;
         const rl = isRealStart ? '4px':'0';
         const rr = isRealEnd   ? '4px':'0';
         const showLabel = isRealStart||isWeekStart;
         const icon = isRealStart ? '🛬 ' : isWeekStart ? '↳ ' : '';
-        const label = showLabel ? propTag+icon+(b.guest_name||b.platform) : ' ';
+        const label = showLabel ? propTag+icon+(b.display_name||b.guest_name||b.platform) : ' ';
         const bar = document.createElement('div');
         // Explicit inline styles for Safari compatibility — no CSS class width inheritance
         // Last visible cell = real checkout eve OR Saturday
@@ -1710,7 +2020,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         // Cleaning check
         const bHasClean = domestics.some(d =>
           d.property_id===b.property_id &&
-          Math.abs(new Date(d.date)-new Date(String(b.check_out||'').slice(0,10))) <= 2*86400000
+          Math.abs(new Date(d.date)-new Date(bCheckOut)) <= 2*86400000
         );
         // Bleed: extend bar 1px into the border of the NEXT cell to cover the gap line
         // Left bleed: when continuing from prev week/cell (not real start, not week start)
@@ -2339,19 +2649,26 @@ function renderTasks() {
 let _taskSubTab = 'guest';
 function setTaskSubTab(tab) {
   window._taskSubTab = tab;
-  document.getElementById('subtab-guest').style.display    = tab==='guest'   ? 'block' : 'none';
-  document.getElementById('subtab-project').style.display  = tab==='project' ? 'block' : 'none';
-  const gb = document.getElementById('subtab-guest-btn');
-  const pb = document.getElementById('subtab-project-btn');
-  if (gb && pb) {
-    gb.style.background = tab==='guest'   ? 'var(--ocean)' : 'transparent';
-    gb.style.color      = tab==='guest'   ? '#fff'         : 'var(--muted)';
-    pb.style.background = tab==='project' ? 'var(--ocean)' : 'transparent';
-    pb.style.color      = tab==='project' ? '#fff'         : 'var(--muted)';
-  }
+  document.getElementById('subtab-guest').style.display      = tab==='guest'      ? 'block' : 'none';
+  document.getElementById('subtab-project').style.display    = tab==='project'    ? 'block' : 'none';
+  document.getElementById('subtab-inspection').style.display = tab==='inspection' ? 'block' : 'none';
+  const btns = {
+    guest:      document.getElementById('subtab-guest-btn'),
+    project:    document.getElementById('subtab-project-btn'),
+    inspection: document.getElementById('subtab-inspection-btn'),
+  };
+  Object.entries(btns).forEach(([id, btn]) => {
+    if (!btn) return;
+    btn.style.background = tab===id ? 'var(--ocean)' : 'transparent';
+    btn.style.color      = tab===id ? '#fff'         : 'var(--muted)';
+  });
   const addBtn = document.getElementById('task-add-btn');
   if (addBtn) addBtn.textContent = tab==='project' ? '+ New Task' : '';
   document.getElementById('task-filters').innerHTML = '';
+  if (tab==='inspection') {
+    renderInspectionChecklist();
+    renderInspectionHistory();
+  }
   renderTasks();
 }
 
