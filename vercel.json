@@ -1,9 +1,6 @@
 {
-  "version": 2,
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "/demo/index_fixed.html"
-    }
+  "rewrites": [
+    { "source": "/", "destination": "/demo/index_fixed.html" },
+    { "source": "/app", "destination": "/demo/index_fixed.html" }
   ]
 }
