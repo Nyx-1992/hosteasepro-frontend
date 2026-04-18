@@ -169,7 +169,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-nav button:hover{background:var(--warm);border-color:var(--accent)}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border);border-top:1px solid var(--border)}
 .cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);background:var(--sand);letter-spacing:.05em}
-.cal-cell{min-height:88px;padding:4px 0 2px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:#fff;cursor:pointer;overflow:hidden;box-sizing:border-box;-webkit-box-sizing:border-box}
+.cal-cell{min-height:88px;padding:4px 0 2px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:#fff;cursor:pointer;overflow:visible;position:relative;box-sizing:border-box;-webkit-box-sizing:border-box}
 /* cal-bar: full width booking bar — explicit for Safari */
 .cal-bar{display:block;width:100%;box-sizing:border-box;-webkit-box-sizing:border-box;font-size:.63rem;font-weight:600;padding:2px 5px;margin-bottom:2px;height:18px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
 .cal-date{padding:0 5px}
@@ -478,15 +478,60 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
       <!-- MESSAGES -->
       <div class="tab-pane" id="tab-messages">
-        <div class="card">
-          <div style="background:var(--sand);border-radius:9px;padding:12px 14px;margin-bottom:14px;font-size:.83rem;line-height:1.6">
-            <strong>💬 Team Channel</strong> — messages are logged here for the team.<br>
-            <span style="color:var(--muted)">💡 <em>WhatsApp integration:</em> For now, use this for internal team notes. WhatsApp Business API integration is on the roadmap — it will let guests message directly into this platform. For now, copy important WhatsApp updates here so everything is in one place.</span>
+        <!-- Sub-tab bar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+          <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:10px;padding:3px">
+            <button id="msg-subtab-wa-btn" onclick="setMsgSubTab('wa')"
+              style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s">
+              💬 WhatsApp
+            </button>
+            <button id="msg-subtab-team-btn" onclick="setMsgSubTab('team')"
+              style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
+              👥 Team Chat
+            </button>
           </div>
-          <div class="chat-wrap" id="chat-messages"></div>
-          <div style="display:flex;gap:10px">
-            <input type="text" id="chat-input" placeholder="Message the team…" onkeydown="if(event.key==='Enter')sendMessage()" style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none"/>
-            <button class="btn btn-primary btn-sm" onclick="sendMessage()">Send</button>
+        </div>
+
+        <!-- WhatsApp sub-tab -->
+        <div id="msg-subtab-wa">
+          <!-- Open WhatsApp Web banner -->
+          <div style="background:linear-gradient(135deg,#25D366,#128C7E);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+            <div>
+              <div style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:4px">💬 WhatsApp Business</div>
+              <div style="font-size:.8rem;color:rgba(255,255,255,.8)">+27 79 977 9455 · S&N Apt Management</div>
+            </div>
+            <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer"
+              style="background:#fff;color:#128C7E;font-weight:700;font-size:.85rem;padding:10px 20px;border-radius:10px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:opacity .2s;white-space:nowrap"
+              onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+              Open WhatsApp Web ↗
+            </a>
+          </div>
+
+          <!-- Guest contact cards -->
+          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">
+            Quick contact — upcoming & recent guests
+          </div>
+          <div id="wa-guest-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
+
+          <!-- Template messages -->
+          <div style="margin-top:20px">
+            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">
+              Message templates
+            </div>
+            <div id="wa-templates" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
+          </div>
+        </div>
+
+        <!-- Team chat sub-tab -->
+        <div id="msg-subtab-team" style="display:none">
+          <div class="card">
+            <div class="chat-wrap" id="chat-messages"></div>
+            <div style="display:flex;gap:10px;margin-top:12px">
+              <input type="text" id="chat-input" placeholder="Message the team…"
+                onkeydown="if(event.key==='Enter')sendMessage()"
+                style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:var(--input-bg)"/>
+              <button class="btn btn-primary btn-sm" onclick="sendMessage()">Send</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1659,31 +1704,32 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const label = showLabel ? propTag+icon+(b.guest_name||b.platform) : ' ';
         const bar = document.createElement('div');
         // Explicit inline styles for Safari compatibility — no CSS class width inheritance
-        // Is this the last visible cell for this booking? (real end OR end of week SAT)
-        const isWeekEnd   = dow===6;
-        const isLastCell  = isRealEnd || isWeekEnd;
-        // Is cleaning booked for this booking?
-        const bHasClean   = domestics.some(d =>
+        // Last visible cell = real checkout eve OR Saturday
+        const isWeekEnd  = dow===6;
+        const isLastCell = isRealEnd || isWeekEnd;
+        // Cleaning check
+        const bHasClean = domestics.some(d =>
           d.property_id===b.property_id &&
           Math.abs(new Date(d.date)-new Date(String(b.check_out||'').slice(0,10))) <= 2*86400000
         );
-        // Build suffix for last cell
-        const cleanSuffix = isLastCell ? (bHasClean ? ' 🧹' : ' ·') : '';
-        // Bleed bar across cell borders: extend 1px left/right, pull back margin
-        const bleedLeft  = (!isRealStart && !isWeekStart) ? '-1px' : '0px';
-        const bleedRight = (!isRealEnd   && !isWeekEnd)   ? '-1px' : '0px';
+        // Bleed: extend bar 1px into the border of the NEXT cell to cover the gap line
+        // Left bleed: when continuing from prev week/cell (not real start, not week start)
+        // Right bleed: when continuing into next cell (not real end, not week end)
+        const bleedL = (!isRealStart && !isWeekStart) ? 1 : 0; // px to extend left
+        const bleedR = (!isRealEnd   && !isWeekEnd)   ? 1 : 0; // px to extend right
         bar.style.cssText = [
           'display:block',
           'position:relative',
-          'width:calc(100% - '+bleedLeft+' - '+bleedRight+')',
-          'margin-left:'+bleedLeft,
-          'margin-right:'+bleedRight,
+          'z-index:2',
+          // Extend width by bleed amounts, pull left by bleedL
+          'width:calc(100% + '+bleedL+'px + '+bleedR+'px)',
+          'margin-left:-'+bleedL+'px',
           'box-sizing:border-box',
           'background:'+color,
-          'color:#fff',
+          'color:'+(color==='#FFC300'?'#1a1a2e':'#fff'),
           'font-size:.63rem',
           'font-weight:600',
-          'padding:2px 5px',
+          'padding:2px 6px',
           'margin-bottom:2px',
           'height:18px',
           'line-height:14px',
@@ -1692,15 +1738,25 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
           'text-overflow:ellipsis',
           'border-radius:'+rl+' '+rr+' '+rr+' '+rl,
         ].join(';');
-        // Add clean symbol at the end of the bar
-        if (isLastCell && cleanSuffix) {
-          const suffix = document.createElement('span');
-          suffix.style.cssText = 'position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:.65rem;opacity:.9';
-          suffix.textContent = bHasClean ? '🧹' : '';
-          suffix.title = bHasClean ? 'Cleaning scheduled ✓' : 'No cleaning scheduled';
-          bar.style.overflow = 'visible';
-          bar.style.position = 'relative';
-          bar.appendChild(suffix);
+        // Append broom symbol as a separate absolutely positioned child on the last cell
+        if (isLastCell) {
+          const broomWrap = document.createElement('div');
+          broomWrap.style.cssText = [
+            'position:absolute',
+            'right:2px',
+            'top:0',
+            'height:18px',
+            'display:flex',
+            'align-items:center',
+            'z-index:3',
+            'pointer-events:none',
+          ].join(';');
+          const broom = document.createElement('span');
+          broom.style.cssText = 'font-size:.6rem;line-height:1;opacity:'+(bHasClean?'1':'.3')+';filter:'+(bHasClean?'none':'grayscale(1)');
+          broom.textContent = '🧹';
+          broom.title = bHasClean ? '✅ Cleaning scheduled' : '⚠ No cleaning booked';
+          broomWrap.appendChild(broom);
+          bar.appendChild(broomWrap);
         }
         bar.title = (b.guest_name||b.platform)+' — '+propName(b.property_id)+' | '+fmtDate(b.check_in)+' → '+fmtDate(b.check_out);
         bar.textContent = label;
@@ -2512,8 +2568,184 @@ async function saveTask() {
 }
 
 // ── MESSAGES ─────────────────────────────────────────────────
-function renderMessages() {
-  document.getElementById('chat-messages').innerHTML = messages.map(m=>{
+let _msgSubTab = 'wa';
+
+function setMsgSubTab(tab) {
+  _msgSubTab = tab;
+  document.getElementById('msg-subtab-wa').style.display   = tab==='wa'   ? 'block' : 'none';
+  document.getElementById('msg-subtab-team').style.display = tab==='team' ? 'block' : 'none';
+  const wb = document.getElementById('msg-subtab-wa-btn');
+  const tb = document.getElementById('msg-subtab-team-btn');
+  if (wb) { wb.style.background = tab==='wa'   ? 'var(--ocean)' : 'transparent'; wb.style.color = tab==='wa'   ? '#fff' : 'var(--muted)'; }
+  if (tb) { tb.style.background = tab==='team' ? 'var(--ocean)' : 'transparent'; tb.style.color = tab==='team' ? '#fff' : 'var(--muted)'; }
+  if (tab==='wa') renderWALauncher();
+  if (tab==='team') renderTeamChat();
+}
+
+function renderWALauncher() {
+  const today = new Date().toISOString().slice(0,10);
+  const waNum = '27799779455';
+
+  // ── Guest cards ──
+  const window14 = bookings.filter(b => {
+    if (b.status==='cancelled' || isCaretaker(b) || isOwnerStay(b)) return false;
+    const dIn  = Math.round((new Date(b.check_in) -new Date())/86400000);
+    const dOut = Math.round((new Date()-new Date(b.check_out))/86400000);
+    return dIn <= 14 && dOut <= 7;
+  }).sort((a,b) => a.check_in.localeCompare(b.check_in));
+
+  const cardsEl = document.getElementById('wa-guest-cards');
+  if (!cardsEl) return;
+
+  cardsEl.innerHTML = window14.length ? window14.map(b => {
+    const isNow  = b.check_in<=today && b.check_out>today;
+    const isPast = b.check_out<=today;
+    const dIn    = Math.round((new Date(b.check_in)-new Date())/86400000);
+    const col    = PLAT_COLORS[b.platform]||'#c17f3c';
+
+    // Pre-fill message templates
+    const checkinMsg = encodeURIComponent(
+      `Hi ${(b.guest_name||'').split(' ')[0]||'there'} 👋
+
+Welcome to ${propName(b.property_id)}! Here are your check-in details:
+
+🏠 Address: ${b.property_id==='speranta'?'35 Athens Road, Blouberg':'110 Athens Road, Tableview'}
+🕒 Check-in: from 15:00
+🔑 Access code: [CODE]
+📶 WiFi: [NETWORK] / [PASSWORD]
+
+Don't hesitate to message us if you need anything. Enjoy your stay! 🌊`
+    );
+    const followupMsg = encodeURIComponent(
+      `Hi ${(b.guest_name||'').split(' ')[0]||'there'} 😊
+
+We hope you enjoyed your stay at ${propName(b.property_id)}! We'd love to have you back.
+
+🔗 Book directly next time and save: https://nestora-homepage-yb2q.vercel.app
+🎁 Use code RETURN10 for a discount on your next booking.
+
+Would love to hear your feedback! ⭐`
+    );
+
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;border-left:3px solid ${col}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px">
+        <div>
+          <div style="font-weight:700;font-size:.88rem;color:var(--ink)">${b.display_name||b.guest_name||'Guest'}</div>
+          <div style="font-size:.73rem;color:var(--muted);margin-top:2px">
+            ${propName(b.property_id)} · ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+          <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform}</span>
+          ${isNow?'<span style="background:#dbeafe;color:#1d4ed8;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:6px">Staying</span>':isPast?'<span style="background:var(--surface-2);color:var(--muted);font-size:.62rem;padding:2px 6px;border-radius:6px">Checked out</span>':`<span style="background:#fef9c3;color:#92400e;font-size:.62rem;font-weight:600;padding:2px 6px;border-radius:6px">In ${dIn}d</span>`}
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <a href="https://wa.me/${waNum}?text=${checkinMsg}" target="_blank" rel="noopener"
+          style="display:inline-flex;align-items:center;gap:4px;background:#25D366;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;text-decoration:none">
+          💬 Check-in msg
+        </a>
+        <a href="https://wa.me/${waNum}?text=${followupMsg}" target="_blank" rel="noopener"
+          style="display:inline-flex;align-items:center;gap:4px;background:#128C7E;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;text-decoration:none">
+          📩 Follow-up
+        </a>
+        <a href="https://web.whatsapp.com" target="_blank" rel="noopener"
+          style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);color:var(--ink);font-size:.74rem;padding:5px 10px;border-radius:7px;text-decoration:none;border:1px solid var(--border)">
+          Open chat ↗
+        </a>
+      </div>
+    </div>`;
+  }).join('') : '<div style="color:var(--muted);font-size:.84rem;padding:16px 0">No active guests in the next 14 days.</div>';
+
+  // ── Templates ──
+  const templatesEl = document.getElementById('wa-templates');
+  if (!templatesEl) return;
+
+  const TEMPLATES = [
+    {
+      icon:'✅',
+      label:'Booking confirmed',
+      msg:`Hi [NAME] 👋
+
+Great news — your booking at [PROPERTY] is confirmed!
+
+📅 Check-in: [DATE] from 15:00
+📅 Check-out: [DATE] by 10:00
+
+We'll send your full check-in details 24h before arrival. Any questions, just reply here!
+
+S&N Apt Management 🐚`
+    },
+    {
+      icon:'🏦',
+      label:'Payment details',
+      msg:`Hi [NAME] 👋
+
+Here are our banking details for your booking:
+
+🏦 S&N Apt Management
+Nedbank Cheque Account
+Branch: 198765
+Account: 1292867345
+Reference: [REF]
+
+Amount due: R[AMOUNT]
+
+Please send proof of payment once done. Thank you!`
+    },
+    {
+      icon:'🔑',
+      label:'Check-in instructions',
+      msg:`Hi [NAME]! 🏠
+
+Here are your check-in details:
+
+Address: [ADDRESS]
+Check-in: from 15:00
+Access code: [CODE]
+WiFi: [NETWORK] / [PASSWORD]
+
+Parking: [PARKING INFO]
+
+Enjoy your stay! We're here if you need anything 🌊`
+    },
+    {
+      icon:'⭐',
+      label:'Review request',
+      msg:`Hi [NAME] 😊
+
+Hope you had a wonderful stay! We'd really appreciate a review — it helps us a lot.
+
+⭐ Airbnb: [LINK]
+⭐ Booking.com: [LINK]
+
+And remember, you can book directly next time at nestora-homepage-yb2q.vercel.app for our best rate! 🎁`
+    },
+  ];
+
+  templatesEl.innerHTML = TEMPLATES.map(t => {
+    const encoded = encodeURIComponent(t.msg);
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px">
+      <div style="font-weight:700;font-size:.85rem;margin-bottom:6px">${t.icon} ${t.label}</div>
+      <div style="font-size:.76rem;color:var(--muted);line-height:1.5;margin-bottom:10px;white-space:pre-wrap;max-height:80px;overflow:hidden;text-overflow:ellipsis">${t.msg.slice(0,120)}…</div>
+      <div style="display:flex;gap:6px">
+        <a href="https://wa.me/${waNum}?text=${encoded}" target="_blank" rel="noopener"
+          style="display:inline-flex;align-items:center;gap:4px;background:#25D366;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;text-decoration:none">
+          Send via WhatsApp
+        </a>
+        <button onclick="navigator.clipboard.writeText(${JSON.stringify(t.msg)}).then(()=>toast('Copied!','success'))"
+          style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:.74rem;cursor:pointer;color:var(--ink)">
+          📋 Copy
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTeamChat() {
+  const el = document.getElementById('chat-messages');
+  if (!el) return;
+  el.innerHTML = messages.map(m=>{
     const isMe=m.from===currentUser.name;
     const initials=m.from.split(' ').map(n=>n[0]).join('').slice(0,2);
     const color=m.role==='admin'?'var(--accent)':'var(--green2)';
@@ -2525,7 +2757,12 @@ function renderMessages() {
       </div>
     </div>`;
   }).join('');
-  const wrap=document.getElementById('chat-messages'); wrap.scrollTop=wrap.scrollHeight;
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderMessages() {
+  if (_msgSubTab==='wa') renderWALauncher();
+  else renderTeamChat();
 }
 function sendMessage() {
   const input=document.getElementById('chat-input'); const text=input.value.trim(); if(!text)return;
