@@ -219,7 +219,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .divider{height:1px;background:var(--border);margin:14px 0}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
 /* Mobile bottom nav — always defined */
-.mobile-nav{position:fixed;bottom:0;left:0;right:0;background:var(--ink);z-index:9999;padding:8px 0 12px;border-top:1px solid rgba(255,255,255,.12);display:block;box-shadow:0 -2px 20px rgba(0,0,0,.25)}
+.mobile-nav{position:fixed;bottom:0;left:0;right:0;background:var(--ink);z-index:9999;padding:8px 0 12px;border-top:1px solid rgba(255,255,255,.12);display:block;box-shadow:0 -2px 20px rgba(0,0,0,.25);-webkit-transform:translateZ(0);transform:translateZ(0)}
 .mobile-nav-inner{display:flex;justify-content:space-around;align-items:center}
 .mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 10px;border-radius:10px;min-width:54px;-webkit-tap-highlight-color:transparent}
 .mob-nav-icon{font-size:1.2rem;line-height:1.3}
@@ -232,7 +232,6 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 @media(min-width:769px){
   .mobile-nav{display:none!important}
   #mob-menu-btn{display:none!important}
-  .mob-drawer,.mob-drawer-overlay{display:none!important}
 }
 @media(max-width:768px){
   .sidebar{display:none!important}
@@ -487,16 +486,27 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   </div>
 
   <div class="tab-pane" id="tab-reports">
-    <div class="stat-grid" id="report-stats"></div>
-    <div class="card mb-6">
-      <div class="card-title">💡 Smart Pricing Insight</div>
-      <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
-      <div class="divider"></div>
-      <div class="text-muted">Suggested rates: 🌞 Peak Dec–Mar: R1,100–1,400/night · 🍂 Shoulder: R800–950/night · ❄️ Low Jun–Sep: R650–750/night</div>
+    <div style="background:var(--sand);border-radius:9px;padding:10px 14px;margin-bottom:16px;font-size:.8rem;color:var(--muted);line-height:1.5">
+      ⚠️ Revenue shows R0 until booking payouts are entered. Use the Finance tab for actual P&L from bank statements. <strong>Speranta</strong> income is yours. <strong>TV House</strong> rental income is credited to owners — only the R6,000/month management fee is S&N income.
     </div>
+    <div class="stat-grid" id="report-stats"></div>
     <div class="grid-2 mb-6">
-      <div class="card"><div class="card-title">📊 Monthly Revenue</div><div class="bar-chart" id="revenue-chart"></div></div>
-      <div class="card"><div class="card-title">🌐 Bookings by Platform</div><div id="platform-breakdown"></div></div>
+      <div class="card">
+        <div class="card-title">🏠 Speranta Flat — Occupancy</div>
+        <div id="report-sp-occ"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🏠 TV House — Occupancy</div>
+        <div id="report-tv-occ"></div>
+      </div>
+    </div>
+    <div class="card mb-6">
+      <div class="card-title">🌐 Bookings by Platform & Property</div>
+      <div id="platform-breakdown"></div>
+    </div>
+    <div class="card mb-6">
+      <div class="card-title">💡 Pricing Insight</div>
+      <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
     </div>
     <div class="card mb-6"><div class="card-title">🧹 Domestic Staff Earnings</div><div id="cleaner-earnings"><div class="text-muted">Loading…</div></div></div>
     <div class="card">
@@ -824,7 +834,10 @@ function doLogin() {
   buildNav(); buildMobileNav(); loadData();
 }
 function doLogout() { currentUser=null; // Force mobile nav check on resize (handles orientation changes on iPhone)
-window.addEventListener('resize', () => { if (currentUser) buildMobileNav(); });
+window.addEventListener('resize', () => { buildMobileNav(); });
+// Run on load too - catches Safari's initial render
+window.addEventListener('load', () => { setTimeout(buildMobileNav, 100); setTimeout(buildMobileNav, 500); });
+document.addEventListener('DOMContentLoaded', () => { setTimeout(buildMobileNav, 50); });
 document.getElementById('auth-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
 
 // ── NAV ───────────────────────────────────────────────────────
@@ -1497,34 +1510,109 @@ async function saveKB() {
 
 // ── REPORTS ───────────────────────────────────────────────────
 async function renderReports() {
-  const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
-  const active = fb.filter(b=>b.status!=='cancelled');
-  const total  = active.reduce((s,b)=>s+(b.revenue||0),0);
-  const nights = active.reduce((s,b)=>s+(b.nights||0),0);
-  const avg    = nights ? Math.round(total/nights) : 0;
-  const occ    = Math.min(99, Math.round(nights/(currentProp==='all'?60:30)*100));
+  const fmt = n => 'R' + Math.round(n).toLocaleString('en-ZA');
+  const today = new Date().toISOString().slice(0,10);
+  const allActive = bookings.filter(b => b.status !== 'cancelled' && !isCaretaker(b));
+  const fb = currentProp === 'all' ? allActive : allActive.filter(b => b.property_id === currentProp);
+
+  // ── Property stats ──
+  const propStats = (pid) => {
+    const pb = allActive.filter(b => b.property_id === pid);
+    const nights = pb.reduce((s,b) => s+(b.nights||0), 0);
+    const past = pb.filter(b => b.check_out < today);
+    const pastNights = past.reduce((s,b) => s+(b.nights||0), 0);
+    // Occupancy: nights booked / days since first booking
+    const firstDate = pb.length ? pb.reduce((min,b) => b.check_in < min ? b.check_in : min, pb[0].check_in) : today;
+    const totalDays = Math.max(1, Math.round((new Date(today) - new Date(firstDate)) / 86400000));
+    const occ = Math.min(99, Math.round(pastNights / totalDays * 100));
+    const rev = pb.reduce((s,b) => s+(b.revenue||0), 0);
+    const avgNight = pastNights ? Math.round(rev / pastNights) : 0;
+    return { bookings: pb.length, nights, pastNights, occ, rev, avgNight, past: past.length };
+  };
+  const sp = propStats('speranta');
+  const tv = propStats('tvhouse');
+  const total = fb.reduce((s,b) => s+(b.revenue||0), 0);
+
+  // ── Stat cards ──
   document.getElementById('report-stats').innerHTML =
-    statCard('Total Revenue','R'+total.toLocaleString(),'all bookings','var(--accent)')+
-    statCard('Total Bookings',active.length,'across all platforms','var(--blue)')+
-    statCard('Avg Nightly Rate','R'+avg.toLocaleString(),'per night','var(--green2)')+
-    statCard('Occupancy Rate',occ+'%','this period','#7c3aed');
-  const m=new Date().getMonth();
-  document.getElementById('pricing-insight').textContent=
-    [5,6,7].includes(m)?'❄️ Low season (Cape Town winter). Consider 15-20% discounts. Target German and Dutch markets.':
-    [11,0,1,2].includes(m)?'🌞 Peak summer! Rates can be 30-40% higher. Minimum 3-night stay recommended.':
-    '🍂 Shoulder season. Good occupancy expected. Competitive pricing will outperform.';
-  const monthly=[12400,18200,21500,14700,8600,5200,9800,11300,19600,22100,16800,24300];
-  const maxR=Math.max(...monthly);
-  document.getElementById('revenue-chart').innerHTML=monthly.map((v,i)=>
-    `<div class="bar-col"><div class="bar-val">R${Math.round(v/1000)}k</div><div class="bar" style="height:${Math.round(v/maxR*120)}px"></div><div class="bar-label">${M_SHORT[i]}</div></div>`).join('');
-  const pColors={airbnb:'#ff5a5f',booking:'#1d4ed8',lekkeslaap:'#2d6a4f',fewo:'#7c3aed',manual:'#c17f3c'};
-  document.getElementById('platform-breakdown').innerHTML=['airbnb','booking','lekkeslaap','fewo','manual'].map(p=>{
-    const pb=active.filter(b=>b.platform===p); if(!pb.length)return'';
-    return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;align-items:center;gap:9px"><div style="width:11px;height:11px;border-radius:2px;background:${pColors[p]}"></div><span style="font-weight:600;text-transform:capitalize">${p}</span></div>
-      <div style="text-align:right"><div style="font-weight:700">R${pb.reduce((s,b)=>s+(b.revenue||0),0).toLocaleString()}</div><div style="font-size:.73rem;color:var(--muted)">${pb.length} booking${pb.length!==1?'s':''}</div></div>
-    </div>`;
-  }).join('');
+    sCard('Speranta Bookings', sp.bookings, sp.nights+' nights total', 'var(--accent)') +
+    sCard('TV House Bookings', tv.bookings, tv.nights+' nights total', 'var(--blue)') +
+    sCard('Speranta Revenue', fmt(sp.rev), sp.rev ? 'avg R'+sp.avgNight+'/night' : 'Enter payouts to see revenue', 'var(--green2)') +
+    sCard('TV House Revenue', fmt(tv.rev), tv.rev ? 'avg R'+tv.avgNight+'/night' : 'TV House income → owners', '#7c3aed');
+
+  // ── Occupancy per property ──
+  const occBar = (pid, stats, prop) => {
+    const plats = ['airbnb','booking','lekkeslaap','manual'];
+    const pColors = {airbnb:'#ff5a5f',booking:'#1d4ed8',lekkeslaap:'#d97706',manual:'#c17f3c'};
+    const pb = allActive.filter(b => b.property_id === pid);
+    const rows = plats.map(p => {
+      const matches = pb.filter(b => b.platform === p);
+      if (!matches.length) return '';
+      const n = matches.reduce((s,b) => s+(b.nights||0), 0);
+      const pct = stats.nights ? Math.round(n/stats.nights*100) : 0;
+      return `<div style="margin-bottom:9px">
+        <div style="display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:2px">
+          <span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:2px;background:${pColors[p]};display:inline-block"></span><strong>${p.charAt(0).toUpperCase()+p.slice(1)}</strong></span>
+          <span>${matches.length} bookings · ${n} nights · <strong style="color:${pColors[p]}">${pct}%</strong></span>
+        </div>
+        <div style="height:5px;background:var(--border);border-radius:3px">
+          <div style="height:5px;width:${pct}%;background:${pColors[p]};border-radius:3px"></div>
+        </div>
+      </div>`;
+    }).join('');
+    const upcoming = pb.filter(b => b.check_in > today).length;
+    return `<div style="margin-bottom:12px;padding:10px;background:var(--sand);border-radius:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:.8rem;font-weight:700;text-transform:uppercase;color:var(--muted)">${prop.address}</span>
+        <span class="badge badge-confirmed">${stats.occ}% occupancy</span>
+      </div>
+    </div>${rows}
+    <div style="font-size:.76rem;color:var(--muted);margin-top:4px">${upcoming} upcoming · ${stats.past} completed stays</div>`;
+  };
+  const spEl = document.getElementById('report-sp-occ');
+  const tvEl = document.getElementById('report-tv-occ');
+  if (spEl) spEl.innerHTML = occBar('speranta', sp, PROPS.speranta);
+  if (tvEl) tvEl.innerHTML = occBar('tvhouse', tv, PROPS.tvhouse);
+
+  // ── Platform breakdown — all properties ──
+  const plats = ['airbnb','booking','lekkeslaap','manual'];
+  const pColors = {airbnb:'#ff5a5f',booking:'#1d4ed8',lekkeslaap:'#d97706',manual:'#c17f3c'};
+  const pbEl = document.getElementById('platform-breakdown');
+  if (pbEl) pbEl.innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Platform</th><th>Speranta bookings</th><th>Speranta nights</th><th>TV House bookings</th><th>TV House nights</th><th>Total</th></tr></thead>
+      <tbody>${plats.map(p => {
+        const spP = allActive.filter(b => b.property_id==='speranta' && b.platform===p);
+        const tvP = allActive.filter(b => b.property_id==='tvhouse'  && b.platform===p);
+        if (!spP.length && !tvP.length) return '';
+        const spN = spP.reduce((s,b)=>s+(b.nights||0),0);
+        const tvN = tvP.reduce((s,b)=>s+(b.nights||0),0);
+        return `<tr>
+          <td><span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;background:${pColors[p]};border-radius:2px;display:inline-block"></span><strong>${p.charAt(0).toUpperCase()+p.slice(1)}</strong></span></td>
+          <td>${spP.length ? spP.length+' ('+spN+'n)' : '—'}</td>
+          <td>${spP.length ? spN+' nights' : '—'}</td>
+          <td>${tvP.length ? tvP.length+' ('+tvN+'n)' : '—'}</td>
+          <td>${tvP.length ? tvN+' nights' : '—'}</td>
+          <td style="font-weight:700">${spP.length+tvP.length} bookings</td>
+        </tr>`;
+      }).join('')}</tbody>
+      <tfoot><tr>
+        <td><strong>Total</strong></td>
+        <td>${allActive.filter(b=>b.property_id==='speranta').length}</td>
+        <td>${allActive.filter(b=>b.property_id==='speranta').reduce((s,b)=>s+(b.nights||0),0)} nights</td>
+        <td>${allActive.filter(b=>b.property_id==='tvhouse').length}</td>
+        <td>${allActive.filter(b=>b.property_id==='tvhouse').reduce((s,b)=>s+(b.nights||0),0)} nights</td>
+        <td>${allActive.length}</td>
+      </tr></tfoot>
+    </table></div>`;
+
+  // ── Pricing insight ──
+  const m = new Date().getMonth();
+  document.getElementById('pricing-insight').innerHTML =
+    [5,6,7].includes(m) ? '❄️ <strong>Low season</strong> (Cape Town winter Jun–Aug). Consider 10-20% discounts to maintain occupancy. LekkeSlaap performs well in winter — target German & Dutch markets. Minimum 2-night stays work better than 3.' :
+    [11,0,1,2].includes(m) ? '🌞 <strong>Peak summer</strong> (Dec–Mar). You can push rates 30-40% higher. Set minimum 3-night stays. Airbnb performs best this season — ensure listing photos show the beach proximity.' :
+    '🍂 <strong>Shoulder season</strong>. Competitive pricing brings good occupancy. Booking.com does well in shoulder months — consider enabling early-bird discounts for stays booked 30+ days ahead.';
+
   await renderCleanerEarningsReport();
 }
 
@@ -1642,20 +1730,27 @@ const MOB_NAV=[
   {id:'tasks',icon:'✅',label:'Tasks'},
 ];
 function buildMobileNav() {
-  // Force mobile nav visible on small screens via JS (bypasses Safari CSS media query issues)
+  // Nuclear Safari iOS fix: force visibility via every possible CSS property
   const nav = document.getElementById('mobile-nav');
   const btn = document.getElementById('mob-menu-btn');
+  const isMobile = window.innerWidth <= 768;
   if (nav) {
-    if (window.innerWidth <= 768) {
-      nav.style.display = 'block';
-      nav.style.visibility = 'visible';
-      nav.style.opacity = '1';
-      if (btn) { btn.style.display = 'flex'; btn.style.visibility = 'visible'; }
+    if (isMobile) {
+      nav.setAttribute('style','display:block!important;visibility:visible!important;opacity:1!important;position:fixed!important;bottom:0!important;left:0!important;right:0!important;z-index:9999!important;background:#1a1a2e!important;padding:8px 0 12px!important;border-top:1px solid rgba(255,255,255,.12)!important;-webkit-transform:translateZ(0)!important;transform:translateZ(0)!important');
     } else {
-      nav.style.display = 'none';
-      if (btn) btn.style.display = 'none';
+      nav.setAttribute('style','display:none!important');
     }
   }
+  if (btn) {
+    if (isMobile) {
+      btn.setAttribute('style','display:flex!important;visibility:visible!important;opacity:1!important;align-items:center!important;background:none!important;border:none!important;cursor:pointer!important;padding:6px 8px!important;font-size:1.5rem!important;color:#1a1a2e!important;line-height:1!important');
+    } else {
+      btn.setAttribute('style','display:none!important');
+    }
+  }
+  // Ensure main content has bottom padding on mobile so nav doesn't cover it
+  const main = document.querySelector('.main');
+  if (main && isMobile) main.style.paddingBottom = '74px';
   const el = document.getElementById('mob-nav-inner'); if (!el) return;
   el.innerHTML = MOB_NAV.map(n=>
     `<div class="mob-nav-item ${currentTab===n.id?'active':''}" onclick="switchTab('${n.id}')">
@@ -1949,7 +2044,10 @@ async function renderFinance() {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 // Force mobile nav check on resize (handles orientation changes on iPhone)
-window.addEventListener('resize', () => { if (currentUser) buildMobileNav(); });
+window.addEventListener('resize', () => { buildMobileNav(); });
+// Run on load too - catches Safari's initial render
+window.addEventListener('load', () => { setTimeout(buildMobileNav, 100); setTimeout(buildMobileNav, 500); });
+document.addEventListener('DOMContentLoaded', () => { setTimeout(buildMobileNav, 50); });
 document.getElementById('auth-screen').style.display='flex';
 </script>
 
