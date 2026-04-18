@@ -91,7 +91,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .badge-checked-out,.badge-checkedout{background:#f3f4f6;color:#374151}
 .badge-cancelled{background:#fee2e2;color:#991b1b}
 .badge-airbnb{background:#FF385C22;color:#FF385C}
-.badge-booking{background:#00358022;color:#003580}
+.badge-booking{background:#00358022;color:#003580}.badge-direct{background:#e0f2fe;color:#0369a1;font-weight:700}
 .badge-lekkeslaap{background:#FFC30030;color:#a07800}
 .badge-fewo{background:#7c3aed22;color:#5b21b6}
 .badge-manual{background:#fef3c7;color:#92400e}
@@ -319,6 +319,8 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
       <!-- DASHBOARD -->
       <div class="tab-pane active" id="tab-dashboard">
+        <!-- Pending Nestora bookings alert -->
+        <div id="dash-pending-alert" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;padding:14px 18px;margin-bottom:16px"></div>
         <div class="stat-grid" id="dash-stats"></div>
         <div class="grid-2">
           <div class="card"><div class="card-title">📅 Upcoming Arrivals</div><div id="dash-upcoming"></div></div>
@@ -328,11 +330,27 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
       <!-- BOOKINGS -->
       <div class="tab-pane" id="tab-bookings">
-        <div class="section-head">
-          <div class="filter-row" id="booking-filters"></div>
-          <button class="btn btn-primary btn-sm" onclick="openModal('booking-modal')">+ Add Booking</button>
+
+        <!-- ── ACTION REQUIRED (pending direct bookings) ── -->
+        <div id="pending-alert-section"></div>
+
+        <!-- ── LANE VIEW: Speranta | TV House ── -->
+        <div id="booking-lane-view" style="display:none;gap:16px;margin-bottom:20px"></div>
+
+        <!-- ── DIVIDER + FILTER ROW ── -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">All Bookings</span>
+            <div class="filter-row" id="booking-filters" style="margin:0"></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button class="btn btn-sm btn-ghost" onclick="toggleLaneView(this)">⬛ Lane View</button>
+            <button class="btn btn-primary btn-sm" onclick="openModal('booking-modal')">+ Add Booking</button>
+          </div>
         </div>
-        <div class="card">
+
+        <!-- ── MAIN TABLE ── -->
+        <div class="card" style="padding:0;overflow:hidden">
           <div class="table-wrap">
             <table><thead><tr id="booking-thead"></tr></thead><tbody id="booking-tbody"></tbody></table>
           </div>
@@ -341,11 +359,30 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
       <!-- CALENDAR -->
       <div class="tab-pane" id="tab-calendar">
-        <div class="toggle-bar" id="cal-prop-toggle">
-          <button class="active" onclick="setCalProp('all',this)">🏠 All Properties</button>
-          <button onclick="setCalProp('speranta',this)">Speranta Flat</button>
-          <button onclick="setCalProp('tvhouse',this)">TV House</button>
+        <!-- ── Top control bar ── -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <!-- Property toggle -->
+          <div class="toggle-bar" id="cal-prop-toggle" style="margin:0">
+            <button class="active" onclick="setCalProp('all',this)">🏠 All</button>
+            <button onclick="setCalProp('speranta',this)">Speranța</button>
+            <button onclick="setCalProp('tvhouse',this)">TV House</button>
+          </div>
+          <!-- View toggles -->
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button id="cleaning-toggle-btn" class="btn btn-sm btn-ghost" onclick="toggleCleaningOverlay(this)">🧹 Show Cleaning</button>
+            <button id="kpi-toggle-btn" class="btn btn-sm btn-ghost" onclick="toggleKPIPanel()">📊 Cleaning KPIs</button>
+            <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ Export CSV</button>
+          </div>
         </div>
+
+        <!-- ── KPI Panel (hidden by default) ── -->
+        <div id="cleaning-kpi-panel" style="display:none;margin-bottom:16px"></div>
+
+        <!-- ── Cleaning coverage alert ── -->
+        <div id="cleaning-coverage-alert" style="display:none;margin-bottom:12px"></div>
+
+        <!-- ── Calendar ── -->
         <div class="cal-wrap">
           <div class="cal-header">
             <div class="cal-month" id="cal-month-label"></div>
@@ -357,43 +394,36 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
           </div>
           <div class="cal-grid" id="cal-grid"></div>
         </div>
+
+        <!-- ── Legend ── -->
         <div class="card">
           <div class="card-title">Legend</div>
           <div class="legend">
             <div class="legend-item"><div class="legend-dot" style="background:#FF385C"></div>Airbnb</div>
             <div class="legend-item"><div class="legend-dot" style="background:#003580"></div>Booking.com</div>
             <div class="legend-item"><div class="legend-dot" style="background:#FFC300"></div>LekkeSlaap</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Manual/Direct</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Direct/Manual</div>
             <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Cleaning</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>🧹 Cleaning</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#22c55e;border:2px solid #16a34a"></div>✅ Clean linked</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ef4444;border:2px dashed #dc2626"></div>⚠ No clean scheduled</div>
             <div class="legend-item"><div class="legend-dot" style="background:#d946ef"></div>Birthday</div>
+          </div>
+        </div>
+
+        <!-- ── Domestic sessions list (toggle shows/hides) ── -->
+        <div id="domestic-sessions-panel" style="display:none">
+          <div class="card mt-4">
+            <div class="card-title">💰 Monthly Cleaning Earnings</div>
+            <div id="dom-earnings-summary"></div>
+          </div>
+          <div class="card mt-4">
+            <div class="card-title">📋 All Cleaning Sessions</div>
+            <div class="dom-grid" id="dom-grid"></div>
           </div>
         </div>
       </div>
 
-      <!-- DOMESTIC -->
-      <div class="tab-pane" id="tab-domestic">
-        <div class="section-head">
-          <div><h2 style="font-size:1.25rem;margin-bottom:3px">Domestic Schedule</h2><div class="text-muted">Cleaning calendar &amp; earnings</div></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ Export CSV</button>
-            <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
-          </div>
-        </div>
-        <div class="cal-wrap">
-          <div class="cal-header">
-            <div class="cal-month" id="dom-cal-month-label"></div>
-            <div class="cal-nav">
-              <button onclick="domCalNav(-1)">← Prev</button>
-              <button onclick="domCalNav(0)">Today</button>
-              <button onclick="domCalNav(1)">Next →</button>
-            </div>
-          </div>
-          <div class="cal-grid" id="dom-cal-grid"></div>
-        </div>
-        <div class="card mb-6"><div class="card-title">💰 Monthly Earnings</div><div id="dom-earnings-summary"></div></div>
-        <div class="card"><div class="card-title">📋 All Sessions</div><div class="dom-grid" id="dom-grid"></div></div>
-      </div>
 
       <!-- TASKS (Nina-facing: per-booking checklist + general tasks) -->
       <div class="tab-pane" id="tab-tasks">
@@ -981,6 +1011,28 @@ function renderDashboard() {
     statCard("Today's Check-ins",  checkIns.length,  checkInLabels,  'var(--accent)') +
     statCard("Today's Check-outs", checkOuts.length, checkOutLabels, 'var(--blue)') +
     statCard('Occupied Now', active.length, 'of '+(currentProp==='all'?2:1)+' properties', 'var(--green2)');
+  // ── Pending direct bookings alert ──
+  const pendingDirect = bookings.filter(b => b.platform==='direct' && b.status==='pending' && b.is_active);
+  const alertEl = document.getElementById('dash-pending-alert');
+  if (alertEl) {
+    if (pendingDirect.length) {
+      alertEl.style.display = 'block';
+      alertEl.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:1.4rem;animation:pulse 1.5s infinite">🔔</span>
+            <div>
+              <div style="font-weight:700;font-size:.9rem;color:#92400e">${pendingDirect.length} Nestora booking${pendingDirect.length>1?'s':''} awaiting approval</div>
+              <div style="font-size:.76rem;color:#a16207">${pendingDirect.map(b=>b.display_name+' · '+b.check_in).join(' · ')}</div>
+            </div>
+          </div>
+          <button class="btn btn-sm" style="background:#d97706;color:#fff;margin-left:auto" onclick="setTab('bookings');setBookingFilter('pending')">Review Pending →</button>
+        </div>`;
+    } else {
+      alertEl.style.display = 'none';
+    }
+  }
+
   document.getElementById('dash-upcoming').innerHTML = upcoming.length ? upcoming.map(b=>
     `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
       <div><div style="font-weight:600;font-size:.88rem">${b.display_name}</div>
@@ -1006,26 +1058,184 @@ function statCard(label, value, sub, color='var(--accent)') {
 const sCard = statCard; // alias
 
 // ── BOOKINGS ──────────────────────────────────────────────────
+let laneViewActive = false;
+
+function toggleLaneView(btn) {
+  laneViewActive = !laneViewActive;
+  btn.textContent = laneViewActive ? '☰ Table View' : '⬛ Lane View';
+  document.getElementById('booking-lane-view').style.display = laneViewActive ? 'grid' : 'none';
+  document.querySelector('.card .table-wrap') && (document.querySelector('.card .table-wrap').closest('.card').style.display = laneViewActive ? 'none' : '');
+  if (laneViewActive) renderLaneView();
+}
+
+function renderLaneView() {
+  const today = new Date().toISOString().slice(0,10);
+  const laneEl = document.getElementById('booking-lane-view');
+  laneEl.style.gridTemplateColumns = 'repeat(auto-fit,minmax(300px,1fr))';
+  laneEl.innerHTML = Object.entries(PROPS).map(([pid, prop]) => {
+    const propBookings = bookings.filter(b => b.property_id===pid && b.is_active && b.status!=='cancelled')
+      .sort((a,b) => a.check_in.localeCompare(b.check_in));
+    const current  = propBookings.find(b => b.check_in<=today && b.check_out>today);
+    const upcoming = propBookings.filter(b => b.check_in>today).slice(0,8);
+    const pending  = propBookings.filter(b => b.status==='pending');
+
+    return `<div style="background:var(--card-bg);border-radius:14px;border:1.5px solid var(--border);overflow:hidden">
+      <!-- Lane header -->
+      <div style="background:var(--ocean);color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:700;font-size:.95rem">${prop.name}</div>
+          <div style="font-size:.73rem;opacity:.7">${prop.address}</div>
+        </div>
+        <span style="background:${current?'#4ade80':'rgba(255,255,255,.2)'};color:${current?'#14532d':'#fff'};font-size:.7rem;font-weight:700;padding:3px 10px;border-radius:20px">
+          ${current ? 'Occupied' : 'Available'}
+        </span>
+      </div>
+
+      <!-- Pending actions -->
+      ${pending.length ? `
+      <div style="background:#fef3c7;padding:10px 14px;border-bottom:1px solid #fde68a">
+        <div style="font-size:.72rem;font-weight:700;color:#92400e;margin-bottom:6px">⚠ ${pending.length} pending — action required</div>
+        ${pending.map(b=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;background:white;border-radius:8px;padding:8px 10px;margin-bottom:4px;font-size:.78rem">
+            <div><strong>${b.display_name}</strong><br><span style="color:var(--muted)">${fmtDate(b.check_in)} · ${b.nights||0}n · ${b.revenue?'R'+Number(b.revenue).toLocaleString():'—'}</span></div>
+            <div style="display:flex;gap:4px">
+              <button onclick="approveBooking(${b.id})" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:.72rem;cursor:pointer;font-weight:700">✓ Approve</button>
+              <button onclick="declineBooking(${b.id})" style="background:#dc2626;color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:.72rem;cursor:pointer">✗</button>
+            </div>
+          </div>`).join('')}
+      </div>` : ''}
+
+      <!-- Current guest -->
+      ${current ? `
+      <div style="padding:10px 14px;background:#f0fdf4;border-bottom:1px solid var(--border)">
+        <div style="font-size:.7rem;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Currently staying</div>
+        <div style="font-weight:600;font-size:.88rem">${current.display_name}</div>
+        <div style="font-size:.76rem;color:var(--muted)">Out ${fmtDate(current.check_out)} · ${current.nights||0} nights</div>
+      </div>` : ''}
+
+      <!-- Upcoming list -->
+      <div style="padding:10px 14px">
+        <div style="font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">Upcoming</div>
+        ${upcoming.length ? upcoming.map(b => {
+          const daysUntil = Math.round((new Date(b.check_in)-new Date())/86400000);
+          const isNextUp  = daysUntil <= 7;
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);last-child:border-0">
+            <div>
+              <div style="font-weight:600;font-size:.82rem">${b.display_name}</div>
+              <div style="font-size:.72rem;color:var(--muted)">${fmtDate(b.check_in)} · ${b.nights||0}n</div>
+            </div>
+            <div style="text-align:right">
+              <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform}</span>
+              ${isNextUp?`<div style="font-size:.68rem;color:var(--coral);font-weight:700;margin-top:2px">In ${daysUntil}d</div>`:''}
+            </div>
+          </div>`;
+        }).join('') : '<div style="font-size:.8rem;color:var(--muted);padding:6px 0">No upcoming bookings</div>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function approveBooking(id) {
+  if (!confirm('Approve this booking and mark as confirmed?')) return;
+  if (db) {
+    const {error} = await db.from('bookings').update({status:'confirmed'}).eq('id',id);
+    if (error) { toast('Error: '+error.message,'error'); return; }
+  }
+  const b = bookings.find(x=>x.id===id);
+  if (b) b.status = 'confirmed';
+  toast('Booking confirmed ✓','success');
+  renderBookings(); renderDashboard();
+  if (laneViewActive) renderLaneView();
+}
+
+async function declineBooking(id) {
+  if (!confirm('Decline and cancel this booking?')) return;
+  if (db) {
+    const {error} = await db.from('bookings').update({status:'cancelled'}).eq('id',id);
+    if (error) { toast('Error: '+error.message,'error'); return; }
+  }
+  const b = bookings.find(x=>x.id===id);
+  if (b) b.status = 'cancelled';
+  toast('Booking declined','info');
+  renderBookings(); renderDashboard();
+  if (laneViewActive) renderLaneView();
+}
+
 function renderBookings() {
   const isAdmin = currentUser.role==='admin';
-  const filters = ['upcoming','past','all','confirmed','checked-in','checked-out','pending','cancelled'];
-  document.getElementById('booking-filters').innerHTML = filters.map(f=>
-    `<button class="btn btn-sm ${f===bookingFilter?'btn-primary':'btn-ghost'}" onclick="setBookingFilter('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`
-  ).join('');
-  const cols = ['Guest','Property','Platform','Check-in','Check-out','Nights',...(isAdmin?['Revenue']:[]),'Status'];
+  const today   = new Date().toISOString().slice(0,10);
+
+  // ── Pending section at top ──
+  const pendingDirect = bookings.filter(b => b.platform==='direct' && b.status==='pending' && b.is_active);
+  const pendingEl = document.getElementById('pending-alert-section');
+  if (pendingEl) {
+    if (pendingDirect.length && bookingFilter !== 'past' && bookingFilter !== 'cancelled') {
+      pendingEl.innerHTML = `
+        <div style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:14px;padding:16px 20px;margin-bottom:20px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <span style="font-size:1.2rem">🔔</span>
+            <span style="font-weight:700;font-size:.9rem;color:#92400e">${pendingDirect.length} direct booking${pendingDirect.length>1?'s':''} awaiting your approval</span>
+          </div>
+          ${pendingDirect.map(b=>`
+            <div style="display:flex;justify-content:space-between;align-items:center;background:white;border-radius:10px;padding:12px 14px;margin-bottom:8px;gap:10px;flex-wrap:wrap">
+              <div>
+                <div style="font-weight:700;font-size:.88rem">${b.display_name}</div>
+                <div style="font-size:.76rem;color:var(--muted)">${propName(b.property_id)} · ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)} · ${b.nights||0} nights</div>
+                ${b.revenue?`<div style="font-size:.78rem;font-weight:700;color:var(--green)">R${Number(b.revenue).toLocaleString()}</div>`:''}
+                ${b.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:2px">${b.notes.split('|')[0]}</div>`:''}
+              </div>
+              <div style="display:flex;gap:8px;flex-shrink:0">
+                <button onclick="approveBooking(${b.id})" style="background:#16a34a;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.82rem;cursor:pointer;font-weight:700">✓ Approve</button>
+                <button onclick="declineBooking(${b.id})" style="background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:8px 14px;font-size:.82rem;cursor:pointer">✗ Decline</button>
+              </div>
+            </div>`).join('')}
+        </div>`;
+    } else {
+      pendingEl.innerHTML = '';
+    }
+  }
+
+  // ── Filter buttons ──
+  const filters = ['upcoming','pending','confirmed','checked-in','checked-out','past','all','cancelled'];
+  const pendingCount = bookings.filter(b=>b.status==='pending'&&b.is_active).length;
+  document.getElementById('booking-filters').innerHTML = filters.map(f => {
+    const isPending = f==='pending';
+    const label = f.charAt(0).toUpperCase()+f.slice(1);
+    const badge = isPending && pendingCount ? ` <span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:.65rem;font-weight:700">${pendingCount}</span>` : '';
+    return `<button class="btn btn-sm ${f===bookingFilter?'btn-primary':'btn-ghost'}" onclick="setBookingFilter('${f}')">${label}${badge}</button>`;
+  }).join('');
+
+  // ── Table ──
+  const cols = ['Guest','Property','Platform','Check-in','Check-out','Nights',...(isAdmin?['Revenue']:[]),'Status',''];
   document.getElementById('booking-thead').innerHTML = cols.map(c=>`<th>${c}</th>`).join('');
   const rows = filteredBookings();
+
   document.getElementById('booking-tbody').innerHTML = rows.length ? rows.map(b => {
     const isCancelled = b.status==='cancelled';
-    return `<tr style="${isCancelled?'opacity:.55':''}">
-      <td><div style="font-weight:600">${b.display_name}</div>${b.notes&&!isCancelled?`<div style="font-size:.73rem;color:var(--muted)">${b.notes}</div>`:''}</td>
+    const isPending   = b.status==='pending';
+    const daysUntil   = Math.round((new Date(b.check_in)-new Date())/86400000);
+    const soonBadge   = daysUntil>=0&&daysUntil<=3 ? `<span style="font-size:.65rem;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:6px;font-weight:700;margin-left:4px">In ${daysUntil}d</span>` : '';
+    const actionBtns  = isPending
+      ? `<td style="white-space:nowrap">
+          <button onclick="approveBooking(${b.id})" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer;font-weight:700;margin-right:4px">✓</button>
+          <button onclick="declineBooking(${b.id})" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:4px 9px;font-size:.75rem;cursor:pointer">✗</button>
+        </td>`
+      : `<td></td>`;
+    return `<tr style="${isCancelled?'opacity:.45':''}${isPending?'background:#fffbeb':''}" class="${isPending?'pending-row':''}">
+      <td>
+        <div style="font-weight:600">${b.display_name}${soonBadge}</div>
+        ${b.notes&&!isCancelled?`<div style="font-size:.71rem;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.notes.split('|')[0]}</div>`:''}
+      </td>
       <td>${propName(b.property_id)}</td>
-      <td><span class="badge badge-${b.platform}">${b.platform}</span></td>
-      <td>${fmtDate(b.check_in)}</td><td>${fmtDate(b.check_out)}</td><td>${b.nights||0}</td>
-      ${isAdmin?`<td style="font-weight:700">${b.revenue?'R'+Number(b.revenue).toLocaleString():'—'}</td>`:''}
+      <td><span class="badge badge-${b.platform}">${b.platform==='direct'?'🌐 Direct':b.platform}</span></td>
+      <td>${fmtDate(b.check_in)}</td>
+      <td>${fmtDate(b.check_out)}</td>
+      <td>${b.nights||0}</td>
+      ${isAdmin?`<td style="font-weight:700;color:var(--green)">${b.revenue?'R'+Number(b.revenue).toLocaleString():'—'}</td>`:''}
       <td><span class="badge badge-${(b.status||'').replace(' ','-')}">${b.status}</span></td>
+      ${actionBtns}
     </tr>`;
-  }).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📭</div>No bookings found</div></td></tr>`;
+  }).join('') : `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📭</div>No bookings found</div></td></tr>`;
 }
 function setBookingFilter(f) { bookingFilter=f; renderBookings(); }
 
