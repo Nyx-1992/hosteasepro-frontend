@@ -8,13 +8,37 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
-  --ink:#1a1a2e;--ink2:#16213e;--sand:#f5f0e8;--warm:#e8ddd0;
-  --accent:#c17f3c;--accent2:#8b5e2a;--green:#2d6a4f;--green2:#52b788;
-  --red:#c1121f;--blue:#2563eb;--muted:#6b7280;--border:#e2ddd5;
-  --card:#fff;--r:12px;--sh:0 2px 16px rgba(26,26,46,.08);--shl:0 8px 40px rgba(26,26,46,.14);
+  /* Brand */
+  --ink:#1a1a2e;--ink2:#16213e;
+  --ocean:#0E4D6B;--ocean-light:#e0f2fe;
+  --accent:#c17f3c;--accent2:#8b5e2a;
+  /* Semantic */
+  --green:#16a34a;--green2:#52b788;--green-light:#dcfce7;
+  --red:#dc2626;--red-light:#fee2e2;
+  --amber:#d97706;--amber-light:#fef3c7;
+  --blue:#2563eb;--blue-light:#dbeafe;
+  /* Neutral surface system */
+  --sand:#f8f7f4;       /* page background */
+  --surface:#ffffff;    /* card / panel */
+  --surface-2:#f3f2ef;  /* inset / subtle bg */
+  --surface-3:#eae9e4;  /* border-adjacent bg */
+  --border:#e4e2dc;     /* default border */
+  --border-strong:#c9c6be; /* strong border */
+  --muted:#71717a;      /* secondary text */
+  --muted-2:#a1a1aa;    /* tertiary text */
+  /* Tokens */
+  --card:var(--surface);
+  --card-bg:var(--surface);
+  --r:10px;--r-lg:16px;
+  --sh:0 1px 4px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
+  --shl:0 8px 40px rgba(26,26,46,.14);
+  /* Form */
+  --input-bg:#fafaf9;
+  --input-border:#d4d2cc;
+  --input-focus:#0E4D6B;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:"DM Sans",sans-serif;background:var(--sand);color:var(--ink);min-height:100vh}
+body{font-family:"DM Sans",sans-serif;background:var(--sand);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
 h2,h3{font-family:"DM Serif Display",serif}
 /* AUTH */
 #auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--ink),var(--ink2))}
@@ -40,7 +64,7 @@ h2,h3{font-family:"DM Serif Display",serif}
 .btn-danger{background:var(--red);color:#fff}
 /* APP SHELL */
 #app-screen{display:none;min-height:100vh}
-.sidebar{width:240px;background:var(--ink);color:#fff;position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:100;overflow:hidden}
+.sidebar{width:240px;background:var(--ink2);color:#fff;position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:100;overflow:hidden}
 .s-logo{padding:26px 22px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
 .s-logo-text{font-family:"DM Serif Display",serif;font-size:1.45rem;color:var(--accent);display:block}
 .s-logo small{font-size:.72rem;color:rgba(255,255,255,.35)}
@@ -67,7 +91,7 @@ h2,h3{font-family:"DM Serif Display",serif}
 .content{padding:28px;flex:1}
 .tab-pane{display:none}.tab-pane.active{display:block}
 /* CARDS */
-.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:22px}
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);padding:20px;border:1px solid var(--border)}
 .card-title{font-family:"DM Serif Display",serif;font-size:1.05rem;margin-bottom:14px;color:var(--ink)}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
 .stat-card{background:var(--card);border-radius:var(--r);padding:18px 22px;box-shadow:var(--sh);border-top:3px solid var(--accent)}
@@ -103,8 +127,18 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
 .form-field{display:flex;flex-direction:column;gap:5px}
 .form-field label{font-size:.73rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
-.form-field input,.form-field select,.form-field textarea{padding:9px 13px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.88rem;outline:none;transition:border .15s;background:var(--sand)}
-.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--accent);background:#fff}
+.form-field input,.form-field select,.form-field textarea{
+  padding:8px 12px;border:1px solid var(--input-border);border-radius:7px;
+  font-family:inherit;font-size:.86rem;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+  background:var(--input-bg);color:var(--ink);
+  box-shadow:inset 0 1px 2px rgba(0,0,0,.04);
+}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{
+  border-color:var(--input-focus);background:#fff;
+  box-shadow:0 0 0 3px rgba(14,77,107,.12),inset 0 1px 2px rgba(0,0,0,.04);
+}
+.form-field input::placeholder,.form-field textarea::placeholder{color:var(--muted-2)}
 .span-full{grid-column:1/-1}
 /* MODALS */
 .modal-overlay{position:fixed;inset:0;background:rgba(26,26,46,.5);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
@@ -1209,7 +1243,7 @@ function renderLaneView() {
           ${[
             ['📋', pending.length+' pending',   pending.length?'#fef3c7':'var(--sand)', pending.length?'#92400e':'var(--muted)'],
             ['📅', upcoming.length+' upcoming',  'var(--sand)', 'var(--muted)'],
-            [isOccupied&&nightsLeft<=1?'🛫':'🌙',
+            [isOccupied&&nightsLeft<=1?'🛫':'⏳',
              isOccupied?(nightsLeft<=0?'Checking out today':nightsLeft===1?'Last night':'Out in '+nightsLeft+'d'):'Next: '+(upcoming[0]?fmtDate(upcoming[0].check_in):'—'),
              isOccupied&&nightsLeft<=1?'#fef3c7':'var(--sand)',
              isOccupied&&nightsLeft<=1?'#92400e':'var(--muted)'],
@@ -1275,8 +1309,8 @@ function renderLaneView() {
                 <div style="font-weight:700;font-size:.9rem;color:var(--ink);display:flex;align-items:center;gap:5px;flex-wrap:wrap">
                   ${b.display_name}
                   ${isPending?'<span style="background:#f59e0b;color:#fff;font-size:.62rem;padding:2px 7px;border-radius:10px;font-weight:700">Pending</span>':''}
-                  ${isImminent&&!isPast?'<span style="background:#fed7aa;color:#c2410c;font-size:.62rem;padding:2px 7px;border-radius:10px;font-weight:700">In '+daysUntil+'d</span>':''}
-                  ${isSoon&&!isImminent&&!isPast?'<span style="background:#fef3c7;color:#92400e;font-size:.62rem;padding:2px 7px;border-radius:10px;font-weight:700">In '+daysUntil+'d</span>':''}
+                  ${isImminent&&!isPast?'<span style="background:#fff3e0;color:#b45309;font-size:.62rem;padding:2px 6px;border-radius:6px;font-weight:600">⏳ '+daysUntil+'d</span>':''}
+                  ${isSoon&&!isImminent&&!isPast?'<span style="background:#fef9c3;color:#92400e;font-size:.62rem;padding:2px 6px;border-radius:6px;font-weight:600">⏳ '+daysUntil+'d</span>':''}
                   ${isPast?'<span style="background:var(--border);color:var(--muted);font-size:.62rem;padding:2px 7px;border-radius:10px">Past</span>':''}
                 </div>
               </div>
@@ -1307,7 +1341,7 @@ function renderLaneView() {
                     {icon:'🧹', key:'book_domestic',done: cleanOk,                          tip:'Clean booked'},
                   ].map(s =>
                     `<span title="${s.tip}${s.done?' ✓':' — pending'}"
-                      style="width:22px;height:22px;border-radius:50%;background:${s.done?'#d1fae5':'#f3f4f6'};border:1.5px solid ${s.done?'#6ee7b7':'#e5e7eb'};display:inline-flex;align-items:center;justify-content:center;font-size:.62rem;filter:${s.done?'none':'grayscale(1)'};opacity:${s.done?'1':'.45'};cursor:${s.done?'default':'pointer'}"
+                      style="width:14px;height:14px;border-radius:50%;background:${s.done?'#d1fae5':'#f3f4f6'};border:1.5px solid ${s.done?'#6ee7b7':'#e5e7eb'};display:inline-flex;align-items:center;justify-content:center;font-size:.62rem;filter:${s.done?'none':'grayscale(1)'};opacity:${s.done?'1':'.45'};cursor:${s.done?'default':'pointer'}"
                       onclick="event.stopPropagation();${s.key!=='book_domestic'?`toggleNinaTask('${_bid}','${s.key}');renderLaneView()`:`bookCleaningForGuest('${b.property_id}','${_co}','${_bid}')`}"
                     >${s.icon}</span>`
                   ).join('');
