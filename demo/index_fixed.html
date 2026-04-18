@@ -1182,7 +1182,7 @@ function calNav(dir) {
 function showDay(ds) {
   const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
   const fd = calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp);
-  const bEvts = fb.filter(b=>b.check_in<=ds&&b.check_out>ds&&b.status!=='cancelled');
+  const bEvts = fb.filter(b=>b.check_in<=ds&&b.check_out>ds&&b.status!=='cancelled'&&!isCaretaker(b));
   const dEvts = fd.filter(d=>d.date===ds);
   const bdayCleaners = CLEANERS.filter(c=>c.birthday&&c.birthday.slice(5)===ds.slice(5));
   document.getElementById('day-modal-title').textContent = fmtDate(ds);
@@ -1522,130 +1522,146 @@ async function renderReports() {
   const today = new Date().toISOString().slice(0,10);
   const pColors = {airbnb:'#ff5a5f', booking:'#1d4ed8', lekkeslaap:'#d97706', manual:'#c17f3c'};
 
-  // ── Live DB query for Speranta revenue ──
-  let spStats = null;
+  // Show loading state
+  document.getElementById('report-stats').innerHTML = '<div class="text-muted" style="padding:10px">Loading…</div>';
+
+  // ── Pull data from DB or fall back to local bookings ──
+  let spData = [];
   if (db) {
     try {
-      const { data } = await db
-        .from('bookings')
-        .select('platform, nights, total_amount, check_in_date, check_out_date, property_name')
-        .eq('is_active', true)
-        .neq('status', 'cancelled')
-        .ilike('property_name', '%speranta%');
-      if (data && data.length) {
-        const paid = data.filter(b => b.total_amount > 0);
-        const byPlat = {};
-        paid.forEach(b => {
-          if (!byPlat[b.platform]) byPlat[b.platform] = {bookings:0, nights:0, revenue:0};
-          byPlat[b.platform].bookings++;
-          byPlat[b.platform].nights += b.nights || 0;
-          byPlat[b.platform].revenue += Number(b.total_amount);
-        });
-        const totalRev = paid.reduce((s,b) => s + Number(b.total_amount), 0);
-        const totalNights = paid.reduce((s,b) => s + (b.nights||0), 0);
-        const totalBookings = paid.length;
-        spStats = { byPlat, totalRev, totalNights, totalBookings, all: data };
+      const res = await db.from('bookings').select('platform,nights,total_amount,check_in_date,check_out_date,status,guest_name,property_name,property_id').eq('is_active',true);
+      if (res.data && res.data.length) {
+        spData = res.data.map(nb).filter(b => b.property_id==='speranta' && b.status!=='cancelled');
       }
-    } catch(e) { console.warn(e); }
+    } catch(e) { console.warn('DB error:', e); }
+  }
+  // Fallback to local array
+  if (!spData.length) {
+    spData = bookings.filter(b => b.property_id==='speranta' && b.status!=='cancelled');
   }
 
-  // Fallback to local bookings array
-  if (!spStats) {
-    const spPaid = bookings.filter(b => b.property_id==='speranta' && b.status!=='cancelled' && (b.revenue||0)>0);
-    const byPlat = {};
-    spPaid.forEach(b => {
-      if (!byPlat[b.platform]) byPlat[b.platform] = {bookings:0, nights:0, revenue:0};
-      byPlat[b.platform].bookings++;
-      byPlat[b.platform].nights += b.nights||0;
-      byPlat[b.platform].revenue += b.revenue||0;
-    });
-    spStats = {
-      byPlat,
-      totalRev: spPaid.reduce((s,b) => s+(b.revenue||0), 0),
-      totalNights: spPaid.reduce((s,b) => s+(b.nights||0), 0),
-      totalBookings: spPaid.length,
-      all: bookings.filter(b => b.property_id==='speranta' && b.status!=='cancelled')
-    };
-  }
+  const paid = spData.filter(b => (b.revenue||b.total_amount||0) > 0);
+  const getAmt = b => Number(b.revenue||b.total_amount||0);
 
-  const { byPlat, totalRev, totalNights, totalBookings } = spStats;
-  const avgNight = totalNights ? Math.round(totalRev / totalNights) : 0;
-  const allSp = spStats.all;
-  const upcoming = allSp.filter(b => b.check_in_date > today && b.status !== 'cancelled' && !b.guest_name?.toLowerCase().includes('owner'));
+  // Aggregate by platform
+  const byPlat = {};
+  paid.forEach(b => {
+    const p = b.platform||'manual';
+    if (!byPlat[p]) byPlat[p] = {bookings:0, nights:0, revenue:0};
+    byPlat[p].bookings++;
+    byPlat[p].nights += b.nights||0;
+    byPlat[p].revenue += getAmt(b);
+  });
 
-  // ── Stat cards ──
+  const totalRev    = paid.reduce((s,b) => s+getAmt(b), 0);
+  const totalNights = paid.reduce((s,b) => s+(b.nights||0), 0);
+  const avgNight    = totalNights ? Math.round(totalRev/totalNights) : 0;
+  const upcoming    = spData.filter(b => b.check_in>today && !isOwnerStay(b));
+
+  // ── STAT CARDS ──
+  const airbnbAvg  = byPlat.airbnb  ? Math.round(byPlat.airbnb.revenue /byPlat.airbnb.nights)  : 0;
+  const bookingAvg = byPlat.booking ? Math.round(byPlat.booking.revenue/byPlat.booking.nights) : 0;
+  const lsAvg      = byPlat.lekkeslaap ? Math.round(byPlat.lekkeslaap.revenue/byPlat.lekkeslaap.nights) : 0;
   document.getElementById('report-stats').innerHTML =
-    sCard('Speranta Revenue', fmt(totalRev), totalBookings + ' paid bookings · ' + totalNights + ' nights', 'var(--green2)') +
+    sCard('Total Revenue', fmt(totalRev), paid.length+' paid bookings · '+totalNights+' nights', 'var(--green2)') +
     sCard('Avg Per Night', fmt(avgNight), 'across all platforms', 'var(--accent)') +
-    sCard('Airbnb Rate', fmt(byPlat.airbnb?.revenue && byPlat.airbnb?.nights ? Math.round(byPlat.airbnb.revenue/byPlat.airbnb.nights) : 1372), 'R' + Math.round((byPlat.airbnb?.revenue||0)/Math.max(byPlat.airbnb?.nights||1,1)) + '/night · best performing platform', '#ff5a5f') +
-    sCard('Upcoming Nights', upcoming.reduce((s,b) => s+(b.nights||0), 0), upcoming.length + ' bookings confirmed', 'var(--blue)');
+    sCard('Best Rate', fmt(airbnbAvg)+'/night', 'Airbnb outperforms by R'+(airbnbAvg-lsAvg)+'/night vs LekkeSlaap', '#ff5a5f') +
+    sCard('Upcoming', upcoming.length+' bookings', upcoming.reduce((s,b)=>s+(b.nights||0),0)+' nights confirmed', 'var(--blue)');
 
-  // ── Platform breakdown ──
+  // ── PLATFORM REVENUE CHART (horizontal bars) ──
   const platOrder = ['airbnb','booking','lekkeslaap','manual'];
   const maxRev = Math.max(...platOrder.map(p => byPlat[p]?.revenue||0));
   const pbEl = document.getElementById('platform-breakdown');
   if (pbEl) pbEl.innerHTML = platOrder.map(p => {
-    const s = byPlat[p]; if (!s) return '';
-    const avgN = s.nights ? Math.round(s.revenue/s.nights) : 0;
-    const pct = maxRev ? Math.round(s.revenue/maxRev*100) : 0;
-    const totPct = totalRev ? Math.round(s.revenue/totalRev*100) : 0;
-    return `<div style="margin-bottom:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="display:flex;align-items:center;gap:7px;font-weight:600">
-          <span style="width:10px;height:10px;border-radius:2px;background:${pColors[p]};display:inline-block"></span>
-          ${p.charAt(0).toUpperCase()+p.slice(1)}
+    const s = byPlat[p]; if (!s || !s.revenue) return '';
+    const avgN    = s.nights ? Math.round(s.revenue/s.nights) : 0;
+    const pct     = maxRev ? Math.round(s.revenue/maxRev*100) : 0;
+    const totPct  = totalRev ? Math.round(s.revenue/totalRev*100) : 0;
+    const label   = p==='airbnb'?'Airbnb':p==='booking'?'Booking.com':p==='lekkeslaap'?'LekkeSlaap':'Direct/Manual';
+    return `<div style="margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+        <span style="display:flex;align-items:center;gap:7px;font-weight:600;font-size:.9rem">
+          <span style="width:11px;height:11px;border-radius:2px;background:${pColors[p]};display:inline-block"></span>${label}
         </span>
-        <span style="font-weight:700;font-size:.9rem">${fmt(s.revenue)} <span style="color:var(--muted);font-weight:400;font-size:.76rem">${totPct}%</span></span>
+        <span style="font-weight:700">${fmt(s.revenue)} <span style="color:var(--muted);font-weight:400;font-size:.76rem">${totPct}%</span></span>
       </div>
-      <div style="height:7px;background:var(--border);border-radius:4px;margin-bottom:4px">
-        <div style="height:7px;width:${pct}%;background:${pColors[p]};border-radius:4px"></div>
+      <div style="height:10px;background:var(--border);border-radius:5px;margin-bottom:5px">
+        <div style="height:10px;width:${pct}%;background:${pColors[p]};border-radius:5px;transition:width .5s"></div>
       </div>
-      <div style="font-size:.75rem;color:var(--muted)">${s.bookings} bookings · ${s.nights} nights · <strong style="color:${pColors[p]}">${fmt(avgN)}/night</strong></div>
+      <div style="display:flex;gap:16px;font-size:.75rem;color:var(--muted)">
+        <span>${s.bookings} bookings</span>
+        <span>${s.nights} nights</span>
+        <span style="color:${pColors[p]};font-weight:700">${fmt(avgN)}/night</span>
+      </div>
     </div>`;
   }).join('');
 
-  // ── Occupancy per property ──
+  // ── SPERANTA OCCUPANCY CARD ──
   const spEl = document.getElementById('report-sp-occ');
   if (spEl) {
-    const allPlatStats = platOrder.map(p => {
-      const s = byPlat[p]; if (!s) return '';
-      const avgN = s.nights ? Math.round(s.revenue/s.nights) : 0;
-      return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:.84rem">
-        <span style="display:flex;align-items:center;gap:6px">
-          <span style="width:8px;height:8px;border-radius:2px;background:${pColors[p]};display:inline-block"></span>${p.charAt(0).toUpperCase()+p.slice(1)}
-        </span>
-        <span>${s.bookings} stays · ${s.nights}n · <strong>${fmt(avgN)}/night</strong></span>
-      </div>`;
-    }).join('');
+    // Monthly revenue bar chart from actual bookings
+    const monthlyRev = {};
+    paid.forEach(b => {
+      const mo = (b.check_in_date||b.check_in||'').slice(0,7);
+      if (mo) monthlyRev[mo] = (monthlyRev[mo]||0) + getAmt(b);
+    });
+    const months = Object.keys(monthlyRev).sort().slice(-12); // last 12 months
+    const maxMo = Math.max(...months.map(m => monthlyRev[m]||0));
+    const moShort = m => {const[y,mo]=m.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1]+'\'' +y.slice(2);};
     spEl.innerHTML = `
-      <div style="background:var(--sand);border-radius:8px;padding:12px;margin-bottom:12px">
-        <div style="font-size:1.4rem;font-weight:700;font-family:'DM Serif Display',serif">${fmt(totalRev)}</div>
-        <div style="font-size:.8rem;color:var(--muted)">${totalBookings} bookings · ${totalNights} nights · avg ${fmt(avgNight)}/night</div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:1.5rem;font-weight:700;font-family:'DM Serif Display',serif;color:var(--green)">${fmt(totalRev)}</div>
+        <div style="font-size:.8rem;color:var(--muted)">${paid.length} bookings · ${totalNights} nights · avg ${fmt(avgNight)}/night</div>
       </div>
-      ${allPlatStats}
-      <div style="margin-top:10px;padding:10px;background:#fff7ed;border-radius:8px;font-size:.78rem;color:#92400e">
-        💡 <strong>Airbnb earns R${Math.round((byPlat.airbnb?.revenue||0)/Math.max(byPlat.airbnb?.nights||1,1) - (byPlat.lekkeslaap?.revenue||0)/Math.max(byPlat.lekkeslaap?.nights||1,1))}/night more than LekkeSlaap.</strong>
-        Prioritise Airbnb for peak season, use LekkeSlaap to fill gaps in winter.
+      <div style="display:flex;align-items:flex-end;gap:4px;height:80px;margin-bottom:6px">
+        ${months.map(m => {
+          const h = maxMo ? Math.round((monthlyRev[m]||0)/maxMo*76) : 0;
+          const isThis = m === today.slice(0,7);
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px" title="${moShort(m)}: ${fmt(monthlyRev[m])}">
+            <div style="width:100%;height:${h}px;background:${isThis?'var(--accent)':'var(--green2)'};border-radius:3px 3px 0 0;min-height:2px"></div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:4px">
+        ${months.map(m => `<div style="flex:1;font-size:.52rem;color:var(--muted);text-align:center;overflow:hidden">${moShort(m)}</div>`).join('')}
+      </div>
+      <div style="margin-top:12px;padding:10px;background:#fef9f0;border-radius:8px;font-size:.78rem;color:#92400e;line-height:1.5">
+        💡 Airbnb earns <strong>R${airbnbAvg-lsAvg}/night more</strong> than LekkeSlaap.
+        Every 3-night LekkeSlaap stay instead of Airbnb = R${(airbnbAvg-lsAvg)*3} less revenue.
       </div>`;
   }
 
-  // TV House note
+  // ── TV HOUSE CARD ──
   const tvEl = document.getElementById('report-tv-occ');
-  if (tvEl) tvEl.innerHTML = `
-    <div style="background:var(--sand);border-radius:8px;padding:16px;text-align:center">
-      <div style="font-size:1.1rem;font-weight:700;margin-bottom:6px">Owner Property</div>
-      <div style="font-size:.84rem;color:var(--muted);line-height:1.6">TV House rental income belongs to Mirka & Antonin.<br>S&N earns the <strong>R6,000/month management fee</strong>.<br>Revenue tracking excluded intentionally.</div>
-    </div>`;
+  if (tvEl) {
+    // Calculate TV House mgmt fee income from finance_transactions if available
+    let mgmtTotal = 0;
+    if (db) {
+      try {
+        const r = await db.from('finance_transactions').select('amount').eq('category','owner_mgmt_fee');
+        if (r.data) mgmtTotal = r.data.reduce((s,x)=>s+Number(x.amount),0);
+      } catch(e) {}
+    }
+    tvEl.innerHTML = `
+      <div style="background:var(--sand);border-radius:8px;padding:16px">
+        <div style="font-size:1.5rem;font-weight:700;font-family:'DM Serif Display',serif;color:var(--blue)">${mgmtTotal?fmt(mgmtTotal):'R6,000/month'}</div>
+        <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">${mgmtTotal?'Total management fees received':'from Mirka & Antonin'}</div>
+        <div style="font-size:.82rem;line-height:1.6;color:var(--ink)">
+          TV House rental income goes directly to owners.<br>
+          S&N earns the <strong>R6,000/month management fee</strong> only.<br>
+          Pool, gardener & maintenance costs recovered from fee.
+        </div>
+      </div>`;
+  }
 
-  // ── Pricing insight ──
+  // ── PRICING INSIGHT ──
   const m = new Date().getMonth();
-  const airbnbAvg = byPlat.airbnb?.nights ? Math.round(byPlat.airbnb.revenue/byPlat.airbnb.nights) : 1372;
   document.getElementById('pricing-insight').innerHTML =
     [5,6,7].includes(m)
-      ? `❄️ <strong>Low season</strong> (Jun–Aug). Your Airbnb avg is ${fmt(airbnbAvg)}/night — consider dropping to R900–1,000 to maintain occupancy. LekkeSlaap performs well in winter for local market.`
+      ? `❄️ <strong>Low season (Jun–Aug).</strong> Your Airbnb avg is ${fmt(airbnbAvg)}/night — consider R900–1,100 to maintain occupancy. LekkeSlaap fills winter well but at ${fmt(lsAvg)}/night. Minimum 2-night stays work better than 3 in winter.`
     : [11,0,1,2].includes(m)
-      ? `🌞 <strong>Peak summer</strong> (Dec–Mar). Push Airbnb rates to R1,500–1,800/night. Your data shows guests pay well above average in this period. Minimum 3-night stay recommended.`
-      : `🍂 <strong>Shoulder season</strong>. Your Airbnb avg of ${fmt(airbnbAvg)}/night is strong. Booking.com at ${fmt(byPlat.booking?.nights ? Math.round(byPlat.booking.revenue/byPlat.booking.nights) : 1070)}/night could be nudged up — try raising rates 10% and monitor impact.`;
+      ? `🌞 <strong>Peak summer (Dec–Mar).</strong> Your data shows guests pay well — push Airbnb to R1,500–1,800/night. You averaged ${fmt(airbnbAvg)}/night across the year; summer can be 30-40% higher. Set 3-night minimums.`
+      : `🍂 <strong>Shoulder season.</strong> Your Airbnb avg of ${fmt(airbnbAvg)}/night is strong. Booking.com at ${fmt(bookingAvg)}/night could be nudged up — try raising 10% and monitor. Prioritise platforms in this order: Airbnb → Booking.com → LekkeSlaap.`;
 
   await renderCleanerEarningsReport();
 }
