@@ -167,9 +167,9 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-nav{display:flex;gap:8px}
 .cal-nav button{background:var(--sand);border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:.84rem;transition:all .15s}
 .cal-nav button:hover{background:var(--warm);border-color:var(--accent)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border);border-top:1px solid var(--border)}
 .cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);background:var(--sand);letter-spacing:.05em}
-.cal-cell{min-height:88px;padding:4px 0;border:1px solid var(--border);background:#fff;cursor:pointer;overflow:hidden;box-sizing:border-box;-webkit-box-sizing:border-box}
+.cal-cell{min-height:88px;padding:4px 0 2px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:#fff;cursor:pointer;overflow:hidden;box-sizing:border-box;-webkit-box-sizing:border-box}
 /* cal-bar: full width booking bar — explicit for Safari */
 .cal-bar{display:block;width:100%;box-sizing:border-box;-webkit-box-sizing:border-box;font-size:.63rem;font-weight:600;padding:2px 5px;margin-bottom:2px;height:18px;line-height:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
 .cal-date{padding:0 5px}
@@ -1656,12 +1656,28 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const rr = isRealEnd   ? '4px':'0';
         const showLabel = isRealStart||isWeekStart;
         const icon = isRealStart ? '🛬 ' : isWeekStart ? '↳ ' : '';
-        const label = showLabel ? propTag+icon+(b.guest_name||b.platform) : '';
+        const label = showLabel ? propTag+icon+(b.guest_name||b.platform) : ' ';
         const bar = document.createElement('div');
         // Explicit inline styles for Safari compatibility — no CSS class width inheritance
+        // Is this the last visible cell for this booking? (real end OR end of week SAT)
+        const isWeekEnd   = dow===6;
+        const isLastCell  = isRealEnd || isWeekEnd;
+        // Is cleaning booked for this booking?
+        const bHasClean   = domestics.some(d =>
+          d.property_id===b.property_id &&
+          Math.abs(new Date(d.date)-new Date(String(b.check_out||'').slice(0,10))) <= 2*86400000
+        );
+        // Build suffix for last cell
+        const cleanSuffix = isLastCell ? (bHasClean ? ' 🧹' : ' ·') : '';
+        // Bleed bar across cell borders: extend 1px left/right, pull back margin
+        const bleedLeft  = (!isRealStart && !isWeekStart) ? '-1px' : '0px';
+        const bleedRight = (!isRealEnd   && !isWeekEnd)   ? '-1px' : '0px';
         bar.style.cssText = [
           'display:block',
-          'width:100%',
+          'position:relative',
+          'width:calc(100% - '+bleedLeft+' - '+bleedRight+')',
+          'margin-left:'+bleedLeft,
+          'margin-right:'+bleedRight,
           'box-sizing:border-box',
           'background:'+color,
           'color:#fff',
@@ -1676,6 +1692,16 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
           'text-overflow:ellipsis',
           'border-radius:'+rl+' '+rr+' '+rr+' '+rl,
         ].join(';');
+        // Add clean symbol at the end of the bar
+        if (isLastCell && cleanSuffix) {
+          const suffix = document.createElement('span');
+          suffix.style.cssText = 'position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:.65rem;opacity:.9';
+          suffix.textContent = bHasClean ? '🧹' : '';
+          suffix.title = bHasClean ? 'Cleaning scheduled ✓' : 'No cleaning scheduled';
+          bar.style.overflow = 'visible';
+          bar.style.position = 'relative';
+          bar.appendChild(suffix);
+        }
         bar.title = (b.guest_name||b.platform)+' — '+propName(b.property_id)+' | '+fmtDate(b.check_in)+' → '+fmtDate(b.check_out);
         bar.textContent = label;
         cell.appendChild(bar);
@@ -1848,43 +1874,7 @@ function renderCalendar() {
   renderCleaningStatusDots();
 }
 
-function renderCleaningStatusDots() {
-  const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
-  fb.filter(b => b.status!=='cancelled' && !isCaretaker(b)).forEach(b => {
-    const coDate = b.check_out_date || b.check_out?.slice(0,10);
-    if (!coDate) return;
-    const [y,m,d] = coDate.split('-').map(Number);
-    if (m-1 !== calMonth || y !== calYear) return;
-    const hasClean = domestics.some(dom =>
-      dom.property_id===b.property_id &&
-      Math.abs(new Date(dom.date)-new Date(coDate)) <= 2*86400000
-    );
-    const cells = document.querySelectorAll('#cal-grid .cal-cell');
-    cells.forEach(cell => {
-      const dateEl = cell.querySelector('.cal-date');
-      if (dateEl && parseInt(dateEl.textContent)===d) {
-        if (!cell.querySelector('.clean-symbol')) {
-          const sym = document.createElement('span');
-          sym.className = 'clean-symbol';
-          sym.textContent = '🧹';
-          sym.title = hasClean ? '✅ Cleaning scheduled' : '⚠ No cleaning — click to add';
-          sym.style.cssText = `
-            position:absolute;bottom:2px;right:2px;
-            font-size:.55rem;line-height:1;cursor:pointer;
-            opacity:${hasClean?'1':'.35'};
-            filter:${hasClean?'none':'grayscale(1)'};
-          `;
-          if (!hasClean) sym.onclick = e => {
-            e.stopPropagation();
-            bookCleaningForGuest(b.property_id, coDate, b.id);
-          };
-          cell.style.position = 'relative';
-          cell.appendChild(sym);
-        }
-      }
-    });
-  });
-}
+function renderCleaningStatusDots() { /* broom now shown on bar end */ }
 
 function calNav(dir) {
   if (dir===0){calYear=new Date().getFullYear();calMonth=new Date().getMonth();}
