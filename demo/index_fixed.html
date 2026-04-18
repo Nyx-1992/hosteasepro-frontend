@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -265,9 +264,8 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .mob-sidebar{display:none;position:fixed;inset:0;z-index:500}
 .mob-sidebar.open{display:block}
 .mob-sidebar-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5)}
-.mob-sidebar-drawer{position:absolute;left:0;top:0;bottom:0;width:260px;background:var(–ink);overflow-y:auto;box-shadow:4px 0 20px rgba(0,0,0,.4);display:flex;flex-direction:column}
+.mob-sidebar-drawer{position:absolute;left:0;top:0;bottom:0;width:260px;background:var(--ink);overflow-y:auto;box-shadow:4px 0 20px rgba(0,0,0,.4);display:flex;flex-direction:column}
 </style>
-
 </head>
 <body>
 
@@ -319,218 +317,214 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
     </div>
     <div class="content">
 
-```
-  <!-- DASHBOARD -->
-  <div class="tab-pane active" id="tab-dashboard">
-    <div class="stat-grid" id="dash-stats"></div>
-    <div class="grid-2">
-      <div class="card"><div class="card-title">📅 Upcoming Arrivals</div><div id="dash-upcoming"></div></div>
-      <div class="card"><div class="card-title">🏠 Property Status</div><div id="dash-prop-status"></div></div>
-    </div>
-  </div>
-
-  <!-- BOOKINGS -->
-  <div class="tab-pane" id="tab-bookings">
-    <div class="section-head">
-      <div class="filter-row" id="booking-filters"></div>
-      <button class="btn btn-primary btn-sm" onclick="openModal('booking-modal')">+ Add Booking</button>
-    </div>
-    <div class="card">
-      <div class="table-wrap">
-        <table><thead><tr id="booking-thead"></tr></thead><tbody id="booking-tbody"></tbody></table>
-      </div>
-    </div>
-  </div>
-
-  <!-- CALENDAR -->
-  <div class="tab-pane" id="tab-calendar">
-    <div class="toggle-bar" id="cal-prop-toggle">
-      <button class="active" onclick="setCalProp('all',this)">🏠 All Properties</button>
-      <button onclick="setCalProp('speranta',this)">Speranta Flat</button>
-      <button onclick="setCalProp('tvhouse',this)">TV House</button>
-    </div>
-    <div class="cal-wrap">
-      <div class="cal-header">
-        <div class="cal-month" id="cal-month-label"></div>
-        <div class="cal-nav">
-          <button onclick="calNav(-1)">← Prev</button>
-          <button onclick="calNav(0)">Today</button>
-          <button onclick="calNav(1)">Next →</button>
+      <!-- DASHBOARD -->
+      <div class="tab-pane active" id="tab-dashboard">
+        <div class="stat-grid" id="dash-stats"></div>
+        <div class="grid-2">
+          <div class="card"><div class="card-title">📅 Upcoming Arrivals</div><div id="dash-upcoming"></div></div>
+          <div class="card"><div class="card-title">🏠 Property Status</div><div id="dash-prop-status"></div></div>
         </div>
       </div>
-      <div class="cal-grid" id="cal-grid"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Legend</div>
-      <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#ff5a5f"></div>Airbnb</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div>Booking.com</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>LekkeSlaap</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Manual/Direct</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Cleaning</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#d946ef"></div>Birthday</div>
-      </div>
-    </div>
-  </div>
 
-  <!-- DOMESTIC -->
-  <div class="tab-pane" id="tab-domestic">
-    <div class="section-head">
-      <div><h2 style="font-size:1.25rem;margin-bottom:3px">Domestic Schedule</h2><div class="text-muted">Cleaning calendar &amp; earnings</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ Export CSV</button>
-        <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
-      </div>
-    </div>
-    <div class="cal-wrap">
-      <div class="cal-header">
-        <div class="cal-month" id="dom-cal-month-label"></div>
-        <div class="cal-nav">
-          <button onclick="domCalNav(-1)">← Prev</button>
-          <button onclick="domCalNav(0)">Today</button>
-          <button onclick="domCalNav(1)">Next →</button>
+      <!-- BOOKINGS -->
+      <div class="tab-pane" id="tab-bookings">
+        <div class="section-head">
+          <div class="filter-row" id="booking-filters"></div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('booking-modal')">+ Add Booking</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table><thead><tr id="booking-thead"></tr></thead><tbody id="booking-tbody"></tbody></table>
+          </div>
         </div>
       </div>
-      <div class="cal-grid" id="dom-cal-grid"></div>
-    </div>
-    <div class="card mb-6"><div class="card-title">💰 Monthly Earnings</div><div id="dom-earnings-summary"></div></div>
-    <div class="card"><div class="card-title">📋 All Sessions</div><div class="dom-grid" id="dom-grid"></div></div>
-  </div>
 
-  <!-- TASKS (Nina-facing: per-booking checklist + general tasks) -->
-  <div class="tab-pane" id="tab-tasks">
-    <div class="section-head">
-      <div><h2 style="font-size:1.25rem;margin-bottom:3px">Tasks</h2><div class="text-muted" id="task-count"></div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <div class="filter-row" id="task-filters"></div>
-        <button class="btn btn-primary btn-sm" onclick="openModal('task-modal')">+ New Task</button>
+      <!-- CALENDAR -->
+      <div class="tab-pane" id="tab-calendar">
+        <div class="toggle-bar" id="cal-prop-toggle">
+          <button class="active" onclick="setCalProp('all',this)">🏠 All Properties</button>
+          <button onclick="setCalProp('speranta',this)">Speranta Flat</button>
+          <button onclick="setCalProp('tvhouse',this)">TV House</button>
+        </div>
+        <div class="cal-wrap">
+          <div class="cal-header">
+            <div class="cal-month" id="cal-month-label"></div>
+            <div class="cal-nav">
+              <button onclick="calNav(-1)">← Prev</button>
+              <button onclick="calNav(0)">Today</button>
+              <button onclick="calNav(1)">Next →</button>
+            </div>
+          </div>
+          <div class="cal-grid" id="cal-grid"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Legend</div>
+          <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#ff5a5f"></div>Airbnb</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div>Booking.com</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>LekkeSlaap</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Manual/Direct</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Cleaning</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#d946ef"></div>Birthday</div>
+          </div>
+        </div>
       </div>
-    </div>
-    <!-- Per-booking Nina tasks -->
-    <div id="nina-booking-tasks" class="mb-6"></div>
-    <!-- General tasks -->
-    <div class="card" id="task-list"></div>
-  </div>
 
-  <!-- MESSAGES -->
-  <div class="tab-pane" id="tab-messages">
-    <div class="card">
-      <div style="background:var(--sand);border-radius:9px;padding:12px 14px;margin-bottom:14px;font-size:.83rem;line-height:1.6">
-        <strong>💬 Team Channel</strong> — messages are logged here for the team.<br>
-        <span style="color:var(--muted)">💡 <em>WhatsApp integration:</em> For now, use this for internal team notes. WhatsApp Business API integration is on the roadmap — it will let guests message directly into this platform. For now, copy important WhatsApp updates here so everything is in one place.</span>
+      <!-- DOMESTIC -->
+      <div class="tab-pane" id="tab-domestic">
+        <div class="section-head">
+          <div><h2 style="font-size:1.25rem;margin-bottom:3px">Domestic Schedule</h2><div class="text-muted">Cleaning calendar &amp; earnings</div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ Export CSV</button>
+            <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
+          </div>
+        </div>
+        <div class="cal-wrap">
+          <div class="cal-header">
+            <div class="cal-month" id="dom-cal-month-label"></div>
+            <div class="cal-nav">
+              <button onclick="domCalNav(-1)">← Prev</button>
+              <button onclick="domCalNav(0)">Today</button>
+              <button onclick="domCalNav(1)">Next →</button>
+            </div>
+          </div>
+          <div class="cal-grid" id="dom-cal-grid"></div>
+        </div>
+        <div class="card mb-6"><div class="card-title">💰 Monthly Earnings</div><div id="dom-earnings-summary"></div></div>
+        <div class="card"><div class="card-title">📋 All Sessions</div><div class="dom-grid" id="dom-grid"></div></div>
       </div>
-      <div class="chat-wrap" id="chat-messages"></div>
-      <div style="display:flex;gap:10px">
-        <input type="text" id="chat-input" placeholder="Message the team…" onkeydown="if(event.key==='Enter')sendMessage()" style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none"/>
-        <button class="btn btn-primary btn-sm" onclick="sendMessage()">Send</button>
-      </div>
-    </div>
-  </div>
 
-  <!-- KNOWLEDGE BASE -->
-  <div class="tab-pane" id="tab-knowledge">
-    <div class="section-head">
-      <div><h2 style="font-size:1.25rem;margin-bottom:3px">Knowledge Base</h2><div class="text-muted">Guides for the team</div></div>
-      <button class="btn btn-primary btn-sm" onclick="openModal('kb-modal')">+ Add Article</button>
-    </div>
-    <div class="mb-6"><input style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:#fff" placeholder="🔍 Search…" oninput="renderKB(this.value)"/></div>
-    <div id="kb-content"></div>
-  </div>
+      <!-- TASKS (Nina-facing: per-booking checklist + general tasks) -->
+      <div class="tab-pane" id="tab-tasks">
+        <div class="section-head">
+          <div><h2 style="font-size:1.25rem;margin-bottom:3px">Tasks</h2><div class="text-muted" id="task-count"></div></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div class="filter-row" id="task-filters"></div>
+            <button class="btn btn-primary btn-sm" onclick="openModal('task-modal')">+ New Task</button>
+          </div>
+        </div>
+        <!-- Per-booking Nina tasks -->
+        <div id="nina-booking-tasks" class="mb-6"></div>
+        <!-- General tasks -->
+        <div class="card" id="task-list"></div>
+      </div>
 
-  <!-- TEAM (admin only) -->
-  <div class="tab-pane" id="tab-team">
-    <div class="section-head">
-      <div><h2 style="font-size:1.25rem;margin-bottom:3px">Team</h2><div class="text-muted">Staff, cleaners & contacts</div></div>
-    </div>
-    <div id="team-content"></div>
-  </div>
+      <!-- MESSAGES -->
+      <div class="tab-pane" id="tab-messages">
+        <div class="card">
+          <div style="background:var(--sand);border-radius:9px;padding:12px 14px;margin-bottom:14px;font-size:.83rem;line-height:1.6">
+            <strong>💬 Team Channel</strong> — messages are logged here for the team.<br>
+            <span style="color:var(--muted)">💡 <em>WhatsApp integration:</em> For now, use this for internal team notes. WhatsApp Business API integration is on the roadmap — it will let guests message directly into this platform. For now, copy important WhatsApp updates here so everything is in one place.</span>
+          </div>
+          <div class="chat-wrap" id="chat-messages"></div>
+          <div style="display:flex;gap:10px">
+            <input type="text" id="chat-input" placeholder="Message the team…" onkeydown="if(event.key==='Enter')sendMessage()" style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none"/>
+            <button class="btn btn-primary btn-sm" onclick="sendMessage()">Send</button>
+          </div>
+        </div>
+      </div>
 
-  <!-- REPORTS (admin only) -->
-  <div class="tab-pane" id="tab-finance">
-    <div class="section-head">
-      <div><h2 style="font-size:1.2rem;margin-bottom:3px">Finance</h2><div class="text-muted">P&L from Nedbank statements Sep 2024 – Dec 2025</div>
-      <div style="background:#fef3c7;border-radius:8px;padding:8px 14px;font-size:.78rem;margin-top:8px;color:#92400e">
-        ⚠️ <strong>Note:</strong> Only Speranta levies are our expense. TV House levies are paid by Mirka & Antonin. February 2025 high income = delayed Airbnb/Payoneer payouts (document verification delay).
-      </div></div>
-    </div>
-    <div class="stat-grid" id="finance-stats"></div>
-    <div class="card mb-6">
-      <div class="card-title">📊 Monthly Income vs Expenses</div>
-      <div style="overflow-x:auto"><div id="finance-chart" style="display:flex;align-items:flex-end;gap:3px;height:140px;padding:4px 0;min-width:600px"></div></div>
-      <div style="display:flex;gap:16px;margin-top:10px;font-size:.76rem">
-        <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:var(--green2);border-radius:2px;display:inline-block"></span>Income</span>
-        <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:#f87171;border-radius:2px;display:inline-block"></span>Expenses</span>
+      <!-- KNOWLEDGE BASE -->
+      <div class="tab-pane" id="tab-knowledge">
+        <div class="section-head">
+          <div><h2 style="font-size:1.25rem;margin-bottom:3px">Knowledge Base</h2><div class="text-muted">Guides for the team</div></div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('kb-modal')">+ Add Article</button>
+        </div>
+        <div class="mb-6"><input style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:#fff" placeholder="🔍 Search…" oninput="renderKB(this.value)"/></div>
+        <div id="kb-content"></div>
       </div>
-    </div>
-    <div class="grid-2 mb-6">
-      <div class="card">
-        <div class="card-title">💳 Income by Platform</div>
-        <div id="finance-platform"></div>
-      </div>
-      <div class="card">
-        <div class="card-title">📤 Expense Breakdown</div>
-        <div id="finance-expenses"></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">📋 Monthly Detail</div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Airbnb</th><th>Booking</th><th>LekkeSlaap</th><th>TV Mgmt Fee</th><th>Cleaning</th><th>Nina</th></tr></thead>
-          <tbody id="finance-table"></tbody>
-          <tfoot><tr id="finance-totals"></tr></tfoot>
-        </table>
-      </div>
-    </div>
-  </div>
 
-  <div class="tab-pane" id="tab-reports">
-    <div style="background:var(--sand);border-radius:9px;padding:10px 14px;margin-bottom:16px;font-size:.8rem;color:var(--muted);line-height:1.5">
-      ⚠️ Revenue shows R0 until booking payouts are entered. Use the Finance tab for actual P&L from bank statements. <strong>Speranta</strong> income is yours. <strong>TV House</strong> rental income is credited to owners — only the R6,000/month management fee is S&N income.
-    </div>
-    <div class="stat-grid" id="report-stats"></div>
-    <div class="grid-2 mb-6">
-      <div class="card">
-        <div class="card-title">🏠 Speranta Flat — Occupancy</div>
-        <div id="report-sp-occ"></div>
+      <!-- TEAM (admin only) -->
+      <div class="tab-pane" id="tab-team">
+        <div class="section-head">
+          <div><h2 style="font-size:1.25rem;margin-bottom:3px">Team</h2><div class="text-muted">Staff, cleaners & contacts</div></div>
+        </div>
+        <div id="team-content"></div>
       </div>
-      <div class="card">
-        <div class="card-title">🏠 TV House — Occupancy</div>
-        <div id="report-tv-occ"></div>
+
+      <!-- REPORTS (admin only) -->
+      <div class="tab-pane" id="tab-finance">
+        <div class="section-head">
+          <div><h2 style="font-size:1.2rem;margin-bottom:3px">Finance</h2><div class="text-muted">P&L from Nedbank statements Sep 2024 – Dec 2025</div>
+          <div style="background:#fef3c7;border-radius:8px;padding:8px 14px;font-size:.78rem;margin-top:8px;color:#92400e">
+            ⚠️ <strong>Note:</strong> Only Speranta levies are our expense. TV House levies are paid by Mirka & Antonin. February 2025 high income = delayed Airbnb/Payoneer payouts (document verification delay).
+          </div></div>
+        </div>
+        <div class="stat-grid" id="finance-stats"></div>
+        <div class="card mb-6">
+          <div class="card-title">📊 Monthly Income vs Expenses</div>
+          <div style="overflow-x:auto"><div id="finance-chart" style="display:flex;align-items:flex-end;gap:3px;height:140px;padding:4px 0;min-width:600px"></div></div>
+          <div style="display:flex;gap:16px;margin-top:10px;font-size:.76rem">
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:var(--green2);border-radius:2px;display:inline-block"></span>Income</span>
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:#f87171;border-radius:2px;display:inline-block"></span>Expenses</span>
+          </div>
+        </div>
+        <div class="grid-2 mb-6">
+          <div class="card">
+            <div class="card-title">💳 Income by Platform</div>
+            <div id="finance-platform"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">📤 Expense Breakdown</div>
+            <div id="finance-expenses"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📋 Monthly Detail</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Airbnb</th><th>Booking</th><th>LekkeSlaap</th><th>TV Mgmt Fee</th><th>Cleaning</th><th>Nina</th></tr></thead>
+              <tbody id="finance-table"></tbody>
+              <tfoot><tr id="finance-totals"></tr></tfoot>
+            </table>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="card mb-6">
-      <div class="card-title">🌐 Bookings by Platform & Property</div>
-      <div id="platform-breakdown"></div>
-    </div>
-    <div class="card mb-6">
-      <div class="card-title">💡 Pricing Insight</div>
-      <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
-    </div>
-    <div class="card mb-6"><div class="card-title">🧹 Domestic Staff Earnings</div><div id="cleaner-earnings"><div class="text-muted">Loading…</div></div></div>
-    <div class="card">
-      <div class="card-title">📈 Seasonal Guide</div>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Season</th><th>Months</th><th>Avg Occupancy</th><th>Best Platform</th><th>Suggested Rate</th></tr></thead>
-        <tbody>
-          <tr><td>🌞 Peak Summer</td><td>Dec–Mar</td><td>87%</td><td>Airbnb</td><td>R1,200–1,400/night</td></tr>
-          <tr><td>🍂 Autumn Shoulder</td><td>Apr–May</td><td>62%</td><td>Booking.com</td><td>R850–950/night</td></tr>
-          <tr><td>❄️ Winter Low</td><td>Jun–Aug</td><td>38%</td><td>LekkeSlaap</td><td>R600–750/night</td></tr>
-          <tr><td>🌸 Spring Shoulder</td><td>Sep–Nov</td><td>71%</td><td>Airbnb</td><td>R900–1,100/night</td></tr>
-        </tbody>
-      </table></div>
-    </div>
-  </div>
 
-</div>
-```
+      <div class="tab-pane" id="tab-reports">
+        <div style="background:var(--sand);border-radius:9px;padding:10px 14px;margin-bottom:16px;font-size:.8rem;color:var(--muted);line-height:1.5">
+          ⚠️ Revenue shows R0 until booking payouts are entered. Use the Finance tab for actual P&L from bank statements. <strong>Speranta</strong> income is yours. <strong>TV House</strong> rental income is credited to owners — only the R6,000/month management fee is S&N income.
+        </div>
+        <div class="stat-grid" id="report-stats"></div>
+        <div class="grid-2 mb-6">
+          <div class="card">
+            <div class="card-title">🏠 Speranta Flat — Occupancy</div>
+            <div id="report-sp-occ"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">🏠 TV House — Occupancy</div>
+            <div id="report-tv-occ"></div>
+          </div>
+        </div>
+        <div class="card mb-6">
+          <div class="card-title">🌐 Bookings by Platform & Property</div>
+          <div id="platform-breakdown"></div>
+        </div>
+        <div class="card mb-6">
+          <div class="card-title">💡 Pricing Insight</div>
+          <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
+        </div>
+        <div class="card mb-6"><div class="card-title">🧹 Domestic Staff Earnings</div><div id="cleaner-earnings"><div class="text-muted">Loading…</div></div></div>
+        <div class="card">
+          <div class="card-title">📈 Seasonal Guide</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Season</th><th>Months</th><th>Avg Occupancy</th><th>Best Platform</th><th>Suggested Rate</th></tr></thead>
+            <tbody>
+              <tr><td>🌞 Peak Summer</td><td>Dec–Mar</td><td>87%</td><td>Airbnb</td><td>R1,200–1,400/night</td></tr>
+              <tr><td>🍂 Autumn Shoulder</td><td>Apr–May</td><td>62%</td><td>Booking.com</td><td>R850–950/night</td></tr>
+              <tr><td>❄️ Winter Low</td><td>Jun–Aug</td><td>38%</td><td>LekkeSlaap</td><td>R600–750/night</td></tr>
+              <tr><td>🌸 Spring Shoulder</td><td>Sep–Nov</td><td>71%</td><td>Airbnb</td><td>R900–1,100/night</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
 
+    </div>
   </div>
 </div>
 
 <!-- MODALS -->
-
 <div class="modal-overlay" id="booking-modal">
   <div class="modal">
     <div class="modal-header"><div class="modal-title">New Booking</div><button class="modal-close" onclick="closeModal('booking-modal')">×</button></div>
@@ -620,7 +614,6 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 </div>
 
 <!-- MOBILE BOTTOM NAV -->
-
 <div class="mobile-nav" id="mobile-nav">
   <div class="mobile-nav-inner" id="mob-nav-inner"></div>
 </div>
@@ -642,7 +635,6 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 </div>
 
 <!-- MOBILE SIDEBAR DRAWER -->
-
 <div class="mob-sidebar" id="mob-sidebar">
   <div class="mob-sidebar-overlay" onclick="toggleMobSidebar()"></div>
   <div class="mob-sidebar-drawer">
@@ -2050,6 +2042,5 @@ window.addEventListener('load', () => { setTimeout(buildMobileNav, 100); setTime
 document.addEventListener('DOMContentLoaded', () => { setTimeout(buildMobileNav, 50); });
 document.getElementById('auth-screen').style.display='flex';
 </script>
-
 </body>
 </html>
