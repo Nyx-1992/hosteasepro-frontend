@@ -747,10 +747,10 @@ const PROPS = {
   tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5'},
 };
 const CLEANERS = [
-  {name:'Blessing', phone:'062 532 2932', payment:'ewallet via Spiwe', properties:['speranta'],           rate:350, birthday:'1988-03-14', note:'Speranta cleaner. Paid via Spiwe ewallet.'},
-  {name:'Fatima',   phone:'063 175 8111', payment:'ewallet',           properties:['speranta','tvhouse'], rate:350, birthday:'1992-07-22', note:'Covers both properties.'},
-  {name:'Patricia', phone:'063 735 3892', payment:'eft',               properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450}, birthday:'1985-11-05', note:'Patricia Mutizwa. Primary TV House cleaner.'},
-  {name:'Spiwe',    phone:'084 915 0894', payment:'ewallet',           properties:['speranta'],           rate:350, birthday:'1990-09-18', note:'Spiwe Gwingwizna. Also collects Blessing payment via ewallet.'},
+  {name:'Blessing', phone:'062 532 2932', payment:'ewallet', properties:['speranta'],           rate:350,                      birthday:'1988-03-14', note:'Speranta cleaner. Paid directly via ewallet to herself.'},
+  {name:'Fatima',   phone:'063 175 8111', payment:'ewallet', properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450},birthday:'1992-07-22', note:'Covers both properties.'},
+  {name:'Patricia', phone:'063 735 3892', payment:'eft',     properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450},birthday:'1985-11-05', note:'Patricia Mutizwa. Primary TV House cleaner.'},
+  {name:'Spiwe',    phone:'084 915 0894', payment:'ewallet', properties:['speranta'],           rate:350,                      birthday:'1990-09-18', note:'Spiwe Gwingwizna.'},
 ];
 const PLAT_COLORS = {airbnb:'#FF385C',booking:'#003580',lekkeslaap:'#FFC300',manual:'#c17f3c',owner:'#64748b',caretaker:'#94a3b8'};
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1919,9 +1919,15 @@ async function editCleaning(id) {
   } else {
     document.getElementById('d-linked-label').style.display = 'none';
   }
-  // Store edit id
+  // Set edit id BEFORE openModal so the reset guard works correctly
   window._editCleanId = id;
-  openModal('domestic-modal');
+  // Manually open without triggering the new-booking reset
+  document.getElementById('domestic-modal').classList.add('open');
+  populateBookingLinkDropdown(d.linked_booking_id || '');
+  // Reselect linked booking in dropdown after populating
+  if (d.linked_booking_id) {
+    document.getElementById('d-booking-link').value = String(d.linked_booking_id);
+  }
 }
 
 async function deleteCleaning(id) {
@@ -1935,6 +1941,7 @@ async function deleteCleaning(id) {
   toast('Cleaning deleted','info');
   closeModal('day-modal');
   renderCalendar();
+  renderBookings();
   if (typeof renderDomestic==='function') renderDomestic();
 }
 
@@ -2083,6 +2090,7 @@ async function saveDomestic() {
   window._editCleanId = null;
   closeModal('domestic-modal');
   renderCalendar();
+  renderBookings();
   if (typeof renderDomestic==='function') renderDomestic();
   if (typeof renderDomEarnings==='function') renderDomEarnings();
 }
