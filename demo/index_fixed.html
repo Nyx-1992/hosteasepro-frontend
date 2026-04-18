@@ -90,9 +90,9 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .badge-checked-in,.badge-checkedin{background:#dbeafe;color:#1e40af}
 .badge-checked-out,.badge-checkedout{background:#f3f4f6;color:#374151}
 .badge-cancelled{background:#fee2e2;color:#991b1b}
-.badge-airbnb{background:#ff5a5f22;color:#c2373c}
-.badge-booking{background:#003b9522;color:#003b95}
-.badge-lekkeslaap{background:#d1fae5;color:#065f46}
+.badge-airbnb{background:#FF385C22;color:#FF385C}
+.badge-booking{background:#00358022;color:#003580}
+.badge-lekkeslaap{background:#FFC30030;color:#a07800}
 .badge-fewo{background:#7c3aed22;color:#5b21b6}
 .badge-manual{background:#fef3c7;color:#92400e}
 .badge-scheduled{background:#fef3c7;color:#92400e}
@@ -150,9 +150,9 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-event.blk-start{border-radius:4px 0 0 4px;margin-left:0}
 .cal-event.blk-end{border-radius:0 4px 4px 0;margin-right:0}
 .cal-event.blk-solo{border-radius:4px}
-.ev-airbnb{background:#ff5a5f;color:#fff}
-.ev-booking{background:#1d4ed8;color:#fff}
-.ev-lekkeslaap{background:#d97706;color:#fff}
+.ev-airbnb{background:#FF385C;color:#fff}
+.ev-booking{background:#003580;color:#fff}
+.ev-lekkeslaap{background:#FFC300;color:#1a1a2e}
 .ev-manual{background:#c17f3c;color:#fff}
 .ev-owner{background:#64748b;color:#fff}
 .ev-caretaker{background:#94a3b8;color:#fff}
@@ -360,9 +360,9 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
         <div class="card">
           <div class="card-title">Legend</div>
           <div class="legend">
-            <div class="legend-item"><div class="legend-dot" style="background:#ff5a5f"></div>Airbnb</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8"></div>Booking.com</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>LekkeSlaap</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#FF385C"></div>Airbnb</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#003580"></div>Booking.com</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#FFC300"></div>LekkeSlaap</div>
             <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Manual/Direct</div>
             <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
             <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>Cleaning</div>
@@ -483,34 +483,60 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
       </div>
 
       <div class="tab-pane" id="tab-reports">
-        <div style="background:#f0fdf4;border-radius:9px;padding:10px 14px;margin-bottom:16px;font-size:.8rem;color:#166534;line-height:1.5;border:1px solid #bbf7d0">
-          ✅ <strong>Speranta revenue fully loaded</strong> from Airbnb, Booking.com & LekkeSlaap statements. <strong>TV House</strong> rental income goes to owners — only the R6,000/month management fee is S&N income.
-        </div>
-        <div class="stat-grid" id="report-stats"></div>
-        <div class="card mb-6">
-          <div class="card-title">📊 Monthly Revenue by Platform</div>
-          <div style="display:flex;gap:14px;margin-bottom:12px;flex-wrap:wrap" id="report-legend"></div>
-          <div style="overflow-x:auto">
-            <div id="report-monthly-chart" style="display:flex;align-items:flex-end;gap:6px;height:160px;min-width:500px;padding:4px 0"></div>
+        <!-- Time frame selector -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+          <div style="font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Speranta Flat · S&N Income Only</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="report-timeframe-btns">
+            <button class="btn btn-sm btn-primary" onclick="setReportTimeframe(3,this)">3 months</button>
+            <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(6,this)">6 months</button>
+            <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(12,this)">12 months</button>
+            <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(0,this)">All time</button>
           </div>
-          <div id="report-month-labels" style="display:flex;gap:6px;min-width:500px;margin-top:4px;overflow-x:auto"></div>
         </div>
+        <!-- Stat cards -->
+        <div class="stat-grid" id="report-stats"></div>
+        <!-- Monthly chart -->
+        <div class="card mb-6">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+            <div class="card-title" style="margin:0">📊 Monthly Revenue by Platform</div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap" id="report-legend"></div>
+          </div>
+          <div style="overflow-x:auto">
+            <div id="report-monthly-chart" style="display:flex;align-items:flex-end;gap:5px;height:180px;min-width:500px;padding:4px 0"></div>
+          </div>
+          <div id="report-month-labels" style="display:flex;gap:5px;min-width:500px;margin-top:4px"></div>
+          <div id="report-chart-tooltip" style="display:none;margin-top:12px;padding:10px 14px;background:var(--sand);border-radius:8px;font-size:.82rem;line-height:1.7"></div>
+        </div>
+        <!-- Platform + best month row -->
         <div class="grid-2 mb-6">
           <div class="card">
-            <div class="card-title">🏠 Speranta — Revenue by Platform</div>
+            <div class="card-title">🌐 Revenue by Platform</div>
             <div id="platform-breakdown"></div>
           </div>
           <div class="card">
-            <div class="card-title">🏠 TV House — Management Income</div>
+            <div class="card-title">📈 Key Insights</div>
+            <div id="report-insights"></div>
+          </div>
+        </div>
+        <!-- Occupancy + TV House row -->
+        <div class="grid-2 mb-6">
+          <div class="card">
+            <div class="card-title">🗓️ Occupancy Analysis</div>
+            <div id="report-occupancy"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">🏠 TV House — Mgmt Income</div>
             <div id="report-tv-occ"></div>
           </div>
         </div>
-        <div class="card mb-6" id="report-sp-occ" style="display:none"></div>
+        <!-- Pricing insight -->
         <div class="card mb-6">
           <div class="card-title">💡 Pricing Insight</div>
           <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
         </div>
+        <!-- Cleaner earnings -->
         <div class="card mb-6"><div class="card-title">🧹 Domestic Staff Earnings</div><div id="cleaner-earnings"><div class="text-muted">Loading…</div></div></div>
+        <div id="report-sp-occ" style="display:none"></div>
         <div class="card">
           <div class="card-title">📈 Seasonal Guide</div>
           <div class="table-wrap"><table>
@@ -690,7 +716,7 @@ const CLEANERS = [
   {name:'Patricia', phone:'063 735 3892', payment:'eft',               properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450}, birthday:'1985-11-05', note:'Patricia Mutizwa. Primary TV House cleaner.'},
   {name:'Spiwe',    phone:'084 915 0894', payment:'ewallet',           properties:['speranta'],           rate:350, birthday:'1990-09-18', note:'Spiwe Gwingwizna. Also collects Blessing payment via ewallet.'},
 ];
-const PLAT_COLORS = {airbnb:'#ff5a5f',booking:'#1d4ed8',lekkeslaap:'#d97706',manual:'#c17f3c',owner:'#64748b',caretaker:'#94a3b8'};
+const PLAT_COLORS = {airbnb:'#FF385C',booking:'#003580',lekkeslaap:'#FFC300',manual:'#c17f3c',owner:'#64748b',caretaker:'#94a3b8'};
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -1523,16 +1549,19 @@ async function saveKB() {
 }
 
 // ── REPORTS ───────────────────────────────────────────────────
-async function renderReports() {
-  const fmt  = n => 'R' + Math.round(n).toLocaleString('en-ZA');
-  const fmtK = n => n >= 1000 ? 'R' + (n/1000).toFixed(0) + 'k' : fmt(n);
-  const today = new Date().toISOString().slice(0,10);
-  const pColors = {airbnb:'#ff5a5f', booking:'#1d4ed8', lekkeslaap:'#d97706', manual:'#c17f3c'};
+async function renderReports(monthsBack) {
+  if (monthsBack === undefined) monthsBack = window._reportMonths ?? 3;
+  window._reportMonths = monthsBack;
+
+  const fmt    = n => 'R' + Math.round(n).toLocaleString('en-ZA');
+  const fmtK   = n => n >= 1000 ? 'R' + (n/1000).toFixed(1) + 'k' : fmt(n);
+  const today  = new Date().toISOString().slice(0,10);
+  const pColors = {airbnb:'#FF385C', booking:'#003580', lekkeslaap:'#FFC300', manual:'#c17f3c'};
   const pNames  = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', manual:'Direct'};
 
   document.getElementById('report-stats').innerHTML = '<div class="text-muted" style="padding:10px">Loading live data…</div>';
 
-  // ── Fetch all bookings from DB ──
+  // ── Fetch from DB ──
   let allBookings = [];
   if (db) {
     try {
@@ -1540,117 +1569,184 @@ async function renderReports() {
       if (res.data && res.data.length) allBookings = res.data.map(nb);
     } catch(e) { console.warn('DB fetch error:', e); }
   }
-  if (!allBookings.length) allBookings = bookings; // fallback
+  if (!allBookings.length) allBookings = bookings;
 
-  const spPaid = allBookings.filter(b => b.property_id==='speranta' && b.status!=='cancelled' && (b.revenue||0)>0);
+  // ── Time frame filter ──
+  let cutoff = '';
+  if (monthsBack > 0) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - monthsBack);
+    cutoff = d.toISOString().slice(0,10);
+  }
+
   const spAll  = allBookings.filter(b => b.property_id==='speranta' && b.status!=='cancelled');
+  const spPaid = spAll.filter(b => (b.revenue||0) > 0 && (!cutoff || b.check_in >= cutoff));
   const platOrder = ['airbnb','booking','lekkeslaap','manual'];
 
-  // Aggregates
+  // ── Aggregates ──
   const byPlat = {};
   spPaid.forEach(b => {
     const p = b.platform||'manual';
     if (!byPlat[p]) byPlat[p] = {bookings:0, nights:0, revenue:0};
     byPlat[p].bookings++;
-    byPlat[p].nights   += b.nights||0;
-    byPlat[p].revenue  += b.revenue||0;
+    byPlat[p].nights  += b.nights||0;
+    byPlat[p].revenue += b.revenue||0;
   });
-  const totalRev    = spPaid.reduce((s,b) => s + (b.revenue||0), 0);
-  const totalNights = spPaid.reduce((s,b) => s + (b.nights||0), 0);
+  const totalRev    = spPaid.reduce((s,b) => s+(b.revenue||0), 0);
+  const totalNights = spPaid.reduce((s,b) => s+(b.nights||0), 0);
   const avgNight    = totalNights ? Math.round(totalRev/totalNights) : 0;
   const upcoming    = spAll.filter(b => b.check_in > today && !isOwnerStay(b));
-  const airbnbAvg   = byPlat.airbnb?.nights    ? Math.round(byPlat.airbnb.revenue/byPlat.airbnb.nights)       : 0;
-  const bookingAvg  = byPlat.booking?.nights   ? Math.round(byPlat.booking.revenue/byPlat.booking.nights)     : 0;
-  const lsAvg       = byPlat.lekkeslaap?.nights? Math.round(byPlat.lekkeslaap.revenue/byPlat.lekkeslaap.nights):0;
+  const airbnbAvg   = byPlat.airbnb?.nights     ? Math.round(byPlat.airbnb.revenue/byPlat.airbnb.nights)        : 0;
+  const bookingAvg  = byPlat.booking?.nights    ? Math.round(byPlat.booking.revenue/byPlat.booking.nights)      : 0;
+  const lsAvg       = byPlat.lekkeslaap?.nights ? Math.round(byPlat.lekkeslaap.revenue/byPlat.lekkeslaap.nights): 0;
 
   // ── STAT CARDS ──
+  const upcomingNights = upcoming.reduce((s,b)=>s+(b.nights||0),0);
   document.getElementById('report-stats').innerHTML =
-    sCard('Speranta Revenue', fmt(totalRev), spPaid.length + ' paid bookings · ' + totalNights + ' nights', 'var(--green2)') +
-    sCard('Avg Per Night',    fmt(avgNight), 'across all platforms', 'var(--accent)') +
-    sCard('Airbnb Rate',      fmt(airbnbAvg)+'/night', 'R'+(airbnbAvg-lsAvg)+'/night more than LekkeSlaap', '#ff5a5f') +
-    sCard('Upcoming',         upcoming.length+' bookings', upcoming.reduce((s,b)=>s+(b.nights||0),0)+' confirmed nights', 'var(--blue)');
+    sCard('Speranta Revenue', fmt(totalRev), spPaid.length+' paid bookings · '+totalNights+' nights', 'var(--green2)') +
+    sCard('Avg Per Night', fmt(avgNight), 'all platforms combined', 'var(--accent)') +
+    sCard('Best Platform', fmt(airbnbAvg)+'/night', 'Airbnb · R'+(airbnbAvg-lsAvg)+' more than LekkeSlaap', '#FF385C') +
+    sCard('Pipeline', upcoming.length+' bookings', upcomingNights+' upcoming nights', 'var(--blue)');
 
-  // ── BUILD MONTHLY DATA — stacked by platform ──
-  const monthlyData = {}; // { 'YYYY-MM': { airbnb:0, booking:0, lekkeslaap:0, manual:0 } }
+  // ── MONTHLY DATA ──
+  const monthlyData = {};
   spPaid.forEach(b => {
     const mo = (b.check_in||'').slice(0,7);
     if (!mo || mo.length < 7) return;
-    if (!monthlyData[mo]) monthlyData[mo] = {airbnb:0, booking:0, lekkeslaap:0, manual:0};
+    if (!monthlyData[mo]) monthlyData[mo] = {airbnb:0, booking:0, lekkeslaap:0, manual:0, total:0};
     const p = b.platform||'manual';
     monthlyData[mo][p] = (monthlyData[mo][p]||0) + (b.revenue||0);
+    monthlyData[mo].total += b.revenue||0;
   });
 
   const months = Object.keys(monthlyData).sort();
-  const maxMonthTotal = Math.max(...months.map(m => platOrder.reduce((s,p)=>s+(monthlyData[m][p]||0),0)));
+  const maxMonthTotal = Math.max(1, ...months.map(m => monthlyData[m].total));
   const moLabel = m => {
-    const parts = m.split('-');
-    const y = parts[0]; const mo = parseInt(parts[1]);
-    return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][mo-1]+'\''+y.slice(2);
+    const[y,mo] = m.split('-');
+    return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1]+"'"+y.slice(2);
   };
 
   // ── STACKED BAR CHART ──
   const chartEl = document.getElementById('report-monthly-chart');
   const labelEl = document.getElementById('report-month-labels');
   const legendEl = document.getElementById('report-legend');
+  const tooltipEl = document.getElementById('report-chart-tooltip');
 
   if (legendEl) legendEl.innerHTML = platOrder.map(p =>
-    `<span style="display:flex;align-items:center;gap:5px;font-size:.76rem;font-weight:600">
-      <span style="width:12px;height:12px;border-radius:3px;background:${pColors[p]};display:inline-block"></span>${pNames[p]}
+    `<span style="display:flex;align-items:center;gap:4px;font-size:.74rem;font-weight:600;color:var(--ink)">
+      <span style="width:10px;height:10px;border-radius:2px;background:${pColors[p]};display:inline-block;${p==='lekkeslaap'?'border:1px solid #d4a800':''}"></span>${pNames[p]}
     </span>`).join('');
 
   if (chartEl && months.length) {
-    chartEl.innerHTML = months.map(m => {
-      const total = platOrder.reduce((s,p) => s+(monthlyData[m][p]||0), 0);
-      const barH  = maxMonthTotal ? Math.round(total/maxMonthTotal*152) : 0;
+    chartEl.innerHTML = months.map((m,i) => {
+      const d = monthlyData[m];
+      const total = d.total;
       const isNow = m === today.slice(0,7);
-      // Build stacked segments from bottom up
-      const segs = platOrder.map(p => {
-        const v = monthlyData[m][p]||0;
-        if (!v) return '';
-        const h = maxMonthTotal ? Math.round(v/maxMonthTotal*152) : 0;
-        return `<div style="width:100%;height:${h}px;background:${pColors[p]};flex-shrink:0" title="${pNames[p]}: ${fmt(v)}"></div>`;
-      }).filter(Boolean).reverse(); // reverse so airbnb on top visually
-      return `<div style="flex:1;min-width:28px;display:flex;flex-direction:column;align-items:center;gap:0">
-        <div style="font-size:.6rem;font-weight:700;color:var(--ink);margin-bottom:3px">${total>=1000?fmtK(total):''}</div>
-        <div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:152px;border-radius:4px 4px 0 0;overflow:hidden;${isNow?'outline:2px solid var(--accent)':''}">
-          ${segs.join('')}
-        </div>
+      const segs = [...platOrder].reverse().map(p => {
+        const v = d[p]||0; if (!v) return '';
+        const h = Math.round(v/maxMonthTotal*172);
+        const textColor = p==='lekkeslaap' ? '#1a1a2e' : '#fff';
+        return `<div style="width:100%;height:${h}px;background:${pColors[p]};flex-shrink:0;cursor:pointer;transition:opacity .15s" 
+          onmouseover="showChartTooltip('${m}',${JSON.stringify(d)})" 
+          onmouseout="hideChartTooltip()"
+          title="${pNames[p]}: ${fmt(v)}"></div>`;
+      }).filter(Boolean);
+      return `<div style="flex:1;min-width:24px;display:flex;flex-direction:column;align-items:center;position:relative" 
+        onmouseover="showChartTooltip('${m}',${JSON.stringify(d)})" onmouseout="hideChartTooltip()">
+        <div style="font-size:.58rem;font-weight:700;color:var(--muted);margin-bottom:3px;white-space:nowrap">${total>=1000?fmtK(total):''}</div>
+        <div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:172px;border-radius:4px 4px 0 0;overflow:hidden;cursor:pointer;
+          ${isNow?'outline:2px solid var(--accent);outline-offset:1px':''}">${segs.join('')}</div>
       </div>`;
     }).join('');
-
     labelEl.innerHTML = months.map(m =>
-      `<div style="flex:1;min-width:28px;font-size:.58rem;color:var(--muted);text-align:center">${moLabel(m)}</div>`
+      `<div style="flex:1;min-width:24px;font-size:.56rem;color:var(--muted);text-align:center;white-space:nowrap">${moLabel(m)}</div>`
     ).join('');
   } else if (chartEl) {
-    chartEl.innerHTML = '<div class="text-muted">No revenue data yet</div>';
+    chartEl.innerHTML = '<div class="text-muted" style="padding:20px">No revenue data for this period</div>';
   }
 
   // ── PLATFORM BREAKDOWN ──
   const pbEl = document.getElementById('platform-breakdown');
-  const maxPlat = Math.max(...platOrder.map(p => byPlat[p]?.revenue||0));
+  const maxPlat = Math.max(1, ...platOrder.map(p => byPlat[p]?.revenue||0));
   if (pbEl) pbEl.innerHTML = platOrder.map(p => {
     const s = byPlat[p]; if (!s||!s.revenue) return '';
     const avgN   = s.nights ? Math.round(s.revenue/s.nights) : 0;
-    const pct    = maxPlat  ? Math.round(s.revenue/maxPlat*100) : 0;
+    const pct    = Math.round(s.revenue/maxPlat*100);
     const totPct = totalRev ? Math.round(s.revenue/totalRev*100) : 0;
-    return `<div style="margin-bottom:18px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
-        <span style="display:flex;align-items:center;gap:7px;font-weight:600">
-          <span style="width:11px;height:11px;border-radius:2px;background:${pColors[p]};display:inline-block"></span>${pNames[p]}
+    const lsStyle = p==='lekkeslaap' ? 'border:1px solid #d4a800' : '';
+    return `<div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span style="display:flex;align-items:center;gap:6px;font-weight:600;font-size:.87rem">
+          <span style="width:10px;height:10px;border-radius:2px;background:${pColors[p]};display:inline-block;${lsStyle}"></span>${pNames[p]}
         </span>
-        <span style="font-weight:700">${fmt(s.revenue)} <span style="color:var(--muted);font-weight:400;font-size:.76rem">${totPct}%</span></span>
+        <span style="font-weight:700;font-size:.9rem">${fmt(s.revenue)} <span style="color:var(--muted);font-weight:400;font-size:.73rem">${totPct}%</span></span>
       </div>
-      <div style="height:10px;background:var(--border);border-radius:5px;margin-bottom:5px">
-        <div style="height:10px;width:${pct}%;background:${pColors[p]};border-radius:5px"></div>
+      <div style="height:8px;background:var(--border);border-radius:4px;margin-bottom:4px">
+        <div style="height:8px;width:${pct}%;background:${pColors[p]};border-radius:4px;${lsStyle}"></div>
       </div>
-      <div style="display:flex;gap:16px;font-size:.75rem;color:var(--muted)">
+      <div style="display:flex;gap:14px;font-size:.74rem;color:var(--muted)">
         <span>${s.bookings} bookings</span><span>${s.nights} nights</span>
-        <span style="color:${pColors[p]};font-weight:700">${fmt(avgN)}/night</span>
+        <span style="color:${pColors[p]};font-weight:700;${p==='lekkeslaap'?'color:#a07800':''}">${fmt(avgN)}/night</span>
       </div>
     </div>`;
   }).join('');
 
-  // ── TV HOUSE MGMT INCOME ──
+  // ── KEY INSIGHTS ──
+  const insightsEl = document.getElementById('report-insights');
+  if (insightsEl) {
+    // Best month
+    const bestMonth = months.reduce((best,m) => monthlyData[m].total > (monthlyData[best]?.total||0) ? m : best, months[0]);
+    const worstMonth = months.reduce((worst,m) => monthlyData[m].total < (monthlyData[worst]?.total||Infinity) ? m : worst, months[0]);
+    // Revenue per booking
+    const revPerBooking = spPaid.length ? Math.round(totalRev/spPaid.length) : 0;
+    // Airbnb vs LekkeSlaap opportunity cost
+    const lsBookings = byPlat.lekkeslaap?.bookings||0;
+    const lsNights   = byPlat.lekkeslaap?.nights||0;
+    const opportunityCost = lsNights * (airbnbAvg - lsAvg);
+
+    insightsEl.innerHTML = [
+      bestMonth  ? `<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Best Month</div><div style="font-weight:700">${moLabel(bestMonth)}</div><div style="font-size:.78rem;color:var(--green)">${fmt(monthlyData[bestMonth].total)}</div></div>` : '',
+      worstMonth && worstMonth!==bestMonth ? `<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Lowest Month</div><div style="font-weight:700">${moLabel(worstMonth)}</div><div style="font-size:.78rem;color:var(--red)">${fmt(monthlyData[worstMonth].total)}</div></div>` : '',
+      `<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Avg Revenue/Booking</div><div style="font-weight:700">${fmt(revPerBooking)}</div><div style="font-size:.78rem;color:var(--muted)">across ${spPaid.length} paid stays</div></div>`,
+      opportunityCost > 0 ? `<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">LekkeSlaap Opportunity Cost</div><div style="font-weight:700;color:var(--red)">${fmt(opportunityCost)}</div><div style="font-size:.78rem;color:var(--muted)">${lsNights} nights at R${airbnbAvg-lsAvg}/night less than Airbnb</div></div>` : '',
+      `<div style="padding:9px 0"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Monthly Average</div><div style="font-weight:700">${months.length ? fmt(Math.round(totalRev/months.length)) : 'R0'}</div><div style="font-size:.78rem;color:var(--muted)">over ${months.length} months</div></div>`,
+    ].filter(Boolean).join('');
+  }
+
+  // ── OCCUPANCY ANALYSIS ──
+  const occEl = document.getElementById('report-occupancy');
+  if (occEl) {
+    // Calculate occupancy: nights booked / days in period
+    const periodDays = monthsBack > 0 ? monthsBack * 30 : 600;
+    const occRate = Math.min(100, Math.round(totalNights / periodDays * 100));
+    // Nights by platform
+    const platNights = platOrder.map(p => ({p, n: byPlat[p]?.nights||0})).filter(x=>x.n>0);
+    const maxN = Math.max(1, ...platNights.map(x=>x.n));
+    occEl.innerHTML = `
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;padding:12px;background:var(--sand);border-radius:8px">
+        <div style="font-size:2.2rem;font-weight:700;font-family:'DM Serif Display',serif;color:var(--accent)">${occRate}%</div>
+        <div>
+          <div style="font-weight:600;font-size:.88rem">Occupancy Rate</div>
+          <div style="font-size:.76rem;color:var(--muted)">${totalNights} booked nights · ${periodDays} day period</div>
+        </div>
+      </div>
+      ${platNights.map(({p,n}) => {
+        const pct = Math.round(n/maxN*100);
+        const lsStyle = p==='lekkeslaap' ? 'border:1px solid #d4a800' : '';
+        return `<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:3px">
+            <span style="font-weight:600">${pNames[p]}</span>
+            <span style="color:var(--muted)">${n} nights</span>
+          </div>
+          <div style="height:6px;background:var(--border);border-radius:3px">
+            <div style="height:6px;width:${pct}%;background:${pColors[p]};border-radius:3px;${lsStyle}"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    `;
+  }
+
+  // ── TV HOUSE MGMT ──
   const tvEl = document.getElementById('report-tv-occ');
   if (tvEl) {
     let mgmtTotal = 0;
@@ -1660,15 +1756,16 @@ async function renderReports() {
         if (r.data) mgmtTotal = r.data.reduce((s,x)=>s+Number(x.amount),0);
       } catch(e) {}
     }
+    const months_mgmt = mgmtTotal ? Math.round(mgmtTotal/6000) : 0;
     tvEl.innerHTML = `
-      <div style="text-align:center;padding:10px 0 16px">
-        <div style="font-size:2rem;font-weight:700;font-family:'DM Serif Display',serif;color:var(--blue)">${mgmtTotal?fmt(mgmtTotal):'R6,000'}</div>
-        <div style="font-size:.8rem;color:var(--muted)">${mgmtTotal?'total received from Mirka & Antonin':'per month management fee'}</div>
+      <div style="text-align:center;padding:12px 0 14px">
+        <div style="font-size:2rem;font-weight:700;font-family:'DM Serif Display',serif;color:var(--blue)">${mgmtTotal ? fmt(mgmtTotal) : 'R6,000'}</div>
+        <div style="font-size:.8rem;color:var(--muted)">${mgmtTotal ? 'total · ~'+months_mgmt+' months · from Mirka & Antonin' : 'per month management fee'}</div>
       </div>
-      <div style="font-size:.82rem;line-height:1.7;color:var(--ink);background:var(--sand);border-radius:8px;padding:12px">
-        TV House rental income → owners.<br>
+      <div style="font-size:.82rem;line-height:1.7;background:var(--sand);border-radius:8px;padding:12px">
+        Rental income → owners.<br>
         S&N earns <strong>R6,000/month</strong> management fee.<br>
-        Pool, gardener & maintenance recovered from fee.
+        Pool, gardener & maintenance covered by fee.
       </div>`;
   }
 
@@ -1676,14 +1773,42 @@ async function renderReports() {
   const m = new Date().getMonth();
   document.getElementById('pricing-insight').innerHTML =
     [5,6,7].includes(m)
-      ? `❄️ <strong>Low season.</strong> Drop Airbnb to R900–1,100 to maintain occupancy. Use LekkeSlaap to fill gaps. 2-night minimums work better than 3 in winter.`
+      ? `❄️ <strong>Low season (Jun–Aug).</strong> Your Airbnb avg is ${fmt(airbnbAvg)}/night — consider R900–1,100 to maintain occupancy. Use LekkeSlaap to fill gaps. 2-night minimums work better than 3 in winter.`
     : [11,0,1,2].includes(m)
-      ? `🌞 <strong>Peak summer.</strong> Your data shows avg ${fmt(airbnbAvg)}/night — push to R1,500–1,800 for peak dates. Set 3-night minimums. Airbnb outperforms all other platforms this season.`
-      : `🍂 <strong>Shoulder season.</strong> Airbnb at ${fmt(airbnbAvg)}/night, Booking.com at ${fmt(bookingAvg)}/night. Try raising Booking.com rates 10%. Every LekkeSlaap booking vs Airbnb costs R${airbnbAvg-lsAvg}/night — use it only for gap-filling.`;
+      ? `🌞 <strong>Peak summer (Dec–Mar).</strong> Push Airbnb to R1,500–1,800/night. Your data shows guests pay well above avg in this period. Set 3-night minimums. Airbnb consistently outperforms — prioritise it.`
+      : `🍂 <strong>Shoulder season (Apr–May, Sep–Nov).</strong> Airbnb at ${fmt(airbnbAvg)}/night, Booking.com at ${fmt(bookingAvg)}/night. Try raising Booking.com 10%. LekkeSlaap at ${fmt(lsAvg)}/night — use only to fill gaps; each night on LekkeSlaap instead of Airbnb costs you R${airbnbAvg-lsAvg}.`;
 
   await renderCleanerEarningsReport();
 }
 
+function setReportTimeframe(months, btn) {
+  document.querySelectorAll('#report-timeframe-btns .btn').forEach(b => {
+    b.className = 'btn btn-sm btn-ghost';
+  });
+  if (btn) btn.className = 'btn btn-sm btn-primary';
+  renderReports(months);
+}
+
+function showChartTooltip(month, data) {
+  const tooltipEl = document.getElementById('report-chart-tooltip');
+  if (!tooltipEl) return;
+  const pNames = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', manual:'Direct'};
+  const pColors = {airbnb:'#FF385C', booking:'#003580', lekkeslaap:'#FFC300', manual:'#c17f3c'};
+  const fmt = n => 'R' + Math.round(n).toLocaleString('en-ZA');
+  const [y,mo] = month.split('-');
+  const moName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1];
+  const parts = ['airbnb','booking','lekkeslaap','manual']
+    .filter(p => data[p] > 0)
+    .map(p => `<span style="display:flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:${pColors[p]};display:inline-block"></span><strong>${pNames[p]}:</strong> ${fmt(data[p])}</span>`)
+    .join(' &nbsp;·&nbsp; ');
+  tooltipEl.style.display = 'block';
+  tooltipEl.innerHTML = `<strong>${moName} ${y}</strong> &nbsp;·&nbsp; Total: <strong style="color:var(--green)">${fmt(data.total)}</strong> &nbsp;&nbsp; ${parts}`;
+}
+
+function hideChartTooltip() {
+  const el = document.getElementById('report-chart-tooltip');
+  if (el) el.style.display = 'none';
+}
 async function renderCleanerEarningsReport() {
   const el=document.getElementById('cleaner-earnings'); if(!el)return;
   const COLORS={Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
@@ -2030,9 +2155,9 @@ async function renderFinance() {
 
   // ── INCOME BY PLATFORM ──
   const pData = [
-    {name:'Airbnb',         val:T.airbnb,     color:'#ff5a5f'},
-    {name:'Booking.com',    val:T.booking,    color:'#1d4ed8'},
-    {name:'LekkeSlaap',     val:T.lekkeslaap, color:'#d97706'},
+    {name:'Airbnb',         val:T.airbnb,     color:'#FF385C'},
+    {name:'Booking.com',    val:T.booking,    color:'#003580'},
+    {name:'LekkeSlaap',     val:T.lekkeslaap, color:'#FFC300'},
     {name:'TV House Mgmt',  val:T.owner_mgmt, color:'var(--green2)'},
   ].filter(p => p.val > 0).sort((a,b) => b.val - a.val);
   const totalInc = pData.reduce((s,p) => s + p.val, 0);
