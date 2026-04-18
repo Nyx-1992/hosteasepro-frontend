@@ -266,6 +266,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   .mobile-nav{display:none!important}
   #mob-menu-btn{display:none!important}
 }
+@media(max-width:900px){#dash-lower-grid{grid-template-columns:1fr!important}}
 @media(max-width:768px){
   .sidebar{display:none!important}
   .main{margin-left:0!important;padding-bottom:74px}
@@ -353,12 +354,46 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
       <!-- DASHBOARD -->
       <div class="tab-pane active" id="tab-dashboard">
-        <!-- Pending Nestora bookings alert -->
+        <!-- Pending alert -->
         <div id="dash-pending-alert" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;padding:14px 18px;margin-bottom:16px"></div>
-        <div class="stat-grid" id="dash-stats"></div>
-        <div class="grid-2">
-          <div class="card"><div class="card-title">📅 Upcoming Arrivals</div><div id="dash-upcoming"></div></div>
-          <div class="card"><div class="card-title">🏠 Property Status</div><div id="dash-prop-status"></div></div>
+
+        <!-- Stat cards -->
+        <div class="stat-grid" id="dash-stats" style="margin-bottom:18px"></div>
+
+        <!-- Next arrivals: Speranta + TV House side by side -->
+        <div class="grid-2" style="margin-bottom:18px">
+          <div class="card" style="padding:16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <span style="width:10px;height:10px;border-radius:50%;background:#FF385C;display:inline-block"></span>
+              <div class="card-title" style="margin:0;font-size:.88rem">Speranța Flat — Next Arrivals</div>
+            </div>
+            <div id="dash-arrivals-speranta"></div>
+          </div>
+          <div class="card" style="padding:16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+              <span style="width:10px;height:10px;border-radius:50%;background:#4ABBA5;display:inline-block"></span>
+              <div class="card-title" style="margin:0;font-size:.88rem">TV House — Next Arrivals</div>
+            </div>
+            <div id="dash-arrivals-tvhouse"></div>
+          </div>
+        </div>
+
+        <!-- Mini calendars: Speranta + TV House + Urgent Tasks -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 320px;gap:18px;align-items:start" id="dash-lower-grid">
+          <div class="card" style="padding:14px">
+            <div class="card-title" style="font-size:.84rem;margin-bottom:10px">📅 Speranța Calendar</div>
+            <div id="dash-cal-speranta"></div>
+          </div>
+          <div class="card" style="padding:14px">
+            <div class="card-title" style="font-size:.84rem;margin-bottom:10px">📅 TV House Calendar</div>
+            <div id="dash-cal-tvhouse"></div>
+          </div>
+          <div class="card" style="padding:14px;background:var(--ink);color:#fff">
+            <div style="font-family:'DM Serif Display',serif;font-size:.9rem;margin-bottom:12px;color:#fff;display:flex;align-items:center;gap:6px">
+              <span style="animation:pulse 2s infinite">🔔</span> Urgent Actions
+            </div>
+            <div id="dash-urgent"></div>
+          </div>
         </div>
       </div>
 
@@ -1425,60 +1460,217 @@ function filteredDomestics() {
 // ── DASHBOARD ─────────────────────────────────────────────────
 function renderDashboard() {
   const today = new Date().toISOString().slice(0,10);
+  const now   = new Date();
   const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
+
+  // ── Base stats ──
   const active    = fb.filter(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b));
-  const checkIns  = fb.filter(b=>b.check_in===today&&b.status!=='cancelled');
-  const checkOuts = fb.filter(b=>b.check_out===today&&b.status!=='cancelled');
-  const monthRev  = fb.filter(b=>b.check_in.startsWith('2026-04')).reduce((s,b)=>s+(b.revenue||0),0);
-  const upcoming  = fb.filter(b=>b.check_in>today&&b.status!=='cancelled').sort((a,z)=>a.check_in.localeCompare(z.check_in)).slice(0,6);
-  const isAdmin = currentUser.role==='admin';
-  const checkInLabels  = checkIns.map(b=>b.display_name+' ('+propName(b.property_id)+')').join(', ') || 'None today';
-  const checkOutLabels = checkOuts.map(b=>b.display_name+' ('+propName(b.property_id)+')').join(', ') || 'None today';
+  const checkIns  = fb.filter(b=>b.check_in===today&&b.status!=='cancelled'&&!isCaretaker(b));
+  const checkOuts = fb.filter(b=>b.check_out===today&&b.status!=='cancelled'&&!isCaretaker(b));
+  const checkInLabels  = checkIns.map(b=>b.display_name+' ('+propName(b.property_id)+')').join(', ')||'None today';
+  const checkOutLabels = checkOuts.map(b=>b.display_name+' ('+propName(b.property_id)+')').join(', ')||'None today';
+
   document.getElementById('dash-stats').innerHTML =
     statCard("Today's Check-ins",  checkIns.length,  checkInLabels,  'var(--accent)') +
     statCard("Today's Check-outs", checkOuts.length, checkOutLabels, 'var(--blue)') +
     statCard('Occupied Now', active.length, 'of '+(currentProp==='all'?2:1)+' properties', 'var(--green2)');
-  // ── Pending direct bookings alert ──
-  const pendingDirect = bookings.filter(b => b.platform==='direct' && b.status==='pending' && b.is_active);
+
+  // ── Pending alert ──
+  const pendingDirect = bookings.filter(b=>b.platform==='direct'&&b.status==='pending'&&b.is_active!==false);
   const alertEl = document.getElementById('dash-pending-alert');
   if (alertEl) {
     if (pendingDirect.length) {
       alertEl.style.display = 'block';
-      alertEl.innerHTML = `
-        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:1.4rem;animation:pulse 1.5s infinite">🔔</span>
-            <div>
-              <div style="font-weight:700;font-size:.9rem;color:#92400e">${pendingDirect.length} Nestora booking${pendingDirect.length>1?'s':''} awaiting approval</div>
-              <div style="font-size:.76rem;color:#a16207">${pendingDirect.map(b=>b.display_name+' · '+b.check_in).join(' · ')}</div>
-            </div>
+      alertEl.innerHTML = `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:1.3rem;animation:pulse 1.5s infinite">🔔</span>
+          <div>
+            <div style="font-weight:700;font-size:.9rem;color:#92400e">${pendingDirect.length} Nestora booking${pendingDirect.length>1?'s':''} awaiting approval</div>
+            <div style="font-size:.76rem;color:#a16207">${pendingDirect.map(b=>b.display_name+' · '+fmtDate(b.check_in)).join(' · ')}</div>
           </div>
-          <button class="btn btn-sm" style="background:#d97706;color:#fff;margin-left:auto" onclick="setTab('bookings');setBookingFilter('pending')">Review Pending →</button>
-        </div>`;
-    } else {
-      alertEl.style.display = 'none';
-    }
+        </div>
+        <button class="btn btn-sm" style="background:#d97706;color:#fff;margin-left:auto" onclick="switchTab('bookings');setBookingFilter('pending')">Review →</button>
+      </div>`;
+    } else { alertEl.style.display='none'; }
   }
 
-  document.getElementById('dash-upcoming').innerHTML = upcoming.length ? upcoming.map(b=>
-    `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div><div style="font-weight:600;font-size:.88rem">${b.display_name}</div>
-      <div style="font-size:.76rem;color:var(--muted)">${propName(b.property_id)} · ${b.nights||0} nights</div></div>
-      <div style="text-align:right"><div style="font-size:.82rem;font-weight:600">${fmtDate(b.check_in)}</div>
-      <span class="badge badge-${b.platform}" style="margin-top:3px">${b.platform}</span></div>
-    </div>`).join('') : '<div class="text-muted">No upcoming bookings</div>';
-  document.getElementById('dash-prop-status').innerHTML = Object.entries(PROPS).map(([pid,prop])=>{
-    const cur = bookings.find(b=>b.property_id===pid&&b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b));
-    return `<div style="padding:13px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-        <span style="font-weight:700">${prop.name}</span>
-        <span class="badge ${cur?'badge-checked-in':'badge-confirmed'}">${cur?'Occupied':'Available'}</span>
+  // ── Next 3 arrivals per property ──
+  function renderArrivals(pid, elId) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const cur = bookings.find(b=>b.property_id===pid&&b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b));
+    const next3 = bookings
+      .filter(b=>b.property_id===pid&&b.check_in>today&&b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b))
+      .sort((a,b)=>a.check_in.localeCompare(b.check_in))
+      .slice(0,3);
+
+    let out = '';
+    if (cur) {
+      const nightsLeft = Math.round((new Date(cur.check_out)-now)/86400000);
+      const col = PLAT_COLORS[cur.platform]||'var(--accent)';
+      out += `<div style="background:var(--ocean-light);border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--ocean)">
+        <div style="font-size:.68rem;font-weight:700;color:var(--ocean);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Currently staying</div>
+        <div style="font-weight:700;font-size:.88rem;color:var(--ink)">${cur.display_name}</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:2px;display:flex;justify-content:space-between">
+          <span>🛫 Out ${fmtDate(cur.check_out)}</span>
+          <span style="color:${nightsLeft<=1?'var(--red)':'var(--muted)'}">⏳ ${nightsLeft<=0?'today':nightsLeft+'d left'}</span>
+        </div>
+      </div>`;
+    }
+    if (!next3.length && !cur) {
+      el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;padding:8px 0">No upcoming bookings</div>';
+      return;
+    }
+    out += next3.map((b,i) => {
+      const daysUntil = Math.round((new Date(b.check_in)-now)/86400000);
+      const col = PLAT_COLORS[b.platform]||'var(--accent)';
+      const cleanOk = domestics.some(d=>d.property_id===pid&&Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10)))<=2*86400000);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;${i<next3.length-1?'border-bottom:1px solid var(--border)':''}">
+        <div style="min-width:0;flex:1">
+          <div style="font-weight:600;font-size:.85rem;color:var(--ink);display:flex;align-items:center;gap:5px">
+            ${b.display_name}
+            ${daysUntil<=2?'<span style="background:#fee2e2;color:#dc2626;font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:5px">'+daysUntil+'d</span>':daysUntil<=5?'<span style="background:#fef3c7;color:#92400e;font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:5px">'+daysUntil+'d</span>':''}
+          </div>
+          <div style="font-size:.73rem;color:var(--muted);margin-top:1px">🛬 ${fmtDate(b.check_in)} · ${b.nights||0}n · <span style="${cleanOk?'color:var(--green)':'color:var(--red)'}">${cleanOk?'🧹✓':'🧹 !'}</span></div>
+        </div>
+        <span class="badge badge-${b.platform}" style="font-size:.65rem;flex-shrink:0;margin-left:8px">${b.platform==='direct'?'🌐':b.platform}</span>
+      </div>`;
+    }).join('');
+    el.innerHTML = out;
+  }
+  renderArrivals('speranta','dash-arrivals-speranta');
+  renderArrivals('tvhouse',  'dash-arrivals-tvhouse');
+
+  // ── Mini calendars ──
+  function renderMiniCal(pid, elId) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const year  = new Date().getFullYear();
+    const month = new Date().getMonth();
+    const firstDay  = new Date(year, month, 1).getDay();
+    const daysCount = new Date(year, month+1, 0).getDate();
+    const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    const propBookings = bookings.filter(b=>b.property_id===pid&&b.status!=='cancelled'&&!isCaretaker(b));
+    const propCleans   = domestics.filter(d=>d.property_id===pid);
+
+    let grid = `<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;text-align:center">${MONTHS_SHORT[month]} ${year}</div>`;
+    grid += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;font-size:.62rem;text-align:center">';
+    ['S','M','T','W','T','F','S'].forEach(d => {
+      grid += `<div style="color:var(--muted);font-weight:700;padding:2px 0">${d}</div>`;
+    });
+
+    // Empty cells before first day
+    for (let i=0;i<firstDay;i++) grid += '<div></div>';
+
+    for (let d=1;d<=daysCount;d++) {
+      const ds = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      const isToday   = ds===today;
+      const hasBooked = propBookings.some(b=>b.check_in<=ds&&b.check_out>ds);
+      const isCheckIn = propBookings.some(b=>b.check_in===ds);
+      const isCheckOut= propBookings.some(b=>{
+        const[y,m,dd]=ds.split('-').map(Number);
+        const prev=new Date(y,m-1,dd-1);
+        const prevStr=prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0')+'-'+String(prev.getDate()).padStart(2,'0');
+        return b.check_out===ds;
+      });
+      const hasClean  = propCleans.some(c=>c.date===ds);
+
+      let bg='transparent', col='var(--ink)', fw='400', border='none', dotColor='';
+      if (isToday)    { border='2px solid var(--accent)'; fw='700'; }
+      if (hasBooked)  { bg=pid==='speranta'?'#FF385C22':'#4ABBA522'; col=pid==='speranta'?'#FF385C':'#4ABBA5'; fw='600'; }
+      if (isCheckIn)  { bg=pid==='speranta'?'#FF385C':'#4ABBA5'; col='#fff'; fw='700'; }
+      if (hasClean)   { dotColor='#06b6d4'; }
+
+      grid += `<div style="position:relative;padding:3px 1px;border-radius:4px;background:${bg};color:${col};font-weight:${fw};border:${border};cursor:pointer;line-height:1.4"
+        onclick="calYear=${year};calMonth=${month};switchTab('calendar');setTimeout(()=>showDay('${ds}'),200)"
+        title="${ds}${hasBooked?' — booked':''}${hasClean?' · cleaning':''}">
+        ${d}
+        ${dotColor?`<span style="position:absolute;bottom:1px;right:1px;width:3px;height:3px;border-radius:50%;background:${dotColor};display:block"></span>`:''}
+      </div>`;
+    }
+    grid += '</div>';
+    el.innerHTML = grid;
+  }
+  renderMiniCal('speranta','dash-cal-speranta');
+  renderMiniCal('tvhouse', 'dash-cal-tvhouse');
+
+  // ── Urgent actions ──
+  const urgentEl = document.getElementById('dash-urgent');
+  if (!urgentEl) return;
+
+  const urgentItems = [];
+
+  // 1. Pending direct bookings
+  pendingDirect.forEach(b => {
+    urgentItems.push({
+      icon:'🔔', label:'Approve booking', color:'#f59e0b', textColor:'#92400e',
+      detail: b.display_name+' · '+propName(b.property_id)+' · '+fmtDate(b.check_in),
+      action: `switchTab('bookings');setBookingFilter('pending')`,
+      priority: 1,
+    });
+  });
+
+  // 2. Check-in message not sent within 24h window
+  bookings.filter(b=>b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b)&&b.is_active!==false).forEach(b => {
+    const bid = String(b.id);
+    const prog = ninaBTaskProgress[bid]||{};
+    const hoursUntil = (new Date(b.check_in)-now)/3600000;
+    if (hoursUntil>0 && hoursUntil<=24 && !prog.checkin_msg) {
+      urgentItems.push({
+        icon:'💬', label:'Send check-in msg', color:'#0369a1', textColor:'#1e40af',
+        detail: b.display_name+' · arrives '+fmtDate(b.check_in)+' ('+Math.round(hoursUntil)+'h)',
+        action: `switchTab('tasks');setTaskSubTab('guest')`,
+        priority: 2,
+      });
+    }
+  });
+
+  // 3. High priority open tasks assigned to Nina
+  tasks.filter(t=>t.status==='open'&&t.priority==='high'&&(t.assigned||'').toLowerCase().includes('nina')).forEach(t => {
+    urgentItems.push({
+      icon:'⚡', label:t.title, color:'#dc2626', textColor:'#991b1b',
+      detail:'High priority · '+propName(t.property_id||'all')+(t.due?' · due '+fmtDate(t.due):''),
+      action:`switchTab('tasks');setTaskSubTab('project')`,
+      priority: 3,
+    });
+  });
+
+  // 4. Upcoming checkouts with no cleaning in next 3 days
+  bookings.filter(b=>b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b)).forEach(b=>{
+    const co = b.check_out?.slice(0,10)||'';
+    const daysUntil = Math.round((new Date(co)-now)/86400000);
+    if (daysUntil>=0 && daysUntil<=3) {
+      const cleanOk = domestics.some(d=>d.property_id===b.property_id&&Math.abs(new Date(d.date)-new Date(co))<=2*86400000);
+      if (!cleanOk) {
+        urgentItems.push({
+          icon:'🧹', label:'Schedule cleaning', color:'#06b6d4', textColor:'#0e7490',
+          detail:propName(b.property_id)+' · '+b.display_name+' checks out '+fmtDate(co),
+          action:`bookCleaningForGuest('${b.property_id}','${co}','${b.id}')`,
+          priority: 4,
+        });
+      }
+    }
+  });
+
+  urgentItems.sort((a,b)=>a.priority-b.priority);
+
+  if (!urgentItems.length) {
+    urgentEl.innerHTML = '<div style="color:rgba(255,255,255,.5);font-size:.82rem;text-align:center;padding:20px 0">✅ All clear — nothing urgent right now</div>';
+    return;
+  }
+
+  urgentEl.innerHTML = urgentItems.map(item => `
+    <div onclick="${item.action}" style="background:rgba(255,255,255,.07);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;border-left:3px solid ${item.color};transition:background .15s"
+      onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+        <span style="font-size:.9rem">${item.icon}</span>
+        <span style="font-weight:700;font-size:.8rem;color:#fff">${item.label}</span>
       </div>
-      <div style="font-size:.76rem;color:var(--muted)">${prop.address}</div>
-      ${cur?`<div style="font-size:.76rem;margin-top:3px">Guest: ${cur.display_name} · Out ${fmtDate(cur.check_out)}</div>`:''}
-    </div>`;
-  }).join('');
+      <div style="font-size:.72rem;color:rgba(255,255,255,.55);padding-left:20px">${item.detail}</div>
+    </div>`).join('');
 }
+
 function statCard(label, value, sub, color='var(--accent)') {
   return `<div class="stat-card" style="border-top-color:${color}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div><div class="stat-sub">${sub}</div></div>`;
 }
