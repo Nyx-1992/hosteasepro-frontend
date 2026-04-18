@@ -413,17 +413,33 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
       <!-- TASKS (Nina-facing: per-booking checklist + general tasks) -->
       <div class="tab-pane" id="tab-tasks">
-        <div class="section-head">
-          <div><h2 style="font-size:1.25rem;margin-bottom:3px">Tasks</h2><div class="text-muted" id="task-count"></div></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <div class="filter-row" id="task-filters"></div>
-            <button class="btn btn-primary btn-sm" onclick="openModal('task-modal')">+ New Task</button>
+        <!-- Sub-tab bar -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+          <div style="display:flex;gap:2px;background:var(--sand);border-radius:10px;padding:3px">
+            <button id="subtab-guest-btn" onclick="setTaskSubTab('guest')"
+              style="padding:6px 18px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s">
+              🏠 Guest Management
+            </button>
+            <button id="subtab-project-btn" onclick="setTaskSubTab('project')"
+              style="padding:6px 18px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
+              📋 Project Management
+            </button>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div id="task-filters" style="display:flex;gap:5px"></div>
+            <button class="btn btn-primary btn-sm" id="task-add-btn" onclick="openModal('task-modal')">+ New Task</button>
           </div>
         </div>
-        <!-- Per-booking Nina tasks -->
-        <div id="nina-booking-tasks" class="mb-6"></div>
-        <!-- General tasks -->
-        <div class="card" id="task-list"></div>
+
+        <!-- Guest Management sub-tab -->
+        <div id="subtab-guest">
+          <div id="guest-booking-grid"></div>
+        </div>
+
+        <!-- Project Management sub-tab (Kanban) -->
+        <div id="subtab-project" style="display:none">
+          <div id="kanban-board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px"></div>
+        </div>
       </div>
 
       <!-- MESSAGES -->
@@ -908,7 +924,7 @@ const NAV = [
   {id:'dashboard',label:'Dashboard',    icon:'🏠',roles:['admin','host']},
   {id:'bookings', label:'Bookings',     icon:'📋',roles:['admin','host']},
   {id:'calendar', label:'Calendar',     icon:'📅',roles:['admin','host']},
-  {id:'tasks',    label:'Tasks',        icon:'✅',roles:['admin','host']},
+  {id:'tasks',    label:'Task Management',        icon:'✅',roles:['admin','host']},
   {id:'messages', label:'Messages',     icon:'💬',roles:['admin','host']},
   {id:'knowledge',label:'Knowledge Base',icon:'📚',roles:['admin','host']},
   {id:'team',     label:'Team',         icon:'👥',roles:['admin']},
@@ -1088,61 +1104,56 @@ function toggleLaneView(btn) {
 }
 
 function lifecycleSteps(b, cleanOk, pid) {
-  const today = new Date().toISOString().slice(0,10);
-  const now   = new Date();
-  const ciDate = b.check_in_date  || b.check_in?.slice(0,10);
-  const coDate = b.check_out_date || b.check_out?.slice(0,10);
+  const bid    = String(b.id);
+  const today  = new Date().toISOString().slice(0,10);
+  const now    = new Date();
+  const ciDate = b.check_in_date  || b.check_in?.slice(0,10)  || '';
+  const coDate = b.check_out_date || b.check_out?.slice(0,10) || '';
+  if (!ninaBTaskProgress[bid]) ninaBTaskProgress[bid] = {};
+  const prog = ninaBTaskProgress[bid];
 
-  // Step states
-  const hoursUntilCI = (new Date(ciDate) - now) / 3600000;
-  const checkedIn    = ciDate <= today;
-  const checkedOut   = coDate <= today;
+  // Read state from ninaBTaskProgress (shared with Guest Management tab)
+  const hoursUntilCI = ciDate ? (new Date(ciDate) - now) / 3600000 : 999;
+  const msgDue    = hoursUntilCI > 0 && hoursUntilCI <= 28;
+  const msgSent   = !!prog.checkin_msg   || ciDate <= today;
+  const checkedIn = !!prog.checked_in    || ciDate <= today;
+  const checkedOut= !!prog.checked_out   || coDate <= today;
+  const followUp  = !!prog.followup_msg;
 
-  // Step 1: check-in message — done if < 28h until checkin OR already checked in
-  const msgSent    = b.checkin_msg_sent || checkedIn;
-  const msgDue     = hoursUntilCI > 0 && hoursUntilCI <= 28;
-
-  // Step 2: guests checked in
-  const guestIn    = b.guests_checked_in || (checkedIn && !checkedOut);
-
-  // Step 3: checked out
-  const guestOut   = b.guests_checked_out || checkedOut;
-
-  // Step 4: follow-up sent
-  const followUp   = b.followup_sent || false;
-
-  const coDate_ = coDate || '';
-
-  function step(icon, label, done, active, action) {
+  function step(icon, label, done, active, taskKey, extraAction) {
     const col  = done ? '#16a34a' : active ? '#0369a1' : '#d1d5db';
     const bg   = done ? '#f0fdf4' : active ? '#eff6ff' : 'transparent';
     const tcol = done ? '#166534' : active ? '#1e40af' : '#9ca3af';
-    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0;cursor:${action?'pointer':'default'}"
-      ${action ? `onclick="${action}"` : ''}>
-      <div style="width:28px;height:28px;border-radius:50%;background:${bg};border:2px solid ${col};display:flex;align-items:center;justify-content:center;font-size:.8rem;transition:all .2s">
-        ${done ? '✓' : icon}
+    const clickFn = extraAction
+      ? extraAction
+      : taskKey
+        ? `toggleNinaTask('${bid}','${taskKey}');renderLaneView()`
+        : '';
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:1;min-width:0;cursor:${clickFn?'pointer':'default'}"
+      title="${label}${done?' ✓':active?' — tap to mark done':''}"
+      ${clickFn ? `onclick="${clickFn}"` : ''}>
+      <div style="width:26px;height:26px;border-radius:50%;background:${bg};border:2px solid ${col};display:flex;align-items:center;justify-content:center;font-size:.76rem;transition:all .2s;${active&&!done?'box-shadow:0 0 0 3px '+col+'33':''}">
+        ${done ? '<span style="font-size:.7rem;color:#16a34a;font-weight:700">✓</span>' : icon}
       </div>
-      <div style="font-size:.58rem;font-weight:600;color:${tcol};text-align:center;line-height:1.2;max-width:52px">${label}</div>
+      <div style="font-size:.56rem;font-weight:600;color:${tcol};text-align:center;line-height:1.2;max-width:48px">${label}</div>
     </div>`;
   }
 
   function connector(done) {
-    return `<div style="flex:1;height:2px;background:${done?'#16a34a':'#e5e7eb'};margin-top:-14px;margin-bottom:auto;max-width:24px"></div>`;
+    return `<div style="flex:1;height:2px;background:${done?'#16a34a':'#e5e7eb'};margin-top:-12px;margin-bottom:auto;max-width:20px;min-width:6px"></div>`;
   }
 
-  return `<div style="display:flex;align-items:flex-start;gap:0;padding:2px 0 4px">
-    ${step('💬','Check-in msg', msgSent, msgDue,
-      msgSent ? '' : `toast('Reminder: send check-in message to ${b.display_name||'guest'}','info')`)}
+  return `<div style="display:flex;align-items:flex-start;gap:2px;padding:4px 0 2px">
+    ${step('💬','Check-in msg', msgSent, msgDue||(!msgSent&&!checkedIn), 'checkin_msg', '')}
     ${connector(msgSent)}
-    ${step('🛬','Checked in', checkedIn, !checkedIn && msgSent, '')}
+    ${step('🛬','Checked in',   checkedIn, msgSent&&!checkedIn, 'checked_in', '')}
     ${connector(checkedIn)}
-    ${step('🛫','Checked out', guestOut, checkedIn && !guestOut, '')}
-    ${connector(guestOut)}
-    ${step('📩','Follow-up', followUp, guestOut && !followUp,
-      followUp ? '' : `toast('Send follow-up with Nestora link & promo code to ${b.display_name||'guest'}','info')`)}
+    ${step('🛫','Checked out',  checkedOut, checkedIn&&!checkedOut, 'checked_out', '')}
+    ${connector(checkedOut)}
+    ${step('📩','Follow-up',    followUp,  checkedOut&&!followUp, 'followup_msg', '')}
     ${connector(followUp)}
-    ${step('🧹','Clean', cleanOk, guestOut && !cleanOk,
-      cleanOk ? '' : `bookCleaningForGuest('${pid}','${coDate_}','${b.id}')`)}
+    ${step('🧹','Clean',        cleanOk,   checkedOut&&!cleanOk, null,
+      cleanOk ? '' : `bookCleaningForGuest('${pid}','${coDate}','${bid}')`)}
   </div>`;
 }
 
@@ -1280,19 +1291,27 @@ function renderLaneView() {
               <span>👥 ${b.number_of_guests||1}</span>
             </div>
 
-            <!-- Bottom row: lifecycle mini + actions -->
+            <!-- Bottom row: lifecycle mini dots (synced with Guest Management) + actions -->
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
-              <!-- Mini lifecycle dots -->
-              <div style="display:flex;align-items:center;gap:4px">
-                ${[
-                  ['💬', b.checkin_msg_sent||b.check_in?.slice(0,10)<=today],
-                  ['🛬', b.check_in?.slice(0,10)<=today],
-                  ['🛫', b.check_out?.slice(0,10)<=today],
-                  ['📩', b.followup_sent||false],
-                  ['🧹', cleanOk],
-                ].map(([icon, done]) =>
-                  `<span title="${icon}" style="width:20px;height:20px;border-radius:50%;background:${done?'#d1fae5':'#f3f4f6'};border:1.5px solid ${done?'#6ee7b7':'#e5e7eb'};display:inline-flex;align-items:center;justify-content:center;font-size:.6rem;filter:${done?'none':'grayscale(1)'};opacity:${done?'1':'.5'}">${icon}</span>`
-                ).join('')}
+              <div style="display:flex;align-items:center;gap:3px">
+                ${(()=>{
+                  const _bid = String(b.id);
+                  const _p = ninaBTaskProgress[_bid]||{};
+                  const _ci = b.check_in?.slice(0,10)||'';
+                  const _co = b.check_out?.slice(0,10)||'';
+                  return [
+                    {icon:'💬', key:'checkin_msg',  done: !!_p.checkin_msg  || _ci<=today, tip:'Check-in msg'},
+                    {icon:'🛬', key:'checked_in',   done: !!_p.checked_in   || _ci<=today, tip:'Checked in'},
+                    {icon:'🛫', key:'checked_out',  done: !!_p.checked_out  || _co<=today, tip:'Checked out'},
+                    {icon:'📩', key:'followup_msg', done: !!_p.followup_msg,               tip:'Follow-up sent'},
+                    {icon:'🧹', key:'book_domestic',done: cleanOk,                          tip:'Clean booked'},
+                  ].map(s =>
+                    `<span title="${s.tip}${s.done?' ✓':' — pending'}"
+                      style="width:22px;height:22px;border-radius:50%;background:${s.done?'#d1fae5':'#f3f4f6'};border:1.5px solid ${s.done?'#6ee7b7':'#e5e7eb'};display:inline-flex;align-items:center;justify-content:center;font-size:.62rem;filter:${s.done?'none':'grayscale(1)'};opacity:${s.done?'1':'.45'};cursor:${s.done?'default':'pointer'}"
+                      onclick="event.stopPropagation();${s.key!=='book_domestic'?`toggleNinaTask('${_bid}','${s.key}');renderLaneView()`:`bookCleaningForGuest('${b.property_id}','${_co}','${_bid}')`}"
+                    >${s.icon}</span>`
+                  ).join('');
+                })()}
               </div>
               <!-- Actions -->
               <div style="display:flex;gap:5px;flex-wrap:wrap">
@@ -2224,98 +2243,227 @@ function exportDomestics() {
 
 // ── TASKS + NINA BOOKING CHECKLIST ───────────────────────────
 function renderTasks() {
-  // Split tasks: guest management vs property projects
-  const allFiltered = currentProp==='all' ? tasks : tasks.filter(x=>x.property_id===currentProp||x.property_id==='all');
-  const guestTasks   = allFiltered.filter(t => t.type==='guest' || (!t.type && !t.title.toLowerCase().includes('garden') && !t.title.toLowerCase().includes('project') && !t.title.toLowerCase().includes('website') && !t.title.toLowerCase().includes('photo')));
-  const projectTasks = allFiltered.filter(t => t.type==='project' || t.title.toLowerCase().includes('garden') || t.title.toLowerCase().includes('project') || t.title.toLowerCase().includes('website') || t.title.toLowerCase().includes('photo'));
+  if (window._taskSubTab === 'project') {
+    renderKanban();
+  } else {
+    renderGuestManagement();
+  }
+}
 
-  const filterGT = taskFilter==='open' ? guestTasks.filter(t=>t.status==='open') : taskFilter==='done' ? guestTasks.filter(t=>t.status==='done') : guestTasks;
-  const filterPT = taskFilter==='open' ? projectTasks.filter(t=>t.status==='open') : taskFilter==='done' ? projectTasks.filter(t=>t.status==='done') : projectTasks;
-  const ft = [...filterGT, ...filterPT];
-  const open = tasks.filter(t=>t.status==='open').length;
-  document.getElementById('task-count').textContent = open+' open task'+(open!==1?'s':'');
-  document.getElementById('task-filters').innerHTML = ['open','done','all'].map(f=>
-    `<button class="btn btn-sm ${f===taskFilter?'btn-primary':'btn-ghost'}" onclick="setTaskFilter('${f}')">${f.charAt(0).toUpperCase()+f.slice(1)}</button>`
-  ).join('');
+let _taskSubTab = 'guest';
+function setTaskSubTab(tab) {
+  window._taskSubTab = tab;
+  document.getElementById('subtab-guest').style.display    = tab==='guest'   ? 'block' : 'none';
+  document.getElementById('subtab-project').style.display  = tab==='project' ? 'block' : 'none';
+  const gb = document.getElementById('subtab-guest-btn');
+  const pb = document.getElementById('subtab-project-btn');
+  if (gb && pb) {
+    gb.style.background = tab==='guest'   ? 'var(--ocean)' : 'transparent';
+    gb.style.color      = tab==='guest'   ? '#fff'         : 'var(--muted)';
+    pb.style.background = tab==='project' ? 'var(--ocean)' : 'transparent';
+    pb.style.color      = tab==='project' ? '#fff'         : 'var(--muted)';
+  }
+  const addBtn = document.getElementById('task-add-btn');
+  if (addBtn) addBtn.textContent = tab==='project' ? '+ New Task' : '';
+  document.getElementById('task-filters').innerHTML = '';
+  renderTasks();
+}
 
-  // Nina per-booking checklist — only upcoming and very recent, exclude owner/caretaker stays
+// ── GUEST MANAGEMENT ──────────────────────────────────────────
+function renderGuestManagement() {
   const today = new Date().toISOString().slice(0,10);
-  const inWindow = bookings.filter(b => {
-    if (b.status==='cancelled') return false;
-    if (isCaretaker(b) || isOwnerStay(b)) return false;
-    const propMatch = currentProp==='all' || b.property_id===currentProp;
-    const daysUntilIn = Math.round((new Date(b.check_in)-new Date(today))/86400000);
-    const daysSinceOut = Math.round((new Date(today)-new Date(b.check_out))/86400000);
-    return propMatch && daysUntilIn <= 3 && daysSinceOut <= 5;
-  }).sort((a,z)=>a.check_in.localeCompare(z.check_in));
+  const gridEl = document.getElementById('guest-booking-grid');
+  if (!gridEl) return;
 
-  const ninaEl = document.getElementById('nina-booking-tasks');
-  if (inWindow.length > 0) {
-    ninaEl.innerHTML = `<div style="font-family:'DM Serif Display',serif;font-size:1.05rem;margin-bottom:12px;color:var(--ink)">📋 Nina's Booking Checklist</div>` +
-    inWindow.map(b=>{
+  // Show bookings: upcoming (next 14d), current, and recently checked out (last 7d)
+  const relevant = bookings.filter(b => {
+    if (b.status==='cancelled' || isCaretaker(b) || isOwnerStay(b)) return false;
+    const propMatch = currentProp==='all' || b.property_id===currentProp;
+    const daysUntil  = Math.round((new Date(b.check_in)-new Date())/86400000);
+    const daysSinceOut = Math.round((new Date()-new Date(b.check_out))/86400000);
+    return propMatch && daysUntil <= 14 && daysSinceOut <= 7;
+  }).sort((a,b) => a.check_in.localeCompare(b.check_in));
+
+  if (!relevant.length) {
+    gridEl.innerHTML = `<div style="text-align:center;padding:48px;color:var(--muted)">
+      <div style="font-size:2.5rem;margin-bottom:12px">🏠</div>
+      <div style="font-size:.9rem">No bookings in the active window (next 14 days / last 7 days)</div>
+    </div>`;
+    return;
+  }
+
+  gridEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
+    ${relevant.map(b => {
       const bid = String(b.id);
       if (!ninaBTaskProgress[bid]) ninaBTaskProgress[bid] = {};
       const prog = ninaBTaskProgress[bid];
-      const doneCount = NINA_BOOKING_TASKS.filter(t=>prog[t.key]).length;
-      return `<div style="background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:18px;margin-bottom:12px;border-left:4px solid ${PLAT_COLORS[b.platform]||'var(--accent)'}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-          <div>
-            <div style="font-weight:700;font-size:.92rem">${b.display_name}</div>
-            <div style="font-size:.76rem;color:var(--muted)">${propName(b.property_id)} · ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)}</div>
+      const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
+      const isNow  = b.check_in<=today && b.check_out>today;
+      const isPast = b.check_out<=today;
+      const daysUntil = Math.round((new Date(b.check_in)-new Date())/86400000);
+      const col = PLAT_COLORS[b.platform]||'#c17f3c';
+      const cleanOk = domestics.some(d =>
+        d.property_id===b.property_id &&
+        Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10))) <= 2*86400000
+      );
+
+      const tasks = [
+        {key:'checkin_msg',   icon:'💬', label:'Check-in message sent'},
+        {key:'checked_in',    icon:'🛬', label:'Guests checked in'},
+        {key:'checked_out',   icon:'🛫', label:'Checkout completed'},
+        {key:'followup_msg',  icon:'📩', label:'Follow-up msg sent'},
+        {key:'book_domestic', icon:'🧹', label:'Cleaning booked', done: cleanOk},
+      ];
+
+      const doneCount = tasks.filter(t => t.done !== undefined ? t.done : prog[t.key]).length;
+      const totalCount = tasks.length;
+
+      // Progress bar colour
+      const pct = Math.round(doneCount/totalCount*100);
+      const barCol = pct===100?'#16a34a':pct>=60?'var(--accent)':'#f59e0b';
+
+      return `<div style="background:var(--card-bg);border-radius:16px;border:1.5px solid var(--border);overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05);${isNow?'border-color:#0369a1':isPast?'opacity:.85':''}">
+        <!-- Card header -->
+        <div style="padding:13px 15px 10px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px">
+            <div style="min-width:0">
+              <div style="font-weight:700;font-size:.88rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.display_name}</div>
+              <div style="font-size:.72rem;color:var(--muted);margin-top:1px">${propName(b.property_id)} · ${nights}n · ${fmtDate(b.check_in)}→${fmtDate(b.check_out)}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+              <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform==='direct'?'🌐':b.platform}</span>
+              ${isNow?'<span style="background:#dbeafe;color:#1e40af;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:8px">Staying</span>':isPast?'<span style="background:var(--sand);color:var(--muted);font-size:.62rem;padding:2px 6px;border-radius:8px">Past</span>':'<span style="background:#fef3c7;color:#92400e;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:8px">In '+daysUntil+'d</span>'}
+            </div>
           </div>
-          <div style="text-align:right">
-            <span class="badge badge-${b.platform}" style="margin-bottom:4px">${b.platform}</span>
-            <div style="font-size:.72rem;color:var(--muted)">${doneCount}/${NINA_BOOKING_TASKS.length} done</div>
+          <!-- Progress bar -->
+          <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden">
+            <div style="height:3px;background:${barCol};border-radius:2px;width:${pct}%;transition:width .4s"></div>
           </div>
+          <div style="font-size:.63rem;color:var(--muted);margin-top:3px">${doneCount}/${totalCount} tasks complete</div>
         </div>
-        ${NINA_BOOKING_TASKS.map(t=>`
-          <div class="nina-task-item">
-            <div class="nina-check ${prog[t.key]?'done':''}" onclick="toggleNinaTask('${bid}','${t.key}')">${prog[t.key]?'✓':''}</div>
-            <div class="nina-task-text ${prog[t.key]?'done':''}">${t.label}</div>
-          </div>`).join('')}
+
+        <!-- Task checklist -->
+        <div style="padding:10px 15px">
+          ${tasks.map(t => {
+            const done = t.done !== undefined ? t.done : !!prog[t.key];
+            const isClean = t.key==='book_domestic';
+            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer"
+              onclick="${isClean
+                ? (done ? '' : `bookCleaningForGuest('${b.property_id}','${b.check_out?.slice(0,10)}','${bid}')`)
+                : `toggleNinaTask('${bid}','${t.key}')`}">
+              <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${done?'#16a34a':'var(--border)'};background:${done?'#d1fae5':'transparent'};display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;transition:all .15s">
+                ${done?'✓':''}
+              </div>
+              <span style="font-size:.73rem;${done?'color:var(--muted);text-decoration:line-through':'color:var(--ink)'}">
+                ${t.icon} ${t.label}
+              </span>
+              ${t.key==='checkin_msg'&&!done?`<span style="margin-left:auto;font-size:.6rem;background:#fef3c7;color:#92400e;padding:2px 5px;border-radius:5px;flex-shrink:0">28h reminder</span>`:''}
+            </div>`;
+          }).join('')}
+        </div>
+
+        <!-- Note field -->
+        <div style="padding:8px 15px 12px">
+          <input placeholder="Add a note…" value="${(ninaBTaskProgress[bid]||{})._note||''}"
+            onchange="saveGuestNote('${bid}',this.value)"
+            style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.76rem;outline:none;background:var(--sand);box-sizing:border-box;transition:border .15s"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+        </div>
       </div>`;
-    }).join('');
-  } else {
-    ninaEl.innerHTML = '';
-  }
-
-  // Render task item helper
-  const taskItem = t => `<div class="task-item">
-    <div class="task-check ${t.status==='done'?'done':''}" onclick="toggleTask('${t.id}')">${t.status==='done'?'✓':''}</div>
-    <div class="task-content">
-      <div class="task-title ${t.status==='done'?'done':''}">${t.title}</div>
-      <div class="task-meta">
-        <span class="pri-${t.priority}">${t.priority} priority</span>
-        <span>📍 ${propName(t.property_id)}</span>
-        <span>👤 ${t.assigned}</span>
-        ${t.due?`<span>📅 ${fmtDate(t.due)}</span>`:''}
-        ${t.notes?`<span>💬 ${t.notes}</span>`:''}
-      </div>
-    </div>
+    }).join('')}
   </div>`;
-
-  // Guest management tasks
-  const guestSection = filterGT.length ? `
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border)">
-      🏠 Guest Management
-    </div>${filterGT.map(taskItem).join('')}` : '';
-
-  // Property project tasks
-  const projectSection = filterPT.length ? `
-    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--blue);margin-top:${filterGT.length?'20px':'0'};margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid var(--border)">
-      🔨 Property Projects
-    </div>${filterPT.map(taskItem).join('')}` : '';
-
-  document.getElementById('task-list').innerHTML = (guestSection||projectSection)
-    ? guestSection+projectSection
-    : '<div class="empty-state"><div class="empty-icon">✅</div>No tasks here</div>';
 }
+
+function saveGuestNote(bookingId, note) {
+  if (!ninaBTaskProgress[bookingId]) ninaBTaskProgress[bookingId] = {};
+  ninaBTaskProgress[bookingId]._note = note;
+}
+
+// ── KANBAN BOARD ──────────────────────────────────────────────
+const KANBAN_COLS = [
+  {id:'todo',       label:'To Do',           color:'#6366f1', bg:'#eef2ff'},
+  {id:'inprogress', label:'In Progress',      color:'#f59e0b', bg:'#fffbeb'},
+  {id:'feedback',   label:'Feedback Needed',  color:'#ec4899', bg:'#fdf2f8'},
+  {id:'done',       label:'Done',             color:'#16a34a', bg:'#f0fdf4'},
+];
+
+function renderKanban() {
+  const boardEl = document.getElementById('kanban-board');
+  if (!boardEl) return;
+  const projectTasks = tasks.filter(t =>
+    t.type==='project' ||
+    ['garden','project','website','photo','maintenance','repair','plumb','electric','paint'].some(kw =>
+      t.title?.toLowerCase().includes(kw)
+    )
+  );
+
+  boardEl.innerHTML = KANBAN_COLS.map(col => {
+    const colTasks = projectTasks.filter(t => (t.kanban_status||'todo') === col.id);
+    return `<div style="background:${col.bg};border-radius:14px;padding:13px;min-height:300px;border:1.5px solid ${col.color}22">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:.78rem;font-weight:700;color:${col.color};text-transform:uppercase;letter-spacing:.06em">${col.label}</div>
+        <span style="background:${col.color}22;color:${col.color};font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px">${colTasks.length}</span>
+      </div>
+      ${colTasks.map(t => `
+        <div style="background:white;border-radius:10px;padding:11px 13px;margin-bottom:8px;border:1px solid ${col.color}33;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+          <div style="font-weight:600;font-size:.83rem;color:var(--ink);margin-bottom:5px">${t.title}</div>
+          ${t.notes||t.description?`<div style="font-size:.74rem;color:var(--muted);margin-bottom:6px">${t.notes||t.description}</div>`:''}
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+            <span style="font-size:.68rem;color:var(--muted)">📍 ${propName(t.property_id||'all')} · 👤 ${t.assigned||'—'}</span>
+            ${t.due?`<span style="font-size:.68rem;color:var(--muted)">📅 ${fmtDate(t.due||t.task_date)}</span>`:''}
+          </div>
+          <!-- Move buttons -->
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            ${KANBAN_COLS.filter(c=>c.id!==col.id).map(c=>`
+              <button onclick="moveKanban('${t.id}','${c.id}')"
+                style="background:${c.bg};color:${c.color};border:1px solid ${c.color}44;border-radius:6px;padding:3px 7px;font-size:.67rem;cursor:pointer;font-weight:600">
+                → ${c.label}
+              </button>`).join('')}
+            <button onclick="deleteTask('${t.id}')"
+              style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:3px 7px;font-size:.67rem;cursor:pointer;margin-left:auto">✕</button>
+          </div>
+        </div>`).join('')}
+      <!-- Add card button -->
+      <button onclick="openTaskModalForKanban('${col.id}')"
+        style="width:100%;background:transparent;border:1.5px dashed ${col.color}66;border-radius:10px;padding:8px;font-size:.78rem;color:${col.color};cursor:pointer;margin-top:4px;font-weight:600">
+        + Add task
+      </button>
+    </div>`;
+  }).join('');
+}
+
+async function moveKanban(taskId, newCol) {
+  const t = tasks.find(x=>String(x.id)===String(taskId));
+  if (!t) return;
+  t.kanban_status = newCol;
+  if (db) await db.from('tasks').update({kanban_status:newCol}).eq('id',taskId);
+  renderKanban();
+}
+
+async function deleteTask(taskId) {
+  if (!confirm('Delete this task?')) return;
+  if (db) await db.from('tasks').delete().eq('id',taskId);
+  tasks.splice(tasks.findIndex(x=>String(x.id)===String(taskId)),1);
+  renderTasks();
+}
+
+function openTaskModalForKanban(colId) {
+  window._kanbanCol = colId;
+  openModal('task-modal');
+}
+
 function toggleNinaTask(bookingId, taskKey) {
   if (!ninaBTaskProgress[bookingId]) ninaBTaskProgress[bookingId]={};
   ninaBTaskProgress[bookingId][taskKey] = !ninaBTaskProgress[bookingId][taskKey];
-  renderTasks();
+  // Keep both tabs in sync
+  if (currentTab === 'tasks')    renderTasks();
+  if (currentTab === 'bookings') renderLaneView();
+  // Always refresh whichever is visible
+  if (document.getElementById('guest-booking-grid')) renderGuestManagement();
+  if (document.getElementById('booking-lane-view')?.style.display !== 'none') renderLaneView();
 }
 function setTaskFilter(f) { taskFilter=f; renderTasks(); }
+window._taskSubTab = 'guest';
 async function toggleTask(id) {
   const t=tasks.find(x=>x.id==id); if(!t)return;
   t.status=t.status==='done'?'open':'done';
@@ -2326,7 +2474,7 @@ async function saveTask() {
   const title=document.getElementById('t-title').value.trim();
   if(!title){toast('Task title is required','error');return;}
   const pid=document.getElementById('t-prop').value;
-  const row={title,description:document.getElementById('t-notes').value,priority:document.getElementById('t-priority').value,status:'open',type:'task',due_at:document.getElementById('t-due').value||null,task_date:document.getElementById('t-due').value||null,property_id:pid!=='all'?pid:null};
+  const row={title,description:document.getElementById('t-notes').value,priority:document.getElementById('t-priority').value,status:'open',type:window._taskSubTab==='project'?'project':'task',kanban_status:window._kanbanCol||'todo',due_at:document.getElementById('t-due').value||null,task_date:document.getElementById('t-due').value||null,property_id:pid!=='all'?pid:null}; window._kanbanCol=null;
   const localRow=nt({...row,property_id:pid,assigned:document.getElementById('t-assign').value});
   if(db){const{data,error}=await db.from('tasks').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}tasks.unshift(nt({...data,property_id:pid,assigned:document.getElementById('t-assign').value}));}
   else{tasks.unshift({...localRow,id:'t'+Date.now()});}
@@ -2769,7 +2917,7 @@ const MOB_NAV=[
   {id:'calendar',icon:'📅',label:'Calendar'},
   {id:'bookings',icon:'📋',label:'Bookings'},
   {id:'domestic',icon:'🧹',label:'Domestic'},
-  {id:'tasks',icon:'✅',label:'Tasks'},
+  {id:'tasks',icon:'✅',label:'Task Management'},
 ];
 function buildMobileNav() {
   // Nuclear Safari iOS fix: force visibility via every possible CSS property
