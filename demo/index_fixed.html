@@ -977,6 +977,7 @@ function renderDashboard() {
 function statCard(label, value, sub, color='var(--accent)') {
   return `<div class="stat-card" style="border-top-color:${color}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div><div class="stat-sub">${sub}</div></div>`;
 }
+const sCard = statCard; // alias
 
 // ── BOOKINGS ──────────────────────────────────────────────────
 function renderBookings() {
