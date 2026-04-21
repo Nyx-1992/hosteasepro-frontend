@@ -1070,7 +1070,7 @@ const SAMPLE_KB = [
   {id:'k1',category:'Access',title:'Door Codes & Keys',content:'Speranta: Main door code #4521. Key box code 1234.\n\nTV House: Main door code #7893. Key box at front gate, code 5678.',tags:['access','security']},
   {id:'k2',category:'WiFi',title:'WiFi Passwords',content:'Speranta: Network "Speranta_Guest" | Password: BloudBerg2024!\n\nTV House: Network "TVHouse_Guest" | Password: TableView2024!',tags:['wifi']},
   {id:'k3',category:'Procedures',title:'Check-in Procedure',content:'1. Send welcome message 24h before arrival with access codes\n2. Confirm arrival time with guest\n3. Ensure property is clean and ready\n4. Leave welcome note and info folder\n5. Do quick video call walkthrough if needed',tags:['checkin']},
-  {id:'k4',category:'Procedures',title:'Check-out Procedure',content:'1. Send reminder evening before checkout\n2. Checkout time is 10:00\n3. Inspect property within 2 hours\n4. Report any damage via tasks\n5. Schedule cleaning immediately\n6. Send follow-up message inviting direct rebooking',tags:['checkout']},
+  {id:'k4',category:'Procedures',title:'Check-out Procedure',content:'1. Send reminder evening before checkout\n2. Checkout time is 10:00\n3. Inspect property within 24 hours\n4. Report any damage via tasks\n5. Schedule cleaning immediately\n6. Send follow-up message inviting direct rebooking',tags:['checkout']},
   {id:'k5',category:'Maintenance',title:'Emergency Contacts',content:'Plumber: Johan Botha - 082 555 1234\nElectrician: Cape Power - 021 555 9876\nLocksmith: Key King - 083 444 2222\nBusiness WhatsApp: +27 79 977 9455',tags:['emergency','contacts']},
   {id:'k6',category:'Guest Info',title:'Area Guide',content:'Beach: 5 min walk\nCheckers Tableview: 3km\nTable Mountain: 30 min drive\nMyCiti bus: 200m away\nKitesurfing & whale watching (Jul-Nov)',tags:['area','guest']},
   {id:'k7',category:'Procedures',title:'Nina Booking Checklist',content:'For every booking Nina must:\n1. Send check-in message 24h before arrival with access codes & house rules\n2. Book domestic/cleaning session after checkout date\n3. Process checkout - inspect property, log any issues as tasks\n4. Send follow-up message to guest inviting them to rebook directly via our website (coming soon)',tags:['nina','checklist','procedure']},
@@ -3425,7 +3425,7 @@ function setMsgSubTab(tab) {
 
 function renderWALauncher() {
   const today = new Date().toISOString().slice(0,10);
-  const waNum = '27799779455';
+  const waNum = '27636021847'; // Nicole for testing
 
   // ── Guest cards ──
   const window14 = bookings.filter(b => {
@@ -3561,6 +3561,16 @@ Hope you had a wonderful stay! We'd really appreciate a review — it helps us a
 ⭐ Booking.com: [LINK]
 
 And remember, you can book directly next time at nestora-homepage-yb2q.vercel.app for our best rate! 🎁`
+    },
+    {
+      icon:'🎁',
+      label:'Return guest — 10% off',
+      msg:`Hi [NAME] 👋\n\nThank you for staying with us — it was a pleasure!\n\nWe’d love to welcome you back. Use code *RETURN10* for *10% off* your next direct booking:\n\n🔗 https://nestora-homepage-yb2q.vercel.app\n\nNo platform fees, best rate guaranteed 🌊\n\nS&N Apt Management`
+    },
+    {
+      icon:'🌟',
+      label:'Past guest re-engagement',
+      msg:`Hi [NAME]! 😊\n\nIt’s been a while since your stay at [PROPERTY] and we’d love to have you back!\n\nBook directly and use code *RETURN10* for 10% off:\n\n🔗 https://nestora-homepage-yb2q.vercel.app\n\nAny questions? Just reply here 🐌\nNicole & the S&N team`
     },
   ];
 
@@ -3961,7 +3971,7 @@ const BUILTIN_CONTACTS = [
   // Management
   {id:'c-nicole',  cat:'management', name:'Nicole Babczyk',    role:'Co-Owner / Admin',        phone:'+27 63 602 1847',   email:'sn_apt_management@outlook.com',  wa:'+27636021847',  note:'Co-founder S&N Apt Management. Manages bookings, finances & operations.', color:'var(--accent)',  initials:'N'},
   {id:'c-silja',   cat:'management', name:'Silja Faltin',      role:'Co-Owner / Admin',        phone:'',                  email:'s.faltin@tischlerei-faltin.de',  wa:'',              note:'Co-founder. TV House owner liaison.', color:'#7c3aed', initials:'S'},
-  {id:'c-nina',    cat:'management', name:'Nina Williams',      role:'Host Expert',             phone:'+27 79 977 9455',   email:'vanwyk.nina@gmail.com',          wa:'+27799779455',  note:'On-ground host manager. Business WhatsApp for all guest contact.', color:'var(--green2)', initials:'NW'},
+  {id:'c-nina',    cat:'management', name:'Nina Williams',      role:'Host Expert',             phone:'+27 79 977 9455',   email:'vanwyk.nina@gmail.com',          wa:'+27636021847',  note:'On-ground host manager. Business WhatsApp for all guest contact.', color:'var(--green2)', initials:'NW'},
   // Domestic
   {id:'c-blessing',cat:'domestic',   name:'Blessing',          role:'Cleaner — Speranta',      phone:'062 532 2932',      email:'',    wa:'27625322932', note:'Paid via ewallet directly. Rate: R350/clean.', color:'#f59e0b', initials:'BL'},
   {id:'c-fatima',  cat:'domestic',   name:'Fatima',            role:'Cleaner — Both properties',phone:'063 175 8111',     email:'',    wa:'27631758111', note:'Covers both properties. R350 Speranta / R450 TV House.', color:'#8b5cf6', initials:'FA'},
