@@ -2377,7 +2377,7 @@ async function loadData() {
   if (!db) return;
   try {
     const [bRes, tRes, dRes, kRes] = await Promise.all([
-      db.from('bookings').select('*').order('check_in_date',{ascending:false}).limit(800),
+      db.from('bookings').select('*').eq('is_active',true).order('check_in_date',{ascending:false}).limit(500),
       db.from('tasks').select('*').order('created_at',{ascending:false}),
       db.from('domestics').select('*').order('date',{ascending:false}),
       db.from('kb_articles').select('*').order('created_at',{ascending:false}),
@@ -2389,11 +2389,16 @@ async function loadData() {
         const seen = {};
         raw = raw.filter(b => {
           if (b.status === 'cancelled') return true; // keep all cancelled
-          const key = b.property_id + '|' + b.check_in + '|' + b.check_out;
-          if (seen[key]) return false; // exact duplicate dates - skip
+          if (b.status === 'blocked')   return true; // keep blocked separately
+          const key = b.property_id + '|' + b.check_in + '|' + b.check_out + '|' + b.platform;
+          if (seen[key]) return false; // exact duplicate - skip
           seen[key] = true;
           return true;
         });
+        // Remove blocked if a real booking exists for same dates+property
+        const realKeys = new Set(raw.filter(b=>!['blocked','owner','cancelled'].includes(b.status))
+          .map(b=>b.property_id+'|'+b.check_in+'|'+b.check_out));
+        raw = raw.filter(b => b.status!=='blocked' || !realKeys.has(b.property_id+'|'+b.check_in+'|'+b.check_out));
         bookings = raw;
         connected = true;
         toast('Live data loaded ✓', 'success');
