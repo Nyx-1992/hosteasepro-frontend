@@ -1,4 +1,5 @@
 const https = require('https');
+const url_module = require('url');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -18,12 +19,13 @@ const FEEDS = [
     url: 'https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=QzZ2aFlFVHhxYnoxdGRVL3ZwelRGUT09' },
 ];
 
-function fetchUrl(rawUrl, redirects) {
+function fetchUrl(rawUrl, redirects, baseUrl) {
   redirects = redirects || 0;
   return new Promise(function(resolve, reject) {
     if (redirects > 5) return reject(new Error('Too many redirects'));
+    var fullUrl = baseUrl ? url_module.resolve(baseUrl, rawUrl) : rawUrl;
     var parsed;
-    try { parsed = new URL(rawUrl); } catch(e) { return reject(new Error('Invalid URL: ' + rawUrl)); }
+    try { parsed = new URL(fullUrl); } catch(e) { return reject(new Error('Invalid URL: ' + fullUrl)); }
     var options = {
       hostname: parsed.hostname,
       path: parsed.pathname + parsed.search,
@@ -32,7 +34,7 @@ function fetchUrl(rawUrl, redirects) {
     };
     var req = https.request(options, function(res) {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetchUrl(res.headers.location, redirects + 1).then(resolve).catch(reject);
+        return fetchUrl(res.headers.location, redirects + 1, fullUrl).then(resolve).catch(reject);
       }
       var data = '';
       res.on('data', function(chunk) { data += chunk; });
@@ -95,11 +97,18 @@ function parseICal(text, feed) {
     var summary  = get('SUMMARY') || '';
     if (!checkIn || !checkOut || checkIn >= checkOut) continue;
     var s = summary.toLowerCase();
-    var isOwner   = s.indexOf('mirka') >= 0 || s.indexOf('antonin') >= 0 || s.indexOf('nicole') >= 0 || s.indexOf('silja') >= 0 || s.indexOf('owner') >= 0;
-    var isBlocked = !isOwner && (!summary.trim() || summary.trim() === '-' || s.indexOf('not available') >= 0 || s.indexOf('closed') >= 0 || s.indexOf('reserved') >= 0 || s.indexOf('blocked') >= 0 || s.indexOf('unavailable') >= 0);
+
+    var isOwner = s.indexOf('mirka') >= 0 || s.indexOf('antonin') >= 0 ||
+                  s.indexOf('nicole') >= 0 || s.indexOf('silja') >= 0 || s.indexOf('owner') >= 0;
+    var isBlocked = !isOwner && (!summary.trim() || summary.trim() === '-' ||
+                    s.indexOf('not available') >= 0 || s.indexOf('closed') >= 0 ||
+                    s.indexOf('reserved') >= 0 || s.indexOf('blocked') >= 0 ||
+                    s.indexOf('unavailable') >= 0);
+
     var status    = isOwner ? 'owner' : isBlocked ? 'blocked' : 'confirmed';
     var guestName = isOwner ? 'Owner Stay' : isBlocked ? 'Blocked' : (summary || 'Guest');
     var nights    = Math.round((new Date(checkOut) - new Date(checkIn)) / 86400000);
+
     events.push({
       property_id:      feed.property_id,
       property_name:    feed.property_name,
@@ -130,7 +139,7 @@ async function run() {
     var feed = FEEDS[fi];
     try {
       console.log('Fetching ' + feed.platform + ' / ' + feed.property_name + '...');
-      var text = await fetchUrl(feed.url);
+      var text = await fetchUrl(feed.url, 0, feed.url);
       if (text.indexOf('BEGIN:VCALENDAR') < 0) {
         console.warn('  Not valid iCal');
         errors++;
@@ -153,7 +162,7 @@ async function run() {
           var ex = existing.data[0];
           var updates = { is_active: true };
           if (!ex.guest_name || ex.guest_name === 'Guest') updates.guest_name = evt.guest_name;
-          if (['cancelled','checked-out','checked-in','owner'].indexOf(ex.status) < 0) updates.status = evt.status;
+          if (['cancelled','checked-out','checked-in'].indexOf(ex.status) < 0) updates.status = evt.status;
           await supabaseRequest('PATCH', 'bookings?id=eq.' + ex.id, updates);
           totalUpdated++;
         } else {
