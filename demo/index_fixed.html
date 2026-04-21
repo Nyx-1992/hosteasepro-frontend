@@ -2497,28 +2497,16 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
           'text-overflow:ellipsis',
           'border-radius:'+rl+' '+rr+' '+rr+' '+rl,
         ].join(';');
-        // Append broom symbol as a separate absolutely positioned child on the last cell
-        if (isLastCell) {
-          const broomWrap = document.createElement('div');
-          broomWrap.style.cssText = [
-            'position:absolute',
-            'right:2px',
-            'top:0',
-            'height:18px',
-            'display:flex',
-            'align-items:center',
-            'z-index:3',
-            'pointer-events:none',
-          ].join(';');
-          const broom = document.createElement('span');
-          broom.style.cssText = 'font-size:.6rem;line-height:1;opacity:'+(bHasClean?'1':'.3')+';filter:'+(bHasClean?'none':'grayscale(1)');
-          broom.textContent = '🧹';
-          broom.title = bHasClean ? '✅ Cleaning scheduled' : '⚠ No cleaning booked';
-          broomWrap.appendChild(broom);
-          bar.appendChild(broomWrap);
-        }
         bar.title = (b.guest_name||b.platform)+' — '+propName(b.property_id)+' | '+fmtDate(b.check_in)+' → '+fmtDate(b.check_out);
         bar.textContent = label;
+        if (isLastCell) {
+          const broom = document.createElement('span');
+          broom.style.cssText = 'position:absolute;right:3px;top:1px;font-size:.6rem;opacity:'+(bHasClean?'1':'.25')+';pointer-events:none';
+          broom.textContent = '🧹';
+          broom.title = bHasClean ? '✅ Cleaning scheduled' : '⚠ No cleaning booked';
+          bar.style.position = 'relative';
+          bar.appendChild(broom);
+        }
         cell.appendChild(bar);
       }
 
