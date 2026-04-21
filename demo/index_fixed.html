@@ -358,7 +358,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
       </div>
       <div class="topbar-right">
         <span class="status-tag" id="db-status">🟡 Demo Mode</span>
-        <button onclick="syncICalFeeds(false)" title="Sync iCal feeds now" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:.74rem;cursor:pointer;color:var(--muted);margin-left:6px">🔄 Sync</button>
+        <button onclick="syncICalFeeds(false)" title="Sync iCal feeds — check console for details" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:.74rem;cursor:pointer;color:var(--muted);margin-left:6px">🔄 Sync</button>
         <span class="status-tag" id="prop-tag" style="display:none"></span>
       </div>
     </div>
@@ -1505,6 +1505,8 @@ const ICAL_FEEDS = [
 const CORS_PROXIES = [
   url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}`,
+  url => `https://cors-anywhere.herokuapp.com/${url}`,
 ];
 
 function parseICalDate(str) {
@@ -1634,7 +1636,12 @@ async function syncICalFeeds(silent = false) {
   for (const feed of ICAL_FEEDS) {
     try {
       const events = await fetchICalFeed(feed);
-      if (!events.length) { errors++; continue; }
+      if (!events.length) {
+        console.warn('[iCal] No events from', feed.platform, feed.property_name, '— proxy blocked or empty feed');
+        errors++;
+        continue;
+      }
+      console.log('[iCal]', feed.platform, feed.property_name, '→', events.length, 'events');
 
       for (const evt of events) {
         // Check if booking already exists by source_uid OR matching dates+property+platform
@@ -1691,8 +1698,10 @@ async function syncICalFeeds(silent = false) {
   }
 
   if (statusEl) statusEl.textContent = errors > 0 ? '🟡 Sync partial' : '🟢 DB Connected';
-  const msg = `iCal sync: ${totalNew} new · ${totalUpdated} updated${errors?' · '+errors+' feeds failed':''}`;
-  if (!silent) toast(msg, errors > 0 ? 'info' : 'success');
+  const total_feeds = ICAL_FEEDS.length;
+  const succeeded = total_feeds - errors;
+  const msg = `iCal: ${totalNew} new · ${totalUpdated} updated · ${succeeded}/${total_feeds} feeds OK${errors?' ('+errors+' failed — check console)':''}`;
+  if (!silent || totalNew > 0) toast(msg, errors > 0 ? 'info' : 'success');
   console.log('[iCal sync]', msg);
 
   renderTab(currentTab);
@@ -1734,9 +1743,9 @@ function renderDashboard() {
   const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
 
   // ── Base stats ──
-  const active    = fb.filter(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b));
-  const checkIns  = fb.filter(b=>b.check_in===today&&b.status!=='cancelled'&&!isCaretaker(b));
-  const checkOuts = fb.filter(b=>b.check_out===today&&b.status!=='cancelled'&&!isCaretaker(b));
+  const active    = fb.filter(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
+  const checkIns  = fb.filter(b=>b.check_in===today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
+  const checkOuts = fb.filter(b=>b.check_out===today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
   const checkInLabels  = checkIns.map(b=>b.display_name+' ('+propName(b.property_id)+')').join(', ')||'None today';
   const checkOutLabels = checkOuts.map(b=>b.display_name+' ('+propName(b.property_id)+')').join(', ')||'None today';
 
@@ -2269,6 +2278,16 @@ function openBookingDetail(bookingId) {
       <button onclick="declineBooking(${b.id});closeModal('day-modal')"
         style="flex:1;background:#fee2e2;color:#dc2626;border:none;border-radius:10px;padding:10px;font-size:.84rem;cursor:pointer;font-weight:600">✗ Decline</button>
     </div>`:''}
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <button onclick="deleteBooking('${b.id}');closeModal('day-modal')"
+        style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;padding:6px 14px;font-size:.78rem;cursor:pointer;font-weight:600">
+        🗑 Delete booking
+      </button>
+      <button onclick="closeModal('day-modal')"
+        style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:.78rem;cursor:pointer;color:var(--muted)">
+        Close
+      </button>
+    </div>
   `;
   openModal('day-modal');
 }
@@ -2297,6 +2316,17 @@ async function declineBooking(id) {
   toast('Booking declined','info');
   renderBookings(); renderDashboard();
   if (laneViewActive) renderLaneView();
+}
+
+async function deleteBooking(id) {
+  if (!confirm('Permanently delete this booking? This cannot be undone.')) return;
+  if (db) {
+    const {error} = await db.from('bookings').update({is_active:false}).eq('id',id);
+    if (error) { toast('Error: '+error.message,'error'); return; }
+  }
+  bookings = bookings.filter(x=>String(x.id)!==String(id));
+  toast('Booking deleted','info');
+  renderBookings(); renderDashboard(); renderCalendar();
 }
 
 function renderBookings() {
@@ -2878,7 +2908,7 @@ async function saveGuestName(bookingId) {
   if (!b) return;
   b.guest_name = name; b.display_name = name || b.platform+' Guest';
   if (db) { const {error} = await db.from('bookings').update({guest_name:name}).eq('id',bookingId); if(error){toast('Could not save: '+error.message,'error');return;} }
-  toast('Guest name saved ✓','success'); renderCalendar(); renderBookings();
+  toast('Guest name saved ✓','success'); renderCalendar(); renderBookings(); renderDashboard(); if(typeof renderLaneView==='function') renderLaneView();
 }
 
 // ── DOMESTIC CALENDAR ─────────────────────────────────────────
