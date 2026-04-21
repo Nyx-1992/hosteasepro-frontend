@@ -2293,16 +2293,56 @@ function openBookingDetail(bookingId) {
 }
 
 async function approveBooking(id) {
-  if (!confirm('Approve this booking and mark as confirmed?')) return;
+  if (!confirm('Approve this booking? A confirmation email will be sent to the guest.')) return;
+  const b = bookings.find(x=>String(x.id)===String(id));
+  if (!b) return;
+
+  // Update DB
   if (db) {
     const {error} = await db.from('bookings').update({status:'confirmed'}).eq('id',id);
     if (error) { toast('Error: '+error.message,'error'); return; }
   }
-  const b = bookings.find(x=>x.id===id);
-  if (b) b.status = 'confirmed';
-  toast('Booking confirmed ✓','success');
+  b.status = 'confirmed';
+
+  // Send confirmation email via Nestora API
+  const ref = 'NESTORA-' + id;
+  const guestEmail = (b.notes||'').match(/Email: ([^\s|]+)/)?.[1] || '';
+  const guestPhone = (b.notes||'').match(/Phone: ([^\s|]+)/)?.[1] || '';
+
+  if (guestEmail) {
+    try {
+      const emailRes = await fetch('https://nestora-homepage-yb2q.vercel.app/api/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: id,
+          reference: ref,
+          guestName: b.guest_name || b.display_name,
+          guestEmail,
+          guestPhone,
+          property: b.property_name || propName(b.property_id),
+          checkIn:  b.check_in_date || b.check_in,
+          checkOut: b.check_out_date || b.check_out,
+          nights:   b.nights,
+          total:    b.total_amount || b.revenue || 0,
+        }),
+      });
+      const result = await emailRes.json();
+      if (result.success) {
+        toast('Booking confirmed + email sent to guest ✓','success');
+      } else {
+        toast('Confirmed — but email failed: '+result.error,'info');
+      }
+    } catch(e) {
+      toast('Confirmed in DB — email could not be sent','info');
+      console.warn('Confirm email failed:', e);
+    }
+  } else {
+    toast('Booking confirmed ✓ (no guest email on file)','success');
+  }
+
   renderBookings(); renderDashboard();
-  if (laneViewActive) renderLaneView();
+  if (typeof renderLaneView === 'function') renderLaneView();
 }
 
 async function declineBooking(id) {
