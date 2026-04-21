@@ -124,6 +124,7 @@ function parseICal(text, feed) {
       number_of_guests: 1,
       status:           status,
       is_active:        true,
+      org_id:           '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
       total_amount:     0,
       payment_status:   'pending',
       currency:         'ZAR'
