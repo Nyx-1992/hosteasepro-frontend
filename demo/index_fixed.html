@@ -305,6 +305,15 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
 </head>
 <body>
+<script>
+// Safe stubs — overridden when main script loads
+function openDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d){d.style.transform='translateX(0)';d.style.webkitTransform='translateX(0)';}if(o)o.style.display='block';}
+function closeDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d){d.style.transform='translateX(-110%)';d.style.webkitTransform='translateX(-110%)';}if(o)o.style.display='none';}
+function toggleMobSidebar(){openDrawer();}
+function buildMobileNav(){/* will be defined by main script */}
+function fillUser(i){const u=[['sn_apt_management@outlook.com','Sevilla2015!'],['s.faltin@tischlerei-faltin.de','Admin2024!'],['vanwyk.nina@gmail.com','HelloWorld1!']][i];if(u){document.getElementById('login-email').value=u[0];document.getElementById('login-password').value=u[1];}}
+function doLogin(){const email=document.getElementById('login-email').value.trim();const pass=document.getElementById('login-password').value;const USERS=[{id:'1',email:'sn_apt_management@outlook.com',password:'Sevilla2015!',name:'Nicole',role:'admin',initials:'N'},{id:'2',email:'s.faltin@tischlerei-faltin.de',password:'Admin2024!',name:'Silja',role:'admin',initials:'S'},{id:'3',email:'vanwyk.nina@gmail.com',password:'HelloWorld1!',name:'Nina Williams',role:'host',initials:'NW'}];const user=USERS.find(u=>u.email===email&&u.password===pass);if(!user){const e=document.getElementById('auth-error');if(e){e.textContent='Invalid email or password.';e.style.display='block';}return;}setTimeout(function(){if(typeof window._doLogin==='function')window._doLogin(user);},50);}
+</script>
 
 <div id="auth-screen">
   <div class="auth-card">
@@ -1101,6 +1110,9 @@ function getCleanerRate(cleaner, propId) {
 
 // ── AUTH ──────────────────────────────────────────────────────
 function fillUser(i) { document.getElementById('login-email').value=USERS[i].email; document.getElementById('login-password').value=USERS[i].password; }
+window._doLogin = function(prefilledUser) {
+  if(prefilledUser){currentUser=prefilledUser;_afterLogin(prefilledUser);return;}
+}
 function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-password').value;
@@ -1115,6 +1127,11 @@ function doLogin() {
   document.getElementById('user-name').textContent=user.name;
   document.getElementById('user-role').textContent=user.role;
   buildNav(); buildMobileNav(); loadData();
+}
+function _afterLogin(user) {
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app-screen').style.display='block';
+  buildNav(); buildMobileNav(); loadData(); scheduleICalSync();
 }
 function doLogout() { currentUser=null; // Force mobile nav check on resize (handles orientation changes on iPhone)
 window.addEventListener('resize', () => { buildMobileNav(); });
