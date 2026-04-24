@@ -965,44 +965,90 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
 
 <div class="toast-wrap" id="toast-wrap"></div>
 <script>
-// ── CONFIG ────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+// HostEase Pro — Property Management Platform
+// Built by Nicole Babczyk · hosteasepro.com
+//
+// ── HOW TO WHITE-LABEL FOR A NEW CLIENT ──────────────────────
+// Everything between the CLIENT CONFIG markers below is the
+// ONLY section you need to change per client. The rest of the
+// file is the core platform and never needs touching.
+//
+// Checklist for a new client:
+//  1. Replace SUPABASE_URL + SUPABASE_KEY with their DB
+//  2. Replace PROPS with their property names/addresses/UUIDs
+//  3. Replace UUID_MAP with their property UUIDs
+//  4. Replace CLEANERS with their staff
+//  5. Replace USERS with their team logins
+//  6. Replace CLIENT_BRAND with their company name/colours
+//  7. Replace ICAL_FEEDS with their iCal URLs
+//  8. Replace BOOKING_TASKS label wording if needed
+//  9. Deploy as a new Vercel project — done.
+// ════════════════════════════════════════════════════════════════
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  CLIENT CONFIG — S&N Apt. Management                        ║
+// ║  Replace this entire block for each new client              ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+const CLIENT_BRAND = {
+  name:       'S&N Apt. Management',
+  shortName:  'S&N',
+  website:    'https://www.snapartments.co.za',
+  logo:       '🏠',
+  whatsapp:   '27636021847',        // Nicole (testing) — change to Nina's for production
+  email:      'sn_apt_management@outlook.com',
+  currency:   'ZAR',
+  country:    'ZA',
+};
+
+// ── Database (Supabase) ──
 const SUPABASE_URL = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRreXpiemxzaHJ4ZHdldHlrbWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMzkyMTUsImV4cCI6MjA3ODYxNTIxNX0.d4K89mdZVzG4Rv4H44MYnhV4VlW3V1vSgbYZcjcPMQw';
-let db = null;
-try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
 
-// ── CONSTANTS ─────────────────────────────────────────────────
+// ── Properties ──
 const UUID_MAP = {
   'e9737638-d83a-4947-940a-8746789e4d9f': 'speranta',
   '83b2a84a-5451-4be5-a84f-2efc0d2602d5': 'tvhouse',
 };
 const PROPS = {
-  speranta: {name:'Speranta Flat', short:'Speranta', address:'35 Athens Road, Blouberg', uuid:'e9737638-d83a-4947-940a-8746789e4d9f'},
-  tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5'},
+  speranta: {name:'Speranta Flat', short:'Speranta', address:'35 Athens Road, Blouberg',    uuid:'e9737638-d83a-4947-940a-8746789e4d9f', cleaningFee:400},
+  tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5', cleaningFee:550},
 };
+
+// ── Domestic staff ──
 const CLEANERS = [
   {name:'Blessing', phone:'062 532 2932', payment:'ewallet', properties:['speranta'],           rate:350,                      birthday:'1988-03-14', note:'Speranta cleaner. Paid directly via ewallet to herself.'},
   {name:'Fatima',   phone:'063 175 8111', payment:'ewallet', properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450},birthday:'1992-07-22', note:'Covers both properties.'},
   {name:'Patricia', phone:'063 735 3892', payment:'eft',     properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450},birthday:'1985-11-05', note:'Patricia Mutizwa. Primary TV House cleaner.'},
   {name:'Spiwe',    phone:'084 915 0894', payment:'ewallet', properties:['speranta'],           rate:350,                      birthday:'1990-09-18', note:'Spiwe Gwingwizna.'},
 ];
-const PLAT_COLORS = {airbnb:'#FF385C',booking:'#003580',lekkeslaap:'#FFC300',manual:'#c17f3c',direct:'#0369a1',owner:'#64748b',blocked:'#94a3b8',caretaker:'#94a3b8'};
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// Nina's standard per-booking checklist
-const NINA_BOOKING_TASKS = [
-  {key:'checkin_msg',    label:'Send check-in message to guest (24h before arrival) with access codes & instructions'},
-  {key:'book_domestic',  label:'Book cleaning/domestic after checkout'},
-  {key:'checkout',       label:'Process checkout — inspect property & report any issues'},
-  {key:'followup_msg',   label:'Send follow-up message — invite to rebook directly via our website'},
-];
-
+// ── Team logins ──
 const USERS = [
-  {id:'1',email:'sn_apt_management@outlook.com',password:'Sevilla2015!', name:'Nicole',       role:'admin',initials:'N'},
-  {id:'2',email:'s.faltin@tischlerei-faltin.de',          password:'Admin2024!',   name:'Silja',        role:'admin',initials:'S'},
-  {id:'3',email:'vanwyk.nina@gmail.com',          password:'HelloWorld1!', name:'Nina Williams',role:'host', initials:'NW'},
+  {id:'1', email:'sn_apt_management@outlook.com', password:'Sevilla2015!', name:'Nicole',       role:'admin', initials:'N'},
+  {id:'2', email:'s.faltin@tischlerei-faltin.de',  password:'Admin2024!',  name:'Silja',        role:'admin', initials:'S'},
+  {id:'3', email:'vanwyk.nina@gmail.com',           password:'HelloWorld1!',name:'Nina Williams',role:'host',  initials:'NW'},
 ];
+
+// ── Guest task checklist (host workflow per booking) ──
+const NINA_BOOKING_TASKS = [
+  {key:'checkin_msg',   label:'Send check-in message to guest (24h before arrival) with access codes & instructions'},
+  {key:'book_domestic', label:'Book cleaning/domestic after checkout'},
+  {key:'checkout',      label:'Process checkout — inspect property & report any issues'},
+  {key:'followup_msg',  label:'Send follow-up message — invite to rebook directly via website'},
+];
+
+// ╔══════════════════════════════════════════════════════════════╗
+// ║  PLATFORM CORE — do not edit per client                     ║
+// ╚══════════════════════════════════════════════════════════════╝
+
+let db = null;
+try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
+
+const PLAT_COLORS = {airbnb:'#FF385C',booking:'#003580',lekkeslaap:'#FFC300',manual:'#c17f3c',direct:'#0369a1',owner:'#64748b',blocked:'#94a3b8',caretaker:'#94a3b8'};
+const MONTHS  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // ── STATE ─────────────────────────────────────────────────────
 let currentUser = null, currentProp = 'all', currentTab = 'dashboard';
@@ -1764,7 +1810,7 @@ function renderDashboard() {
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:1.3rem;animation:pulse 1.5s infinite">🔔</span>
           <div>
-            <div style="font-weight:700;font-size:.9rem;color:#92400e">${pendingDirect.length} Nestora booking${pendingDirect.length>1?'s':''} awaiting approval</div>
+            <div style="font-weight:700;font-size:.9rem;color:#92400e">${pendingDirect.length} S&N Apartments booking${pendingDirect.length>1?'s':''} awaiting approval</div>
             <div style="font-size:.76rem;color:#a16207">${pendingDirect.map(b=>b.display_name+' · '+fmtDate(b.check_in)).join(' · ')}</div>
           </div>
         </div>
@@ -2304,14 +2350,14 @@ async function approveBooking(id) {
   }
   b.status = 'confirmed';
 
-  // Send confirmation email via Nestora API
-  const ref = 'NESTORA-' + id;
+  // Send confirmation email via S&N Apartments API
+  const ref = 'SNAP-' + id;
   const guestEmail = (b.notes||'').match(/Email: ([^\s|]+)/)?.[1] || '';
   const guestPhone = (b.notes||'').match(/Phone: ([^\s|]+)/)?.[1] || '';
 
   if (guestEmail) {
     try {
-      const emailRes = await fetch('https://nestora-homepage-yb2q.vercel.app/api/confirm', {
+      const emailRes = await fetch('https://www.snapartments.co.za/api/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3462,7 +3508,7 @@ Don't hesitate to message us if you need anything. Enjoy your stay! 🌊`
 
 We hope you enjoyed your stay at ${propName(b.property_id)}! We'd love to have you back.
 
-🔗 Book directly next time and save: https://nestora-homepage-yb2q.vercel.app
+🔗 Book directly next time and save: https://www.snapartments.co.za
 🎁 Use code RETURN10 for a discount on your next booking.
 
 Would love to hear your feedback! ⭐`
@@ -3560,17 +3606,17 @@ Hope you had a wonderful stay! We'd really appreciate a review — it helps us a
 ⭐ Airbnb: [LINK]
 ⭐ Booking.com: [LINK]
 
-And remember, you can book directly next time at nestora-homepage-yb2q.vercel.app for our best rate! 🎁`
+And remember, you can book directly next time at www.snapartments.co.za for our best rate! 🎁`
     },
     {
       icon:'🎁',
       label:'Return guest — 10% off',
-      msg:`Hi [NAME] 👋\n\nThank you for staying with us — it was a pleasure!\n\nWe’d love to welcome you back. Use code *RETURN10* for *10% off* your next direct booking:\n\n🔗 https://nestora-homepage-yb2q.vercel.app\n\nNo platform fees, best rate guaranteed 🌊\n\nS&N Apt Management`
+      msg:`Hi [NAME] 👋\n\nThank you for staying with us — it was a pleasure!\n\nWe’d love to welcome you back. Use code *RETURN10* for *10% off* your next direct booking:\n\n🔗 https://www.snapartments.co.za\n\nNo platform fees, best rate guaranteed 🌊\n\nS&N Apt Management`
     },
     {
       icon:'🌟',
       label:'Past guest re-engagement',
-      msg:`Hi [NAME]! 😊\n\nIt’s been a while since your stay at [PROPERTY] and we’d love to have you back!\n\nBook directly and use code *RETURN10* for 10% off:\n\n🔗 https://nestora-homepage-yb2q.vercel.app\n\nAny questions? Just reply here 🐌\nNicole & the S&N team`
+      msg:`Hi [NAME]! 😊\n\nIt’s been a while since your stay at [PROPERTY] and we’d love to have you back!\n\nBook directly and use code *RETURN10* for 10% off:\n\n🔗 https://www.snapartments.co.za\n\nAny questions? Just reply here 🐌\nNicole & the S&N team`
     },
   ];
 
