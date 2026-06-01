@@ -252,7 +252,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .divider{height:1px;background:var(--border);margin:14px 0}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
 /* Mobile bottom nav — always defined */
-.mobile-nav{position:fixed;bottom:0;left:0;right:0;background:var(--ink);z-index:9999;padding:8px 0 12px;border-top:1px solid rgba(255,255,255,.12);display:block;box-shadow:0 -2px 20px rgba(0,0,0,.25);-webkit-transform:translateZ(0);transform:translateZ(0)}
+.mobile-nav{position:fixed;bottom:0;left:0;right:0;background:#16213e;z-index:9999;padding:8px 0 12px;border-top:1px solid rgba(255,255,255,.15);display:none;box-shadow:0 -2px 20px rgba(0,0,0,.25);-webkit-transform:translateZ(0);transform:translateZ(0)}
 .mobile-nav-inner{display:flex;justify-content:space-around;align-items:center}
 .mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 10px;border-radius:10px;min-width:54px;-webkit-tap-highlight-color:transparent}
 .mob-nav-icon{font-size:1.2rem;line-height:1.3}
@@ -310,7 +310,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 function openDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d){d.style.transform='translateX(0)';d.style.webkitTransform='translateX(0)';}if(o)o.style.display='block';}
 function closeDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d){d.style.transform='translateX(-110%)';d.style.webkitTransform='translateX(-110%)';}if(o)o.style.display='none';}
 function toggleMobSidebar(){openDrawer();}
-function buildMobileNav(){/* will be defined by main script */}
+function _buildMobileNavStub(){/* replaced by main script */}
 function fillUser(i){const u=[['sn_apt_management@outlook.com','Sevilla2015!'],['s.faltin@tischlerei-faltin.de','Admin2024!'],['vanwyk.nina@gmail.com','HelloWorld1!']][i];if(u){document.getElementById('login-email').value=u[0];document.getElementById('login-password').value=u[1];}}
 function doLogin(){const email=document.getElementById('login-email').value.trim();const pass=document.getElementById('login-password').value;const USERS=[{id:'1',email:'sn_apt_management@outlook.com',password:'Sevilla2015!',name:'Nicole',role:'admin',initials:'N'},{id:'2',email:'s.faltin@tischlerei-faltin.de',password:'Admin2024!',name:'Silja',role:'admin',initials:'S'},{id:'3',email:'vanwyk.nina@gmail.com',password:'HelloWorld1!',name:'Nina Williams',role:'host',initials:'NW'}];const user=USERS.find(u=>u.email===email&&u.password===pass);if(!user){const e=document.getElementById('auth-error');if(e){e.textContent='Invalid email or password.';e.style.display='block';}return;}setTimeout(function(){if(typeof window._doLogin==='function')window._doLogin(user);},50);}
 </script>
@@ -1203,6 +1203,46 @@ function buildNav() {
     `<div class="nav-item ${n.id===currentTab?'active':''}" onclick="switchTab('${n.id}')"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
   ).join('');
 }
+function buildMobileNav() {
+  const nav = document.getElementById('mobile-nav');
+  const inner = document.getElementById('mob-nav-inner');
+  if (!nav || !inner || !currentUser) return;
+
+  const MOB_NAV = [
+    {id:'dashboard', icon:'🏠', label:'Home'},
+    {id:'bookings',  icon:'📋', label:'Bookings'},
+    {id:'calendar',  icon:'📅', label:'Calendar'},
+    {id:'tasks',     icon:'✅', label:'Tasks'},
+    {id:'reports',   icon:'📊', label:'Reports'},
+  ];
+
+  inner.innerHTML = MOB_NAV.map(item => `
+    <div onclick="switchTab('${item.id}')"
+      style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;cursor:pointer;flex:1;
+             color:${currentTab===item.id ? '#FF385C' : 'rgba(255,255,255,0.6)'};
+             border-top:2px solid ${currentTab===item.id ? '#FF385C' : 'transparent'};
+             transition:all .15s">
+      <span style="font-size:1.2rem;line-height:1">${item.icon}</span>
+      <span style="font-size:.58rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${item.label}</span>
+    </div>`).join('');
+
+  // Force display on mobile
+  const isMobile = window.innerWidth <= 768;
+  nav.setAttribute('style',
+    'display:' + (isMobile ? 'flex' : 'none') + '!important;' +
+    'position:fixed!important;bottom:0!important;left:0!important;right:0!important;' +
+    'z-index:9999!important;background:#16213e!important;' +
+    'padding:6px 0 env(safe-area-inset-bottom,10px)!important;' +
+    'border-top:1px solid rgba(255,255,255,.12)!important;' +
+    'visibility:visible!important;opacity:1!important;' +
+    '-webkit-transform:translateZ(0)!important;transform:translateZ(0)!important'
+  );
+  // Also fix inner
+  inner.setAttribute('style',
+    'display:flex!important;width:100%!important;justify-content:space-around!important'
+  );
+}
+
 function switchTab(id) {
   currentTab=id;
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
@@ -1754,6 +1794,20 @@ async function syncICalFeeds(silent = false) {
 }
 
 // Auto-sync on load (silent) — runs 3 seconds after login so DB is ready
+// Mobile nav on resize
+window.addEventListener('resize', function() {
+  if (currentUser) buildMobileNav();
+});
+
+// Build mobile nav on DOM ready and after load
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() { if (currentUser) buildMobileNav(); }, 100);
+});
+window.addEventListener('load', function() {
+  setTimeout(function() { if (currentUser) buildMobileNav(); }, 200);
+  setTimeout(function() { if (currentUser) buildMobileNav(); }, 800);
+});
+
 function scheduleICalSync() {
   setTimeout(() => syncICalFeeds(true), 3000);
   // Re-sync every 30 minutes while app is open
