@@ -426,70 +426,123 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
 
       <!-- CALENDAR -->
       <div class="tab-pane" id="tab-calendar">
-        <!-- ── Top control bar ── -->
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-          <!-- Property toggle -->
-          <div class="toggle-bar" id="cal-prop-toggle" style="margin:0">
-            <button class="active" onclick="setCalProp('all',this)">🏠 All</button>
-            <button onclick="setCalProp('speranta',this)">Speranța</button>
-            <button onclick="setCalProp('tvhouse',this)">TV House</button>
-          </div>
-          <!-- View toggles -->
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <button id="cleaning-toggle-btn" class="btn btn-sm btn-ghost" onclick="toggleCleaningOverlay(this)">🧹 Show Cleaning</button>
-            <button id="kpi-toggle-btn" class="btn btn-sm btn-ghost" onclick="toggleKPIPanel()">📊 Cleaning KPIs</button>
-            <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
-            <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ Export CSV</button>
-          </div>
+
+        <!-- ── Mode switch: Bookings vs Domestic ── -->
+        <div style="display:flex;gap:2px;background:var(--sand);border-radius:10px;padding:3px;margin-bottom:14px;width:fit-content">
+          <button id="calmode-bookings-btn" onclick="setCalMode('bookings')"
+            style="padding:7px 18px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s">
+            📅 Bookings
+          </button>
+          <button id="calmode-domestic-btn" onclick="setCalMode('domestic')"
+            style="padding:7px 18px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
+            🧹 Domestic
+          </button>
         </div>
 
-        <!-- ── KPI Panel (hidden by default) ── -->
-        <div id="cleaning-kpi-panel" style="display:none;margin-bottom:16px"></div>
-
-        <!-- ── Cleaning coverage alert ── -->
-        <div id="cleaning-coverage-alert" style="display:none;margin-bottom:12px"></div>
-
-        <!-- ── Calendar ── -->
-        <div class="cal-wrap">
-          <div class="cal-header">
-            <div class="cal-month" id="cal-month-label"></div>
-            <div class="cal-nav">
-              <button onclick="calNav(-1)">← Prev</button>
-              <button onclick="calNav(0)">Today</button>
-              <button onclick="calNav(1)">Next →</button>
+        <!-- ══ BOOKINGS CALENDAR VIEW ══ -->
+        <div id="calview-bookings">
+          <!-- Top control bar -->
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+            <div class="toggle-bar" id="cal-prop-toggle" style="margin:0">
+              <button class="active" onclick="setCalProp('all',this)">🏠 All</button>
+              <button onclick="setCalProp('speranta',this)">Speranța</button>
+              <button onclick="setCalProp('tvhouse',this)">TV House</button>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <!-- View: Monthly / Weekly / Daily -->
+              <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:8px;padding:2px">
+                <button id="calview-month-btn" onclick="setCalView('month')"
+                  style="padding:4px 12px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:var(--ink);color:#fff">Month</button>
+                <button id="calview-week-btn" onclick="setCalView('week')"
+                  style="padding:4px 12px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted)">Week</button>
+                <button id="calview-day-btn" onclick="setCalView('day')"
+                  style="padding:4px 12px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted)">Day</button>
+              </div>
+              <button id="cleaning-toggle-btn" class="btn btn-sm btn-ghost" onclick="toggleCleaningOverlay(this)">🧹 Cleaning</button>
+              <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ CSV</button>
             </div>
           </div>
-          <div class="cal-grid" id="cal-grid"></div>
-        </div>
 
-        <!-- ── Legend ── -->
-        <div class="card">
-          <div class="card-title">Legend</div>
-          <div class="legend">
-            <div class="legend-item"><div class="legend-dot" style="background:#FF385C"></div>Airbnb</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#003580"></div>Booking.com</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#FFC300"></div>LekkeSlaap</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Direct/Manual</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>🧹 Cleaning</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>🔒 Blocked</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#22c55e;border:2px solid #16a34a"></div>✅ Clean linked</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#ef4444;border:2px dashed #dc2626"></div>⚠ No clean scheduled</div>
-            <div class="legend-item"><div class="legend-dot" style="background:#d946ef"></div>Birthday</div>
+          <!-- KPI + Alert -->
+          <div id="cleaning-kpi-panel" style="display:none;margin-bottom:16px"></div>
+          <div id="cleaning-coverage-alert" style="display:none;margin-bottom:12px"></div>
+
+          <!-- Calendar wrapper -->
+          <div class="cal-wrap">
+            <div class="cal-header">
+              <div class="cal-month" id="cal-month-label"></div>
+              <div class="cal-nav">
+                <button onclick="calNav(-1)">← Prev</button>
+                <button onclick="calNav(0)">Today</button>
+                <button onclick="calNav(1)">Next →</button>
+              </div>
+            </div>
+            <!-- Monthly grid -->
+            <div id="calview-month-panel">
+              <div class="cal-grid" id="cal-grid"></div>
+            </div>
+            <!-- Weekly view -->
+            <div id="calview-week-panel" style="display:none">
+              <div id="cal-week-grid"></div>
+            </div>
+            <!-- Daily view -->
+            <div id="calview-day-panel" style="display:none">
+              <div id="cal-day-detail"></div>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div class="card" style="margin-top:12px">
+            <div class="card-title">Legend</div>
+            <div class="legend">
+              <div class="legend-item"><div class="legend-dot" style="background:#FF385C"></div>Airbnb</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#003580"></div>Booking.com</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#FFC300"></div>LekkeSlaap</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Direct/Manual</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>🧹 Cleaning</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>🔒 Blocked</div>
+            </div>
           </div>
         </div>
 
-        <!-- ── Domestic sessions list (toggle shows/hides) ── -->
-        <div id="domestic-sessions-panel" style="display:none">
-          <div class="card mt-4">
+        <!-- ══ DOMESTIC CALENDAR VIEW ══ -->
+        <div id="calview-domestic" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+            <div style="display:flex;gap:6px;align-items:center">
+              <button onclick="domCalNav(-1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.82rem">← Prev</button>
+              <span id="dom-month-label" style="font-weight:600;font-size:.92rem"></span>
+              <button onclick="domCalNav(1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.82rem">Next →</button>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button id="kpi-toggle-btn" class="btn btn-sm btn-ghost" onclick="toggleKPIPanel()">📊 KPIs</button>
+              <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ CSV</button>
+            </div>
+          </div>
+
+          <!-- Domestic KPI panel -->
+          <div id="cleaning-kpi-panel-dom" style="margin-bottom:14px"></div>
+
+          <!-- Domestic calendar grid -->
+          <div class="card" style="padding:16px;margin-bottom:14px">
+            <div id="dom-cal-grid"></div>
+          </div>
+
+          <!-- Cleaner earnings -->
+          <div class="card" style="margin-bottom:14px">
             <div class="card-title">💰 Monthly Cleaning Earnings</div>
             <div id="dom-earnings-summary"></div>
           </div>
-          <div class="card mt-4">
-            <div class="card-title">📋 All Cleaning Sessions</div>
+
+          <!-- All cleaning sessions -->
+          <div class="card">
+            <div class="card-title">📋 Cleaning Sessions</div>
             <div class="dom-grid" id="dom-grid"></div>
           </div>
         </div>
+
       </div>
 
 
@@ -1054,6 +1107,8 @@ const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 let currentUser = null, currentProp = 'all', currentTab = 'dashboard';
 let taskFilter = 'open', bookingFilter = 'upcoming';
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+let calViewMode = 'month'; // 'month' | 'week' | 'day'
+let calMode     = 'bookings'; // 'bookings' | 'domestic'
 let domCalYear = new Date().getFullYear(), domCalMonth = new Date().getMonth();
 let calProp = 'all';
 let bookings = [], tasks = [], domestics = [], kbArticles = [];
@@ -2852,11 +2907,253 @@ function renderCoverageAlert() {
   }
 }
 
-function renderCalendar() {
+// ── Calendar mode: Bookings vs Domestic ──────────────────────
+function setCalMode(mode) {
+  calMode = mode;
+  document.getElementById('calview-bookings').style.display = mode==='bookings' ? 'block' : 'none';
+  document.getElementById('calview-domestic').style.display = mode==='domestic' ? 'block' : 'none';
+  const bb = document.getElementById('calmode-bookings-btn');
+  const db = document.getElementById('calmode-domestic-btn');
+  if (bb) { bb.style.background = mode==='bookings' ? 'var(--ocean)' : 'transparent'; bb.style.color = mode==='bookings' ? '#fff' : 'var(--muted)'; }
+  if (db) { db.style.background = mode==='domestic' ? 'var(--ocean)' : 'transparent'; db.style.color = mode==='domestic' ? '#fff' : 'var(--muted)'; }
+  if (mode==='domestic') renderDomesticCalView();
+  else renderCalendar();
+}
+
+// ── Calendar view: Month / Week / Day ────────────────────────
+function setCalView(view) {
+  calViewMode = view;
+  ['month','week','day'].forEach(v => {
+    const panel = document.getElementById('calview-'+v+'-panel');
+    const btn   = document.getElementById('calview-'+v+'-btn');
+    if (panel) panel.style.display = v===view ? 'block' : 'none';
+    if (btn) {
+      btn.style.background = v===view ? 'var(--ink)' : 'transparent';
+      btn.style.color      = v===view ? '#fff' : 'var(--muted)';
+    }
+  });
+  renderCalendar();
+}
+
+// ── Weekly view renderer ──────────────────────────────────────
+function renderWeekView() {
+  const el = document.getElementById('cal-week-grid');
+  if (!el) return;
+  const today = new Date().toISOString().slice(0,10);
+  // Find the Monday of the current week containing calYear/calMonth/1
+  // Use the currently highlighted day or today if in current month
+  const refDate = new Date(calYear, calMonth, 1);
+  const dow = refDate.getDay();
+  const monday = new Date(refDate);
+  monday.setDate(refDate.getDate() - (dow===0?6:dow-1));
+
   const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
   const fd = showCleaningOverlay
     ? (calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp))
     : [];
+
+  const days = [];
+  for (let i=0; i<7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate()+i);
+    days.push(d.toISOString().slice(0,10));
+  }
+
+  const DOW_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px">
+      ${DOW_LABELS.map((d,i) => `
+        <div style="text-align:center;font-size:.7rem;font-weight:700;color:var(--muted);padding:6px 2px;text-transform:uppercase;letter-spacing:.05em;
+          ${days[i]===today?'color:var(--accent);':''}">${d}<br>
+          <span style="font-size:.8rem;font-weight:${days[i]===today?'700':'400'};color:${days[i]===today?'var(--accent)':'var(--ink)'}">${days[i].slice(8)}</span>
+        </div>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;min-height:200px">
+      ${days.map(ds => {
+        const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled' && b.status!=='blocked');
+        const dayCleans   = fd.filter(d => d.date===ds);
+        const isToday     = ds===today;
+        return `<div onclick="showDay('${ds}')"
+          style="border:1px solid var(--border);border-radius:8px;padding:6px 4px;min-height:120px;cursor:pointer;
+                 background:${isToday?'var(--ocean-light)':'var(--surface)'};
+                 ${isToday?'border-color:var(--ocean);':''}"
+          onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${isToday?'var(--ocean-light)':'var(--surface)'}'">
+          ${dayBookings.map(b => {
+            const col = PLAT_COLORS[isOwnerStay(b)?'owner':b.platform]||'var(--accent)';
+            return `<div style="background:${col};color:#fff;font-size:.6rem;font-weight:600;padding:2px 4px;border-radius:4px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              ${b.display_name||b.guest_name||b.platform}
+            </div>`;
+          }).join('')}
+          ${dayCleans.map(c => `
+            <div style="background:#06b6d4;color:#fff;font-size:.6rem;padding:2px 4px;border-radius:4px;margin-bottom:2px">
+              🧹 ${c.cleaner||'Clean'}
+            </div>`).join('')}
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="text-align:center;margin-top:10px;display:flex;gap:8px;justify-content:center">
+      <button onclick="calNavWeek(-1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">← Prev week</button>
+      <button onclick="calNavWeek(0)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">This week</button>
+      <button onclick="calNavWeek(1)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">Next week →</button>
+    </div>`;
+}
+
+function calNavWeek(dir) {
+  const ref = new Date(calYear, calMonth, 1);
+  if (dir===0) { calYear=new Date().getFullYear(); calMonth=new Date().getMonth(); }
+  else { ref.setDate(ref.getDate()+(dir*7)); calYear=ref.getFullYear(); calMonth=ref.getMonth(); }
+  renderCalendar();
+}
+
+// ── Daily view renderer ───────────────────────────────────────
+function renderDayView() {
+  const el = document.getElementById('cal-day-detail');
+  if (!el) return;
+  // Use today's date as default day
+  const today = new Date().toISOString().slice(0,10);
+  const ds = today;
+  const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
+  const fd = calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp);
+  const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled');
+  const dayCleans   = fd.filter(d => d.date===ds);
+  const fmtDs = new Date(ds).toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+  el.innerHTML = `
+    <div style="margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div style="font-size:1rem;font-weight:700;color:var(--ink)">${fmtDs}</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="calNavDay(-1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:4px 12px;cursor:pointer;font-size:.8rem">← Yesterday</button>
+        <button onclick="calNavDay(0)"  style="background:var(--ocean);color:#fff;border:none;border-radius:7px;padding:4px 12px;cursor:pointer;font-size:.8rem">Today</button>
+        <button onclick="calNavDay(1)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:4px 12px;cursor:pointer;font-size:.8rem">Tomorrow →</button>
+      </div>
+    </div>
+    ${!dayBookings.length && !dayCleans.length ? '<div style="color:var(--muted);text-align:center;padding:40px">Nothing scheduled for this day</div>' : ''}
+    ${dayBookings.map(b => {
+      const col = PLAT_COLORS[isOwnerStay(b)?'owner':b.platform]||'var(--accent)';
+      return `<div style="background:${col}18;border-left:4px solid ${col};border-radius:10px;padding:12px 14px;margin-bottom:10px;cursor:pointer" onclick="openBookingDetail('${b.id}')">
+        <div style="font-weight:700;color:var(--ink)">${b.display_name||b.guest_name}</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:3px">${propName(b.property_id)} · Check-in: ${fmtDate(b.check_in)} · Check-out: ${fmtDate(b.check_out)} · ${b.nights||0}n</div>
+        <span class="badge badge-${b.platform}" style="margin-top:6px">${b.platform}</span>
+      </div>`;
+    }).join('')}
+    ${dayCleans.map(c => `
+      <div style="background:#06b6d418;border-left:4px solid #06b6d4;border-radius:10px;padding:12px 14px;margin-bottom:10px">
+        <div style="font-weight:700;color:var(--ink)">🧹 Cleaning — ${c.cleaner||'Unassigned'}</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:3px">${propName(c.property_id)} · ${c.time||'—'} · ${c.type||'turnover'} · R${c.amount_paid||0}</div>
+      </div>`).join('')}`;
+}
+
+let _currentDayStr = new Date().toISOString().slice(0,10);
+function calNavDay(dir) {
+  const d = new Date(_currentDayStr);
+  if (dir===0) { _currentDayStr = new Date().toISOString().slice(0,10); }
+  else { d.setDate(d.getDate()+dir); _currentDayStr = d.toISOString().slice(0,10); }
+  renderDayView();
+}
+
+// ── Domestic calendar view ────────────────────────────────────
+function renderDomesticCalView() {
+  // Update month label
+  const labelEl = document.getElementById('dom-month-label');
+  if (labelEl) labelEl.textContent = MONTHS[domCalMonth] + ' ' + domCalYear;
+
+  // Render domestic mini calendar
+  const gridEl = document.getElementById('dom-cal-grid');
+  if (gridEl) {
+    const year = domCalYear, month = domCalMonth;
+    const firstDay  = new Date(year, month, 1).getDay();
+    const daysCount = new Date(year, month+1, 0).getDate();
+    const today = new Date().toISOString().slice(0,10);
+    const monthStr = String(year)+'-'+String(month+1).padStart(2,'0');
+    const monthDoms = domestics.filter(d=>d.date&&d.date.startsWith(monthStr));
+    const COLORS = {Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+
+    let g = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;font-size:.7rem;margin-bottom:8px">';
+    ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
+      g += `<div style="font-weight:700;color:var(--muted);padding:4px">${d}</div>`;
+    });
+    g += '</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">';
+    for (let i=0; i<firstDay; i++) g += '<div></div>';
+    for (let d=1; d<=daysCount; d++) {
+      const ds = year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      const dayDoms = monthDoms.filter(dom=>dom.date===ds);
+      const isToday = ds===today;
+      g += `<div style="border-radius:6px;padding:4px 2px;border:${isToday?'2px solid var(--accent)':'1px solid var(--border)'};background:${dayDoms.length?'var(--surface-2)':'transparent'};min-height:52px;position:relative;cursor:${dayDoms.length?'pointer':'default'}"
+        onclick="if(${dayDoms.length}) showDomesticDay('${ds}')">
+        <div style="font-size:.7rem;font-weight:${isToday?'700':'400'};color:${isToday?'var(--accent)':'var(--ink)'}">${d}</div>
+        ${dayDoms.slice(0,2).map(dom=>`
+          <div style="background:${COLORS[dom.cleaner]||'#64748b'};color:#fff;font-size:.55rem;font-weight:600;padding:1px 3px;border-radius:3px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            ${dom.cleaner||'Clean'}
+          </div>`).join('')}
+        ${dayDoms.length>2?`<div style="font-size:.55rem;color:var(--muted);margin-top:1px">+${dayDoms.length-2} more</div>`:''}
+      </div>`;
+    }
+    g += '</div>';
+    gridEl.innerHTML = g;
+  }
+
+  // Render earnings
+  renderDomEarnings();
+
+  // Render sessions list
+  const domGrid = document.getElementById('dom-grid');
+  if (domGrid) {
+    const monthStr = String(domCalYear)+'-'+String(domCalMonth+1).padStart(2,'0');
+    const monthDoms = domestics.filter(d=>d.date&&d.date.startsWith(monthStr))
+      .sort((a,b)=>a.date.localeCompare(b.date));
+    if (!monthDoms.length) {
+      domGrid.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">No cleaning sessions this month</div>';
+      return;
+    }
+    domGrid.innerHTML = monthDoms.map(d => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:600;font-size:.88rem">${d.cleaner||'Unassigned'} — ${propName(d.property_id)}</div>
+          <div style="font-size:.76rem;color:var(--muted);margin-top:2px">${fmtDate(d.date)} · ${d.time||'—'} · ${d.type||'turnover'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-weight:700;color:var(--green2)">R${d.amount_paid||0}</span>
+          <span class="badge badge-${d.status||'scheduled'}">${d.status||'scheduled'}</span>
+          <button onclick="editCleaning('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.8rem">✏</button>
+          <button onclick="deleteCleaning('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:.8rem">✕</button>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function showDomesticDay(ds) {
+  const dayDoms = domestics.filter(d=>d.date===ds);
+  document.getElementById('day-modal-title').textContent = '🧹 Cleaning — ' + fmtDate(ds);
+  document.getElementById('day-modal-body').innerHTML = dayDoms.map(d=>`
+    <div style="background:var(--surface-2);border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="font-weight:700">${d.cleaner||'Unassigned'} · ${propName(d.property_id)}</div>
+      <div style="font-size:.8rem;color:var(--muted);margin-top:4px">${d.time||'—'} · ${d.type} · R${d.amount_paid||0} · ${d.status}</div>
+      ${d.notes?`<div style="font-size:.78rem;color:var(--muted);margin-top:4px;font-style:italic">${d.notes}</div>`:''}
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button onclick="closeModal('day-modal');editCleaning('${d.id}')" class="btn btn-sm btn-ghost">✏ Edit</button>
+        <button onclick="deleteCleaning('${d.id}');closeModal('day-modal')" class="btn btn-sm" style="background:#fee2e2;color:#dc2626;border:none">✕ Delete</button>
+      </div>
+    </div>`).join('');
+  openModal('day-modal');
+}
+
+function domCalNav(dir) {
+  domCalMonth += dir;
+  if (domCalMonth > 11) { domCalMonth=0; domCalYear++; }
+  if (domCalMonth < 0)  { domCalMonth=11; domCalYear--; }
+  renderDomesticCalView();
+}
+
+function renderCalendar() {
+  if (calMode === 'domestic') { renderDomesticCalView(); return; }
+  const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
+  const fd = showCleaningOverlay
+    ? (calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp))
+    : [];
+  if (calViewMode === 'week') { renderWeekView(); return; }
+  if (calViewMode === 'day')  { renderDayView();  return; }
+  // Default: monthly
   buildCalGrid(calYear, calMonth, fb, fd, 'cal-grid', 'cal-month-label', 'showDay');
   renderCoverageAlert();
   if (showKPIPanel) renderKPIPanel();
