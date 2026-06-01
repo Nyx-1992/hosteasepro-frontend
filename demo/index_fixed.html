@@ -161,13 +161,13 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .pri-medium{color:var(--accent);font-weight:700}
 .pri-low{color:var(--green);font-weight:700}
 /* CALENDAR */
-.cal-wrap{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:20px}
+.cal-wrap{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .cal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
 .cal-month{font-family:"DM Serif Display",serif;font-size:1.25rem}
 .cal-nav{display:flex;gap:8px}
 .cal-nav button{background:var(--sand);border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:.84rem;transition:all .15s}
 .cal-nav button:hover{background:var(--warm);border-color:var(--accent)}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border);border-top:1px solid var(--border)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(44px,1fr));min-width:560px;border-left:1px solid var(--border);border-top:1px solid var(--border)}
 .cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);background:var(--sand);letter-spacing:.05em}
 .cal-cell{min-height:88px;padding:4px 0 2px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:#fff;cursor:pointer;overflow:visible;position:relative;box-sizing:border-box;-webkit-box-sizing:border-box}
 /* cal-bar: full width booking bar — explicit for Safari */
@@ -480,7 +480,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
             </div>
             <!-- Monthly grid -->
             <div id="calview-month-panel">
-              <div class="cal-grid" id="cal-grid"></div>
+              <div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><div class="cal-grid" id="cal-grid"></div></div>
             </div>
             <!-- Weekly view -->
             <div id="calview-week-panel" style="display:none">
@@ -2702,7 +2702,8 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const rr = isRealEnd   ? '4px':'0';
         const showLabel = isRealStart||isWeekStart;
         const icon = isRealStart ? '🛬 ' : isWeekStart ? '↳ ' : '';
-        const label = showLabel ? propTag+icon+(b.display_name||b.guest_name||b.platform) : ' ';
+        const rawName = (b.display_name||b.guest_name||b.platform||'').split('\n')[0].split('|')[0].trim();
+        const label = showLabel ? propTag+icon+rawName : ' ';
         const bar = document.createElement('div');
         // Explicit inline styles for Safari compatibility — no CSS class width inheritance
         // Last visible cell = real checkout eve OR Saturday
@@ -2916,7 +2917,7 @@ function setCalMode(mode) {
   const db = document.getElementById('calmode-domestic-btn');
   if (bb) { bb.style.background = mode==='bookings' ? 'var(--ocean)' : 'transparent'; bb.style.color = mode==='bookings' ? '#fff' : 'var(--muted)'; }
   if (db) { db.style.background = mode==='domestic' ? 'var(--ocean)' : 'transparent'; db.style.color = mode==='domestic' ? '#fff' : 'var(--muted)'; }
-  if (mode==='domestic') renderDomesticCalView();
+  if (mode==='domestic') { domCalYear=new Date().getFullYear(); domCalMonth=new Date().getMonth(); renderDomesticCalView(); }
   else renderCalendar();
 }
 
@@ -3093,8 +3094,46 @@ function renderDomesticCalView() {
     gridEl.innerHTML = g;
   }
 
-  // Render earnings
-  renderDomEarnings();
+  // Render earnings into the domestic view panel
+  const kpiEl = document.getElementById('cleaning-kpi-panel-dom');
+  if (kpiEl) {
+    const year = domCalYear, month = domCalMonth;
+    const monthStr = String(year)+'-'+String(month+1).padStart(2,'0');
+    const md = domestics.filter(d=>d.date&&d.date.startsWith(monthStr));
+    const COLORS = {Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+    const summary = {};
+    md.forEach(d=>{
+      if (!d.cleaner) return;
+      if (!summary[d.cleaner]) summary[d.cleaner]={cleans:0,earned:0};
+      summary[d.cleaner].cleans++;
+      summary[d.cleaner].earned += Number(d.amount_paid||getCleanerRate(d.cleaner,d.property_id));
+    });
+    const cleaners = Object.keys(summary);
+    if (!cleaners.length) {
+      kpiEl.innerHTML = '<div style="color:var(--muted);font-size:.84rem;padding:8px 0">No cleaning sessions recorded for '+MONTHS[month]+' '+year+'</div>';
+    } else {
+      const totalEarned = cleaners.reduce((s,c)=>s+summary[c].earned,0);
+      const totalCleans = cleaners.reduce((s,c)=>s+summary[c].cleans,0);
+      kpiEl.innerHTML = `
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <div style="background:var(--surface-2);border-radius:10px;padding:10px 14px;flex:1;min-width:120px">
+            <div style="font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Total Sessions</div>
+            <div style="font-size:1.4rem;font-weight:700;color:var(--ink);margin-top:2px">${totalCleans}</div>
+          </div>
+          <div style="background:var(--surface-2);border-radius:10px;padding:10px 14px;flex:1;min-width:120px">
+            <div style="font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">Total Paid</div>
+            <div style="font-size:1.4rem;font-weight:700;color:var(--green2);margin-top:2px">R${totalEarned.toLocaleString()}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${cleaners.map(c=>`
+            <div style="background:${COLORS[c]||'#64748b'}18;border:1px solid ${COLORS[c]||'#64748b'}44;border-radius:8px;padding:8px 12px;flex:1;min-width:100px">
+              <div style="font-weight:700;font-size:.82rem;color:${COLORS[c]||'#64748b'}">${c}</div>
+              <div style="font-size:.76rem;color:var(--muted);margin-top:2px">${summary[c].cleans} clean${summary[c].cleans>1?'s':''} · R${summary[c].earned.toLocaleString()}</div>
+            </div>`).join('')}
+        </div>`;
+    }
+  }
 
   // Render sessions list
   const domGrid = document.getElementById('dom-grid');
