@@ -1111,6 +1111,7 @@ let calViewMode = 'month'; // 'month' | 'week' | 'day'
 let calMode     = 'bookings'; // 'bookings' | 'domestic'
 let domCalYear = new Date().getFullYear(), domCalMonth = new Date().getMonth();
 let calProp = 'all';
+let showCancelledOnCal = false;
 let bookings = [], tasks = [], domestics = [], kbArticles = [];
 let messages = [
   {id:'m1',from:'Nicole',   role:'admin',text:'Speranta: Joe Ladlow arrives 17 Apr. Welcome pack ready?',       time:'09:14'},
