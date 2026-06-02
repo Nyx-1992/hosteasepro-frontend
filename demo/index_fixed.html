@@ -277,17 +277,17 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   .grid-2{grid-template-columns:1fr}
   .form-grid{grid-template-columns:1fr}
 
-  /* ── Calendar: taller cells, readable bars ── */
-  .cal-cell{min-height:64px}
-  .cal-grid{grid-template-columns:repeat(7,1fr)!important;gap:0!important}
-  .cal-bar{font-size:.58rem;height:17px;line-height:13px;padding:2px 4px}
-  .cal-event{font-size:.58rem;padding:2px 4px}
-  .cal-date{font-size:.7rem;width:20px;height:20px}
-  /* Abbreviate day headers on mobile: Sunday→S, Monday→M etc */
-  .cal-day-head{font-size:.62rem;padding:6px 1px;letter-spacing:0}
-  .cal-month{font-size:1.1rem}
-  .cal-nav button{padding:5px 10px;font-size:.76rem}
-  .cal-header{padding:12px 14px}
+  /* ── Calendar: full-bleed, taller cells ── */
+  .cal-wrap{border-radius:0;margin-left:-10px;margin-right:-10px;box-shadow:none;border-left:none;border-right:none}
+  .cal-cell{min-height:62px}
+  .cal-grid{grid-template-columns:repeat(7,minmax(0,1fr))!important;gap:0!important;width:100%}
+  .cal-bar{font-size:.56rem;height:16px;line-height:12px;padding:1px 3px}
+  .cal-event{font-size:.56rem;padding:1px 3px}
+  .cal-date{font-size:.68rem;width:18px;height:18px}
+  .cal-day-head{font-size:.6rem;padding:5px 0;letter-spacing:0;text-align:center}
+  .cal-month{font-size:1rem}
+  .cal-nav button{padding:5px 8px;font-size:.72rem}
+  .cal-header{padding:10px 12px}
 
   /* ── Cards & tables ── */
   .card{padding:14px}.stat-card{padding:12px 14px}
@@ -454,39 +454,42 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
 
         <!-- ══ BOOKINGS CALENDAR VIEW ══ -->
         <div id="calview-bookings">
-          <!-- ── Calendar toolbar: mobile-first layout ── -->
-          <div style="margin-bottom:12px">
-            <!-- Row 1: Property toggle + View toggle -->
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-              <!-- Property pills -->
-              <div style="display:flex;gap:4px" id="cal-prop-toggle">
+          <!-- ── Calendar toolbar: compact single-area ── -->
+          <div style="margin-bottom:10px;display:flex;flex-direction:column;gap:6px">
+            <!-- Row 1: Property + View + Actions all in one scrollable strip -->
+            <div style="display:flex;align-items:center;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px">
+              <!-- Property -->
+              <div style="display:flex;gap:3px;flex-shrink:0" id="cal-prop-toggle">
                 <button class="active" onclick="setCalProp('all',this)"
-                  style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--accent);color:#fff;font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit">All</button>
+                  style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">All</button>
                 <button onclick="setCalProp('speranta',this)"
-                  style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit">Speranța</button>
+                  style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">SP</button>
                 <button onclick="setCalProp('tvhouse',this)"
-                  style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit">TV House</button>
+                  style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">TV</button>
               </div>
-              <!-- View toggle -->
+              <!-- Divider -->
+              <span style="width:1px;height:20px;background:var(--border);display:inline-block;flex-shrink:0"></span>
+              <!-- View -->
               <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:8px;padding:2px;flex-shrink:0">
                 <button id="calview-month-btn" onclick="setCalView('month')"
-                  style="padding:4px 11px;border-radius:6px;border:none;font-size:.74rem;font-weight:600;cursor:pointer;background:var(--ink);color:#fff">Month</button>
+                  style="padding:3px 9px;border-radius:6px;border:none;font-size:.7rem;font-weight:600;cursor:pointer;background:var(--ink);color:#fff;white-space:nowrap">Mo</button>
                 <button id="calview-week-btn" onclick="setCalView('week')"
-                  style="padding:4px 11px;border-radius:6px;border:none;font-size:.74rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted)">Week</button>
+                  style="padding:3px 9px;border-radius:6px;border:none;font-size:.7rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);white-space:nowrap">Wk</button>
                 <button id="calview-day-btn" onclick="setCalView('day')"
-                  style="padding:4px 11px;border-radius:6px;border:none;font-size:.74rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted)">Day</button>
+                  style="padding:3px 9px;border-radius:6px;border:none;font-size:.7rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);white-space:nowrap">Dy</button>
               </div>
-            </div>
-            <!-- Row 2: Actions -->
-            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <!-- Divider -->
+              <span style="width:1px;height:20px;background:var(--border);display:inline-block;flex-shrink:0"></span>
+              <!-- Toggles -->
               <button id="cleaning-toggle-btn" onclick="toggleCleaningOverlay(this)"
-                style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">🧹 Cleaning</button>
+                style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">🧹</button>
               <button onclick="toggleCancelledOnCal(this)"
-                style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">❌ Cancelled</button>
+                style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">❌</button>
+              <!-- Actions pushed right -->
               <button onclick="openModal('domestic-modal')"
-                style="padding:5px 14px;border-radius:20px;border:none;background:var(--green);color:#fff;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;margin-left:auto">+ Clean</button>
+                style="padding:4px 12px;border-radius:14px;border:none;background:var(--green);color:#fff;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;margin-left:auto">+ Clean</button>
               <button onclick="exportDomestics()"
-                style="padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.74rem;cursor:pointer;font-family:inherit">⬇</button>
+                style="padding:4px 8px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.7rem;cursor:pointer;font-family:inherit;flex-shrink:0">⬇</button>
             </div>
           </div>
 
@@ -1245,7 +1248,27 @@ function nb(b) {
     property_id: pid,
   };
 }
-function nt(t) { return {...t, notes:t.notes||t.description||'', due:String(t.due||t.due_at||t.task_date||'').slice(0,10), assigned:t.assigned||'Unassigned', property_id:t.property_id||'all', priority:t.priority||'medium', status:t.status||'open'}; }
+function nt(t) {
+  // Map DB status → app status
+  const statusMap = {'pending':'open','in_progress':'open','completed':'done','cancelled':'cancelled'};
+  // Map DB priority → app priority  
+  const prioMap   = {'normal':'medium','urgent':'high','low':'low','high':'high'};
+  const appStatus = statusMap[t.status] || t.status || 'open';
+  const appPrio   = prioMap[t.priority] || t.priority || 'medium';
+  // Preserve kanban_status if set, otherwise derive from status
+  const kanbanMap = {'pending':'todo','in_progress':'inprogress','completed':'done','cancelled':'cancelled'};
+  const appKanban = t.kanban_status || kanbanMap[t.status] || 'todo';
+  return {
+    ...t,
+    notes:        t.notes || t.description || '',
+    due:          String(t.due || t.due_at || t.task_date || '').slice(0,10),
+    assigned:     t.assigned || 'Unassigned',
+    property_id:  t.property_id || 'all',
+    priority:     appPrio,
+    status:       appStatus,
+    kanban_status: appKanban,
+  };
+}
 function nd(d) { return {...d, checklist:d.checklist||{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}}; }
 function propName(id) { return id==='speranta'?'Speranta':id==='tvhouse'?'TV House':id==='all'?'All Properties':id||'—'; }
 function fmtDate(d) { if(!d)return''; const[y,m,day]=d.split('-'); return day+'/'+m+'/'+y; }
