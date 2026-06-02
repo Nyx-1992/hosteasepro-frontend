@@ -1666,15 +1666,21 @@ function unfoldIcal(text) {
 }
 
 function parseICalSummaryFields(rawSummary) {
-  // LekkeSlaap embeds structured data in SUMMARY with literal \n escapes
-  // e.g. "LS-12345\nCustomer: Jane Smith\nEmail: jane@example.com\nGuests: 2"
-  const decoded = rawSummary.replace(/\\n/g, '\n');
-  const result = { externalRef: null, customerName: null, guestEmail: null };
-  const lines = decoded.split('\n').map(l => l.trim()).filter(Boolean);
-  lines.forEach(line => {
-    if (/^LS-\d+/i.test(line)) result.externalRef = line.trim();
-    else if (/^Customer:\s*/i.test(line)) result.customerName = line.replace(/^Customer:\s*/i, '').trim();
-    else if (/^Email:\s*/i.test(line)) result.guestEmail = line.replace(/^Email:\s*/i, '').trim();
+  const result = { externalRef: null, customerName: null, guestEmail: null, guestCount: null };
+  if (!rawSummary) return result;
+  // LekkeSlaap uses literal \n (backslash + n) as field delimiter
+  const parts = rawSummary.split('\\n').map(s => s.trim()).filter(Boolean);
+  parts.forEach(part => {
+    const refMatch   = part.match(/^Reference:\s*(LS-[A-Z0-9]+)/i);
+    const bareRef    = part.match(/^(LS-[A-Z0-9]+)$/i);
+    const custMatch  = part.match(/^Customer:\s*(.+)$/i);
+    const emailMatch = part.match(/^Email:\s*(.+)$/i);
+    const guestMatch = part.match(/^Guests?:\s*(\d+)$/i);
+    if (refMatch)   result.externalRef  = refMatch[1];
+    if (bareRef)    result.externalRef  = bareRef[1];
+    if (custMatch)  result.customerName = custMatch[1].trim();
+    if (emailMatch) result.guestEmail   = emailMatch[1].trim();
+    if (guestMatch) result.guestCount   = parseInt(guestMatch[1], 10);
   });
   return result;
 }
