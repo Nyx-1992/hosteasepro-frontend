@@ -2165,9 +2165,9 @@ function renderDashboard() {
     }
   });
 
-  // 3. ALL high priority open tasks — only show if due in future or recently
-  const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate()-7);
-  tasks.filter(t=>t.status==='open'&&t.priority==='high'&&(!t.due||new Date(t.due)>=sevenDaysAgo)).forEach(t => {
+  // 3. ALL high priority open tasks — exclude only if due date is more than 14 days past
+  const fourteenDaysAgo = new Date(); fourteenDaysAgo.setDate(fourteenDaysAgo.getDate()-14);
+  tasks.filter(t=>t.status==='open'&&t.priority==='high'&&(!t.due||new Date(t.due)>=fourteenDaysAgo)).forEach(t => {
     urgentItems.push({
       icon:'⚡', label:t.title, color:'#dc2626', textColor:'#991b1b',
       detail:(t.assigned||'Unassigned')+' · '+propName(t.property_id||'all')+(t.due?' · due '+fmtDate(t.due):''),
@@ -2834,12 +2834,14 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         // Middle days: full width with 1px bleeds on each side
         let startOffset, startWidth;
         if (isRealStart && isRealEnd) {
-          // Single-night stay: 60% → 40% = just the middle 40% chunk... use 30% offset, 40% wide
-          startOffset = '30%'; startWidth = '40%';
+          // Single-night stay: starts at 50%, ends at 50% = centred half-width bar
+          startOffset = '25%'; startWidth = '50%';
         } else if (isRealStart) {
-          startOffset = '60%'; startWidth = 'calc(40% + '+bleedR+'px)';
+          // Check-in at 15:00 — bar starts halfway through the cell
+          startOffset = '50%'; startWidth = 'calc(50% + '+bleedR+'px)';
         } else if (isRealEnd) {
-          startOffset = (-bleedL)+'px'; startWidth = 'calc(40% + '+bleedL+'px)';
+          // Last night — checkout at 10:00 — bar ends halfway through this cell
+          startOffset = (-bleedL)+'px'; startWidth = 'calc(50% + '+bleedL+'px)';
         } else {
           startOffset = (-bleedL)+'px'; startWidth = 'calc(100% + '+bleedL+'px + '+bleedR+'px)';
         }
@@ -3907,7 +3909,10 @@ function renderKanban() {
           ${t.notes||t.description?`<div style="font-size:.74rem;color:var(--muted);margin-bottom:6px">${t.notes||t.description}</div>`:''}
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px">
             <span style="font-size:.68rem;color:var(--muted)">📍 ${propName(t.property_id||'all')} · 👤 ${t.assigned||'—'}</span>
-            ${t.due?`<span style="font-size:.68rem;color:var(--muted)">📅 ${fmtDate(t.due||t.task_date)}</span>`:''}
+            <div style="display:flex;gap:4px;align-items:center">
+              <span style="font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;background:${t.priority==='high'?'#fee2e2':t.priority==='medium'?'#fef3c7':'#dcfce7'};color:${t.priority==='high'?'#dc2626':t.priority==='medium'?'#d97706':'#16a34a'}">${t.priority||'medium'}</span>
+              ${t.due?`<span style="font-size:.68rem;color:var(--muted)">📅 ${fmtDate(t.due||t.task_date)}</span>`:''}
+            </div>
           </div>
           <!-- Move buttons -->
           <div style="display:flex;gap:4px;flex-wrap:wrap">
