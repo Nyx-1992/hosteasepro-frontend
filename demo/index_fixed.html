@@ -1664,12 +1664,9 @@ const ICAL_FEEDS = [
     url: 'https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=QzZ2aFlFVHhxYnoxdGRVL3ZwelRGUT09' },
 ];
 
-// CORS proxies to try in order
+// CORS proxies
 const CORS_PROXIES = [
-  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-  url => `https://thingproxy.freeboard.io/fetch/${url}`,
-  url => `https://cors-anywhere.herokuapp.com/${url}`,
+  url => `/api/ical?url=${encodeURIComponent(url)}`,
 ];
 
 function parseICalDate(str) {
