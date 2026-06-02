@@ -169,17 +169,15 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-nav button:hover{background:var(--warm);border-color:var(--accent)}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border);border-top:1px solid var(--border)}
 .cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);background:var(--sand);letter-spacing:.05em}
-.cal-cell{min-height:88px;padding:4px 0 2px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:#fff;cursor:pointer;overflow:visible;position:relative;box-sizing:border-box;-webkit-box-sizing:border-box}
-/* cal-bar: full width booking bar — explicit for Safari */
-.cal-bar{display:block;width:100%;box-sizing:border-box;-webkit-box-sizing:border-box;font-size:.63rem;font-weight:600;padding:2px 5px;margin-bottom:2px;height:auto;line-height:14px;white-space:normal;word-wrap:break-word;color:#fff;position:relative;z-index:2}
+.cal-cell{min-height:88px;padding:4px 0 2px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:#fff;cursor:pointer;overflow:visible;position:relative;box-sizing:border-box}
+.cal-bar{display:block;width:100%;box-sizing:border-box;font-size:.63rem;font-weight:600;padding:2px 5px;margin-bottom:2px;min-height:18px;line-height:14px;color:#fff;position:relative;z-index:2;overflow:visible;white-space:nowrap}
 .cal-date{padding:0 5px}
 .cal-cell:hover{background:#fffbf5}
 .cal-cell.other{background:var(--sand);opacity:.55;cursor:default}
 .cal-cell.today{background:#fffbf5}
 .cal-date{font-size:.8rem;font-weight:600;margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-sizing:content-box}
 .cal-cell.today .cal-date{background:var(--accent);color:#fff;border-radius:50%}
-/* Booking blocks — solid colour full width */
-.cal-event{font-size:.66rem;padding:2px 5px;margin-bottom:2px;white-space:normal;word-wrap:break-word;font-weight:600;border-radius:3px;position:relative;z-index:2}
+.cal-event{font-size:.66rem;padding:2px 5px;margin-bottom:2px;font-weight:600;border-radius:3px;position:relative;z-index:2;overflow:visible;white-space:nowrap;display:inline-block;max-width:100%}
 .cal-event.blk{border-radius:0;margin-left:-5px;margin-right:-5px;padding-left:6px}
 .cal-event.blk-start{border-radius:4px 0 0 4px;margin-left:0}
 .cal-event.blk-end{border-radius:0 4px 4px 0;margin-right:0}
@@ -190,7 +188,8 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .ev-manual{background:#c17f3c;color:#fff}
 .ev-owner{background:#64748b;color:#fff}
 .ev-caretaker{background:#94a3b8;color:#fff}
-.ev-cleaning{background:#06b6d4;color:#fff}.ev-inspection{background:#8b5cf6;color:#fff}
+.ev-cleaning{background:#06b6d4;color:#fff}
+.ev-inspection{background:#8b5cf6;color:#fff}
 .ev-birthday{background:#d946ef;color:#fff}
 /* Toggle buttons */
 .toggle-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
