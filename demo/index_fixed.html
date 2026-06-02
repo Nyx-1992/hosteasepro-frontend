@@ -3151,9 +3151,11 @@ function showDomesticDay(ds) {
 }
 
 function domCalNav(dir) {
-  domCalMonth += dir;
+  if (dir===0){domCalYear=new Date().getFullYear();domCalMonth=new Date().getMonth();}
+  else{domCalMonth+=dir;
   if (domCalMonth > 11) { domCalMonth=0; domCalYear++; }
   if (domCalMonth < 0)  { domCalMonth=11; domCalYear--; }
+  }
   renderDomesticCalView();
 }
 
