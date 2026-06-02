@@ -1760,7 +1760,8 @@ function parseICalText(text, feed) {
       guestName = '🔒 Blocked';
     } else {
       status    = 'confirmed';
-      guestName = parsedCustomerName || summary || 'Guest';
+      // Show customer name if parsed, otherwise the LS reference, otherwise platform guest
+      guestName = parsedCustomerName || parsedRef || 'Guest';
     }
 
     events.push({
@@ -1776,7 +1777,7 @@ function parseICalText(text, feed) {
       check_in:         checkIn + ' 15:00:00+02',
       check_out:        checkOut + ' 10:00:00+02',
       nights,
-      number_of_guests: 1,
+      number_of_guests: lsFields.guestCount || 1,
       status,
       is_active:        true,
       total_amount:     0,
@@ -1872,9 +1873,29 @@ async function syncICalFeeds(silent = false) {
               updates.status = evt.status;
             }
           }
-          // Preserve guest name if manually edited
-          if ((!ex.guest_name || ex.guest_name === 'Guest') && evt.guest_name && evt.guest_name !== 'Guest') {
+          // Preserve guest name if manually edited — only update if:
+          // 1. DB is empty / 'Guest' placeholder
+          // 2. DB contains a raw LS reference (e.g. "LS-5W38B2") and we now have a real name
+          // 3. A real parsed name is available (not just another reference)
+          const dbNameIsPlaceholder = !ex.guest_name
+            || ex.guest_name === 'Guest'
+            || /^LS-[A-Z0-9]+$/i.test((ex.guest_name || '').trim());
+          const newNameIsReal = evt.guest_name
+            && evt.guest_name !== 'Guest'
+            && !/^LS-[A-Z0-9]+$/i.test(evt.guest_name.trim());
+          // If DB has a real human name already — never touch it
+          if (dbNameIsPlaceholder && evt.guest_name && evt.guest_name !== 'Guest') {
             updates.guest_name = evt.guest_name;
+            // Also update guest_first/last if we have a real name now
+            if (newNameIsReal) {
+              const parts = evt.guest_name.trim().split(' ');
+              updates.guest_first_name = parts[0];
+              updates.guest_last_name  = parts.slice(1).join(' ');
+            }
+          }
+          // Always update guest count if we now know it
+          if (evt.number_of_guests > 1 && (!ex.number_of_guests || ex.number_of_guests <= 1)) {
+            updates.number_of_guests = evt.number_of_guests;
           }
           await db.from('bookings').update(updates).eq('id', ex.id);
           totalUpdated++;
