@@ -1660,9 +1660,29 @@ function parseICalDate(str) {
   return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
 }
 
+function unfoldIcal(text) {
+  // RFC 5545: fold = CRLF/LF followed by a single SPACE or TAB = logical continuation
+  return text.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '');
+}
+
+function parseICalSummaryFields(rawSummary) {
+  // LekkeSlaap embeds structured data in SUMMARY with literal \n escapes
+  // e.g. "LS-12345\nCustomer: Jane Smith\nEmail: jane@example.com\nGuests: 2"
+  const decoded = rawSummary.replace(/\\n/g, '\n');
+  const result = { externalRef: null, customerName: null, guestEmail: null };
+  const lines = decoded.split('\n').map(l => l.trim()).filter(Boolean);
+  lines.forEach(line => {
+    if (/^LS-\d+/i.test(line)) result.externalRef = line.trim();
+    else if (/^Customer:\s*/i.test(line)) result.customerName = line.replace(/^Customer:\s*/i, '').trim();
+    else if (/^Email:\s*/i.test(line)) result.guestEmail = line.replace(/^Email:\s*/i, '').trim();
+  });
+  return result;
+}
+
 function parseICalText(text, feed) {
+  const unfolded = unfoldIcal(text);
   const events = [];
-  const blocks = text.split('BEGIN:VEVENT');
+  const blocks = unfolded.split('BEGIN:VEVENT');
 
   for (const block of blocks.slice(1)) {
     const get = key => {
@@ -1670,11 +1690,13 @@ function parseICalText(text, feed) {
       return m ? m[1].trim() : '';
     };
 
-    const startRaw = get('DTSTART');
-    const endRaw   = get('DTEND');
-    const summary  = get('SUMMARY') || '';
-    const desc     = (get('DESCRIPTION') || '').toLowerCase();
-    const uid      = get('UID') || '';
+    const startRaw  = get('DTSTART');
+    const endRaw    = get('DTEND');
+    const summary   = get('SUMMARY') || '';
+    const desc      = (get('DESCRIPTION') || '').toLowerCase();
+    const rawDesc   = get('DESCRIPTION') || '';
+    const uid       = get('UID') || '';
+    const icalStatus = (get('STATUS') || '').toUpperCase();
 
     if (!startRaw || !endRaw) continue;
     const checkIn  = parseICalDate(startRaw);
@@ -1685,8 +1707,16 @@ function parseICalText(text, feed) {
     const sumLower = summary.toLowerCase();
     const sumTrim  = summary.trim();
 
+    // ── Detect explicit iCal cancellation ──────────────────────
+    const isCancelledByStatus = icalStatus === 'CANCELLED';
+
+    // ── Parse LekkeSlaap structured fields ─────────────────────
+    const lsFields = parseICalSummaryFields(summary);
+    const parsedCustomerName = lsFields.customerName || null;
+    const parsedEmail        = lsFields.guestEmail   || null;
+    const parsedRef          = lsFields.externalRef  || null;
+
     // ── Classify the event ──────────────────────────────────────
-    // OWNER stay: explicit owner names
     const isOwnerStayEvent =
       sumLower.includes('mirka') ||
       sumLower.includes('antonin') ||
@@ -1715,7 +1745,10 @@ function parseICalText(text, feed) {
 
     // Determine status & display name
     let status, guestName;
-    if (isOwnerStayEvent) {
+    if (isCancelledByStatus) {
+      status    = 'cancelled';
+      guestName = parsedCustomerName || sumTrim || 'Cancelled';
+    } else if (isOwnerStayEvent) {
       status    = 'owner';
       guestName = 'Owner Stay — ' + (
         sumLower.includes('mirka') || sumLower.includes('antonin') ? 'Mirka & Antonin' :
@@ -1727,7 +1760,7 @@ function parseICalText(text, feed) {
       guestName = '🔒 Blocked';
     } else {
       status    = 'confirmed';
-      guestName = summary || 'Guest';
+      guestName = parsedCustomerName || summary || 'Guest';
     }
 
     events.push({
@@ -1749,6 +1782,12 @@ function parseICalText(text, feed) {
       total_amount:     0,
       currency:         'ZAR',
       source_uid:       uid,
+      // Raw storage — never lose iCal data
+      raw_summary:      summary,
+      raw_description:  rawDesc.slice(0, 500),
+      // Parsed extras (LekkeSlaap)
+      guest_email:      parsedEmail,
+      external_ref:     parsedRef,
     });
   }
   return events;
@@ -1789,37 +1828,69 @@ async function syncICalFeeds(silent = false) {
       console.log('[iCal]', feed.platform, feed.property_name, '→', events.length, 'events');
 
       for (const evt of events) {
-        // Check if booking already exists by source_uid OR matching dates+property+platform
-        const { data: existing } = await db.from('bookings')
-          .select('id, status, total_amount, guest_name, is_active')
-          .eq('property_id', feed.property_id)
-          .eq('check_in_date', evt.check_in_date)
-          .eq('check_out_date', evt.check_out_date)
-          .eq('platform', evt.platform)
-          .limit(1);
+        // ── Step 1: Try exact UID match first ────────────────────────────────
+        let existing = null;
+        if (evt.uid) {
+          const { data: byUid } = await db.from('bookings')
+            .select('id, status, total_amount, guest_name, is_active, source_uid')
+            .eq('source_uid', evt.uid)
+            .limit(1);
+          if (byUid && byUid.length > 0) existing = byUid;
+        }
+        // ── Step 2: Fallback — match by dates + property + platform ──────────
+        if (!existing || !existing.length) {
+          const { data: byDates } = await db.from('bookings')
+            .select('id, status, total_amount, guest_name, is_active, source_uid')
+            .eq('property_id', feed.property_id)
+            .eq('check_in_date', evt.check_in_date)
+            .eq('check_out_date', evt.check_out_date)
+            .eq('platform', evt.platform)
+            .limit(1);
+          if (byDates && byDates.length > 0) existing = byDates;
+        }
 
         if (existing && existing.length > 0) {
           const ex = existing[0];
-          // UPDATE only safe fields — PRESERVE revenue, guest_name if already filled
+          // ── UPDATE: preserve manually-edited data; always apply cancellation ──
           const updates = { is_active: true };
-          if (!ex.guest_name || ex.guest_name === 'Guest') updates.guest_name = evt.guest_name;
-          if (ex.status !== evt.status && !['cancelled','checked-out','checked-in','owner'].includes(ex.status)) {
-            updates.status = evt.status;
+          // Always store raw iCal fields
+          if (evt.raw_summary)     updates.raw_summary     = evt.raw_summary;
+          if (evt.raw_description) updates.raw_description = evt.raw_description;
+          if (evt.guest_email)     updates.guest_email     = evt.guest_email;
+          if (evt.external_ref)    updates.external_ref    = evt.external_ref;
+          if (evt.source_uid && !ex.source_uid) updates.source_uid = evt.source_uid;
+          // Cancellation: always honour it regardless of current status
+          if (evt.status === 'cancelled') {
+            if (ex.status !== 'cancelled') {
+              updates.status       = 'cancelled';
+              updates.cancelled_at = new Date().toISOString();
+              console.log('[iCal] Marking cancelled:', evt.check_in_date, feed.platform);
+            }
+          } else {
+            const manualTerminal = ['checked-out', 'checked-in', 'owner'];
+            if (!manualTerminal.includes(ex.status) && ex.status !== evt.status) {
+              updates.status = evt.status;
+            }
+          }
+          // Preserve guest name if manually edited
+          if ((!ex.guest_name || ex.guest_name === 'Guest') && evt.guest_name && evt.guest_name !== 'Guest') {
+            updates.guest_name = evt.guest_name;
           }
           await db.from('bookings').update(updates).eq('id', ex.id);
           totalUpdated++;
         } else {
-          // INSERT new booking — preserve history by never deleting
+          // ── INSERT: new booking — NEVER delete old rows ───────────────────
           const { error } = await db.from('bookings').insert([{
             ...evt,
             guest_first_name: evt.guest_name.split(' ')[0],
             guest_last_name:  evt.guest_name.split(' ').slice(1).join(' '),
             number_of_guests: 1,
             total_amount:     0,
-            payment_status:   'pending',
+            payment_status:   evt.status === 'cancelled' ? 'cancelled' : 'pending',
+            cancelled_at:     evt.status === 'cancelled' ? new Date().toISOString() : null,
           }]);
           if (!error) totalNew++;
-          else console.warn('Insert error:', error.message, evt.check_in_date, feed.platform);
+          else console.warn('Insert error:', error.message, evt.check_in_date, feed.platform, evt.status);
         }
       }
     } catch(e) {
@@ -1829,7 +1900,7 @@ async function syncICalFeeds(silent = false) {
   }
 
   // Reload bookings from DB to get fresh data
-  const { data } = await db.from('bookings').select('*').eq('is_active', true)
+  const { data } = await db.from('bookings').select('*')
     .order('check_in_date', { ascending: false }).limit(500);
   if (data && data.length) {
     const seen = {};
@@ -2630,7 +2701,8 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
   // First pass: assign lanes to bookings that START before this month but are still active
   // These get priority — assign them on day 1 so they hold their lane all month
   bkgs.filter(b => {
-    if (b.status==='cancelled'||isCaretaker(b)) return false;
+    if (isCaretaker(b)) return false;
+    if (b.status==='cancelled' && !showCancelledOnCal) return false;
     const bci = String(b.check_in||'').slice(0,10);
     const bco = String(b.check_out||'').slice(0,10);
     return bci < monthStart && bco > monthStart; // started before, ends during/after
@@ -2677,7 +2749,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
 
       // Max active lane this day
       let maxLane=-1;
-      bkgs.forEach(b=>{const ci=String(b.check_in||'').slice(0,10),co=String(b.check_out||'').slice(0,10);if(b.status!=='cancelled'&&!isCaretaker(b)&&ci<=ds&&co>ds) maxLane=Math.max(maxLane,laneOf[b.id]||0);});
+      bkgs.forEach(b=>{const ci=String(b.check_in||'').slice(0,10),co=String(b.check_out||'').slice(0,10);if((b.status!=='cancelled'||(b.status==='cancelled'&&showCancelledOnCal))&&!isCaretaker(b)&&ci<=ds&&co>ds) maxLane=Math.max(maxLane,laneOf[b.id]||0);});
 
       for (let lane=0; lane<=maxLane; lane++) {
         const b = bkgs.find(bk=>{const ci=String(bk.check_in||'').slice(0,10),co=String(bk.check_out||'').slice(0,10);return !isCaretaker(bk)&&bk.status!=='cancelled'&&laneOf[bk.id]===lane&&ci<=ds&&co>ds;});
@@ -2687,10 +2759,12 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
           sp.style.cssText='height:18px;margin-bottom:2px;background:transparent;display:block;width:100%;box-sizing:border-box';
           cell.appendChild(sp); continue;
         }
-        const isOwner   = isOwnerStay(b);
-        const isBlocked = b.status==='blocked';
-        const color = isOwner   ? PLAT_COLORS['owner'] :
-                      isBlocked ? PLAT_COLORS['blocked'] :
+        const isOwner     = isOwnerStay(b);
+        const isBlocked   = b.status==='blocked';
+        const isCancelled = b.status==='cancelled';
+        const color = isOwner     ? PLAT_COLORS['owner'] :
+                      isBlocked   ? PLAT_COLORS['blocked'] :
+                      isCancelled ? '#9ca3af' :
                       PLAT_COLORS[b.platform]||'#c17f3c';
         const propTag = showProp ? '['+(b.property_id==='speranta'?'SP':'TV')+'] ' : '';
         const bCheckIn  = String(b.check_in  || b.check_in_date  || '').slice(0,10);
@@ -2731,7 +2805,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
           'margin-left:-'+bleedL+'px',
           'box-sizing:border-box',
           'background:'+color,
-          'color:'+(color==='#FFC300'?'#1a1a2e':'#fff'),
+          'color:'+(isCancelled?'#6b7280':color==='#FFC300'?'#1a1a2e':'#fff'),
           'font-size:.63rem',
           'font-weight:600',
           'padding:2px 6px',
@@ -2742,7 +2816,10 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
           'overflow:hidden',
           'text-overflow:ellipsis',
           'border-radius:'+rl+' '+rr+' '+rr+' '+rl,
-        ].join(';');
+          isCancelled ? 'opacity:.4'          : '',
+          isCancelled ? 'text-decoration:line-through' : '',
+          isCancelled ? 'border:1px dashed #9ca3af'    : '',
+        ].filter(Boolean).join(';');
         bar.title = (b.guest_name||b.platform)+' — '+propName(b.property_id)+' | '+fmtDate(b.check_in)+' → '+fmtDate(b.check_out);
         bar.textContent = label;
         if (isLastCell) {
