@@ -3165,7 +3165,7 @@ function renderCalendar() {
   if (calViewMode === 'week') { renderWeekView(); return; }
   if (calViewMode === 'day')  { renderDayView();  return; }
   // Default: monthly
-  buildCalGrid(calYear, calMonth, fb, fd, 'cal-grid', 'cal-month-label', 'showDay');
+  buildCalGrid(calYear, calMonth, filteredBookings, fd, 'cal-grid', 'cal-month-label', 'showDay');
   renderCoverageAlert();
   if (showKPIPanel) renderKPIPanel();
   // Annotate checkout days with cleaning status
