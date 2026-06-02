@@ -269,30 +269,43 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 @media(max-width:768px){
   .sidebar{display:none!important}
   .main{margin-left:0!important;padding-bottom:74px}
-  .content{padding:12px}
+  .content{padding:10px}
   #mob-menu-btn{display:flex!important;align-items:center;background:none;border:none;cursor:pointer;padding:6px 8px;font-size:1.5rem;color:var(--ink);line-height:1;-webkit-tap-highlight-color:transparent}
   .topbar{padding:10px 14px}
   .page-title{font-size:1.1rem}
   .stat-grid{grid-template-columns:1fr 1fr}
   .grid-2{grid-template-columns:1fr}
   .form-grid{grid-template-columns:1fr}
-  .cal-cell{min-height:54px}
-  .cal-grid{grid-template-columns:repeat(7,1fr)!important;gap:1px!important}
-  .cal-bar{font-size:.56rem;height:16px;line-height:12px;padding:2px 3px}
-  .cal-event{font-size:.56rem;padding:2px 3px}
-  .cal-date{font-size:.66rem;width:18px;height:18px}
-  .cal-day-head{font-size:.58rem;padding:6px 2px}
-  .cal-nav button{padding:5px 8px;font-size:.75rem}
+
+  /* ── Calendar: taller cells, readable bars ── */
+  .cal-cell{min-height:64px}
+  .cal-grid{grid-template-columns:repeat(7,1fr)!important;gap:0!important}
+  .cal-bar{font-size:.58rem;height:17px;line-height:13px;padding:2px 4px}
+  .cal-event{font-size:.58rem;padding:2px 4px}
+  .cal-date{font-size:.7rem;width:20px;height:20px}
+  /* Abbreviate day headers on mobile: Sunday→S, Monday→M etc */
+  .cal-day-head{font-size:.62rem;padding:6px 1px;letter-spacing:0}
+  .cal-month{font-size:1.1rem}
+  .cal-nav button{padding:5px 10px;font-size:.76rem}
+  .cal-header{padding:12px 14px}
+
+  /* ── Cards & tables ── */
   .card{padding:14px}.stat-card{padding:12px 14px}
   .stat-value{font-size:1.4rem}
   table{font-size:.76rem}thead th{padding:7px 8px}tbody td{padding:8px}
-  .btn{padding:8px 14px;font-size:.82rem}.btn-sm{padding:6px 11px;font-size:.77rem}
+  .btn{padding:8px 14px;font-size:.82rem}.btn-sm{padding:5px 10px;font-size:.76rem}
   .modal{border-radius:12px}.modal-body{padding:0 16px 20px}.modal-header{padding:16px 16px 0}
-  .toggle-bar button{font-size:.68rem;padding:4px 10px}
+  .toggle-bar button{font-size:.7rem;padding:5px 11px}
   .filter-row .btn-sm{padding:5px 9px;font-size:.72rem}
   .dom-grid{grid-template-columns:1fr}
   .kb-grid{grid-template-columns:1fr}
   .section-head{flex-direction:column;align-items:flex-start}
+
+  /* ── Task drawer full-screen on mobile ── */
+  #task-drawer{width:100vw!important;border-radius:0}
+
+  /* ── Kanban: single column on mobile ── */
+  #kanban-board{grid-template-columns:1fr!important}
 }
 
 /* Mobile sidebar drawer */
@@ -428,40 +441,52 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
       <div class="tab-pane" id="tab-calendar">
 
         <!-- ── Mode switch: Bookings vs Domestic ── -->
-        <div style="display:flex;gap:2px;background:var(--sand);border-radius:10px;padding:3px;margin-bottom:14px;width:fit-content">
+        <div style="display:flex;gap:4px;margin-bottom:12px">
           <button id="calmode-bookings-btn" onclick="setCalMode('bookings')"
-            style="padding:7px 18px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s">
+            style="padding:6px 16px;border-radius:20px;border:1.5px solid var(--ocean);background:var(--ocean);color:#fff;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s">
             📅 Bookings
           </button>
           <button id="calmode-domestic-btn" onclick="setCalMode('domestic')"
-            style="padding:7px 18px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
+            style="padding:6px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--muted);font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s">
             🧹 Domestic
           </button>
         </div>
 
         <!-- ══ BOOKINGS CALENDAR VIEW ══ -->
         <div id="calview-bookings">
-          <!-- Top control bar -->
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-            <div class="toggle-bar" id="cal-prop-toggle" style="margin:0">
-              <button class="active" onclick="setCalProp('all',this)">🏠 All</button>
-              <button onclick="setCalProp('speranta',this)">Speranța</button>
-              <button onclick="setCalProp('tvhouse',this)">TV House</button>
-            </div>
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <!-- View: Monthly / Weekly / Daily -->
-              <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:8px;padding:2px">
-                <button id="calview-month-btn" onclick="setCalView('month')"
-                  style="padding:4px 12px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:var(--ink);color:#fff">Month</button>
-                <button id="calview-week-btn" onclick="setCalView('week')"
-                  style="padding:4px 12px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted)">Week</button>
-                <button id="calview-day-btn" onclick="setCalView('day')"
-                  style="padding:4px 12px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted)">Day</button>
+          <!-- ── Calendar toolbar: mobile-first layout ── -->
+          <div style="margin-bottom:12px">
+            <!-- Row 1: Property toggle + View toggle -->
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+              <!-- Property pills -->
+              <div style="display:flex;gap:4px" id="cal-prop-toggle">
+                <button class="active" onclick="setCalProp('all',this)"
+                  style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--accent);color:#fff;font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit">All</button>
+                <button onclick="setCalProp('speranta',this)"
+                  style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit">Speranța</button>
+                <button onclick="setCalProp('tvhouse',this)"
+                  style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit">TV House</button>
               </div>
-              <button id="cleaning-toggle-btn" class="btn btn-sm btn-ghost" onclick="toggleCleaningOverlay(this)">🧹 Cleaning</button>
-              <button class="btn btn-sm btn-ghost" onclick="toggleCancelledOnCal(this)">❌ Cancelled</button>
-              <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
-              <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ CSV</button>
+              <!-- View toggle -->
+              <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:8px;padding:2px;flex-shrink:0">
+                <button id="calview-month-btn" onclick="setCalView('month')"
+                  style="padding:4px 11px;border-radius:6px;border:none;font-size:.74rem;font-weight:600;cursor:pointer;background:var(--ink);color:#fff">Month</button>
+                <button id="calview-week-btn" onclick="setCalView('week')"
+                  style="padding:4px 11px;border-radius:6px;border:none;font-size:.74rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted)">Week</button>
+                <button id="calview-day-btn" onclick="setCalView('day')"
+                  style="padding:4px 11px;border-radius:6px;border:none;font-size:.74rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted)">Day</button>
+              </div>
+            </div>
+            <!-- Row 2: Actions -->
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+              <button id="cleaning-toggle-btn" onclick="toggleCleaningOverlay(this)"
+                style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">🧹 Cleaning</button>
+              <button onclick="toggleCancelledOnCal(this)"
+                style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">❌ Cancelled</button>
+              <button onclick="openModal('domestic-modal')"
+                style="padding:5px 14px;border-radius:20px;border:none;background:var(--green);color:#fff;font-size:.74rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;margin-left:auto">+ Clean</button>
+              <button onclick="exportDomestics()"
+                style="padding:5px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.74rem;cursor:pointer;font-family:inherit">⬇</button>
             </div>
           </div>
 
@@ -551,26 +576,28 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
 
       <!-- TASKS (Nina-facing: per-booking checklist + general tasks) -->
       <div class="tab-pane" id="tab-tasks">
-        <!-- Sub-tab bar -->
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
-          <div style="display:flex;gap:2px;background:var(--sand);border-radius:10px;padding:3px;flex-wrap:wrap">
-            <button id="subtab-guest-btn" onclick="setTaskSubTab('guest')"
-              style="padding:6px 14px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s">
-              🏠 Guest Management
-            </button>
-            <button id="subtab-project-btn" onclick="setTaskSubTab('project')"
-              style="padding:6px 14px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
-              📋 Project Management
-            </button>
-            <button id="subtab-inspection-btn" onclick="setTaskSubTab('inspection')"
-              style="padding:6px 14px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
-              🔍 Monthly Inspection
-            </button>
+        <!-- Sub-tab bar — mobile-first -->
+        <div style="margin-bottom:14px">
+          <!-- Row 1: Sub-tabs + New Task button -->
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+            <div style="display:flex;gap:4px;background:var(--sand);border-radius:10px;padding:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1">
+              <button id="subtab-guest-btn" onclick="setTaskSubTab('guest')"
+                style="padding:6px 12px;border-radius:8px;border:none;font-size:.78rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s;white-space:nowrap;flex-shrink:0">
+                🏠 Guests
+              </button>
+              <button id="subtab-project-btn" onclick="setTaskSubTab('project')"
+                style="padding:6px 12px;border-radius:8px;border:none;font-size:.78rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap;flex-shrink:0">
+                📋 Projects
+              </button>
+              <button id="subtab-inspection-btn" onclick="setTaskSubTab('inspection')"
+                style="padding:6px 12px;border-radius:8px;border:none;font-size:.78rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap;flex-shrink:0">
+                🔍 Inspection
+              </button>
+            </div>
+            <button class="btn btn-primary btn-sm" id="task-add-btn" onclick="openModal('task-modal')" style="flex-shrink:0;white-space:nowrap">+ New</button>
           </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <div id="task-filters" style="display:flex;gap:5px"></div>
-            <button class="btn btn-primary btn-sm" id="task-add-btn" onclick="openModal('task-modal')">+ New Task</button>
-          </div>
+          <!-- Row 2: Filters (only shown for project tab) -->
+          <div id="task-filters" style="display:flex;gap:5px;flex-wrap:wrap"></div>
         </div>
 
         <!-- Guest Management sub-tab -->
