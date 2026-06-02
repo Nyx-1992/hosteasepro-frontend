@@ -1109,6 +1109,7 @@ const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 // ── STATE ─────────────────────────────────────────────────────
 let currentUser = null, currentProp = 'all', currentTab = 'dashboard';
 let taskFilter = 'open', bookingFilter = 'upcoming';
+let taskAssigneeFilter = 'all'; // 'all' | 'Nicole' | 'Silja' | 'Nina Williams'
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let calViewMode = 'month'; // 'month' | 'week' | 'day'
 let calMode     = 'bookings'; // 'bookings' | 'domestic'
@@ -2163,11 +2164,11 @@ function renderDashboard() {
     }
   });
 
-  // 3. High priority open tasks assigned to Nina
-  tasks.filter(t=>t.status==='open'&&t.priority==='high'&&(t.assigned||'').toLowerCase().includes('nina')).forEach(t => {
+  // 3. ALL high priority open tasks (not just Nina's)
+  tasks.filter(t=>t.status==='open'&&t.priority==='high').forEach(t => {
     urgentItems.push({
       icon:'⚡', label:t.title, color:'#dc2626', textColor:'#991b1b',
-      detail:'High priority · '+propName(t.property_id||'all')+(t.due?' · due '+fmtDate(t.due):''),
+      detail:(t.assigned||'Unassigned')+' · '+propName(t.property_id||'all')+(t.due?' · due '+fmtDate(t.due):''),
       action:`switchTab('tasks');setTaskSubTab('project')`,
       priority: 3,
     });
@@ -3213,7 +3214,7 @@ function renderDomesticCalView() {
         <div style="font-size:.7rem;font-weight:${isToday?'700':'400'};color:${isToday?'var(--accent)':'var(--ink)'}">${d}</div>
         ${dayDoms.slice(0,2).map(dom=>`
           <div style="background:${COLORS[dom.cleaner]||'#64748b'};color:#fff;font-size:.55rem;font-weight:600;padding:1px 3px;border-radius:3px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            ${dom.cleaner||'Clean'}
+            ${dom.property_id==='speranta'?'SP':'TV'} · ${(dom.cleaner||'Clean').slice(0,7)}
           </div>`).join('')}
         ${dayDoms.length>2?`<div style="font-size:.55rem;color:var(--muted);margin-top:1px">+${dayDoms.length-2} more</div>`:''}
       </div>`;
@@ -3725,7 +3726,20 @@ function setTaskSubTab(tab) {
   });
   const addBtn = document.getElementById('task-add-btn');
   if (addBtn) addBtn.textContent = tab==='project' ? '+ New Task' : '';
-  document.getElementById('task-filters').innerHTML = '';
+  // Render assignee filter buttons for project tab
+  const filtersEl = document.getElementById('task-filters');
+  if (tab === 'project') {
+    filtersEl.innerHTML = ['all','Nicole','Silja','Nina Williams'].map(person => {
+      const label = person === 'all' ? '👥 All' : person === 'Nina Williams' ? '👤 Nina' : '👤 '+person;
+      const active = taskAssigneeFilter === person;
+      return `<button onclick="setTaskAssigneeFilter('${person}')" 
+        style="padding:4px 12px;border-radius:20px;border:1.5px solid ${active?'var(--accent)':'var(--border)'};background:${active?'var(--accent)':'var(--sand)'};color:${active?'#fff':'var(--ink)'};font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s">
+        ${label}
+      </button>`;
+    }).join('');
+  } else {
+    filtersEl.innerHTML = '';
+  }
   if (tab==='inspection') {
     renderInspectionChecklist();
     renderInspectionHistory();
@@ -3854,14 +3868,21 @@ const KANBAN_COLS = [
 function renderKanban() {
   const boardEl = document.getElementById('kanban-board');
   if (!boardEl) return;
-  const projectTasks = tasks.filter(t =>
-    t.type==='project' ||
-    ['garden','project','website','photo','maintenance','repair','plumb','electric','paint'].some(kw =>
-      t.title?.toLowerCase().includes(kw)
-    )
-  );
+  // Filter by assignee if set
+  const projectTasks = tasks.filter(t => {
+    const isProject = t.type==='project' ||
+      ['garden','project','website','photo','maintenance','repair','plumb','electric','paint'].some(kw =>
+        t.title?.toLowerCase().includes(kw));
+    if (!isProject) return false;
+    if (taskAssigneeFilter !== 'all') {
+      return (t.assigned||'').toLowerCase().includes(taskAssigneeFilter.toLowerCase());
+    }
+    return true;
+  });
 
-  boardEl.innerHTML = KANBAN_COLS.map(col => {
+  // Show filter indicator if filtered
+  const filterLabel = taskAssigneeFilter !== 'all' ? `<div style="font-size:.74rem;color:var(--muted);margin-bottom:12px">Showing tasks for: <strong>${taskAssigneeFilter}</strong></div>` : '';
+  boardEl.innerHTML = filterLabel + KANBAN_COLS.map(col => {
     const colTasks = projectTasks.filter(t => (t.kanban_status||'todo') === col.id);
     return `<div style="background:${col.bg};border-radius:14px;padding:13px;min-height:300px;border:1.5px solid ${col.color}22">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
@@ -3927,6 +3948,7 @@ function toggleNinaTask(bookingId, taskKey) {
   if (document.getElementById('booking-lane-view')?.style.display !== 'none') renderLaneView();
 }
 function setTaskFilter(f) { taskFilter=f; renderTasks(); }
+function setTaskAssigneeFilter(person) { taskAssigneeFilter=person; setTaskSubTab('project'); }
 window._taskSubTab = 'guest';
 async function toggleTask(id) {
   const t=tasks.find(x=>x.id==id); if(!t)return;
