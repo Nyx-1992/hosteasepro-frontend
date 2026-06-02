@@ -580,7 +580,8 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
 
         <!-- Project Management sub-tab (Kanban) -->
         <div id="subtab-project" style="display:none">
-          <div id="kanban-board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px"></div>
+          <div id="kanban-filter-label" style="font-size:.74rem;color:var(--muted);margin-bottom:10px;min-height:18px"></div>
+        <div id="kanban-board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px"></div>
         </div>
 
         <!-- Monthly Inspection sub-tab -->
@@ -2036,9 +2037,9 @@ function renderDashboard() {
   function renderArrivals(pid, elId) {
     const el = document.getElementById(elId);
     if (!el) return;
-    const cur = bookings.find(b=>b.property_id===pid&&b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
+    const cur = bookings.find(b=>b.property_id===pid&&b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&b.status!=='blocked'&&b.is_active!==false&&!isCaretaker(b)&&!isOwnerStay(b));
     const next3 = bookings
-      .filter(b=>b.property_id===pid&&b.check_in>today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b))
+      .filter(b=>b.property_id===pid&&b.check_in>today&&b.status!=='cancelled'&&b.status!=='blocked'&&b.is_active!==false&&!isCaretaker(b)&&!isOwnerStay(b))
       .sort((a,b)=>a.check_in.localeCompare(b.check_in))
       .slice(0,3);
 
@@ -2060,7 +2061,7 @@ function renderDashboard() {
       return;
     }
     out += next3.map((b,i) => {
-      const daysUntil = Math.round((new Date(b.check_in)-now)/86400000);
+      const daysUntil = Math.ceil((new Date(b.check_in)-now)/86400000);
       const col = PLAT_COLORS[b.platform]||'var(--accent)';
       const cleanOk = domestics.some(d=>d.property_id===pid&&Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10)))<=2*86400000);
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;${i<next3.length-1?'border-bottom:1px solid var(--border)':''}">
@@ -2164,8 +2165,9 @@ function renderDashboard() {
     }
   });
 
-  // 3. ALL high priority open tasks (not just Nina's)
-  tasks.filter(t=>t.status==='open'&&t.priority==='high').forEach(t => {
+  // 3. ALL high priority open tasks — only show if due in future or recently
+  const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate()-7);
+  tasks.filter(t=>t.status==='open'&&t.priority==='high'&&(!t.due||new Date(t.due)>=sevenDaysAgo)).forEach(t => {
     urgentItems.push({
       icon:'⚡', label:t.title, color:'#dc2626', textColor:'#991b1b',
       detail:(t.assigned||'Unassigned')+' · '+propName(t.property_id||'all')+(t.due?' · due '+fmtDate(t.due):''),
@@ -2379,7 +2381,7 @@ function renderLaneView() {
         ${shown.filter(b=>b.id!==current?.id).map(b => {
           const isPending  = b.status==='pending';
           const isPast     = b.check_out < today;
-          const daysUntil  = Math.round((new Date(b.check_in)-new Date())/86400000);
+          const daysUntil  = Math.ceil((new Date(b.check_in)-new Date())/86400000);
           const isImminent = daysUntil>=0 && daysUntil<=3;
           const isSoon     = daysUntil>=0 && daysUntil<=7;
           const cleanOk    = hasClean(b);
@@ -2826,12 +2828,21 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         // Right bleed: when continuing into next cell (not real end, not week end)
         const bleedL = (!isRealStart && !isWeekStart) ? 1 : 0; // px to extend left
         const bleedR = (!isRealEnd   && !isWeekEnd)   ? 1 : 0; // px to extend right
-        // On check-in day: start bar at ~60% (15:00 check-in visually)
-        // On checkout day: end bar at ~40% (10:00 checkout visually) — handled by isRealEnd
-        const startOffset = isRealStart ? '60%' : (-bleedL)+'px';
-        const startWidth  = isRealStart
-          ? 'calc(40% + '+bleedR+'px)'
-          : 'calc(100% + '+bleedL+'px + '+bleedR+'px)';
+        // Bar positioning:
+        // Check-in day (isRealStart): start at 60% of cell (15:00), width = remaining 40%
+        // Last night cell (isRealEnd, NOT start): full left, width = 40% (10:00 checkout)
+        // Middle days: full width with 1px bleeds on each side
+        let startOffset, startWidth;
+        if (isRealStart && isRealEnd) {
+          // Single-night stay: 60% → 40% = just the middle 40% chunk... use 30% offset, 40% wide
+          startOffset = '30%'; startWidth = '40%';
+        } else if (isRealStart) {
+          startOffset = '60%'; startWidth = 'calc(40% + '+bleedR+'px)';
+        } else if (isRealEnd) {
+          startOffset = (-bleedL)+'px'; startWidth = 'calc(40% + '+bleedL+'px)';
+        } else {
+          startOffset = (-bleedL)+'px'; startWidth = 'calc(100% + '+bleedL+'px + '+bleedR+'px)';
+        }
         bar.style.cssText = [
           'display:block',
           'position:relative',
@@ -3757,7 +3768,7 @@ function renderGuestManagement() {
   const relevant = bookings.filter(b => {
     if (['cancelled','blocked','owner'].includes(b.status) || isCaretaker(b) || b.is_active===false) return false;
     const propMatch = currentProp==='all' || b.property_id===currentProp;
-    const daysUntil  = Math.round((new Date(b.check_in)-new Date())/86400000);
+    const daysUntil  = Math.ceil((new Date(b.check_in)-new Date())/86400000);
     const daysSinceOut = Math.round((new Date()-new Date(b.check_out))/86400000);
     return propMatch && daysUntil <= 14 && daysSinceOut <= 7;
   }).sort((a,b) => a.check_in.localeCompare(b.check_in));
@@ -3778,7 +3789,7 @@ function renderGuestManagement() {
       const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
       const isNow  = b.check_in<=today && b.check_out>today;
       const isPast = b.check_out<=today;
-      const daysUntil = Math.round((new Date(b.check_in)-new Date())/86400000);
+      const daysUntil = Math.ceil((new Date(b.check_in)-new Date())/86400000);
       const col = PLAT_COLORS[b.platform]||'#c17f3c';
       const cleanOk = domestics.some(d =>
         d.property_id===b.property_id &&
@@ -3880,9 +3891,10 @@ function renderKanban() {
     return true;
   });
 
-  // Show filter indicator if filtered
-  const filterLabel = taskAssigneeFilter !== 'all' ? `<div style="font-size:.74rem;color:var(--muted);margin-bottom:12px">Showing tasks for: <strong>${taskAssigneeFilter}</strong></div>` : '';
-  boardEl.innerHTML = filterLabel + KANBAN_COLS.map(col => {
+  // Show filter indicator above board (outside grid)
+  const filterLabelEl = document.getElementById('kanban-filter-label');
+  if (filterLabelEl) filterLabelEl.textContent = taskAssigneeFilter !== 'all' ? 'Showing tasks for: '+taskAssigneeFilter : '';
+  boardEl.innerHTML = KANBAN_COLS.map(col => {
     const colTasks = projectTasks.filter(t => (t.kanban_status||'todo') === col.id);
     return `<div style="background:${col.bg};border-radius:14px;padding:13px;min-height:300px;border:1.5px solid ${col.color}22">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
