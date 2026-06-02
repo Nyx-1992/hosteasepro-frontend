@@ -3162,9 +3162,10 @@ function domCalNav(dir) {
 function renderCalendar() {
   if (calMode === 'domestic') { renderDomesticCalView(); return; }
   const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
-  const fd = showCleaningOverlay
+const fd = showCleaningOverlay
     ? (calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp))
     : [];
+  const filteredBookings = showCancelledOnCal ? fb : fb.filter(b=>b.status!=='cancelled');
   if (calViewMode === 'week') { renderWeekView(); return; }
   if (calViewMode === 'day')  { renderDayView();  return; }
   // Default: monthly
