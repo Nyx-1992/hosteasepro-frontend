@@ -572,6 +572,12 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
             <div class="card-title">📋 Cleaning Sessions</div>
             <div class="dom-grid" id="dom-grid"></div>
           </div>
+
+          <!-- Inventory Reports from cleaners -->
+          <div class="card" style="margin-top:16px">
+            <div class="card-title" style="margin-bottom:12px">🔍 Inventory Reports</div>
+            <div id="dom-inv-reports"><div style="color:var(--muted);font-size:.82rem;text-align:center;padding:16px">No reports yet</div></div>
+          </div>
         </div>
 
       </div>
@@ -1154,6 +1160,7 @@ const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 // ── STATE ─────────────────────────────────────────────────────
 let currentUser = null, currentProp = 'all', currentTab = 'dashboard';
 let taskFilter = 'open', bookingFilter = 'upcoming';
+let inventoryReports = [];
 let taskAssigneeFilter = 'all'; // 'all' | 'Nicole' | 'Silja' | 'Nina Williams'
 let taskPriorityFilter = 'all';  // 'all' | 'high' | 'medium' | 'low'
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
@@ -1656,11 +1663,12 @@ async function loadData() {
   renderTab(currentTab);
   if (!db) return;
   try {
-    const [bRes, tRes, dRes, kRes] = await Promise.all([
+    const [bRes, tRes, dRes, kRes, invRes] = await Promise.all([
       db.from('bookings').select('*').order('check_in_date',{ascending:false}).limit(500),
       db.from('tasks').select('*').order('created_at',{ascending:false}),
       db.from('domestics').select('*').order('date',{ascending:false}),
       db.from('kb_articles').select('*').order('created_at',{ascending:false}),
+      db.from('inventory_reports').select('*').order('submitted_at',{ascending:false}).limit(100),
     ]);
     let connected = false;
     if (bRes.data && bRes.data.length > 0) {
@@ -1687,6 +1695,7 @@ async function loadData() {
     if (tRes.data && tRes.data.length > 0) tasks = tRes.data.map(nt);
     if (dRes.data && dRes.data.length > 0) domestics = dRes.data.map(nd);
     if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
+    if (invRes && invRes.data) inventoryReports = invRes.data;
     // db-status hidden on mobile — status logged to console only
     renderTab(currentTab);
   } catch(e) { console.warn('DB load:', e); }
@@ -2247,6 +2256,27 @@ function renderDashboard() {
       priority: 3,
     });
   });
+
+  // 3b. Unreviewed inventory flags from cleaners
+  inventoryReports
+    .filter(r => !r.all_ok && !r.reviewed)
+    .forEach(r => {
+      const flagCount = (r.flagged_items||[]).length;
+      const propN = r.property_id==='e9737638-d83a-4947-940a-8746789e4d9f'?'Speranta':'TV House';
+      const label = flagCount>0
+        ? `${flagCount} item${flagCount>1?'s':''} flagged — ${propN}`
+        : `Cleaner note — ${propN}`;
+      const detail = flagCount>0
+        ? (r.flagged_items||[]).slice(0,2).map(f=>`${f.room}: ${f.item}${f.note?' ('+f.note+')':''}`).join(' · ')
+        : (r.notes||'');
+      urgentItems.push({
+        icon:'🔍', label, color:'#f59e0b', textColor:'#92400e',
+        detail:`${r.cleaner} · ${fmtDate(r.clean_date)} · ${detail.slice(0,80)}`,
+        action:`switchTab('tasks');showInventoryReport('${r.id}')`,
+        priority: 2,
+        reportId: r.id,
+      });
+    });
 
   // 4. Upcoming checkouts with no cleaning in next 3 days
   bookings.filter(b=>b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b)).forEach(b=>{
@@ -3314,6 +3344,41 @@ function renderDomesticCalView() {
 
   // Render earnings
   renderDomEarnings();
+
+  // Render inventory reports
+  const invEl = document.getElementById('dom-inv-reports');
+  if (invEl) {
+    if (!inventoryReports.length) {
+      invEl.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:16px">No inventory reports yet</div>';
+    } else {
+      invEl.innerHTML = inventoryReports.slice(0,20).map(r => {
+        const propN = r.property_id==='e9737638-d83a-4947-940a-8746789e4d9f'?'Speranta':'TV House';
+        const flags = r.flagged_items||[];
+        const hasNote = r.notes;
+        const borderCol = (!r.all_ok && !r.reviewed) ? '#f59e0b33' : 'var(--border)';
+         const statusBadge = r.all_ok
+           ? '<span style="background:#dcfce7;color:#16a34a;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px">✓ All OK</span>'
+           : '<span style="background:#fef3c7;color:#d97706;font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px">⚠ ' + flags.length + ' flag' + (flags.length!==1?'s':'') + '</span>';
+         const reviewedBadge = r.reviewed ? '<span style="background:#f1f5f9;color:#64748b;font-size:.68rem;padding:2px 8px;border-radius:10px">Reviewed</span>' : '';
+         const flagsHtml = flags.length > 0
+           ? '<div style="margin-bottom:8px">' + flags.map(function(f){return '<div style="font-size:.78rem;padding:5px 10px;background:#fef9c3;border-radius:6px;margin-bottom:3px;color:#92400e"><strong>' + f.room + ':</strong> ' + f.item + (f.note?' — '+f.note:'') + '</div>';}).join('') + '</div>'
+           : '';
+         const noteHtml = hasNote ? '<div style="font-size:.78rem;color:var(--muted);font-style:italic;margin-bottom:8px">📌 "' + (r.notes||'') + '"</div>' : '';
+         const createBtn = flags.length > 0
+           ? '<button onclick="createTaskFromFlag(\'' + r.id + '\')" style="padding:4px 12px;border-radius:8px;background:#fef3c7;border:1px solid #fcd34d;font-size:.74rem;cursor:pointer;color:#92400e">⚡ Create task</button>'
+           : '';
+         const actionsHtml = !r.reviewed
+           ? '<div style="display:flex;gap:6px;flex-wrap:wrap"><button onclick="markReviewed(\'' + r.id + '\')" style="padding:4px 12px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);font-size:.74rem;cursor:pointer;color:var(--ink)">✓ Mark reviewed</button>' + createBtn + '</div>'
+           : '';
+         return '<div style="background:var(--surface);border:1.5px solid ' + borderCol + ';border-radius:12px;padding:14px;margin-bottom:8px">'
+           + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">'
+           + '<div><span style="font-weight:700;font-size:.88rem">' + r.cleaner + '</span>'
+           + '<span style="color:var(--muted);font-size:.78rem"> · ' + propN + ' · ' + fmtDate(r.clean_date) + '</span></div>'
+           + '<div style="display:flex;gap:6px;align-items:center">' + statusBadge + reviewedBadge + '</div>'
+           + '</div>' + flagsHtml + noteHtml + actionsHtml + '</div>';
+       }).join('');
+    }
+  }
 
   // Render sessions list
   const domGrid = document.getElementById('dom-grid');
@@ -5064,6 +5129,53 @@ async function saveTaskDrawer() {
   }
   renderTasks();
 }
+async function markReviewed(reportId) {
+  const r = inventoryReports.find(x=>x.id===reportId);
+  if(!r) return;
+  r.reviewed = true;
+  if(db) await db.from('inventory_reports').update({reviewed:true}).eq('id',reportId);
+  toast('Marked as reviewed ✓','success');
+  if(calMode==='domestic') renderDomesticCalView();
+  renderDashboard();
+}
+
+async function createTaskFromFlag(reportId) {
+  const r = inventoryReports.find(x=>x.id===reportId);
+  if(!r) return;
+  const flags = r.flagged_items||[];
+  const propN = r.property_id==='e9737638-d83a-4947-940a-8746789e4d9f'?'Speranta':'TV House';
+  const propUuid = r.property_id;
+  const title = flags.length>0
+    ? `Check & repair: ${flags.map(f=>f.item).join(', ')} — ${propN}`
+    : `Follow up: ${propN} cleaner note`;
+  const notes = [
+    ...flags.map(f=>`${f.room} — ${f.item}${f.note?': '+f.note:''}`),
+    r.notes ? `Note: ${r.notes}` : ''
+  ].filter(Boolean).join('\n');
+  const row = {
+    title, description:notes, priority:'high', status:'pending',
+    kanban_status:'todo', type:'other',
+    org_id:'5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+    property_id:propUuid,
+  };
+  if(db) {
+    const {data,error} = await db.from('tasks').insert([row]).select().single();
+    if(error){toast('Error: '+error.message,'error');return;}
+    tasks.unshift(nt({...data}));
+    await db.from('inventory_reports').update({task_created:true,reviewed:true}).eq('id',reportId);
+    r.task_created=true; r.reviewed=true;
+  }
+  toast('Task created ✓','success');
+  if(calMode==='domestic') renderDomesticCalView();
+  renderDashboard(); renderTasks();
+}
+
+function showInventoryReport(reportId) {
+  setCalMode('domestic');
+  switchTab('calendar');
+  setTimeout(()=>{ const el=document.getElementById('dom-inv-reports'); if(el) el.scrollIntoView({behavior:'smooth'}); },400);
+}
+
 async function deleteTaskFromDrawer() {
   if (!_drawerTaskId||!confirm('Delete this task?')) return;
   if (db) await db.from('tasks').delete().eq('id',_drawerTaskId);
