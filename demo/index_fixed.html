@@ -935,7 +935,21 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         <div class="form-field span-full"><label>Task Title *</label><input id="t-title" placeholder="What needs to be done?"/></div>
         <div class="form-field"><label>Property</label><select id="t-prop"><option value="all">Both Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select></div>
         <div class="form-field"><label>Priority</label><select id="t-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
-        <div class="form-field"><label>Assign To</label><select id="t-assign"><option>Nicole</option><option>Silja</option><option>Nina Williams</option></select></div>
+        <div class="form-field span-full">
+          <label>Assignees</label>
+          <div id="t-assign-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"></div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap">
+            <button type="button" onclick="toggleAssignee('Nicole')" id="ta-Nicole"
+              style="padding:4px 12px;border-radius:20px;border:1.5px solid #c17f3c;background:var(--sand);color:var(--ink);font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s">Nicole</button>
+            <button type="button" onclick="toggleAssignee('Silja')" id="ta-Silja"
+              style="padding:4px 12px;border-radius:20px;border:1.5px solid #7c3aed;background:var(--sand);color:var(--ink);font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s">Silja</button>
+            <button type="button" onclick="toggleAssignee('Nina Williams')" id="ta-Nina Williams"
+              style="padding:4px 12px;border-radius:20px;border:1.5px solid #16a34a;background:var(--sand);color:var(--ink);font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s">Nina</button>
+            <button type="button" onclick="toggleAssignee('Tino')" id="ta-Tino"
+              style="padding:4px 12px;border-radius:20px;border:1.5px solid #0369a1;background:var(--sand);color:var(--ink);font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s">Tino</button>
+          </div>
+          <input type="hidden" id="t-assign" value=""/>
+        </div>
         <div class="form-field"><label>Due Date</label><input type="date" id="t-due"/></div>
         <div class="form-field span-full"><label>Notes</label><input id="t-notes" placeholder="Additional details"/></div>
       </div>
@@ -1111,6 +1125,7 @@ const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 let currentUser = null, currentProp = 'all', currentTab = 'dashboard';
 let taskFilter = 'open', bookingFilter = 'upcoming';
 let taskAssigneeFilter = 'all'; // 'all' | 'Nicole' | 'Silja' | 'Nina Williams'
+let taskPriorityFilter = 'all';  // 'all' | 'high' | 'medium' | 'low'
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let calViewMode = 'month'; // 'month' | 'week' | 'day'
 let calMode     = 'bookings'; // 'bookings' | 'domestic'
@@ -1134,7 +1149,7 @@ const SAMPLE_BOOKINGS = [
   {id:'s3',  property_id:'speranta',guest_name:'Armand Roets',        platform:'booking',    check_in:'2026-04-24',check_out:'2026-04-26',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
   {id:'s5',  property_id:'speranta',guest_name:'Carlin Baier',        platform:'booking',    check_in:'2026-05-05',check_out:'2026-05-07',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
   {id:'s6',  property_id:'speranta',guest_name:'Jack Marvellous',     platform:'booking',    check_in:'2026-05-08',check_out:'2026-05-10',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s7',  property_id:'speranta',guest_name:'Nicole & Silja (Owners)',platform:'manual',  check_in:'2026-05-13',check_out:'2026-05-21',nights:8, status:'confirmed',   revenue:0,  currency:'ZAR',notes:'Owner stay'},
+  {id:'s7',  property_id:'speranta',guest_name:'Nicole & Silja (Owners)',platform:'manual',  check_in:'2026-05-13',check_out:'2026-05-21',nights:8, status:'owner',       revenue:0,  currency:'ZAR',notes:'Owner stay',is_active:false},
   {id:'s8',  property_id:'speranta',guest_name:'Jasmine Hunton',      platform:'airbnb',     check_in:'2026-05-23',check_out:'2026-05-27',nights:4, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
   {id:'s9',  property_id:'speranta',guest_name:'Amogelang Masoma',    platform:'booking',    check_in:'2026-07-10',check_out:'2026-07-12',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
   {id:'s10', property_id:'speranta',guest_name:'Tiago Borralho',      platform:'booking',    check_in:'2026-08-08',check_out:'2026-08-12',nights:4, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
@@ -1149,18 +1164,18 @@ const SAMPLE_BOOKINGS = [
   // TV House upcoming
   {id:'t1',  property_id:'tvhouse', guest_name:'Clare Lang',          platform:'booking',    check_in:'2026-04-13',check_out:'2026-04-22',nights:9, status:'confirmed',   revenue:0,  currency:'ZAR',notes:'9 nights'},
   {id:'t2',  property_id:'tvhouse', guest_name:'Dimakatso Kunene',    platform:'lekkeslaap', check_in:'2026-04-25',check_out:'2026-04-30',nights:5, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'t3',  property_id:'tvhouse', guest_name:'Mirka & Antonin (Owners)',platform:'manual', check_in:'2026-04-28',check_out:'2026-06-13',nights:46,status:'confirmed',   revenue:0,  currency:'ZAR',notes:'TV House owners visit'},
+  {id:'t3',  property_id:'tvhouse', guest_name:'Mirka & Antonin (Owners)',platform:'manual', check_in:'2026-04-28',check_out:'2026-06-13',nights:46,status:'owner',       revenue:0,  currency:'ZAR',notes:'TV House owners visit',is_active:false},
 ].map(b=>({...b,display_name:b.guest_name}));
 
 const SAMPLE_TASKS = [
   // Guest management tasks
-  {id:'t1',title:'Fix leaking tap — Speranta bathroom',    property_id:'speranta',priority:'high',  status:'open', assigned:'Nina Williams',due:'2026-04-18',notes:'Under sink — urgent before Joe Ladlow arrives', type:'guest'},
+  {id:'t1',title:'Fix leaking tap — Speranta bathroom',    property_id:'speranta',priority:'high',  status:'done', assigned:'Nina Williams',due:'2026-04-18',notes:'Under sink — urgent before Joe Ladlow arrives', type:'guest'},
   {id:'t2',title:'Service air conditioner — Speranta',     property_id:'speranta',priority:'medium',status:'open', assigned:'Nicole',       due:'2026-04-25',notes:'Last serviced Jan 2025', type:'guest'},
   {id:'t3',title:'Set up direct booking website',          property_id:'all',     priority:'high',  status:'open', assigned:'Nicole',       due:'2026-05-15',notes:'For follow-up booking messages to guests', type:'project'},
   // Property projects
   {id:'t4',title:'Garden project — Speranta',              property_id:'speranta',priority:'high',  status:'open', assigned:'Nicole',       due:'2026-04-30',notes:'Current project — coordinate with contractor', type:'project'},
   {id:'t5',title:'Update Airbnb photos — TV House',        property_id:'tvhouse', priority:'low',   status:'open', assigned:'Silja',        due:'2026-04-30',notes:'New bedding installed — take new photos', type:'project'},
-  {id:'t6',title:'Deep clean before owners arrive — TV House',property_id:'tvhouse',priority:'high',status:'open', assigned:'Nina Williams',due:'2026-04-27',notes:'Mirka & Antonin arrive 28 Apr', type:'guest'},
+  {id:'t6',title:'Deep clean before owners arrive — TV House',property_id:'tvhouse',priority:'high',status:'done', assigned:'Nina Williams',due:'2026-04-27',notes:'Mirka & Antonin arrive 28 Apr', type:'guest'},
 ].map(t=>({...t,notes:t.notes||'',due:t.due||''}));
 
 const SAMPLE_DOMESTICS = [
@@ -1614,7 +1629,8 @@ async function loadData() {
         const realKeys = new Set(raw.filter(b=>!['blocked','owner','cancelled'].includes(b.status))
           .map(b=>b.property_id+'|'+b.check_in+'|'+b.check_out));
         raw = raw.filter(b => b.status!=='blocked' || !realKeys.has(b.property_id+'|'+b.check_in+'|'+b.check_out));
-        bookings = raw;
+        // Filter out soft-deleted bookings
+        bookings = raw.filter(b => b.is_active !== false);
         connected = true;
         toast('Live data loaded ✓', 'success');
       }
@@ -2165,9 +2181,15 @@ function renderDashboard() {
     }
   });
 
-  // 3. ALL high priority open tasks — exclude only if due date is more than 14 days past
+  // 3. ALL high priority open tasks — exclude stale sample data and old due dates
   const fourteenDaysAgo = new Date(); fourteenDaysAgo.setDate(fourteenDaysAgo.getDate()-14);
-  tasks.filter(t=>t.status==='open'&&t.priority==='high'&&(!t.due||new Date(t.due)>=fourteenDaysAgo)).forEach(t => {
+  tasks.filter(t=>
+    t.status==='open' &&
+    t.priority==='high' &&
+    (!t.due || new Date(t.due) >= fourteenDaysAgo) &&
+    // Skip sample data tasks (string IDs like 't1','t6') once DB tasks are loaded
+    !(typeof t.id==='string' && t.id.match(/^t\d+$/) && tasks.some(x=>typeof x.id==='number'))
+  ).forEach(t => {
     urgentItems.push({
       icon:'⚡', label:t.title, color:'#dc2626', textColor:'#991b1b',
       detail:(t.assigned||'Unassigned')+' · '+propName(t.property_id||'all')+(t.due?' · due '+fmtDate(t.due):''),
@@ -3742,14 +3764,30 @@ function setTaskSubTab(tab) {
   // Render assignee filter buttons for project tab
   const filtersEl = document.getElementById('task-filters');
   if (tab === 'project') {
-    filtersEl.innerHTML = ['all','Nicole','Silja','Nina Williams'].map(person => {
+    const personBtns = ['all','Nicole','Silja','Nina Williams'].map(person => {
       const label = person === 'all' ? '👥 All' : person === 'Nina Williams' ? '👤 Nina' : '👤 '+person;
       const active = taskAssigneeFilter === person;
       return `<button onclick="setTaskAssigneeFilter('${person}')" 
-        style="padding:4px 12px;border-radius:20px;border:1.5px solid ${active?'var(--accent)':'var(--border)'};background:${active?'var(--accent)':'var(--sand)'};color:${active?'#fff':'var(--ink)'};font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s">
+        style="padding:4px 12px;border-radius:20px;border:1.5px solid ${active?'var(--ocean)':'var(--border)'};background:${active?'var(--ocean)':'var(--sand)'};color:${active?'#fff':'var(--ink)'};font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s">
         ${label}
       </button>`;
     }).join('');
+    const prioBtns = ['all','high','medium','low'].map(p => {
+      const active = taskPriorityFilter === p;
+      const label = p==='all'?'🎯 All':p==='high'?'🔴 High':p==='medium'?'🟡 Med':'🟢 Low';
+      const col = p==='high'?'#dc2626':p==='medium'?'#d97706':p==='low'?'#16a34a':'var(--muted)';
+      return `<button onclick="setTaskPriorityFilter('${p}')" 
+        style="padding:4px 12px;border-radius:20px;border:1.5px solid ${active?col:'var(--border)'};background:${active?col:'var(--sand)'};color:${active?'#fff':'var(--ink)'};font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s">
+        ${label}
+      </button>`;
+    }).join('');
+    filtersEl.innerHTML = `<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Person</span>
+      ${personBtns}
+      <span style="width:1px;height:20px;background:var(--border);display:inline-block;margin:0 4px"></span>
+      <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Priority</span>
+      ${prioBtns}
+    </div>`;
   } else {
     filtersEl.innerHTML = '';
   }
@@ -3888,7 +3926,10 @@ function renderKanban() {
         t.title?.toLowerCase().includes(kw));
     if (!isProject) return false;
     if (taskAssigneeFilter !== 'all') {
-      return (t.assigned||'').toLowerCase().includes(taskAssigneeFilter.toLowerCase());
+      if (!(t.assigned||'').toLowerCase().includes(taskAssigneeFilter.toLowerCase())) return false;
+    }
+    if (taskPriorityFilter !== 'all') {
+      if ((t.priority||'medium') !== taskPriorityFilter) return false;
     }
     return true;
   });
@@ -3904,11 +3945,14 @@ function renderKanban() {
         <span style="background:${col.color}22;color:${col.color};font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px">${colTasks.length}</span>
       </div>
       ${colTasks.map(t => `
-        <div style="background:white;border-radius:10px;padding:11px 13px;margin-bottom:8px;border:1px solid ${col.color}33;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+        <div style="background:white;border-radius:10px;padding:11px 13px;margin-bottom:8px;border:1px solid ${col.color}33;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer" onclick="openTaskDrawer('${t.id}')">
           <div style="font-weight:600;font-size:.83rem;color:var(--ink);margin-bottom:5px">${t.title}</div>
           ${t.notes||t.description?`<div style="font-size:.74rem;color:var(--muted);margin-bottom:6px">${t.notes||t.description}</div>`:''}
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px">
-            <span style="font-size:.68rem;color:var(--muted)">📍 ${propName(t.property_id||'all')} · 👤 ${t.assigned||'—'}</span>
+            <span style="font-size:.68rem;color:var(--muted)">📍 ${propName(t.property_id||'all')}</span>
+            <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">
+              ${(t.assigned||'').split(',').filter(Boolean).map(a=>{const c=assigneeColor(a.trim());const s=a.trim()==='Nina Williams'?'Nina':a.trim();return `<span style="background:${c.bg};color:${c.text};font-size:.62rem;font-weight:600;padding:1px 7px;border-radius:10px">${s}</span>`;}).join('')}
+            </div>
             <div style="display:flex;gap:4px;align-items:center">
               <span style="font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;background:${t.priority==='high'?'#fee2e2':t.priority==='medium'?'#fef3c7':'#dcfce7'};color:${t.priority==='high'?'#dc2626':t.priority==='medium'?'#d97706':'#16a34a'}">${t.priority||'medium'}</span>
               ${t.due?`<span style="font-size:.68rem;color:var(--muted)">📅 ${fmtDate(t.due||t.task_date)}</span>`:''}
@@ -3966,6 +4010,7 @@ function toggleNinaTask(bookingId, taskKey) {
 }
 function setTaskFilter(f) { taskFilter=f; renderTasks(); }
 function setTaskAssigneeFilter(person) { taskAssigneeFilter=person; setTaskSubTab('project'); }
+function setTaskPriorityFilter(p) { taskPriorityFilter=p; setTaskSubTab('project'); }
 window._taskSubTab = 'guest';
 async function toggleTask(id) {
   const t=tasks.find(x=>x.id==id); if(!t)return;
@@ -4730,6 +4775,234 @@ function contactCard(c) {
   </div>`;
 }
 
+
+
+// ── TASK ASSIGNEE COLORS ──────────────────────────────────────────────────────
+const ASSIGNEE_COLORS = {
+  'Nicole':        {bg:'#c17f3c', text:'#fff'},
+  'Silja':         {bg:'#7c3aed', text:'#fff'},
+  'Nina Williams': {bg:'#16a34a', text:'#fff'},
+  'Nina':          {bg:'#16a34a', text:'#fff'},
+  'Tino':          {bg:'#0369a1', text:'#fff'},
+};
+function assigneeColor(name) {
+  const key = Object.keys(ASSIGNEE_COLORS).find(k => (name||'').toLowerCase().includes(k.toLowerCase()));
+  return key ? ASSIGNEE_COLORS[key] : {bg:'#64748b', text:'#fff'};
+}
+let _modalAssignees = [];
+function toggleAssignee(name) {
+  const idx = _modalAssignees.indexOf(name);
+  if (idx > -1) _modalAssignees.splice(idx, 1);
+  else _modalAssignees.push(name);
+  renderModalAssignees();
+}
+function renderModalAssignees() {
+  document.getElementById('t-assign').value = _modalAssignees.join(',');
+  const chips = document.getElementById('t-assign-chips');
+  if (chips) chips.innerHTML = _modalAssignees.map(n => {
+    const c = assigneeColor(n); const s = n==='Nina Williams'?'Nina':n;
+    return `<span style="background:${c.bg};color:${c.text};font-size:.75rem;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px">${s} <span onclick="toggleAssignee('${n}')" style="cursor:pointer;opacity:.7">x</span></span>`;
+  }).join('');
+  ['Nicole','Silja','Nina Williams','Tino'].forEach(name => {
+    const btn = document.getElementById('ta-'+name);
+    if (!btn) return;
+    const active = _modalAssignees.includes(name);
+    const c = assigneeColor(name);
+    btn.style.background = active ? c.bg : 'var(--sand)';
+    btn.style.color = active ? c.text : 'var(--ink)';
+    btn.style.fontWeight = active ? '700' : '400';
+  });
+}
+let _drawerTaskId = null;
+let _drawerAssignees = [];
+function openTaskDrawer(taskId) {
+  const t = tasks.find(x => String(x.id) === String(taskId));
+  if (!t) return;
+  _drawerTaskId = taskId;
+  _drawerAssignees = (t.assigned || '').split(',').map(s => s.trim()).filter(Boolean);
+  document.getElementById('drawer-title').value    = t.title || '';
+  document.getElementById('drawer-priority').value = t.priority || 'medium';
+  document.getElementById('drawer-status').value   = t.kanban_status || 'todo';
+  document.getElementById('drawer-prop').value     = t.property_id || 'all';
+  document.getElementById('drawer-due').value      = t.due || t.due_at || t.task_date || '';
+  document.getElementById('drawer-notes').value    = t.notes || t.description || '';
+  document.getElementById('drawer-title-display').textContent = t.title || 'Task';
+  renderDrawerAssignees();
+  renderDrawerComments(t);
+  document.getElementById('task-drawer').style.display = 'flex';
+  document.getElementById('task-drawer-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+function closeTaskDrawer() {
+  document.getElementById('task-drawer').style.display = 'none';
+  document.getElementById('task-drawer-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+  _drawerTaskId = null;
+}
+function renderDrawerAssignees() {
+  const TEAM = ['Nicole','Silja','Nina Williams','Tino'];
+  document.getElementById('drawer-assignees').innerHTML = TEAM.map(name => {
+    const active = _drawerAssignees.includes(name);
+    const c = assigneeColor(name);
+    const short = name === 'Nina Williams' ? 'Nina' : name;
+    return `<button type="button" onclick="toggleDrawerAssignee('${name}')"
+      style="padding:5px 14px;border-radius:20px;border:2px solid ${c.bg};background:${active?c.bg:'var(--sand)'};color:${active?c.text:'var(--ink)'};font-size:.78rem;font-weight:${active?'700':'400'};cursor:pointer;font-family:inherit;transition:all .15s">
+      ${active?'+ ':' '}${short}</button>`;
+  }).join('');
+}
+function toggleDrawerAssignee(name) {
+  const idx = _drawerAssignees.indexOf(name);
+  if (idx > -1) _drawerAssignees.splice(idx, 1);
+  else _drawerAssignees.push(name);
+  renderDrawerAssignees();
+}
+function renderDrawerComments(t) {
+  const comments = t._comments || [];
+  const el = document.getElementById('drawer-comments');
+  if (!el) return;
+  if (!comments.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.8rem;font-style:italic;padding:8px 0">No comments yet</div>'; return; }
+  el.innerHTML = comments.map(c => `
+    <div style="display:flex;gap:9px;margin-bottom:10px">
+      <div style="width:28px;height:28px;border-radius:50%;background:${assigneeColor(c.author).bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;flex-shrink:0">${c.author.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
+      <div style="flex:1">
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:2px"><strong style="color:var(--ink)">${c.author}</strong> · ${c.time}</div>
+        <div style="font-size:.83rem;color:var(--ink);background:var(--surface-2);border-radius:8px;padding:7px 10px;line-height:1.5">${c.text}</div>
+      </div>
+    </div>`).join('');
+}
+function addDrawerComment() {
+  const input = document.getElementById('drawer-comment-input');
+  const text = input?.value.trim();
+  if (!text || !_drawerTaskId) return;
+  const t = tasks.find(x => String(x.id) === String(_drawerTaskId));
+  if (!t) return;
+  if (!t._comments) t._comments = [];
+  const now = new Date();
+  t._comments.push({author:currentUser?.name||'Nicole',text,time:now.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})+' '+now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'})});
+  input.value = '';
+  renderDrawerComments(t);
+}
+async function saveTaskDrawer() {
+  if (!_drawerTaskId) return;
+  const t = tasks.find(x => String(x.id) === String(_drawerTaskId));
+  if (!t) return;
+  const newTitle=document.getElementById('drawer-title').value.trim();
+  const newPriority=document.getElementById('drawer-priority').value;
+  const newStatus=document.getElementById('drawer-status').value;
+  const newProp=document.getElementById('drawer-prop').value;
+  const newDue=document.getElementById('drawer-due').value;
+  const newNotes=document.getElementById('drawer-notes').value;
+  const newAssigned=_drawerAssignees.join(',');
+  if (!newTitle) { toast('Title is required','error'); return; }
+  Object.assign(t,{title:newTitle,priority:newPriority,kanban_status:newStatus,property_id:newProp,due:newDue,due_at:newDue,task_date:newDue,notes:newNotes,description:newNotes,assigned:newAssigned});
+  document.getElementById('drawer-title-display').textContent = newTitle;
+  if (db) {
+    const {error} = await db.from('tasks').update({title:newTitle,priority:newPriority,kanban_status:newStatus,property_id:newProp!=='all'?newProp:null,due_at:newDue||null,task_date:newDue||null,description:newNotes,assigned:newAssigned}).eq('id',_drawerTaskId);
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+  }
+  toast('Task saved','success');
+  renderTasks();
+}
+async function deleteTaskFromDrawer() {
+  if (!_drawerTaskId||!confirm('Delete this task?')) return;
+  if (db) await db.from('tasks').delete().eq('id',_drawerTaskId);
+  tasks.splice(tasks.findIndex(x=>String(x.id)===String(_drawerTaskId)),1);
+  closeTaskDrawer(); renderTasks(); toast('Task deleted','info');
+}
+
 </script>
+
+<!-- ── TASK DETAIL DRAWER ──────────────────────────────────────────────── -->
+<div id="task-drawer-overlay" onclick="closeTaskDrawer()"
+  style="display:none;position:fixed;inset:0;background:rgba(26,26,46,.45);z-index:300;backdrop-filter:blur(2px)"></div>
+<div id="task-drawer"
+  style="display:none;position:fixed;top:0;right:0;bottom:0;width:min(520px,100vw);background:var(--surface);z-index:301;
+         box-shadow:-8px 0 40px rgba(0,0,0,.18);overflow-y:auto;flex-direction:column">
+  <div style="padding:20px 24px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;margin-bottom:0;position:sticky;top:0;background:var(--surface);z-index:10;padding-bottom:14px">
+    <div style="font-family:'DM Serif Display',serif;font-size:1.1rem;color:var(--ink)" id="drawer-title-display">Task</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button onclick="saveTaskDrawer()" style="background:var(--ocean);color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:.82rem;font-weight:600;cursor:pointer">Save</button>
+      <button onclick="closeTaskDrawer()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--muted);padding:4px;line-height:1">×</button>
+    </div>
+  </div>
+
+  <div style="padding:20px 24px;flex:1">
+    <!-- Title -->
+    <div style="margin-bottom:16px">
+      <input id="drawer-title" style="width:100%;font-size:1rem;font-weight:700;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;outline:none;color:var(--ink);background:var(--input-bg)"
+        onfocus="this.style.borderColor='var(--ocean)'" onblur="this.style.borderColor='var(--border)'" placeholder="Task title"/>
+    </div>
+
+    <!-- Meta row -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div>
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px">Priority</div>
+        <select id="drawer-priority" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem;outline:none;background:var(--input-bg)"
+          onchange="document.getElementById('drawer-priority').style.borderColor='var(--ocean)'">
+          <option value="high">🔴 High</option>
+          <option value="medium" selected>🟡 Medium</option>
+          <option value="low">🟢 Low</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px">Status</div>
+        <select id="drawer-status" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem;outline:none;background:var(--input-bg)">
+          <option value="todo">To Do</option>
+          <option value="inprogress">In Progress</option>
+          <option value="feedback">Feedback Needed</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px">Property</div>
+        <select id="drawer-prop" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem;outline:none;background:var(--input-bg)">
+          <option value="all">Both Properties</option>
+          <option value="speranta">Speranta Flat</option>
+          <option value="tvhouse">TV House</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px">Due Date</div>
+        <input type="date" id="drawer-due" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem;outline:none;background:var(--input-bg)"/>
+      </div>
+    </div>
+
+    <!-- Assignees -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Assignees</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="drawer-assignees">
+        <!-- rendered by openTaskDrawer -->
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div style="margin-bottom:18px">
+      <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px">Description / Notes</div>
+      <textarea id="drawer-notes" rows="3"
+        style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem;outline:none;resize:vertical;background:var(--input-bg)"
+        onfocus="this.style.borderColor='var(--ocean)'" onblur="this.style.borderColor='var(--border)'"
+        placeholder="Describe the task, add context…"></textarea>
+    </div>
+
+    <!-- Comments -->
+    <div>
+      <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px">Comments & Activity</div>
+      <div id="drawer-comments" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <input id="drawer-comment-input" placeholder="Add a comment…"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();addDrawerComment();}"
+          style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem;outline:none;background:var(--input-bg)"
+          onfocus="this.style.borderColor='var(--ocean)'" onblur="this.style.borderColor='var(--border)'"/>
+        <button onclick="addDrawerComment()" style="background:var(--ocean);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:.82rem;cursor:pointer;font-weight:600;white-space:nowrap">Post</button>
+      </div>
+    </div>
+
+    <!-- Delete -->
+    <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--border)">
+      <button onclick="deleteTaskFromDrawer()" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;padding:7px 16px;font-size:.8rem;cursor:pointer;font-weight:600">🗑 Delete task</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
