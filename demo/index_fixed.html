@@ -370,8 +370,8 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         <div class="page-title" id="page-title">Dashboard</div>
       </div>
       <div class="topbar-right">
-        <span class="status-tag" id="db-status">🟡 Demo Mode</span>
-        <button onclick="syncICalFeeds(false)" title="Sync iCal feeds — check console for details" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:.74rem;cursor:pointer;color:var(--muted);margin-left:6px">🔄 Sync</button>
+        <span class="status-tag" id="db-status" style="display:none">🟡 Demo Mode</span>
+        <button onclick="syncICalFeeds(false)" title="Sync iCal feeds" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:.74rem;cursor:pointer;color:var(--muted)">🔄 Sync</button>
         <span class="status-tag" id="prop-tag" style="display:none"></span>
       </div>
     </div>
@@ -404,7 +404,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         </div>
 
         <!-- Mini calendars: Speranta + TV House + Urgent Tasks -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 320px;gap:18px;align-items:start" id="dash-lower-grid">
+        <div style="display:grid;grid-template-columns:1fr 1fr 320px;gap:18px;align-items:start;width:100%;box-sizing:border-box" id="dash-lower-grid">
           <div class="card" style="padding:14px">
             <div class="card-title" style="font-size:.84rem;margin-bottom:10px">📅 Speranța Calendar</div>
             <div id="dash-cal-speranta"></div>
@@ -580,17 +580,17 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         <div style="margin-bottom:14px">
           <!-- Row 1: Sub-tabs + New Task button -->
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
-            <div style="display:flex;gap:4px;background:var(--sand);border-radius:10px;padding:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1">
+            <div style="display:flex;gap:3px;background:var(--surface-3);border-radius:10px;padding:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1;border:1px solid var(--border)">
               <button id="subtab-guest-btn" onclick="setTaskSubTab('guest')"
-                style="padding:6px 12px;border-radius:8px;border:none;font-size:.78rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s;white-space:nowrap;flex-shrink:0">
+                style="padding:6px 12px;border-radius:7px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s;white-space:nowrap;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.12)">
                 🏠 Guests
               </button>
               <button id="subtab-project-btn" onclick="setTaskSubTab('project')"
-                style="padding:6px 12px;border-radius:8px;border:none;font-size:.78rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap;flex-shrink:0">
+                style="padding:6px 12px;border-radius:7px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap;flex-shrink:0">
                 📋 Projects
               </button>
               <button id="subtab-inspection-btn" onclick="setTaskSubTab('inspection')"
-                style="padding:6px 12px;border-radius:8px;border:none;font-size:.78rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap;flex-shrink:0">
+                style="padding:6px 12px;border-radius:7px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap;flex-shrink:0">
                 🔍 Inspection
               </button>
             </div>
@@ -1664,7 +1664,7 @@ async function loadData() {
     if (tRes.data && tRes.data.length > 0) tasks = tRes.data.map(nt);
     if (dRes.data && dRes.data.length > 0) domestics = dRes.data.map(nd);
     if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
-    document.getElementById('db-status').textContent = connected ? '🟢 DB Connected' : '🟢 DB Ready';
+    // db-status hidden on mobile — status logged to console only
     renderTab(currentTab);
   } catch(e) { console.warn('DB load:', e); }
 }
@@ -1865,7 +1865,7 @@ async function syncICalFeeds(silent = false) {
   if (!silent) toast('Syncing iCal feeds…', 'info');
 
   const statusEl = document.getElementById('db-status');
-  if (statusEl) statusEl.textContent = '🔄 Syncing…';
+  // syncing indicator hidden
 
   let totalNew = 0, totalUpdated = 0, errors = 0;
 
@@ -1985,7 +1985,7 @@ async function syncICalFeeds(silent = false) {
     });
   }
 
-  if (statusEl) statusEl.textContent = errors > 0 ? '🟡 Sync partial' : '🟢 DB Connected';
+  // sync status hidden — console only
   const total_feeds = ICAL_FEEDS.length;
   const succeeded = total_feeds - errors;
   const msg = `iCal: ${totalNew} new · ${totalUpdated} updated · ${succeeded}/${total_feeds} feeds OK${errors?' ('+errors+' failed — check console)':''}`;
@@ -2136,10 +2136,10 @@ function renderDashboard() {
     const propBookings = bookings.filter(b=>b.property_id===pid&&b.status!=='cancelled'&&!isCaretaker(b));
     const propCleans   = domestics.filter(d=>d.property_id===pid);
 
-    let grid = `<div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;text-align:center">${MONTHS_SHORT[month]} ${year}</div>`;
-    grid += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;font-size:.62rem;text-align:center">';
+    let grid = `<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;text-align:center">${MONTHS_SHORT[month]} ${year}</div>`;
+    grid += '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;font-size:.65rem;text-align:center;width:100%">';
     ['S','M','T','W','T','F','S'].forEach(d => {
-      grid += `<div style="color:var(--muted);font-weight:700;padding:2px 0">${d}</div>`;
+      grid += `<div style="color:var(--muted);font-weight:700;padding:3px 0">${d}</div>`;
     });
 
     // Empty cells before first day
@@ -2164,11 +2164,11 @@ function renderDashboard() {
       if (isCheckIn)  { bg=pid==='speranta'?'#FF385C':'#4ABBA5'; col='#fff'; fw='700'; }
       if (hasClean)   { dotColor='#06b6d4'; }
 
-      grid += `<div style="position:relative;padding:3px 1px;border-radius:4px;background:${bg};color:${col};font-weight:${fw};border:${border};cursor:pointer;line-height:1.4"
+      grid += `<div style="position:relative;padding:4px 0;border-radius:4px;background:${bg};color:${col};font-weight:${fw};border:${border};cursor:pointer;line-height:1.5;text-align:center;min-width:0;overflow:hidden"
         onclick="calYear=${year};calMonth=${month};switchTab('calendar');setTimeout(()=>showDay('${ds}'),200)"
         title="${ds}${hasBooked?' — booked':''}${hasClean?' · cleaning':''}">
         ${d}
-        ${dotColor?`<span style="position:absolute;bottom:1px;right:1px;width:3px;height:3px;border-radius:50%;background:${dotColor};display:block"></span>`:''}
+        ${dotColor?`<span style="position:absolute;bottom:1px;right:50%;transform:translateX(50%);width:3px;height:3px;border-radius:50%;background:${dotColor};display:block"></span>`:''}
       </div>`;
     }
     grid += '</div>';
@@ -3792,27 +3792,27 @@ function setTaskSubTab(tab) {
   const filtersEl = document.getElementById('task-filters');
   if (tab === 'project') {
     const personBtns = ['all','Nicole','Silja','Nina Williams'].map(person => {
-      const label = person === 'all' ? '👥 All' : person === 'Nina Williams' ? '👤 Nina' : '👤 '+person;
+      const label = person === 'all' ? 'All' : person === 'Nina Williams' ? 'Nina' : person;
       const active = taskAssigneeFilter === person;
       return `<button onclick="setTaskAssigneeFilter('${person}')" 
-        style="padding:4px 12px;border-radius:20px;border:1.5px solid ${active?'var(--ocean)':'var(--border)'};background:${active?'var(--ocean)':'var(--sand)'};color:${active?'#fff':'var(--ink)'};font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s">
+        style="padding:3px 9px;border-radius:12px;border:1.5px solid ${active?'var(--ocean)':'var(--border)'};background:${active?'var(--ocean)':'transparent'};color:${active?'#fff':'var(--muted)'};font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap">
         ${label}
       </button>`;
     }).join('');
     const prioBtns = ['all','high','medium','low'].map(p => {
       const active = taskPriorityFilter === p;
-      const label = p==='all'?'🎯 All':p==='high'?'🔴 High':p==='medium'?'🟡 Med':'🟢 Low';
+      const label = p==='all'?'All':p==='high'?'🔴':p==='medium'?'🟡':'🟢';
       const col = p==='high'?'#dc2626':p==='medium'?'#d97706':p==='low'?'#16a34a':'var(--muted)';
-      return `<button onclick="setTaskPriorityFilter('${p}')" 
-        style="padding:4px 12px;border-radius:20px;border:1.5px solid ${active?col:'var(--border)'};background:${active?col:'var(--sand)'};color:${active?'#fff':'var(--ink)'};font-size:.76rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s">
-        ${label}
+      return `<button onclick="setTaskPriorityFilter('${p}')" title="${p}"
+        style="padding:3px 9px;border-radius:12px;border:1.5px solid ${active?col:'var(--border)'};background:${active?col:'transparent'};color:${active?'#fff':'var(--muted)'};font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap">
+        ${label}${p!=='all'?(' '+p.charAt(0).toUpperCase()+p.slice(1)):''}
       </button>`;
     }).join('');
-    filtersEl.innerHTML = `<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
-      <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Person</span>
+    filtersEl.innerHTML = `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding:6px 10px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)">
+      <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:2px">Who</span>
       ${personBtns}
-      <span style="width:1px;height:20px;background:var(--border);display:inline-block;margin:0 4px"></span>
-      <span style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Priority</span>
+      <span style="width:1px;height:16px;background:var(--border-strong);display:inline-block;margin:0 4px;flex-shrink:0"></span>
+      <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:2px">Priority</span>
       ${prioBtns}
     </div>`;
   } else {
