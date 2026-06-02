@@ -2788,6 +2788,13 @@ function toggleCleaningOverlay(btn) {
   if (showCleaningOverlay) renderDomesticEarnings();
 }
 
+  function toggleCancelledOnCal(btn) {
+  showCancelledOnCal = !showCancelledOnCal;
+  btn.textContent = showCancelledOnCal ? '❌ Show All' : '❌ Cancelled';
+  btn.className = showCancelledOnCal ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost';
+  renderCalendar();
+}
+
 function toggleKPIPanel() {
   showKPIPanel = !showKPIPanel;
   const btn = document.getElementById('kpi-toggle-btn');
