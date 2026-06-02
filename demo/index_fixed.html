@@ -1669,8 +1669,7 @@ function parseICalSummaryFields(rawSummary) {
   const result = { externalRef: null, customerName: null, guestEmail: null, guestCount: null };
   if (!rawSummary) return result;
   // LekkeSlaap uses literal \n (backslash + n) as field delimiter
-  // Split on literal \n with optional leading space (LekkeSlaap format: 'field \nNext field')
-  const parts = rawSummary.split(/\s*\\n/).map(s => s.trim()).filter(Boolean);
+  const parts = rawSummary.split('\\n').map(s => s.trim()).filter(Boolean);
   parts.forEach(part => {
     const refMatch   = part.match(/^Reference:\s*(LS-[A-Z0-9]+)/i);
     const bareRef    = part.match(/^(LS-[A-Z0-9]+)$/i);
@@ -1886,9 +1885,7 @@ async function syncICalFeeds(silent = false) {
           // 3. A real parsed name is available (not just another reference)
           const dbNameIsPlaceholder = !ex.guest_name
             || ex.guest_name === 'Guest'
-            || /^LS-[A-Z0-9]+$/i.test((ex.guest_name || '').trim())
-            || (ex.guest_name || '').startsWith('Reference:')
-            || (ex.guest_name || '').includes('\\n');
+            || /^LS-[A-Z0-9]+$/i.test((ex.guest_name || '').trim());
           const newNameIsReal = evt.guest_name
             && evt.guest_name !== 'Guest'
             && !/^LS-[A-Z0-9]+$/i.test(evt.guest_name.trim());
@@ -2037,9 +2034,9 @@ function renderDashboard() {
   function renderArrivals(pid, elId) {
     const el = document.getElementById(elId);
     if (!el) return;
-    const cur = bookings.find(b=>b.property_id===pid&&b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b));
+    const cur = bookings.find(b=>b.property_id===pid&&b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
     const next3 = bookings
-      .filter(b=>b.property_id===pid&&b.check_in>today&&b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b))
+      .filter(b=>b.property_id===pid&&b.check_in>today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b))
       .sort((a,b)=>a.check_in.localeCompare(b.check_in))
       .slice(0,3);
 
@@ -3173,6 +3170,12 @@ function calNavDay(dir) {
 
 // ── Domestic calendar view ────────────────────────────────────
 function renderDomesticCalView() {
+  // If domestics not loaded yet and DB available, load them first
+  if (!domestics.length && db) {
+    db.from('domestics').select('*').order('date',{ascending:false}).then(({data}) => {
+      if (data && data.length) { domestics = data.map(nd); renderDomesticCalView(); }
+    });
+  }
   // Update month label
   const labelEl = document.getElementById('dom-month-label');
   if (labelEl) labelEl.textContent = MONTHS[domCalMonth] + ' ' + domCalYear;
@@ -3401,6 +3404,11 @@ function bookCleaningForGuest(pid, checkoutDate, bookingId) {
   document.getElementById('d-notes').value = '';
   // Store linked booking id for save
   document.getElementById('d-linked-booking').value = bookingId;
+  // Also pre-select in the visible dropdown
+  setTimeout(() => {
+    const sel = document.getElementById('d-booking-link');
+    if (sel) sel.value = String(bookingId);
+  }, 50);
   document.getElementById('domestic-modal-title').textContent = 'Schedule Cleaning';
   document.getElementById('d-linked-label').style.display = 'block';
   // Find booking name
@@ -3475,11 +3483,7 @@ function renderDomCal() {
   const fd = currentProp==='all' ? domestics : domestics.filter(d=>d.property_id===currentProp);
   buildCalGrid(domCalYear, domCalMonth, [], fd, 'dom-cal-grid', 'dom-cal-month-label', 'showDomDay');
 }
-function domCalNav(dir) {
-  if (dir===0){domCalYear=new Date().getFullYear();domCalMonth=new Date().getMonth();}
-  else{domCalMonth+=dir;if(domCalMonth>11){domCalMonth=0;domCalYear++;}else if(domCalMonth<0){domCalMonth=11;domCalYear--;}}
-  renderDomCal(); renderDomEarnings();
-}
+// domCalNav duplicate removed — using the version above that calls renderDomesticCalView
 function showDomDay(ds) {
   const dEvts = domestics.filter(d=>d.date===ds);
   document.getElementById('day-modal-title').textContent='🧹 '+fmtDate(ds);
@@ -3606,6 +3610,8 @@ async function saveDomestic() {
   closeModal('domestic-modal');
   renderCalendar();
   renderBookings();
+  renderDashboard();
+  if (calMode==='domestic') renderDomesticCalView();
   if (typeof renderDomestic==='function') renderDomestic();
   if (typeof renderDomEarnings==='function') renderDomEarnings();
 }
@@ -3616,7 +3622,7 @@ function populateBookingLinkDropdown(preselect) {
   const pid = document.getElementById('d-prop')?.value || '';
   // All bookings not cancelled, sorted by checkout descending (latest first)
   const candidates = bookings
-    .filter(b => b.status!=='cancelled' && (!pid || b.property_id===pid))
+    .filter(b => !['cancelled','blocked','owner'].includes(b.status) && (!pid || b.property_id===pid))
     .sort((a,b) => b.check_out.localeCompare(a.check_out))
     .slice(0, 40);
   // Which ones already have a cleaning?
@@ -4475,6 +4481,10 @@ function openModal(id){
       document.getElementById('d-booking-link').value = '';
       document.getElementById('d-linked-booking').value = '';
       document.getElementById('d-notes').value = '';
+      // Always initialise date to today to avoid mobile Safari defaulting to wrong year
+      if (!document.getElementById('d-date').value) {
+        document.getElementById('d-date').value = new Date().toISOString().slice(0,10);
+      }
     }
   }
 }
