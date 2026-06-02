@@ -1995,6 +1995,7 @@ function filteredDomestics() {
 // ── DASHBOARD ─────────────────────────────────────────────────
 function renderDashboard() {
   if (!currentUser) return; // Guard: don't run before login
+  // Re-filter from live bookings array (handles deleted bookings)
   const today = new Date().toISOString().slice(0,10);
   const now   = new Date();
   const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
@@ -2624,6 +2625,7 @@ async function deleteBooking(id) {
   bookings = bookings.filter(x=>String(x.id)!==String(id));
   toast('Booking deleted','info');
   renderBookings(); renderDashboard(); renderCalendar();
+  if (laneViewActive) renderLaneView();
 }
 
 function renderBookings() {
@@ -2823,13 +2825,18 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         // Right bleed: when continuing into next cell (not real end, not week end)
         const bleedL = (!isRealStart && !isWeekStart) ? 1 : 0; // px to extend left
         const bleedR = (!isRealEnd   && !isWeekEnd)   ? 1 : 0; // px to extend right
+        // On check-in day: start bar at ~60% (15:00 check-in visually)
+        // On checkout day: end bar at ~40% (10:00 checkout visually) — handled by isRealEnd
+        const startOffset = isRealStart ? '60%' : (-bleedL)+'px';
+        const startWidth  = isRealStart
+          ? 'calc(40% + '+bleedR+'px)'
+          : 'calc(100% + '+bleedL+'px + '+bleedR+'px)';
         bar.style.cssText = [
           'display:block',
           'position:relative',
           'z-index:2',
-          // Extend width by bleed amounts, pull left by bleedL
-          'width:calc(100% + '+bleedL+'px + '+bleedR+'px)',
-          'margin-left:-'+bleedL+'px',
+          'width:'+startWidth,
+          'margin-left:'+startOffset,
           'box-sizing:border-box',
           'background:'+color,
           'color:'+(isCancelled?'#6b7280':color==='#FFC300'?'#1a1a2e':'#fff'),
@@ -3315,6 +3322,7 @@ function showDay(ds) {
   bEvts.forEach(b=>{
     const col = PLAT_COLORS[isOwnerStay(b)?'owner':b.platform] || '#c17f3c';
     const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
+    const _bid = b.id;
     const coDate = b.check_out_date || b.check_out?.slice(0,10);
 
     // Find cleaning linked to this booking (within 2 days of checkout)
@@ -3355,6 +3363,10 @@ function showDay(ds) {
         📍 ${propName(b.property_id)} · 📅 ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)} · ${nights} night${nights!==1?'s':''}
       </div>
       ${b.revenue?`<div style="font-size:.84rem;font-weight:700;color:var(--green);margin-top:4px">R${Number(b.revenue).toLocaleString()}</div>`:''}
+      <div style="margin-top:8px;display:flex;gap:6px">
+        <button onclick="openBookingDetail('${b.id}')" style="background:var(--sand);border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:.75rem;cursor:pointer">View detail →</button>
+        <button onclick="deleteBooking('${b.id}');closeModal('day-modal')" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:7px;padding:4px 10px;font-size:.75rem;cursor:pointer">🗑 Delete</button>
+      </div>
     </div>`;
   });
 
