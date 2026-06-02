@@ -4024,7 +4024,20 @@ async function saveTask() {
   const pid=document.getElementById('t-prop').value;
   const PROP_UUIDS2={'speranta':'e9737638-d83a-4947-940a-8746789e4d9f','tvhouse':'83b2a84a-5451-4be5-a84f-2efc0d2602d5'};
   const propUuidModal = pid !== 'all' ? (PROP_UUIDS2[pid] || null) : null;
-  const row={title,description:document.getElementById('t-notes').value,priority:document.getElementById('t-priority').value,status:'pending',type:window._taskSubTab==='project'?'project':'task',kanban_status:window._kanbanCol||'todo',due_at:document.getElementById('t-due').value||null,task_date:document.getElementById('t-due').value||null,property_id:propUuidModal,org_id:'5966bc67-5c2f-45ae-8519-9b7eaeee09f4'}; window._kanbanCol=null;
+  const _pri = document.getElementById('t-priority').value;
+  const _typ = window._taskSubTab==='project' ? 'project' : 'task';
+  const row={
+    title,
+    description: document.getElementById('t-notes').value,
+    priority:    toDbPriority(_pri),
+    status:      'pending',
+    kanban_status: window._kanbanCol || 'todo',
+    type:        toDbType(_typ),
+    due_at:      document.getElementById('t-due').value || null,
+    task_date:   document.getElementById('t-due').value || null,
+    property_id: propUuidModal,
+    org_id:      '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+  }; window._kanbanCol=null;
   const localRow=nt({...row,property_id:pid,assigned:document.getElementById('t-assign').value});
   if(db){const{data,error}=await db.from('tasks').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}tasks.unshift(nt({...data,property_id:pid,assigned:document.getElementById('t-assign').value}));}
   else{tasks.unshift({...localRow,id:'t'+Date.now()});}
@@ -4886,16 +4899,17 @@ function addDrawerComment() {
 }
 
 // Map app kanban statuses to DB-allowed values
+// DB constraint: pending | in_progress | completed | cancelled
 function toDbStatus(appStatus) {
   const map = {
-    'todo':       'pending',
-    'open':       'pending',
-    'inprogress': 'in_progress',
-    'in_progress':'in_progress',
-    'feedback':   'in_progress',
-    'done':       'completed',
-    'completed':  'completed',
-    'cancelled':  'cancelled',
+    'todo':        'pending',
+    'open':        'pending',
+    'inprogress':  'in_progress',
+    'in_progress': 'in_progress',
+    'feedback':    'in_progress',
+    'done':        'completed',
+    'completed':   'completed',
+    'cancelled':   'cancelled',
   };
   return map[appStatus] || 'pending';
 }
@@ -4908,6 +4922,32 @@ function fromDbStatus(dbStatus) {
     'cancelled':   'cancelled',
   };
   return map[dbStatus] || 'todo';
+}
+// Map app priority to DB-allowed values
+// DB constraint: low | normal | high | urgent
+function toDbPriority(appPriority) {
+  const map = {
+    'low':    'low',
+    'medium': 'normal',
+    'normal': 'normal',
+    'high':   'high',
+    'urgent': 'urgent',
+  };
+  return map[appPriority] || 'normal';
+}
+// Map DB type to allowed values
+// DB constraint: cleaning | maintenance | admin | other
+function toDbType(appType) {
+  const map = {
+    'project':  'other',
+    'task':     'other',
+    'guest':    'admin',
+    'cleaning': 'cleaning',
+    'maintenance': 'maintenance',
+    'admin':    'admin',
+    'other':    'other',
+  };
+  return map[appType] || 'other';
 }
 
 async function saveTaskDrawer() {
@@ -4939,10 +4979,10 @@ async function saveTaskDrawer() {
     const row = {
       title:         newTitle,
       description:   newNotes,
-      priority:      newPriority,
+      priority:      toDbPriority(newPriority),
       status:        toDbStatus(newStatus),
       kanban_status: newStatus,
-      type:          'project',
+      type:          toDbType('project'),
       org_id:        '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
       property_id:   propUuid,
       due_at:        newDue || null,
