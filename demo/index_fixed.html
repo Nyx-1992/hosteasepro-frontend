@@ -459,6 +459,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
                   style="padding:4px 12px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted)">Day</button>
               </div>
               <button id="cleaning-toggle-btn" class="btn btn-sm btn-ghost" onclick="toggleCleaningOverlay(this)">🧹 Cleaning</button>
+              <button class="btn btn-sm btn-ghost" onclick="toggleCancelledOnCal(this)">❌ Cancelled</button>
               <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
               <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ CSV</button>
             </div>
