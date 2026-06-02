@@ -1664,9 +1664,12 @@ const ICAL_FEEDS = [
     url: 'https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=QzZ2aFlFVHhxYnoxdGRVL3ZwelRGUT09' },
 ];
 
-// CORS proxies
+// CORS proxies to try in order
 const CORS_PROXIES = [
-  url => `/api/ical?url=${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://thingproxy.freeboard.io/fetch/${url}`,
+  url => `https://cors-anywhere.herokuapp.com/${url}`,
 ];
 
 function parseICalDate(str) {
@@ -4883,21 +4886,46 @@ async function saveTaskDrawer() {
   if (!_drawerTaskId) return;
   const t = tasks.find(x => String(x.id) === String(_drawerTaskId));
   if (!t) return;
-  const newTitle=document.getElementById('drawer-title').value.trim();
-  const newPriority=document.getElementById('drawer-priority').value;
-  const newStatus=document.getElementById('drawer-status').value;
-  const newProp=document.getElementById('drawer-prop').value;
-  const newDue=document.getElementById('drawer-due').value;
-  const newNotes=document.getElementById('drawer-notes').value;
-  const newAssigned=_drawerAssignees.join(',');
+  const newTitle    = document.getElementById('drawer-title').value.trim();
+  const newPriority = document.getElementById('drawer-priority').value;
+  const newStatus   = document.getElementById('drawer-status').value;
+  const newProp     = document.getElementById('drawer-prop').value;
+  const newDue      = document.getElementById('drawer-due').value;
+  const newNotes    = document.getElementById('drawer-notes').value;
+  const newAssigned = _drawerAssignees.join(',');
   if (!newTitle) { toast('Title is required','error'); return; }
-  Object.assign(t,{title:newTitle,priority:newPriority,kanban_status:newStatus,property_id:newProp,due:newDue,due_at:newDue,task_date:newDue,notes:newNotes,description:newNotes,assigned:newAssigned});
+
+  // Update local task object
+  Object.assign(t, {title:newTitle, priority:newPriority, kanban_status:newStatus,
+    property_id:newProp, due:newDue, due_at:newDue, task_date:newDue,
+    notes:newNotes, description:newNotes, assigned:newAssigned});
   document.getElementById('drawer-title-display').textContent = newTitle;
+
   if (db) {
-    const {error} = await db.from('tasks').update({title:newTitle,priority:newPriority,kanban_status:newStatus,property_id:newProp!=='all'?newProp:null,due_at:newDue||null,task_date:newDue||null,description:newNotes,assigned:newAssigned}).eq('id',_drawerTaskId);
-    if (error) { toast('Save error: '+error.message,'error'); return; }
+    const row = {title:newTitle, priority:newPriority, kanban_status:newStatus,
+      property_id:newProp!=='all'?newProp:null,
+      due_at:newDue||null, task_date:newDue||null,
+      description:newNotes, assigned:newAssigned, status:'open',
+      type:'project'};
+
+    // Check if this is a sample task (string id like 't4') — needs INSERT not UPDATE
+    const isSampleId = typeof _drawerTaskId === 'string' && /^t\d+$/.test(_drawerTaskId);
+    if (isSampleId) {
+      // Insert as new real DB record
+      const {data, error} = await db.from('tasks').insert([row]).select().single();
+      if (error) { toast('Save error: '+error.message,'error'); return; }
+      // Update local task with real DB id
+      t.id = data.id;
+      _drawerTaskId = data.id;
+      toast('Task saved to database ✓','success');
+    } else {
+      const {error} = await db.from('tasks').update(row).eq('id', _drawerTaskId);
+      if (error) { toast('Save error: '+error.message,'error'); return; }
+      toast('Task saved ✓','success');
+    }
+  } else {
+    toast('Task saved (local only)','info');
   }
-  toast('Task saved','success');
   renderTasks();
 }
 async function deleteTaskFromDrawer() {
