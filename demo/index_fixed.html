@@ -1669,7 +1669,8 @@ function parseICalSummaryFields(rawSummary) {
   const result = { externalRef: null, customerName: null, guestEmail: null, guestCount: null };
   if (!rawSummary) return result;
   // LekkeSlaap uses literal \n (backslash + n) as field delimiter
-  const parts = rawSummary.split('\\n').map(s => s.trim()).filter(Boolean);
+  // Split on literal \n with optional leading space (LekkeSlaap format: 'field \nNext field')
+  const parts = rawSummary.split(/\s*\\n/).map(s => s.trim()).filter(Boolean);
   parts.forEach(part => {
     const refMatch   = part.match(/^Reference:\s*(LS-[A-Z0-9]+)/i);
     const bareRef    = part.match(/^(LS-[A-Z0-9]+)$/i);
@@ -1885,7 +1886,9 @@ async function syncICalFeeds(silent = false) {
           // 3. A real parsed name is available (not just another reference)
           const dbNameIsPlaceholder = !ex.guest_name
             || ex.guest_name === 'Guest'
-            || /^LS-[A-Z0-9]+$/i.test((ex.guest_name || '').trim());
+            || /^LS-[A-Z0-9]+$/i.test((ex.guest_name || '').trim())
+            || (ex.guest_name || '').startsWith('Reference:')
+            || (ex.guest_name || '').includes('\\n');
           const newNameIsReal = evt.guest_name
             && evt.guest_name !== 'Guest'
             && !/^LS-[A-Z0-9]+$/i.test(evt.guest_name.trim());
