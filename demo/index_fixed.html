@@ -1274,6 +1274,7 @@ function nt(t) {
     priority:     appPrio,
     status:       appStatus,
     kanban_status: appKanban,
+    _comments:    Array.isArray(t.comments) ? t.comments : [],
   };
 }
 function nd(d) { return {...d, checklist:d.checklist||{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}}; }
@@ -4961,6 +4962,10 @@ function openTaskDrawer(taskId) {
   document.getElementById('drawer-due').value      = t.due || t.due_at || t.task_date || '';
   document.getElementById('drawer-notes').value    = t.notes || t.description || '';
   document.getElementById('drawer-title-display').textContent = t.title || 'Task';
+  // Load comments from DB column (array of {author, text, time})
+  if (!t._comments && t.comments) {
+    t._comments = Array.isArray(t.comments) ? t.comments : [];
+  }
   renderDrawerAssignees();
   renderDrawerComments(t);
   document.getElementById('task-drawer').style.display = 'flex';
@@ -5004,7 +5009,7 @@ function renderDrawerComments(t) {
       </div>
     </div>`).join('');
 }
-function addDrawerComment() {
+async function addDrawerComment() {
   const input = document.getElementById('drawer-comment-input');
   const text = input?.value.trim();
   if (!text || !_drawerTaskId) return;
@@ -5012,9 +5017,21 @@ function addDrawerComment() {
   if (!t) return;
   if (!t._comments) t._comments = [];
   const now = new Date();
-  t._comments.push({author:currentUser?.name||'Nicole',text,time:now.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})+' '+now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'})});
+  const comment = {
+    author: currentUser?.name || 'Nicole',
+    text,
+    time: now.toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) + ' ' +
+          now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}),
+  };
+  t._comments.push(comment);
+  t.comments = t._comments; // keep in sync
   input.value = '';
   renderDrawerComments(t);
+  // Persist to DB
+  const isSample = typeof _drawerTaskId === 'string' && /^t\d+$/.test(_drawerTaskId);
+  if (db && !isSample) {
+    await db.from('tasks').update({comments: t._comments}).eq('id', _drawerTaskId);
+  }
 }
 
 // Map app kanban statuses to DB-allowed values
@@ -5107,6 +5124,7 @@ async function saveTaskDrawer() {
       due_at:        newDue || null,
       task_date:     newDue || null,
       assigned:      newAssigned,
+      comments:      t._comments || [],
     };
 
     // Check if this is a sample task (string id like 't4') — needs INSERT not UPDATE
