@@ -4712,6 +4712,32 @@ async function renderCleanerEarningsReport() {
 // ── MODAL / TOAST ─────────────────────────────────────────────
 function openModal(id){
   document.getElementById(id).classList.add('open');
+
+  // ── Reset booking modal every time it opens fresh ────────────────────────
+  if (id==='booking-modal' && !window._editBookingId) {
+    document.getElementById('b-guest').value    = '';
+    document.getElementById('b-checkin').value  = '';
+    document.getElementById('b-checkout').value = '';
+    document.getElementById('b-revenue').value  = '';
+    document.getElementById('b-guests').value   = '1';
+    document.getElementById('b-notes').value    = '';
+    document.getElementById('b-status').value   = 'confirmed';
+    document.getElementById('b-platform').value = 'manual';
+    document.getElementById('b-prop').value     = 'speranta';
+  }
+
+  // ── Reset task modal every time it opens fresh ────────────────────────────
+  if (id==='task-modal' && !window._editTaskId) {
+    document.getElementById('t-title').value    = '';
+    document.getElementById('t-notes').value    = '';
+    document.getElementById('t-due').value      = '';
+    document.getElementById('t-priority').value = 'medium';
+    // Reset assignees
+    _modalAssignees = [];
+    renderModalAssignees();
+  }
+
+  // ── Domestic modal reset ──────────────────────────────────────────────────
   if (id==='domestic-modal') {
     populateBookingLinkDropdown(document.getElementById('d-linked-booking').value);
     if (!window._editCleanId) {
@@ -4720,7 +4746,6 @@ function openModal(id){
       document.getElementById('d-booking-link').value = '';
       document.getElementById('d-linked-booking').value = '';
       document.getElementById('d-notes').value = '';
-      // Always initialise date to today to avoid mobile Safari defaulting to wrong year
       if (!document.getElementById('d-date').value) {
         document.getElementById('d-date').value = new Date().toISOString().slice(0,10);
       }
