@@ -1987,6 +1987,7 @@ async function syncICalFeeds(silent = false) {
           // ── INSERT: new booking — NEVER delete old rows ───────────────────
           const { error } = await db.from('bookings').insert([{
             ...evt,
+            org_id: '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
             guest_first_name: evt.guest_name.split(' ')[0],
             guest_last_name:  evt.guest_name.split(' ').slice(1).join(' '),
             number_of_guests: 1,
@@ -2789,12 +2790,19 @@ async function saveBooking() {
   if (!guest||!cin||!cout) { toast('Please fill required fields','error'); return; }
   const nights = Math.round((new Date(cout)-new Date(cin))/86400000);
   const pid = document.getElementById('b-prop').value;
+  const PROP_UUIDS = {
+    'speranta': 'e9737638-d83a-4947-940a-8746789e4d9f',
+    'tvhouse':  '83b2a84a-5451-4be5-a84f-2efc0d2602d5',
+  };
+  const propUuid = PROP_UUIDS[pid] || pid;
   const row = {
+    org_id:       '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+    property_id:  propUuid,
     guest_name:guest, guest_first_name:guest.split(' ')[0], guest_last_name:guest.split(' ').slice(1).join(' '),
     platform:document.getElementById('b-platform').value,
     property_name:PROPS[pid]?.name||pid,
     check_in_date:cin, check_out_date:cout,
-    check_in:cin+' 12:00:00+02', check_out:cout+' 10:00:00+02',
+    check_in:cin+' 15:00:00+02', check_out:cout+' 10:00:00+02',
     nights, number_of_guests:Number(document.getElementById('b-guests').value)||1,
     status:document.getElementById('b-status').value, payment_status:'pending',
     total_amount:Number(document.getElementById('b-revenue').value)||0,
@@ -4401,7 +4409,7 @@ async function saveKB() {
   const title=document.getElementById('kb-title').value.trim(); const content=document.getElementById('kb-content-input').value.trim();
   if(!title||!content){toast('Title and content required','error');return;}
   const tags=document.getElementById('kb-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  const row={category:document.getElementById('kb-cat').value,title,content,tags};
+  const row={category:document.getElementById('kb-cat').value,title,content,tags,org_id:'5966bc67-5c2f-45ae-8519-9b7eaeee09f4'};
   if(db){const{data,error}=await db.from('kb_articles').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}kbArticles.unshift(data);}
   else{kbArticles.unshift({...row,id:'k'+Date.now()});}
   toast('Article published ✓','success');closeModal('kb-modal');renderKB();
