@@ -4126,7 +4126,7 @@ function renderKanban() {
   if (!boardEl) return;
   // Filter by assignee if set
   const projectTasks = tasks.filter(t => {
-    const isProject = t.type==='project' ||
+    const isProject = t.type==='project' || t.type==='other' || t.type==='admin' ||
       ['garden','project','website','photo','maintenance','repair','plumb','electric','paint'].some(kw =>
         t.title?.toLowerCase().includes(kw));
     if (!isProject) return false;
@@ -4254,10 +4254,20 @@ async function saveTask() {
     property_id: propUuidModal,
     org_id:      '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
   }; window._kanbanCol=null;
-  const localRow=nt({...row,property_id:pid,assigned:document.getElementById('t-assign').value});
-  if(db){const{data,error}=await db.from('tasks').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}tasks.unshift(nt({...data,property_id:pid,assigned:document.getElementById('t-assign').value}));}
-  else{tasks.unshift({...localRow,id:'t'+Date.now()});}
-  toast('Task created ✓','success');closeModal('task-modal');renderTasks();
+  const assigned = document.getElementById('t-assign').value;
+  if(db){
+    const{data,error}=await db.from('tasks').insert([row]).select().single();
+    if(error){toast('Save error: '+error.message,'error');return;}
+    // Use DB-returned record, map back to app values
+    tasks.unshift(nt({...data, property_id:pid, assigned}));
+  } else {
+    tasks.unshift(nt({...row, id:'t'+Date.now(), property_id:pid, assigned}));
+  }
+  toast('Task created ✓','success');
+  closeModal('task-modal');
+  // Switch to project tab so user can see the new task on the board
+  if(window._taskSubTab !== 'project') setTaskSubTab('project');
+  renderTasks();
 }
 
 // ── MESSAGES ─────────────────────────────────────────────────
