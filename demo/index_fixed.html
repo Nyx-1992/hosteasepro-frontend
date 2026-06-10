@@ -891,6 +891,76 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         </div>
       </div>
 
+      <!-- ══ SETTINGS ══════════════════════════════════════════════════════ -->
+      <div class="tab-pane" id="tab-settings">
+        <div style="margin-bottom:24px">
+          <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;font-weight:700">Settings &amp; Links</div>
+        </div>
+
+        <!-- iCal Feed URLs -->
+        <div class="card" style="margin-bottom:18px">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">📡 Outbound iCal Feeds</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px">Paste these into Airbnb, Booking.com and LekkeSlaap to automatically block dates when you add bookings in HEP.</div>
+          <div style="margin-bottom:14px">
+            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">🏠 Speranta Flat</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <code id="url-speranta" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.78rem;color:var(--ink);word-break:break-all">https://hosteasepro-frontend.vercel.app/api/calendar/speranta.ics</code>
+              <button onclick="copyUrl('url-speranta',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--sand);font-size:.78rem;cursor:pointer;font-family:inherit;white-space:nowrap">📋 Copy</button>
+              <a href="https://hosteasepro-frontend.vercel.app/api/calendar/speranta.ics" target="_blank" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--ocean);color:var(--ocean);font-size:.78rem;text-decoration:none;white-space:nowrap">↗ Test</a>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">🏡 TV House</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <code id="url-tvhouse" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.78rem;color:var(--ink);word-break:break-all">https://hosteasepro-frontend.vercel.app/api/calendar/tvhouse.ics</code>
+              <button onclick="copyUrl('url-tvhouse',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--sand);font-size:.78rem;cursor:pointer;font-family:inherit;white-space:nowrap">📋 Copy</button>
+              <a href="https://hosteasepro-frontend.vercel.app/api/calendar/tvhouse.ics" target="_blank" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--ocean);color:var(--ocean);font-size:.78rem;text-decoration:none;white-space:nowrap">↗ Test</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Platform setup guide -->
+        <div class="card" style="margin-bottom:18px">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:12px">📋 How to connect each platform</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="background:var(--surface-2);border-radius:10px;padding:14px">
+              <div style="font-weight:700;font-size:.88rem;margin-bottom:3px">Airbnb <span style="font-size:.72rem;color:var(--muted);font-weight:400">— syncs every ~3 hours, manual refresh available</span></div>
+              <div style="font-size:.78rem;color:var(--muted);line-height:1.7">Calendar → Availability → Import Calendar → paste URL → Save<br>Force update: Calendar → imported calendar → Refresh</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:14px">
+              <div style="font-weight:700;font-size:.88rem;margin-bottom:3px">Booking.com <span style="font-size:.72rem;color:var(--muted);font-weight:400">— syncs every ~2 hours</span></div>
+              <div style="font-size:.78rem;color:var(--muted);line-height:1.7">Extranet → Property → Calendar → iCal Sync → Import External Calendar → paste URL</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:14px">
+              <div style="font-weight:700;font-size:.88rem;margin-bottom:3px">LekkeSlaap <span style="font-size:.72rem;color:var(--muted);font-weight:400">— syncs every ~3–6 hours</span></div>
+              <div style="font-size:.78rem;color:var(--muted);line-height:1.7">Supplier Portal → Calendar → Sync/Import → paste URL</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Staff portal -->
+        <div class="card" style="margin-bottom:18px">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🧹 Domestic Staff Portal</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Share with Blessing, Fatima, Patricia and Spiwe. They use it to log cleans, submit inventory and mark availability.</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <code id="url-domestic" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.78rem;color:var(--ink);word-break:break-all">https://hosteasepro-frontend.vercel.app/domestic</code>
+            <button onclick="copyUrl('url-domestic',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--sand);font-size:.78rem;cursor:pointer;font-family:inherit;white-space:nowrap">📋 Copy</button>
+            <a href="https://hosteasepro-frontend.vercel.app/domestic" target="_blank" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--ocean);color:var(--ocean);font-size:.78rem;text-decoration:none;white-space:nowrap">↗ Open</a>
+          </div>
+        </div>
+
+        <!-- Business info -->
+        <div class="card">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:12px">🏦 Business Info</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.82rem">
+            <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Business Name</div>SN Apt Management</div>
+            <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Registration</div>2024/643198/07</div>
+            <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Tax Number</div>9008226327</div>
+            <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Bank</div>Nedbank · 198765</div>
+          </div>
+        </div>
+      </div><!-- end tab-settings -->
+
     </div>
   </div>
 </div>
@@ -908,6 +978,8 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         <div class="form-field"><label>Check-out *</label><input type="date" id="b-checkout"/></div>
         <div class="form-field"><label>Revenue (ZAR)</label><input type="number" id="b-revenue" placeholder="0"/></div>
         <div class="form-field"><label>Guests</label><input type="number" id="b-guests" value="1" min="1"/></div>
+        <div class="form-field"><label>Guest Email</label><input type="email" id="b-email" placeholder="Optional"/></div>
+        <div class="form-field"><label>Guest Phone</label><input type="tel" id="b-phone" placeholder="Optional"/></div>
         <div class="form-field"><label>Status</label><select id="b-status"><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="cancelled">Cancelled</option></select></div>
         <div class="form-field span-full"><label>Notes</label><input id="b-notes" placeholder="Optional notes"/></div>
       </div>
@@ -1331,6 +1403,7 @@ const NAV = [
   {id:'knowledge',label:'Knowledge Base',icon:'📚',roles:['admin','host']},
   {id:'team',     label:'Team',         icon:'👥',roles:['admin']},
   {id:'reports',  label:'Reports',      icon:'📊',roles:['admin']},
+  {id:'settings',  label:'Settings',     icon:'⚙️', roles:['admin']},
 ];
 function buildNav() {
   document.getElementById('sidebar-nav').innerHTML = NAV.filter(n=>n.roles.includes(currentUser.role)).map(n=>
@@ -2406,7 +2479,7 @@ function renderLaneView() {
   });
 
   laneEl.innerHTML = Object.entries(PROPS).map(([pid, prop]) => {
-    const allProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false && b.status!=='blocked');
+    const allProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false && !isOwnerStay(b));
     const current = allProp.find(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b));
     const pending = allProp.filter(b=>b.status==='pending');
     const shown   = filterForLane(allProp).sort((a,b)=>a.check_in.localeCompare(b.check_in));
@@ -2581,7 +2654,7 @@ function openBookingDetail(bookingId) {
   );
   const today = new Date().toISOString().slice(0,10);
   const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
-  const col = PLAT_COLORS[isOwnerStay(b)?'owner':b.platform]||'#c17f3c';
+  const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#c17f3c'));
 
   document.getElementById('day-modal-title').textContent = b.display_name||'Booking';
   document.getElementById('day-modal-body').innerHTML = `
@@ -2602,11 +2675,13 @@ function openBookingDetail(bookingId) {
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.8rem;color:var(--muted)">
         <div><strong style="color:var(--ink)">📍</strong> ${propName(b.property_id)}</div>
-        <div><strong style="color:var(--ink)">👥</strong> ${b.number_of_guests||1} guests</div>
+        <div><strong style="color:var(--ink)">👥</strong> ${b.number_of_guests||1} guest${(b.number_of_guests||1)!==1?'s':''}</div>
         <div><strong style="color:var(--ink)">🛬</strong> ${fmtDate(b.check_in)}</div>
         <div><strong style="color:var(--ink)">🛫</strong> ${fmtDate(b.check_out)}</div>
         <div><strong style="color:var(--ink)">🌙</strong> ${nights} nights</div>
         ${b.revenue?`<div><strong style="color:var(--green)">💰</strong> R${Number(b.revenue).toLocaleString()}</div>`:''}
+        ${b.guest_email?`<div style="grid-column:1/-1"><strong style="color:var(--ink)">✉</strong> <a href="mailto:${b.guest_email}" style="color:var(--ocean);text-decoration:none">${b.guest_email}</a></div>`:''}
+        ${b.guest_phone?`<div style="grid-column:1/-1"><strong style="color:var(--ink)">📱</strong> <a href="tel:${b.guest_phone}" style="color:var(--ocean);text-decoration:none">${b.guest_phone}</a></div>`:''}
       </div>
       ${b.notes?`<div style="font-size:.76rem;color:var(--muted);margin-top:8px;font-style:italic;border-top:1px solid var(--border);padding-top:8px">${b.notes.replace(/\|/g,'<br>')}</div>`:''}
     </div>
@@ -2808,6 +2883,8 @@ async function saveBooking() {
     total_amount:Number(document.getElementById('b-revenue').value)||0,
     revenue:Number(document.getElementById('b-revenue').value)||0,
     currency:'ZAR', notes:document.getElementById('b-notes').value, is_active:true,
+    guest_email: document.getElementById('b-email')?.value?.trim() || null,
+    guest_phone: document.getElementById('b-phone')?.value?.trim() || null,
   };
   if (db) {
     const {data,error} = await db.from('bookings').insert([row]).select().single();
@@ -3232,7 +3309,7 @@ function renderWeekView() {
                  ${isToday?'border-color:var(--ocean);':''}"
           onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${isToday?'var(--ocean-light)':'var(--surface)'}'">
           ${dayBookings.map(b => {
-            const col = PLAT_COLORS[isOwnerStay(b)?'owner':b.platform]||'var(--accent)';
+            const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'var(--accent))'));
             return `<div style="background:${col};color:#fff;font-size:.6rem;font-weight:600;padding:2px 4px;border-radius:4px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
               ${b.display_name||b.guest_name||b.platform}
             </div>`;
@@ -3282,7 +3359,7 @@ function renderDayView() {
     </div>
     ${!dayBookings.length && !dayCleans.length ? '<div style="color:var(--muted);text-align:center;padding:40px">Nothing scheduled for this day</div>' : ''}
     ${dayBookings.map(b => {
-      const col = PLAT_COLORS[isOwnerStay(b)?'owner':b.platform]||'var(--accent)';
+      const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'var(--accent)'));
       return `<div style="background:${col}18;border-left:4px solid ${col};border-radius:10px;padding:12px 14px;margin-bottom:10px;cursor:pointer" onclick="openBookingDetail('${b.id}')">
         <div style="font-weight:700;color:var(--ink)">${b.display_name||b.guest_name}</div>
         <div style="font-size:.78rem;color:var(--muted);margin-top:3px">${propName(b.property_id)} · Check-in: ${fmtDate(b.check_in)} · Check-out: ${fmtDate(b.check_out)} · ${b.nights||0}n</div>
@@ -3484,7 +3561,7 @@ function showDay(ds) {
 
   // Bookings — with cleaning status chip in corner
   bEvts.forEach(b=>{
-    const col = PLAT_COLORS[isOwnerStay(b)?'owner':b.platform] || '#c17f3c';
+    const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#c17f3c'));
     const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
     const _bid = b.id;
     const coDate = b.check_out_date || b.check_out?.slice(0,10);
@@ -4137,6 +4214,17 @@ function toggleNinaTask(bookingId, taskKey) {
   if (document.getElementById('booking-lane-view')?.style.display !== 'none') renderLaneView();
 }
 function setTaskFilter(f) { taskFilter=f; renderTasks(); }
+function copyUrl(elId, btn) {
+  const text = document.getElementById(elId)?.textContent?.trim();
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    btn.style.background = 'var(--green)';
+    btn.style.color = '#fff';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 2000);
+  }).catch(() => toast('Copy failed — select the text manually','error'));
+}
 function setTaskAssigneeFilter(person) { taskAssigneeFilter=person; setTaskSubTab('project'); }
 function setTaskPriorityFilter(p) { taskPriorityFilter=p; setTaskSubTab('project'); }
 window._taskSubTab = 'guest';
@@ -4724,6 +4812,8 @@ function openModal(id){
     document.getElementById('b-status').value   = 'confirmed';
     document.getElementById('b-platform').value = 'manual';
     document.getElementById('b-prop').value     = 'speranta';
+    if (document.getElementById('b-email')) document.getElementById('b-email').value = '';
+    if (document.getElementById('b-phone')) document.getElementById('b-phone').value = '';
   }
 
   // ── Reset task modal every time it opens fresh ────────────────────────────
