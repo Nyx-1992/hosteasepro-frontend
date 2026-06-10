@@ -65,6 +65,18 @@ async function generateFeed(propertyId, propertyName, feedId) {
       lines.push('END:VEVENT');
     }
 
+    // Some platforms reject empty feeds — add a placeholder if no events
+    if (bookings.filter(b => b.check_in_date).length === 0) {
+      const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+      lines.push('BEGIN:VEVENT');
+      lines.push('UID:hep-speranta-placeholder@snapartments.co.za');
+      lines.push('DTSTAMP:' + formatICalDate(new Date()));
+      lines.push('DTSTART;VALUE=DATE:' + today);
+      lines.push('DTEND;VALUE=DATE:' + today);
+      lines.push('SUMMARY:Calendar Active');
+      lines.push('STATUS:CANCELLED');
+      lines.push('END:VEVENT');
+    }
     lines.push('END:VCALENDAR');
     const icsContent = lines.join('\r\n');
 
