@@ -304,6 +304,21 @@ async function run() {
           totalUpdated++;
 
         } else {
+          // ── For blocked entries: skip if any overlapping block exists ─────
+          if (evt.status === 'blocked') {
+            var overlapRes = await supabaseRequest('GET',
+              'bookings?property_id=eq.' + evt.property_id +
+              '&platform=eq.' + evt.platform +
+              '&status=eq.blocked' +
+              '&is_active=eq.true' +
+              '&check_in_date=lte.' + evt.check_out_date +
+              '&check_out_date=gte.' + evt.check_in_date +
+              '&select=id&limit=1', null);
+            if (overlapRes.data && overlapRes.data.length > 0) {
+              totalUpdated++; // count as handled, not new
+              continue;
+            }
+          }
           // ── INSERT ────────────────────────────────────────────────────────
           var result = await supabaseRequest('POST', 'bookings', evt);
           if (result.status >= 200 && result.status < 300) {
