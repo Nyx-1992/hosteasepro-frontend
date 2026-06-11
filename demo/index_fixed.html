@@ -2986,11 +2986,17 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const isOwner     = isOwnerStay(b);
         const isBlocked   = b.status==='blocked';
         const isCancelled = b.status==='cancelled';
-        const color = isOwner     ? PLAT_COLORS['owner'] :
-                      isBlocked   ? PLAT_COLORS['blocked'] :
-                      isCancelled ? '#9ca3af' :
+        // If blocked but has a real guest name and known platform = likely misclassified, use platform colour
+        const hasRealName = b.guest_name && b.guest_name !== 'Blocked' && b.guest_name !== 'Not Available';
+        const effectivelyBlocked = isBlocked && !hasRealName;
+        const color = isOwner          ? PLAT_COLORS['owner'] :
+                      effectivelyBlocked ? PLAT_COLORS['blocked'] :
+                      isCancelled      ? '#9ca3af' :
                       PLAT_COLORS[b.platform]||'#c17f3c';
         const propTag = showProp ? '['+(b.property_id==='speranta'?'SP':'TV')+'] ' : '';
+        // Short name for mobile — first name only, max 10 chars
+        const fullName = b.display_name || b.guest_name || b.platform || 'Guest';
+        const shortName = fullName.split(' ')[0].slice(0,10);
         const bCheckIn  = String(b.check_in  || b.check_in_date  || '').slice(0,10);
         const bCheckOut = String(b.check_out || b.check_out_date || '').slice(0,10);
         const isRealStart = bCheckIn===ds;
@@ -3004,7 +3010,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const rr = isRealEnd   ? '4px':'0';
         const showLabel = isRealStart||isWeekStart;
         const icon = isRealStart ? '🛬 ' : isWeekStart ? '↳ ' : '';
-        const label = showLabel ? propTag+icon+(b.display_name||b.guest_name||b.platform) : ' ';
+        const label = showLabel ? propTag+icon+shortName : ' ';
         const bar = document.createElement('div');
         // Explicit inline styles for Safari compatibility — no CSS class width inheritance
         // Last visible cell = real checkout eve OR Saturday
