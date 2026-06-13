@@ -1770,6 +1770,20 @@ async function loadData() {
     if (dRes.data && dRes.data.length > 0) domestics = dRes.data.map(nd);
     if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
     if (invRes && invRes.data) inventoryReports = invRes.data;
+
+    // Load booking checklists into ninaBTaskProgress
+    const clRes = await db.from('booking_checklists').select('*');
+    if (clRes.data) {
+      clRes.data.forEach(cl => {
+        ninaBTaskProgress[cl.booking_id] = {
+          checkin_msg:  !!cl.guest_contacted_at,
+          checked_in:   !!cl.checked_in_at,
+          checked_out:  !!cl.checked_out_at,
+          followup_msg: !!cl.follow_up_sent_at,
+          _note:        cl.notes || '',
+        };
+      });
+    }
     // db-status hidden on mobile — status logged to console only
     renderTab(currentTab);
   } catch(e) { console.warn('DB load:', e); }
@@ -2479,7 +2493,7 @@ function renderLaneView() {
   });
 
   laneEl.innerHTML = Object.entries(PROPS).map(([pid, prop]) => {
-    const allProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false && !isOwnerStay(b));
+    const allProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false && !isOwnerStay(b) && b.status!=='blocked');
     const current = allProp.find(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b));
     const pending = allProp.filter(b=>b.status==='pending');
     const shown   = filterForLane(allProp).sort((a,b)=>a.check_in.localeCompare(b.check_in));
@@ -2680,8 +2694,24 @@ function openBookingDetail(bookingId) {
         <div><strong style="color:var(--ink)">🛫</strong> ${fmtDate(b.check_out)}</div>
         <div><strong style="color:var(--ink)">🌙</strong> ${nights} nights</div>
         ${b.revenue?`<div><strong style="color:var(--green)">💰</strong> R${Number(b.revenue).toLocaleString()}</div>`:''}
-        ${b.guest_email?`<div style="grid-column:1/-1"><strong style="color:var(--ink)">✉</strong> <a href="mailto:${b.guest_email}" style="color:var(--ocean);text-decoration:none">${b.guest_email}</a></div>`:''}
-        ${b.guest_phone?`<div style="grid-column:1/-1"><strong style="color:var(--ink)">📱</strong> <a href="tel:${b.guest_phone}" style="color:var(--ocean);text-decoration:none">${b.guest_phone}</a></div>`:''}
+      </div>
+      <!-- Contact info — editable inline -->
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:7px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:.8rem;color:var(--ink);width:20px">📱</span>
+          <input id="gphone-${b.id}" type="tel" value="${b.guest_phone||''}" placeholder="Add phone number…"
+            style="flex:1;padding:5px 9px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.82rem;outline:none;background:#fff"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+          ${b.guest_phone?`<a href="tel:${b.guest_phone}" style="padding:5px 9px;border-radius:7px;background:#dcfce7;color:#16a34a;font-size:.78rem;text-decoration:none;white-space:nowrap;font-weight:600">📞 Call</a>`:''}
+          <button onclick="saveContactInfo('${b.id}')" style="padding:5px 10px;border-radius:7px;background:var(--ocean);color:#fff;border:none;font-size:.76rem;cursor:pointer;font-family:inherit;font-weight:600">Save</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:.8rem;color:var(--ink);width:20px">✉</span>
+          <input id="gemail-${b.id}" type="email" value="${b.guest_email||''}" placeholder="Add email address…"
+            style="flex:1;padding:5px 9px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.82rem;outline:none;background:#fff"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+          ${b.guest_email?`<a href="mailto:${b.guest_email}" style="padding:5px 9px;border-radius:7px;background:#dbeafe;color:#1d4ed8;font-size:.78rem;text-decoration:none;white-space:nowrap;font-weight:600">✉ Mail</a>`:''}
+        </div>
       </div>
       ${b.notes?`<div style="font-size:.76rem;color:var(--muted);margin-top:8px;font-style:italic;border-top:1px solid var(--border);padding-top:8px">${b.notes.replace(/\|/g,'<br>')}</div>`:''}
     </div>
@@ -4114,6 +4144,22 @@ function renderGuestManagement() {
   </div>`;
 }
 
+async function saveContactInfo(bookingId) {
+  const b = bookings.find(x=>String(x.id)===String(bookingId));
+  if (!b) return;
+  const phone = document.getElementById('gphone-'+bookingId)?.value?.trim() || null;
+  const email = document.getElementById('gemail-'+bookingId)?.value?.trim() || null;
+  b.guest_phone = phone;
+  b.guest_email = email;
+  if (db) {
+    const {error} = await db.from('bookings').update({guest_phone:phone, guest_email:email}).eq('id', bookingId);
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+  }
+  toast('Contact info saved ✓','success');
+  // Refresh modal to show call/mail buttons
+  openBookingDetail(bookingId);
+}
+
 function saveGuestNote(bookingId, note) {
   if (!ninaBTaskProgress[bookingId]) ninaBTaskProgress[bookingId] = {};
   ninaBTaskProgress[bookingId]._note = note;
@@ -4209,13 +4255,49 @@ function openTaskModalForKanban(colId) {
   openModal('task-modal');
 }
 
-function toggleNinaTask(bookingId, taskKey) {
+async function toggleNinaTask(bookingId, taskKey) {
   if (!ninaBTaskProgress[bookingId]) ninaBTaskProgress[bookingId]={};
   ninaBTaskProgress[bookingId][taskKey] = !ninaBTaskProgress[bookingId][taskKey];
-  // Keep both tabs in sync
+  const val = ninaBTaskProgress[bookingId][taskKey];
+
+  // Map app key → DB column
+  const COL_MAP = {
+    checkin_msg:  'guest_contacted_at',
+    checked_in:   'checked_in_at',
+    checked_out:  'checked_out_at',
+    followup_msg: 'follow_up_sent_at',
+  };
+  const dbCol = COL_MAP[taskKey];
+
+  if (db && dbCol) {
+    // Find the booking to get property_id and org_id
+    const b = bookings.find(x => String(x.id) === String(bookingId));
+    const propUuids = {
+      'speranta': 'e9737638-d83a-4947-940a-8746789e4d9f',
+      'tvhouse':  '83b2a84a-5451-4be5-a84f-2efc0d2602d5',
+    };
+    const propUuid = propUuids[b?.property_id] || b?.property_id;
+
+    const update = { [dbCol]: val ? new Date().toISOString() : null };
+    // Try update first, then insert if not exists
+    const { data: existing } = await db.from('booking_checklists')
+      .select('booking_id').eq('booking_id', bookingId).single();
+
+    if (existing) {
+      await db.from('booking_checklists').update(update).eq('booking_id', bookingId);
+    } else {
+      await db.from('booking_checklists').insert([{
+        booking_id:  bookingId,
+        org_id:      '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+        property_id: propUuid,
+        ...update,
+      }]);
+    }
+  }
+
+  // Refresh UI
   if (currentTab === 'tasks')    renderTasks();
   if (currentTab === 'bookings') renderLaneView();
-  // Always refresh whichever is visible
   if (document.getElementById('guest-booking-grid')) renderGuestManagement();
   if (document.getElementById('booking-lane-view')?.style.display !== 'none') renderLaneView();
 }
