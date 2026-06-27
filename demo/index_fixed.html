@@ -1311,6 +1311,13 @@ const SAMPLE_KB = [
 ];
 
 // ── HELPERS ───────────────────────────────────────────────────
+// SAST date helper (UTC+2) — prevents date being one day behind late at night
+function todaySAST() {
+  const d = new Date();
+  d.setHours(d.getHours() + 2); // shift to SAST
+  return d.toISOString().slice(0,10);
+}
+
 function nb(b) {
   let pid = b.property_id || '';
   if (UUID_MAP[pid]) pid = UUID_MAP[pid];
@@ -1341,7 +1348,7 @@ function nt(t) {
     ...t,
     notes:        t.notes || t.description || '',
     due:          String(t.due || t.due_at || t.task_date || '').slice(0,10),
-    assigned:     t.assigned || 'Unassigned',
+    assigned:     t.assigned || '',
     property_id:  t.property_id || 'all',
     priority:     appPrio,
     status:       appStatus,
@@ -1350,7 +1357,13 @@ function nt(t) {
   };
 }
 function nd(d) { return {...d, checklist:d.checklist||{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}}; }
-function propName(id) { return id==='speranta'?'Speranta':id==='tvhouse'?'TV House':id==='all'?'All Properties':id||'—'; }
+function propName(id) {
+  if (!id) return '—';
+  if (id==='speranta' || id==='e9737638-d83a-4947-940a-8746789e4d9f') return 'Speranta';
+  if (id==='tvhouse'  || id==='83b2a84a-5451-4be5-a84f-2efc0d2602d5') return 'TV House';
+  if (id==='all') return 'All Properties';
+  return id;
+}
 function fmtDate(d) { if(!d)return''; const[y,m,day]=d.split('-'); return day+'/'+m+'/'+y; }
 function isOwnerStay(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return b.status==='owner'||n.includes('owner')||n.includes('mirka')||n.includes('nicole & silja')||n.includes('antonin'); }
 function isCaretaker(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return n.includes('caretaker')||n.includes('tino'); }
@@ -2139,7 +2152,7 @@ function scheduleICalSync() {
 
 // ── FILTERS ───────────────────────────────────────────────────
 function filteredBookings() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   let b = currentProp==='all' ? bookings : bookings.filter(x=>x.property_id===currentProp);
   // Always exclude raw blocked events from booking lists (they show on calendar only)
   b = b.filter(x=>x.status!=='blocked');
@@ -2162,7 +2175,7 @@ function filteredDomestics() {
 function renderDashboard() {
   if (!currentUser) return; // Guard: don't run before login
   // Re-filter from live bookings array (handles deleted bookings)
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   const now   = new Date();
   const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
 
@@ -2216,7 +2229,7 @@ function renderDashboard() {
         <div style="font-weight:700;font-size:.88rem;color:var(--ink)">${cur.display_name}</div>
         <div style="font-size:.75rem;color:var(--muted);margin-top:2px;display:flex;justify-content:space-between">
           <span>🛫 Out ${fmtDate(cur.check_out)}</span>
-          <span style="color:${nightsLeft<=1?'var(--red)':'var(--muted)'}">⏳ ${nightsLeft<=0?'today':nightsLeft+'d left'}</span>
+          <span style="color:${nightsLeft<=1?'var(--red)':'var(--muted)'}">⏳ ${nightsLeft<=0?'out today':nightsLeft===1?'1d left':nightsLeft+'d left'}</span>
         </div>
       </div>`;
     }
@@ -2420,7 +2433,7 @@ function toggleLaneView(btn) {
 
 function lifecycleSteps(b, cleanOk, pid) {
   const bid    = String(b.id);
-  const today  = new Date().toISOString().slice(0,10);
+  const today  = todaySAST();
   const now    = new Date();
   const ciDate = b.check_in_date  || b.check_in?.slice(0,10)  || '';
   const coDate = b.check_out_date || b.check_out?.slice(0,10) || '';
@@ -2473,7 +2486,7 @@ function lifecycleSteps(b, cleanOk, pid) {
 }
 
 function renderLaneView() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   const laneEl = document.getElementById('booking-lane-view');
   if (!laneEl) return;
   laneEl.style.gridTemplateColumns = 'repeat(auto-fit,minmax(360px,1fr))';
@@ -2666,7 +2679,7 @@ function openBookingDetail(bookingId) {
     d.property_id===b.property_id &&
     Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000
   );
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
   const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#c17f3c'));
 
@@ -2842,7 +2855,7 @@ async function deleteBooking(id) {
 
 function renderBookings() {
   if (!currentUser) return;
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
 
   // ── Pending direct bookings alert ──
   const pendingDirect = bookings.filter(b => b.platform==='direct' && b.status==='pending' && b.is_active);
@@ -2934,7 +2947,7 @@ function setCalProp(prop, btn) {
 
 function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
   if (labelId) document.getElementById(labelId).textContent = MONTHS[month]+' '+year;
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   const firstDay = new Date(year,month,1).getDay();
   const dim = new Date(year,month+1,0).getDate();
   const weeks = Math.ceil((firstDay+dim)/7);
@@ -3164,7 +3177,7 @@ function renderKPIPanel() {
   if (!showKPIPanel) { el.style.display = 'none'; return; }
   el.style.display = 'block';
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   const last90 = new Date(); last90.setDate(last90.getDate()-90);
   const l90str = last90.toISOString().slice(0,10);
 
@@ -3229,7 +3242,7 @@ function renderCoverageAlert() {
   const alertEl = document.getElementById('cleaning-coverage-alert');
   if (!alertEl) return;
 
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   const next14 = new Date(); next14.setDate(next14.getDate()+14);
   const next14str = next14.toISOString().slice(0,10);
 
@@ -3303,7 +3316,7 @@ function setCalView(view) {
 function renderWeekView() {
   const el = document.getElementById('cal-week-grid');
   if (!el) return;
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   // Find the Monday of the current week containing calYear/calMonth/1
   // Use the currently highlighted day or today if in current month
   const refDate = new Date(calYear, calMonth, 1);
@@ -3376,7 +3389,7 @@ function renderDayView() {
   const el = document.getElementById('cal-day-detail');
   if (!el) return;
   // Use today's date as default day
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   const ds = today;
   const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
   const fd = calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp);
@@ -3409,10 +3422,10 @@ function renderDayView() {
       </div>`).join('')}`;
 }
 
-let _currentDayStr = new Date().toISOString().slice(0,10);
+let _currentDayStr = todaySAST();
 function calNavDay(dir) {
   const d = new Date(_currentDayStr);
-  if (dir===0) { _currentDayStr = new Date().toISOString().slice(0,10); }
+  if (dir===0) { _currentDayStr = todaySAST(); }
   else { d.setDate(d.getDate()+dir); _currentDayStr = d.toISOString().slice(0,10); }
   renderDayView();
 }
@@ -3435,7 +3448,7 @@ function renderDomesticCalView() {
     const year = domCalYear, month = domCalMonth;
     const firstDay  = new Date(year, month, 1).getDay();
     const daysCount = new Date(year, month+1, 0).getDate();
-    const today = new Date().toISOString().slice(0,10);
+    const today = todaySAST();
     const monthStr = String(year)+'-'+String(month+1).padStart(2,'0');
     const monthDoms = domestics.filter(d=>d.date&&d.date.startsWith(monthStr));
     const COLORS = {Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
@@ -4043,7 +4056,7 @@ function setTaskSubTab(tab) {
 
 // ── GUEST MANAGEMENT ──────────────────────────────────────────
 function renderGuestManagement() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   const gridEl = document.getElementById('guest-booking-grid');
   if (!gridEl) return;
 
@@ -4210,7 +4223,7 @@ function renderKanban() {
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px">
             <span style="font-size:.68rem;color:var(--muted)">📍 ${propName(t.property_id||'all')}</span>
             <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">
-              ${(t.assigned||'').split(',').filter(Boolean).map(a=>{const c=assigneeColor(a.trim());const s=a.trim()==='Nina Williams'?'Nina':a.trim();return `<span style="background:${c.bg};color:${c.text};font-size:.62rem;font-weight:600;padding:1px 7px;border-radius:10px">${s}</span>`;}).join('')}
+              ${(t.assigned||'').split(',').filter(s=>s.trim()&&s.trim()!=='Unassigned').map(a=>{const c=assigneeColor(a.trim());const s=a.trim()==='Nina Williams'?'Nina':a.trim();return `<span style="background:${c.bg};color:${c.text};font-size:.62rem;font-weight:600;padding:1px 7px;border-radius:10px">${s}</span>`;}).join('') || '<span style="font-size:.62rem;color:var(--muted)">Unassigned</span>'}
             </div>
             <div style="display:flex;gap:4px;align-items:center">
               <span style="font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;background:${t.priority==='high'?'#fee2e2':t.priority==='medium'?'#fef3c7':'#dcfce7'};color:${t.priority==='high'?'#dc2626':t.priority==='medium'?'#d97706':'#16a34a'}">${t.priority||'medium'}</span>
@@ -4376,7 +4389,7 @@ function setMsgSubTab(tab) {
 }
 
 function renderWALauncher() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = todaySAST();
   const waNum = '27636021847'; // Nicole for testing
 
   // ── Guest cards ──
@@ -4610,7 +4623,7 @@ async function renderReports(monthsBack) {
 
   const fmt    = n => 'R' + Math.round(n).toLocaleString('en-ZA');
   const fmtK   = n => n >= 1000 ? 'R' + (n/1000).toFixed(1) + 'k' : fmt(n);
-  const today  = new Date().toISOString().slice(0,10);
+  const today  = todaySAST();
   const pColors = {airbnb:'#FF385C', booking:'#003580', lekkeslaap:'#FFC300', manual:'#c17f3c'};
   const pNames  = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', manual:'Direct'};
 
