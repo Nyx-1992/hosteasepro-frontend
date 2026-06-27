@@ -5104,7 +5104,7 @@ const amt = b.revenue || b.total_amount || 0;
     const plats = ['airbnb','booking','lekkeslaap','manual'];
 
     const netMonthly = {};
-    spBookings.filter(b => b.is_active && !['cancelled','blocked','owner'].includes(b.status)
+   spAll.filter(b => !['cancelled','blocked','owner'].includes(b.status)
       && !( (b.guest_name||'').toLowerCase().includes('owner')
          || (b.guest_name||'').toLowerCase().includes('test')
          || (b.guest_name||'').toLowerCase().includes('nyx') )
