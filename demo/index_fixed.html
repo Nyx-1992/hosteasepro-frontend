@@ -4935,6 +4935,7 @@ const amt = b.revenue || b.total_amount || 0;
   });
   const todayMo = todaySAST().slice(0,7);
   const months = Object.keys(monthlyData).sort();
+  console.log('monthlyData:', JSON.stringify(monthlyData));
   const maxMonthTotal = Math.max(1, ...months.map(m => monthlyData[m].total));
   const moLabel = m => {
     const[y,mo] = m.split('-');
