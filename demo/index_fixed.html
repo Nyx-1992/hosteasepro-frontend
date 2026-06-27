@@ -4878,7 +4878,7 @@ async function renderReports(monthsBack) {
   let allBookings = [];
   if (db) {
     try {
-      const res = await db.from('bookings').select('platform,nights,total_amount,check_in_date,check_out_date,status,guest_name,property_name,property_id,is_active').eq('is_active', true);
+      const res = await db.from('bookings').select('platform,nights,total_amount,revenue,check_in,check_in_date,check_out_date,status,guest_name,property_name,property_id,is_active').eq('is_active', true);
       if (res.data && res.data.length) allBookings = res.data.map(nb);
     } catch(e) { console.warn('DB fetch error:', e); }
   }
