@@ -959,33 +959,20 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
             <div class="card-title" style="margin:0">📊 Net Revenue by Month — Speranta (completed months only)</div>
             <span style="font-size:.72rem;color:var(--muted);font-style:italic">Updated after each month closes</span>
           </div>
-          <!-- S&N Income — Speranta only -->
           <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏠 Speranta — S&N Rental Income</div>
-          <div class="table-wrap"><table>
+          <div class="table-wrap"><table id="report-monthly-net-table">
             <thead><tr>
               <th>Month</th>
               <th style="color:#FF385C">Airbnb</th>
               <th style="color:#003580">Booking.com</th>
               <th style="color:#f59e0b">LekkeSlaap</th>
+              <th style="color:#c17f3c">Direct</th>
               <th>Total Net</th>
             </tr></thead>
-            <tbody>
-              <tr><td><strong>Jan 2026</strong></td><td style="color:var(--muted)">—</td><td style="color:var(--green)">R24,347</td><td style="color:var(--muted)">—</td><td><strong style="color:var(--green)">R24,347</strong></td></tr>
-              <tr style="background:var(--surface-2)"><td><strong>Feb 2026</strong></td><td style="color:var(--muted)">—</td><td style="color:var(--green)">R11,448</td><td style="color:var(--muted)">—</td><td><strong style="color:var(--green)">R11,448</strong></td></tr>
-              <tr><td><strong>Mar 2026</strong></td><td style="color:var(--muted)">—</td><td style="color:var(--green)">R5,627</td><td style="color:var(--muted)">—</td><td><strong style="color:var(--green)">R5,627</strong></td></tr>
-              <tr style="background:var(--surface-2)"><td><strong>Apr 2026</strong></td><td style="color:var(--green)">R14,391</td><td style="color:var(--green)">R3,915</td><td style="color:var(--green)">R2,097</td><td><strong style="color:var(--green)">R20,403</strong></td></tr>
-              <tr><td><strong>May 2026</strong></td><td style="color:var(--green)">R6,240</td><td style="color:var(--green)">R5,108</td><td style="color:var(--green)">R1,805</td><td><strong style="color:var(--green)">R13,153</strong></td></tr>
-              <tr style="background:#fef3c7"><td><strong>Jun 2026</strong> 🔄</td><td style="color:var(--muted);font-size:.78rem">TBC</td><td style="color:var(--muted);font-size:.78rem">TBC</td><td style="color:var(--muted);font-size:.78rem">R6,542+ so far</td><td style="color:var(--muted)"><em>In progress</em></td></tr>
+            <tbody id="report-monthly-net-body">
+              <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">Loading…</td></tr>
             </tbody>
-            <tfoot>
-              <tr style="border-top:2px solid var(--border)">
-                <td><strong>Jan–May total</strong></td>
-                <td style="color:var(--green)"><strong>R20,631</strong></td>
-                <td style="color:var(--green)"><strong>R50,445</strong></td>
-                <td style="color:var(--green)"><strong>R3,902</strong></td>
-                <td style="color:var(--green)"><strong>R74,978</strong></td>
-              </tr>
-            </tfoot>
+            <tfoot id="report-monthly-net-foot"></tfoot>
           </table></div>
 
           <!-- TV House Management Fee Income -->
