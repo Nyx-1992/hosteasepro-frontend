@@ -4892,7 +4892,7 @@ async function renderReports(monthsBack) {
     cutoff = d.toISOString().slice(0,10);
   }
 
- const spAll  = allBookings.filter(b => (b.property_id==='e9737638-d83a-4947-940a-8746789e4d9f' || (b.property_name||'').toLowerCase().includes('speranta')) && b.status!=='cancelled');
+const spAll  = allBookings.filter(b => b.property_id==='speranta' && b.status!=='cancelled');
   const spPaid = spAll.filter(b => (b.revenue||0) > 0 && (!cutoff || b.check_in >= cutoff));
   const platOrder = ['airbnb','booking','lekkeslaap','manual'];
 
