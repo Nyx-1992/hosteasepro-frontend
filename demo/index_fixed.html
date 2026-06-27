@@ -4921,10 +4921,10 @@ async function renderReports(monthsBack) {
     if (!mo || mo.length < 7) return;
     if (!monthlyData[mo]) monthlyData[mo] = {airbnb:0, booking:0, lekkeslaap:0, manual:0, total:0};
     const p = b.platform||'manual';
-    const amt = b.revenue || b.total_amount || 0;
+const amt = b.revenue || b.total_amount || 0;
     monthlyData[mo][p] = (monthlyData[mo][p]||0) + amt;
     monthlyData[mo].total += amt;
-    
+  });
   const months = Object.keys(monthlyData).sort();
   const maxMonthTotal = Math.max(1, ...months.map(m => monthlyData[m].total));
   const moLabel = m => {
