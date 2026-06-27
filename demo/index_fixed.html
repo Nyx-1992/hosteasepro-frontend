@@ -3911,7 +3911,7 @@ function populateBookingLinkDropdown(preselect) {
   const pid = document.getElementById('d-prop')?.value || '';
   // All bookings not cancelled, sorted by checkout descending (latest first)
   const candidates = bookings
-    .filter(b => !['cancelled','blocked','owner'].includes(b.status) && (!pid || b.property_id===pid))
+    .filter(b => !['cancelled','blocked','owner'].includes(b.status) && !isCaretaker(b) && (!pid || b.property_id===pid))
     .sort((a,b) => b.check_out.localeCompare(a.check_out))
     .slice(0, 40);
   // Which ones already have a cleaning?
@@ -3942,11 +3942,13 @@ function populateBookingLinkDropdown(preselect) {
 function validateCleanDate() {
   const dateEl = document.getElementById('d-date');
   const linkId = document.getElementById('d-booking-link').value;
-  if (!linkId || !dateEl.value) return true;
+  // No booking linked = independent/maintenance clean, any date is valid
+  if (!linkId || linkId === '' || !dateEl.value) return true;
   const bk = bookings.find(b=>String(b.id)===String(linkId));
   if (!bk) return true;
+  // Only validate date if a real guest booking is linked
   const coDate = bk.check_out_date || bk.check_out?.slice(0,10);
-  if (dateEl.value < coDate) {
+  if (coDate && dateEl.value < coDate) {
     toast('Cleaning date must be on or after guest checkout ('+fmtDate(coDate)+')','error');
     return false;
   }
@@ -5332,7 +5334,9 @@ async function saveTaskDrawer() {
       'speranta': 'e9737638-d83a-4947-940a-8746789e4d9f',
       'tvhouse':  '83b2a84a-5451-4be5-a84f-2efc0d2602d5',
     };
-    const propUuid = newProp !== 'all' ? (PROP_UUIDS[newProp] || newProp) : null;
+    // Only send known UUID values — empty/unknown defaults to null
+    const propUuid = (newProp && newProp !== 'all' && PROP_UUIDS[newProp])
+      ? PROP_UUIDS[newProp] : null;
     const row = {
       title:         newTitle,
       description:   newNotes,
@@ -5345,7 +5349,7 @@ async function saveTaskDrawer() {
       due_at:        newDue || null,
       task_date:     newDue || null,
       assigned:      newAssigned,
-      comments:      t._comments || [],
+      comments:      Array.isArray(t._comments) && t._comments.length > 0 ? t._comments : [],
     };
 
     // Check if this is a sample task (string id like 't4') — needs INSERT not UPDATE
