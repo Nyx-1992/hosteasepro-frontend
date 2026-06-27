@@ -256,6 +256,8 @@ const PROPS = {
 
 // ⚠ CHANGE PINS BEFORE SHARING WITH CLEANERS
 const CLEANERS = [
+  {name:'Test',     pin:'0000', color:'#64748b', initials:'TS',
+   rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350, default:350}},
   {name:'Blessing', pin:'0314', color:'#f59e0b', initials:'BL',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350, default:350}},
   {name:'Fatima',   pin:'0722', color:'#8b5cf6', initials:'FA',
@@ -451,6 +453,29 @@ function doLogout() {
 // ── Data ──────────────────────────────────────────────────────────────────────
 async function loadData() {
   if(!db||!currentCleaner) return;
+
+  // Test account gets demo data
+  if (currentCleaner.name === 'Test') {
+    const td = tod();
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
+    const tmr = tomorrow.toISOString().slice(0,10);
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-3);
+    const yest = yesterday.toISOString().slice(0,10);
+    myCleans = [
+      {id:'demo1', cleaner:'Test', property_id:'e9737638-d83a-4947-940a-8746789e4d9f',
+       date:tmr, time:'10:00', type:'turnover', status:'pending', amount_paid:350, notes:'After Dawie Van Staden checkout'},
+      {id:'demo2', cleaner:'Test', property_id:'83b2a84a-5451-4be5-a84f-2efc0d2602d5',
+       date:td, time:'10:00', type:'turnover', status:'pending', amount_paid:450, notes:'After Nonduduzo checkout'},
+      {id:'demo3', cleaner:'Test', property_id:'e9737638-d83a-4947-940a-8746789e4d9f',
+       date:yest, time:'10:00', type:'turnover', status:'completed', amount_paid:350, notes:''},
+    ];
+    myBookingCheckouts = [
+      {date:tmr, prop:'Speranta', guest:'Dawie Van Staden'},
+      {date:td,  prop:'TV House', guest:'Nonduduzo Mmoni'},
+    ];
+    return;
+  }
+
   try {
     const [cleanRes, bookRes] = await Promise.all([
       db.from('domestics').select('*').eq('cleaner',currentCleaner.name).order('date',{ascending:true}),
