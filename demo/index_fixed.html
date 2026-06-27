@@ -4957,8 +4957,9 @@ const amt = b.revenue || b.total_amount || 0;
     chartEl.innerHTML = months.map((m,i) => {
       const d = monthlyData[m];
       const total = d.total;
-     const isNow = m === todayMo;
-      const isForecast = m > todayMo;
+    const isNow = m === todayMo;
+const isForecast = m > todayMo;
+const isPast = m < todayMo;
       const segs = [...platOrder].reverse().map(p => {
         const v = d[p]||0; if (!v) return '';
         const h = Math.round(v/maxMonthTotal*172);
