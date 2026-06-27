@@ -882,6 +882,20 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
           </div>
           <div id="report-inspection-list"></div>
         </div>
+
+        <!-- Cleaner Inventory Reports -->
+        <div class="card" style="margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin:0">🧹 Cleaner Inventory Reports</div>
+            <div style="display:flex;gap:6px">
+              <button onclick="filterInvReports('all',this)" class="btn btn-sm btn-primary" id="inv-filter-all">All</button>
+              <button onclick="filterInvReports('flagged',this)" class="btn btn-sm btn-ghost" id="inv-filter-flagged">⚠ Flagged only</button>
+              <button onclick="filterInvReports('unreviewed',this)" class="btn btn-sm btn-ghost" id="inv-filter-unreviewed">Unreviewed</button>
+            </div>
+          </div>
+          <div id="report-inv-list"></div>
+        </div>
+
         <div id="report-sp-occ" style="display:none"></div>
         <div class="card">
           <div class="card-title">📈 Seasonal Guide</div>
@@ -1705,6 +1719,52 @@ function setInspFilter(filter, btn) {
   renderReportInspections();
 }
 
+function filterInvReports(f, btn) {
+  document.querySelectorAll('#inv-filter-all,#inv-filter-flagged,#inv-filter-unreviewed').forEach(b=>{
+    b.className='btn btn-sm btn-ghost';
+  });
+  if(btn) btn.className='btn btn-sm btn-primary';
+  renderReportInventory(f);
+}
+
+function renderReportInventory(filter) {
+  const el = document.getElementById('report-inv-list');
+  if (!el) return;
+  filter = filter || 'all';
+  let reports = [...inventoryReports];
+  if (filter === 'flagged')    reports = reports.filter(r => !r.all_ok);
+  if (filter === 'unreviewed') reports = reports.filter(r => !r.reviewed);
+  if (!reports.length) {
+    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:24px;font-size:.85rem">No inventory reports yet</div>';
+    return;
+  }
+  el.innerHTML = reports.slice(0,30).map(r => {
+    const propN = propName(r.property_id);
+    const flags = r.flagged_items||[];
+    const borderCol = (!r.all_ok && !r.reviewed) ? '#f59e0b44' : 'var(--border)';
+    const statusBadge = r.all_ok
+      ? '<span style="background:#dcfce7;color:#16a34a;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:10px">✓ All OK</span>'
+      : '<span style="background:#fef3c7;color:#d97706;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:10px">⚠ '+flags.length+' flag'+(flags.length!==1?'s':'')+'</span>';
+    const reviewedBadge = r.reviewed
+      ? '<span style="background:#f1f5f9;color:#64748b;font-size:.68rem;padding:2px 8px;border-radius:10px">Reviewed</span>' : '';
+    const flagsHtml = flags.length > 0
+      ? '<div style="margin:8px 0">' + flags.map(f=>'<div style="font-size:.78rem;padding:4px 10px;background:#fef9c3;border-radius:6px;margin-bottom:3px;color:#92400e"><strong>'+f.room+':</strong> '+f.item+(f.note?' — '+f.note:'')+'</div>').join('') + '</div>'
+      : '';
+    const noteHtml = r.notes ? '<div style="font-size:.78rem;color:var(--muted);font-style:italic;margin-bottom:8px">📌 "'+r.notes+'"</div>' : '';
+    const createBtn = flags.length > 0
+      ? '<button onclick="createTaskFromFlag(\'' + r.id + '\')" style="padding:4px 12px;border-radius:8px;background:#fef3c7;border:1px solid #fcd34d;font-size:.74rem;cursor:pointer;color:#92400e">⚡ Create task</button>' : '';
+    const rid = r.id;
+    const actionsHtml = !r.reviewed
+      ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button data-rid="'+rid+'" onclick="markReviewed(this.dataset.rid);renderReportInventory()" style="padding:4px 12px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);font-size:.74rem;cursor:pointer;color:var(--ink)">✓ Mark reviewed</button>'+createBtn+'</div>'
+      : '';
+    return '<div style="border:1.5px solid '+borderCol+';border-radius:12px;padding:14px;margin-bottom:8px">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px">'
+      + '<div><strong style="font-size:.9rem">'+r.cleaner+'</strong><span style="color:var(--muted);font-size:.78rem"> · '+propN+' · '+fmtDate(r.clean_date)+'</span></div>'
+      + '<div style="display:flex;gap:5px;align-items:center">'+statusBadge+reviewedBadge+'</div>'
+      + '</div>'+flagsHtml+noteHtml+actionsHtml+'</div>';
+  }).join('');
+}
+
 function renderReportInspections() {
   const el = document.getElementById('report-inspection-list');
   if (!el) return;
@@ -1735,7 +1795,7 @@ function renderTab(id) {
   else if (id==='knowledge') renderKB();
   else if (id==='team')      renderTeam();
   else if (id==='finance')   renderFinance();
-  else if (id==='reports')   { renderReports(); renderReportInspections(); }
+  else if (id==='reports')   { renderReports(); renderReportInspections(); renderReportInventory(); }
 }
 
 function renderDomesticEarnings() {
