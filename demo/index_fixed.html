@@ -866,6 +866,27 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
           </div>
         </div>
 
+           <!-- Platform Revenue Summary — Monthly Breakdown -->
+        <div class="card" style="margin-top:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin:0">📊 Net Revenue by Month — Speranta (completed months only)</div>
+            <span style="font-size:.72rem;color:var(--muted);font-style:italic">Updated after each month closes</span>
+          </div>
+          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏠 Speranta — S&N Rental Income</div>
+          <div class="table-wrap"><table id="report-monthly-net-table">
+            <thead><tr>
+              <th>Month</th>
+              <th style="color:#FF385C">Airbnb</th>
+              <th style="color:#003580">Booking.com</th>
+              <th style="color:#f59e0b">LekkeSlaap</th>
+              <th style="color:#c17f3c">Direct</th>
+              <th>Total Net</th>
+            </tr></thead>
+            <tbody id="report-monthly-net-body">
+              <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">Loading…</td></tr>
+            </tbody>
+            <tfoot id="report-monthly-net-foot"></tfoot>
+          </table></div>
           </div><!-- end rsub-revenue -->
 
         <!-- PROPERTY SUB-TAB -->
@@ -973,29 +994,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
           </div>
         </div>
 
-        <!-- Platform Revenue Summary — Monthly Breakdown -->
-        <div class="card" style="margin-top:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-            <div class="card-title" style="margin:0">📊 Net Revenue by Month — Speranta (completed months only)</div>
-            <span style="font-size:.72rem;color:var(--muted);font-style:italic">Updated after each month closes</span>
-          </div>
-          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏠 Speranta — S&N Rental Income</div>
-          <div class="table-wrap"><table id="report-monthly-net-table">
-            <thead><tr>
-              <th>Month</th>
-              <th style="color:#FF385C">Airbnb</th>
-              <th style="color:#003580">Booking.com</th>
-              <th style="color:#f59e0b">LekkeSlaap</th>
-              <th style="color:#c17f3c">Direct</th>
-              <th>Total Net</th>
-            </tr></thead>
-            <tbody id="report-monthly-net-body">
-              <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">Loading…</td></tr>
-            </tbody>
-            <tfoot id="report-monthly-net-foot"></tfoot>
-          </table></div>
-
-          <!-- TV House Management Fee Income -->
+            <!-- TV House Management Fee Income -->
           <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:18px;margin-bottom:8px">🏡 TV House — S&N Management Fee Income</div>
           <div class="table-wrap"><table>
             <thead><tr><th>Month</th><th>Management Fee</th><th>Notes</th></tr></thead>
