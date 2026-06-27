@@ -4925,6 +4925,7 @@ const amt = b.revenue || b.total_amount || 0;
     monthlyData[mo][p] = (monthlyData[mo][p]||0) + amt;
     monthlyData[mo].total += amt;
   });
+  const todayMo = todaySAST().slice(0,7);
   const months = Object.keys(monthlyData).sort();
   const maxMonthTotal = Math.max(1, ...months.map(m => monthlyData[m].total));
   const moLabel = m => {
@@ -4947,7 +4948,8 @@ const amt = b.revenue || b.total_amount || 0;
     chartEl.innerHTML = months.map((m,i) => {
       const d = monthlyData[m];
       const total = d.total;
-      const isNow = m === today.slice(0,7);
+     const isNow = m === todayMo;
+      const isForecast = m > todayMo;
       const segs = [...platOrder].reverse().map(p => {
         const v = d[p]||0; if (!v) return '';
         const h = Math.round(v/maxMonthTotal*172);
