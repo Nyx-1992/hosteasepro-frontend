@@ -5084,7 +5084,7 @@ async function renderReports(monthsBack) {
       ? `🌞 <strong>Peak summer (Dec–Mar).</strong> Push Airbnb to R1,500–1,800/night. Your data shows guests pay well above avg in this period. Set 3-night minimums. Airbnb consistently outperforms — prioritise it.`
       : `🍂 <strong>Shoulder season (Apr–May, Sep–Nov).</strong> Airbnb at ${fmt(airbnbAvg)}/night, Booking.com at ${fmt(bookingAvg)}/night. Try raising Booking.com 10%. LekkeSlaap at ${fmt(lsAvg)}/night — use only to fill gaps; each night on LekkeSlaap instead of Airbnb costs you R${airbnbAvg-lsAvg}.`;
 
-  await renderCleanerEarningsReport();
+renderCleanerEarningsReport();
 }
 
 function setReportTimeframe(months, btn) {
