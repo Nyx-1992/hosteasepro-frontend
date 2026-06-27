@@ -5075,7 +5075,72 @@ const amt = b.revenue || b.total_amount || 0;
       ? `🌞 <strong>Peak summer (Dec–Mar).</strong> Push Airbnb to R1,500–1,800/night. Your data shows guests pay well above avg in this period. Set 3-night minimums. Airbnb consistently outperforms — prioritise it.`
       : `🍂 <strong>Shoulder season (Apr–May, Sep–Nov).</strong> Airbnb at ${fmt(airbnbAvg)}/night, Booking.com at ${fmt(bookingAvg)}/night. Try raising Booking.com 10%. LekkeSlaap at ${fmt(lsAvg)}/night — use only to fill gaps; each night on LekkeSlaap instead of Airbnb costs you R${airbnbAvg-lsAvg}.`;
 
-renderCleanerEarningsReport();
+// ── MONTHLY NET TABLE ──
+  const netBody = document.getElementById('report-monthly-net-body');
+  const netFoot = document.getElementById('report-monthly-net-foot');
+  if (netBody) {
+    const todayMoStr = todaySAST().slice(0,7);
+    const fmt2 = n => n ? 'R' + Math.round(n).toLocaleString('en-ZA') : '—';
+    const plats = ['airbnb','booking','lekkeslaap','manual'];
+
+    const netMonthly = {};
+    spBookings.filter(b => b.is_active && !['cancelled','blocked','owner'].includes(b.status)
+      && !( (b.guest_name||'').toLowerCase().includes('owner')
+         || (b.guest_name||'').toLowerCase().includes('test')
+         || (b.guest_name||'').toLowerCase().includes('nyx') )
+      && (b.revenue||b.total_amount||0) > 0
+    ).forEach(b => {
+      const mo = (b.check_in_date||b.check_in||'').slice(0,7);
+      if (!mo || mo.length < 7) return;
+      if (!netMonthly[mo]) netMonthly[mo] = {airbnb:0, booking:0, lekkeslaap:0, manual:0, total:0};
+      const p = b.platform === 'direct' ? 'manual' : (b.platform||'manual');
+      const amt = b.revenue || b.total_amount || 0;
+      netMonthly[mo][p] = (netMonthly[mo][p]||0) + amt;
+      netMonthly[mo].total += amt;
+    });
+
+    const netMonths = Object.keys(netMonthly).sort();
+    const pastMonths = netMonths.filter(m => m < todayMoStr);
+    const currentMonth = netMonths.find(m => m === todayMoStr);
+
+    const moName = m => {
+      const [y,mo] = m.split('-');
+      return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1]+' '+y;
+    };
+
+    let rows = pastMonths.map((m,i) => {
+      const d = netMonthly[m];
+      return `<tr style="${i%2===1?'background:var(--surface-2)':''}">
+        <td><strong>${moName(m)}</strong></td>
+        ${plats.map(p => d[p] ? `<td style="color:var(--green)">${fmt2(d[p])}</td>` : `<td style="color:var(--muted)">—</td>`).join('')}
+        <td><strong style="color:var(--green)">${fmt2(d.total)}</strong></td>
+      </tr>`;
+    }).join('');
+
+    if (currentMonth) {
+      const d = netMonthly[currentMonth];
+      rows += `<tr style="background:#fef3c7">
+        <td><strong>${moName(currentMonth)}</strong> 🔄</td>
+        ${plats.map(p => d[p] ? `<td style="color:var(--muted);font-size:.78rem">${fmt2(d[p])}+</td>` : `<td style="color:var(--muted);font-size:.78rem">TBC</td>`).join('')}
+        <td style="color:var(--muted)"><em>In progress</em></td>
+      </tr>`;
+    }
+
+    netBody.innerHTML = rows || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No data</td></tr>';
+
+    const totals = {airbnb:0, booking:0, lekkeslaap:0, manual:0, total:0};
+    pastMonths.forEach(m => { plats.forEach(p => { totals[p] += netMonthly[m][p]||0; }); totals.total += netMonthly[m].total||0; });
+    const rangeLabel = pastMonths.length > 1
+      ? `${moName(pastMonths[0])}–${moName(pastMonths[pastMonths.length-1])} total`
+      : pastMonths.length === 1 ? `${moName(pastMonths[0])} total` : 'Total';
+    netFoot.innerHTML = `<tr style="border-top:2px solid var(--border)">
+      <td><strong>${rangeLabel}</strong></td>
+      ${plats.map(p => totals[p] ? `<td style="color:var(--green)"><strong>${fmt2(totals[p])}</strong></td>` : `<td style="color:var(--muted)">—</td>`).join('')}
+      <td style="color:var(--green)"><strong>${fmt2(totals.total)}</strong></td>
+    </tr>`;
+  }
+
+  renderCleanerEarningsReport();
 }
 
 function setReportTimeframe(months, btn) {
