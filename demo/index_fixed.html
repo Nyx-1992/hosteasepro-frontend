@@ -953,35 +953,42 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
           </div>
         </div>
 
-        <!-- Platform Revenue Summary -->
+        <!-- Platform Revenue Summary — Monthly Breakdown -->
         <div class="card" style="margin-top:12px">
-          <div class="card-title" style="margin-bottom:12px">📊 Revenue Summary (Apr–Jun 2026)</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px">
-            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
-              <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Airbnb Net</div>
-              <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:700;color:var(--green)">R20,632</div>
-              <div style="font-size:.7rem;color:var(--muted)">Apr + May</div>
-            </div>
-            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
-              <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">LekkeSlaap Net</div>
-              <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:700;color:var(--green)">R13,900</div>
-              <div style="font-size:.7rem;color:var(--muted)">Apr–Jun</div>
-            </div>
-            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
-              <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Booking.com</div>
-              <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:700;color:var(--muted)">TBC</div>
-              <div style="font-size:.7rem;color:var(--muted)">Awaiting stmt</div>
-            </div>
-            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
-              <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Booking.com Net</div>
-              <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:700;color:var(--green)">R50,444</div>
-              <div style="font-size:.7rem;color:var(--muted)">Jan–May</div>
-            </div>
-            <div style="background:rgba(45,212,160,.1);border:1px solid rgba(45,212,160,.3);border-radius:10px;padding:12px;text-align:center">
-              <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Total Net (all)</div>
-              <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:700;color:var(--green)">R84,976</div>
-              <div style="font-size:.7rem;color:var(--muted)">All platforms</div>
-            </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin:0">📊 Net Revenue by Month — Speranta (completed months only)</div>
+            <span style="font-size:.72rem;color:var(--muted);font-style:italic">Updated after each month closes</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>Month</th>
+              <th style="color:#FF385C">Airbnb</th>
+              <th style="color:#003580">Booking.com</th>
+              <th style="color:#f59e0b">LekkeSlaap</th>
+              <th>Total Net</th>
+            </tr></thead>
+            <tbody>
+              <tr><td><strong>Jan 2026</strong></td><td style="color:var(--muted)">—</td><td style="color:var(--green)">R24,347</td><td style="color:var(--muted)">—</td><td><strong style="color:var(--green)">R24,347</strong></td></tr>
+              <tr style="background:var(--surface-2)"><td><strong>Feb 2026</strong></td><td style="color:var(--muted)">—</td><td style="color:var(--green)">R11,448</td><td style="color:var(--muted)">—</td><td><strong style="color:var(--green)">R11,448</strong></td></tr>
+              <tr><td><strong>Mar 2026</strong></td><td style="color:var(--muted)">—</td><td style="color:var(--green)">R5,627</td><td style="color:var(--muted)">—</td><td><strong style="color:var(--green)">R5,627</strong></td></tr>
+              <tr style="background:var(--surface-2)"><td><strong>Apr 2026</strong></td><td style="color:var(--green)">R14,391</td><td style="color:var(--green)">R3,915</td><td style="color:var(--green)">R13,662 <span style="font-size:.68rem;color:var(--muted)">(SP R2,097 + TV R11,565)</span></td><td><strong style="color:var(--green)">R31,968</strong></td></tr>
+              <tr><td><strong>May 2026</strong></td><td style="color:var(--green)">R6,240</td><td style="color:var(--green)">R5,108</td><td style="color:var(--green)">R1,805</td><td><strong style="color:var(--green)">R13,153</strong></td></tr>
+              <tr style="background:#fef3c7"><td><strong>Jun 2026</strong> 🔄</td><td style="color:var(--muted);font-size:.78rem">TBC</td><td style="color:var(--muted);font-size:.78rem">TBC</td><td style="color:var(--muted);font-size:.78rem">R6,542+ so far</td><td style="color:var(--muted)"><em>In progress</em></td></tr>
+            </tbody>
+            <tfoot>
+              <tr style="border-top:2px solid var(--border)">
+                <td><strong>Jan–May total</strong></td>
+                <td style="color:var(--green)"><strong>R20,631</strong></td>
+                <td style="color:var(--green)"><strong>R50,445</strong></td>
+                <td style="color:var(--green)"><strong>R15,467</strong></td>
+                <td style="color:var(--green)"><strong>R86,543</strong></td>
+              </tr>
+            </tfoot>
+          </table></div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:8px">LekkeSlaap April includes Dimakatso TV House (R11,565) + Speranta payouts (R2,097). June figures will be confirmed after month close.</div>
+          <div style="margin-top:10px;padding:10px 14px;background:rgba(45,212,160,.08);border:1px solid rgba(45,212,160,.2);border-radius:8px;font-size:.78rem">
+            🏆 <strong>Best month: April 2026</strong> — R31,968 net (Dimakatso TV House + strong Airbnb + BDC) &nbsp;|&nbsp;
+            📈 <strong>June 2026</strong> — R6,542 LekkeSlaap received so far, Airbnb + BDC still to confirm
           </div>
         </div>
 
@@ -990,8 +997,8 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
           <div class="table-wrap"><table>
             <thead><tr><th>Season</th><th>Months</th><th>Avg Occupancy</th><th>Best Platform</th><th>Suggested Rate</th></tr></thead>
             <tbody>
-              <tr><td>🌞 Peak Summer</td><td>Dec–Mar</td><td>87%</td><td>Airbnb</td><td>R1,200–1,400/night</td></tr>
-              <tr><td>🍂 Autumn Shoulder</td><td>Apr–May</td><td>62%</td><td>Booking.com</td><td>R850–950/night</td></tr>
+              <tr><td>🌞 Peak Summer</td><td>Dec–Mar</td><td>87%</td><td>Booking.com</td><td>R1,200–1,400/night</td></tr>
+              <tr><td>🍂 Autumn Shoulder</td><td>Apr–May</td><td>62%</td><td>Airbnb + BDC</td><td>R850–950/night</td></tr>
               <tr><td>❄️ Winter Low</td><td>Jun–Aug</td><td>38%</td><td>LekkeSlaap</td><td>R600–750/night</td></tr>
               <tr><td>🌸 Spring Shoulder</td><td>Sep–Nov</td><td>71%</td><td>Airbnb</td><td>R900–1,100/night</td></tr>
             </tbody>
