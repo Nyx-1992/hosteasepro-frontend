@@ -897,6 +897,94 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         </div>
 
         <div id="report-sp-occ" style="display:none"></div>
+        <!-- Platform Commission Table -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-title" style="margin-bottom:12px">💸 Platform Commission Rates</div>
+          <div style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Based on actual payouts April–June 2026. Booking.com to be confirmed.</div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>Platform</th><th>Our Gross</th><th>Their Fee</th><th>Fee %</th><th>We Receive</th><th>Notes</th>
+            </tr></thead>
+            <tbody>
+              <tr>
+                <td><strong style="color:#FF385C">Airbnb</strong></td>
+                <td>R17,513 <span style="font-size:.7rem;color:var(--muted)">(Apr)</span></td>
+                <td style="color:var(--red)">-R3,122</td>
+                <td><strong>17.8%</strong></td>
+                <td style="color:var(--green)">R14,391</td>
+                <td style="font-size:.74rem;color:var(--muted)">Consistent at 17.8% both months</td>
+              </tr>
+              <tr>
+                <td><strong style="color:#FF385C">Airbnb</strong></td>
+                <td>R7,594 <span style="font-size:.7rem;color:var(--muted)">(May)</span></td>
+                <td style="color:var(--red)">-R1,354</td>
+                <td><strong>17.8%</strong></td>
+                <td style="color:var(--green)">R6,240</td>
+                <td style="font-size:.74rem;color:var(--muted)">Confirmed 17.8% rate</td>
+              </tr>
+              <tr style="background:var(--surface-2)">
+                <td><strong style="color:#f59e0b">LekkeSlaap</strong></td>
+                <td>R17,848 <span style="font-size:.7rem;color:var(--muted)">(Apr–Jun)</span></td>
+                <td style="color:var(--red)">-R3,948</td>
+                <td><strong>22.1%</strong></td>
+                <td style="color:var(--green)">R13,900</td>
+                <td style="font-size:.74rem;color:var(--muted)">Higher than Airbnb — includes payment handling fee</td>
+              </tr>
+              <tr style="background:var(--surface-2)">
+                <td><strong style="color:#003580">Booking.com</strong></td>
+                <td>R62,590 <span style="font-size:.7rem;color:var(--muted)">(Jan–May)</span></td>
+                <td style="color:var(--red)">-R9,419</td>
+                <td><strong>15.0%</strong></td>
+                <td style="color:var(--green)">R50,444</td>
+                <td style="font-size:.74rem;color:var(--muted)">Consistent 15.0% all 5 months — lowest fee platform</td>
+              </tr>
+              <tr>
+                <td><strong style="color:var(--accent)">Direct/Manual</strong></td>
+                <td colspan="4" style="color:var(--green);font-size:.78rem;font-weight:600">0% — full amount retained ✓</td>
+              </tr>
+            </tbody>
+          </table></div>
+          <div style="margin-top:12px;padding:10px 14px;background:var(--surface-2);border-radius:8px;font-size:.78rem">
+            <strong>💡 Key insights:</strong><br>
+            • Booking.com (15%) is your <strong>cheapest platform</strong> — R350 less than Airbnb on a R5,000 booking<br>
+            • LekkeSlaap (22.1%) is the <strong>most expensive</strong> — R360 more than Booking.com on the same booking<br>
+            • Direct bookings save you <strong>R750–R1,100</strong> per R5,000 booking vs platforms<br>
+            • Platform ranking by cost: Booking.com (15%) &lt; Airbnb (17.8%) &lt; LekkeSlaap (22.1%)
+          </div>
+        </div>
+
+        <!-- Platform Revenue Summary -->
+        <div class="card" style="margin-top:12px">
+          <div class="card-title" style="margin-bottom:12px">📊 Revenue Summary (Apr–Jun 2026)</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px">
+            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Airbnb Net</div>
+              <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:700;color:var(--green)">R20,632</div>
+              <div style="font-size:.7rem;color:var(--muted)">Apr + May</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">LekkeSlaap Net</div>
+              <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:700;color:var(--green)">R13,900</div>
+              <div style="font-size:.7rem;color:var(--muted)">Apr–Jun</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Booking.com</div>
+              <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:700;color:var(--muted)">TBC</div>
+              <div style="font-size:.7rem;color:var(--muted)">Awaiting stmt</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Booking.com Net</div>
+              <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:700;color:var(--green)">R50,444</div>
+              <div style="font-size:.7rem;color:var(--muted)">Jan–May</div>
+            </div>
+            <div style="background:rgba(45,212,160,.1);border:1px solid rgba(45,212,160,.3);border-radius:10px;padding:12px;text-align:center">
+              <div style="font-size:.68rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">Total Net (all)</div>
+              <div style="font-family:'DM Serif Display',serif;font-size:1.3rem;font-weight:700;color:var(--green)">R84,976</div>
+              <div style="font-size:.7rem;color:var(--muted)">All platforms</div>
+            </div>
+          </div>
+        </div>
+
         <div class="card">
           <div class="card-title">📈 Seasonal Guide</div>
           <div class="table-wrap"><table>
