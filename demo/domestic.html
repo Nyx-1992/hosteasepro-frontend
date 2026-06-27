@@ -14,17 +14,17 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden}
-h1,h2,h3{font-family:'Syne',sans-serif}
+h1,h2,h3{font-family:Syne,sans-serif}
 
 /* Auth */
 #auth{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;
   background:radial-gradient(ellipse at 20% 80%,#1a2a1a 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,#1a1a2e 0%,transparent 60%),var(--bg)}
-.auth-logo{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:40px;opacity:.8}
+.auth-logo{font-family:Syne,sans-serif;font-size:1.1rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:40px;opacity:.8}
 .auth-card{background:var(--card);border:1px solid var(--border);border-radius:24px;padding:32px 28px;width:100%;max-width:360px;box-shadow:0 24px 80px rgba(0,0,0,.5)}
 .auth-title{font-size:1.6rem;font-weight:800;margin-bottom:6px}
 .auth-sub{color:var(--muted);font-size:.85rem;margin-bottom:28px}
 .cleaner-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px}
-.cleaner-btn{padding:14px 10px;border-radius:14px;border:2px solid var(--border);background:var(--card2);cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:'Syne',sans-serif}
+.cleaner-btn{padding:14px 10px;border-radius:14px;border:2px solid var(--border);background:var(--card2);cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:6px;font-family:Syne,sans-serif}
 .cleaner-btn:hover,.cleaner-btn.selected{border-color:var(--accent);background:rgba(193,127,60,.12)}
 .cleaner-btn .av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;color:#fff}
 .cleaner-btn .nm{font-size:.78rem;font-weight:700;color:var(--text)}
@@ -34,7 +34,7 @@ h1,h2,h3{font-family:'Syne',sans-serif}
 .pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);transition:all .2s}
 .pin-dot.filled{background:var(--accent);border-color:var(--accent)}
 .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.num-btn{padding:16px;border-radius:14px;border:1px solid var(--border);background:var(--card2);font-size:1.2rem;font-weight:700;cursor:pointer;font-family:'Syne',sans-serif;color:var(--text);transition:all .15s}
+.num-btn{padding:16px;border-radius:14px;border:1px solid var(--border);background:var(--card2);font-size:1.2rem;font-weight:700;cursor:pointer;font-family:Syne,sans-serif;color:var(--text);transition:all .15s}
 .num-btn:active{background:rgba(193,127,60,.2);border-color:var(--accent);transform:scale(.95)}
 .num-btn.del{font-size:.9rem;color:var(--muted)}
 .auth-error{color:var(--red);font-size:.82rem;text-align:center;margin-top:10px;min-height:20px}
@@ -42,8 +42,8 @@ h1,h2,h3{font-family:'Syne',sans-serif}
 /* App */
 #app{display:none;min-height:100vh;flex-direction:column}
 .app-header{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--card);position:sticky;top:0;z-index:50}
-.user-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.82rem;font-family:'Syne',sans-serif}
-.user-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem}
+.user-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.82rem;font-family:Syne,sans-serif}
+.user-name{font-family:Syne,sans-serif;font-weight:700;font-size:.9rem}
 .logout-btn{background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--muted);font-size:.75rem;cursor:pointer;font-family:inherit}
 .app-content{padding:20px;flex:1;max-width:480px;margin:0 auto;width:100%}
 
@@ -52,14 +52,14 @@ h1,h2,h3{font-family:'Syne',sans-serif}
 .nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 12px;opacity:.45;transition:opacity .2s}
 .nav-item.active{opacity:1}
 .nav-icon{font-size:1.3rem}
-.nav-label{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:'Syne',sans-serif}
+.nav-label{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:Syne,sans-serif}
 .nav-item.active .nav-label{color:var(--accent)}
 
 /* Screens */
 .screen{display:none;padding-bottom:90px}
 .screen.active{display:block}
 .section-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px}
-.section-title{font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:4px}
+.section-title{font-family:Syne,sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:4px}
 .section-sub{font-size:.82rem;color:var(--muted);margin-bottom:16px}
 
 /* Cards */
@@ -77,7 +77,7 @@ h1,h2,h3{font-family:'Syne',sans-serif}
 .room-section{margin-bottom:16px}
 .room-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card2);border-radius:12px;margin-bottom:8px}
 .room-icon{font-size:1.1rem}
-.room-name{font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem}
+.room-name{font-family:Syne,sans-serif;font-weight:700;font-size:.88rem}
 .item-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .15s}
 .item-row.flagged{background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.35)}
 .item-name{font-size:.85rem}
@@ -90,12 +90,12 @@ h1,h2,h3{font-family:'Syne',sans-serif}
 
 /* Availability */
 .avail-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:20px}
-.avail-day-head{font-size:.6rem;font-weight:700;text-align:center;color:var(--muted);padding:4px 0;font-family:'Syne',sans-serif}
-.avail-cell{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.74rem;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:all .2s;font-family:'Syne',sans-serif}
+.avail-day-head{font-size:.6rem;font-weight:700;text-align:center;color:var(--muted);padding:4px 0;font-family:Syne,sans-serif}
+.avail-cell{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.74rem;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:all .2s;font-family:Syne,sans-serif}
 .avail-cell.empty{opacity:0;pointer-events:none}
 .avail-cell.today{border-color:var(--accent);color:var(--accent)}
-.avail-cell.unavailable{background:rgba(255,107,107,.15);border-color:rgba(255,107,107,.4);color:var(--red)}
-.avail-cell.booked{background:rgba(45,212,160,.1);border-color:rgba(45,212,160,.3);color:var(--green);cursor:default}
+.avail-cell.available{background:rgba(45,212,160,.15);border-color:rgba(45,212,160,.5);color:var(--green)}
+.avail-cell.booked{background:rgba(45,212,160,.3);border-color:rgba(45,212,160,.7);color:var(--green);cursor:default;font-weight:800}
 .avail-cell.past{opacity:.3;cursor:default}
 
 /* Earnings */
@@ -103,7 +103,7 @@ h1,h2,h3{font-family:'Syne',sans-serif}
 .earn-row:last-child{border:none}
 
 /* Submit */
-.submit-btn{width:100%;padding:16px;border-radius:14px;border:none;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:.04em;margin-top:12px;transition:all .2s}
+.submit-btn{width:100%;padding:16px;border-radius:14px;border:none;background:var(--accent);color:#fff;font-family:Syne,sans-serif;font-size:1rem;font-weight:800;cursor:pointer;letter-spacing:.04em;margin-top:12px;transition:all .2s}
 .submit-btn:active{transform:scale(.98);opacity:.9}
 .submit-btn.green{background:var(--green);color:#0f1117}
 .submit-btn:disabled{opacity:.4;cursor:not-allowed}
@@ -112,7 +112,7 @@ h1,h2,h3{font-family:'Syne',sans-serif}
 .ping-box{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:16px}
 .ping-textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-family:inherit;font-size:.85rem;outline:none;resize:none;min-height:80px;line-height:1.5}
 .ping-textarea:focus{border-color:var(--accent)}
-.ping-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:'Syne',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;margin-top:8px}
+.ping-btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-family:Syne,sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;margin-top:8px}
 
 /* Toast */
 .toast-wrap{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);z-index:999;pointer-events:none;width:calc(100% - 40px);max-width:360px}
@@ -164,8 +164,19 @@ h1,h2,h3{font-family:'Syne',sans-serif}
 
     <!-- My Cleans -->
     <div class="screen" id="screen-cleans">
-      <div class="section-title">My Cleans</div>
-      <div class="section-sub">Tap a clean to submit your inventory</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div class="section-title" style="margin:0">My Cleans</div>
+        <div style="display:flex;gap:4px;background:var(--card2);border-radius:10px;padding:3px">
+          <button id="filter-upcoming-btn" onclick="setCleanFilter('upcoming')"
+            style="padding:5px 12px;border-radius:7px;border:none;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;background:var(--accent);color:#fff;transition:all .2s">Upcoming</button>
+          <button id="filter-completed-btn" onclick="setCleanFilter('completed')"
+            style="padding:5px 12px;border-radius:7px;border:none;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .2s">Completed</button>
+        </div>
+      </div>
+
+      <!-- Checkout dates needing cleaning -->
+      <div id="checkouts-needed"></div>
+
       <div id="cleans-list"></div>
     </div>
 
@@ -174,7 +185,7 @@ h1,h2,h3{font-family:'Syne',sans-serif}
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
         <button onclick="showScreen('cleans')" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;color:var(--text);font-size:.82rem;cursor:pointer;font-family:inherit">← Back</button>
         <div>
-          <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem" id="inv-title"></div>
+          <div style="font-family:Syne,sans-serif;font-weight:800;font-size:1rem" id="inv-title"></div>
           <div style="font-size:.78rem;color:var(--muted)" id="inv-sub"></div>
         </div>
       </div>
@@ -195,13 +206,13 @@ h1,h2,h3{font-family:'Syne',sans-serif}
       <div class="section-sub">Tap a day to mark yourself unavailable</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <button onclick="availNav(-1)" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;color:var(--text);font-size:.8rem;cursor:pointer;font-family:inherit">← Prev</button>
-        <div style="font-family:'Syne',sans-serif;font-weight:700" id="avail-month-label"></div>
+        <div style="font-family:Syne,sans-serif;font-weight:700" id="avail-month-label"></div>
         <button onclick="availNav(1)" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;color:var(--text);font-size:.8rem;cursor:pointer;font-family:inherit">Next →</button>
       </div>
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px">
-        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:rgba(45,212,160,.3)"></div>Clean booked</div>
-        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:rgba(255,107,107,.3)"></div>Unavailable</div>
-        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:var(--card2);border:1px solid var(--border)"></div>Available</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:rgba(45,212,160,.6)"></div>Clean booked</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:rgba(45,212,160,.2);border:1px solid rgba(45,212,160,.5)"></div>Available (tap to set)</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:var(--card2);border:1px solid var(--border)"></div>Unavailable (default)</div>
         <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;border:1.5px solid rgba(193,127,60,.5)"></div>Checkout (clean needed)</div>
       </div>
       <div class="avail-cal" id="avail-cal"></div>
@@ -325,8 +336,9 @@ const MONTHS_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','N
 let db = null;
 let currentCleaner = null;
 let myCleans = [];
+let cleansFilter = 'upcoming'; // 'upcoming' | 'completed'
 let myBookingCheckouts = []; // checkout dates for properties this cleaner covers
-let unavailableDays = new Set();
+let availableDays = new Set(); // days marked as available (default = unavailable)
 let availYear = new Date().getFullYear();
 let availMonth = new Date().getMonth();
 let currentInventoryClean = null;
@@ -438,6 +450,14 @@ async function loadData() {
       db.from('bookings').select('check_out_date,property_id,guest_name,nights').eq('is_active',true).gte('check_out_date',tod()).order('check_out_date',{ascending:true}).limit(60),
     ]);
     myCleans = cleanRes.data||[];
+    // Load availability for current month
+    const avRes = await db.from('cleaner_availability')
+      .select('date,available')
+      .eq('cleaner',currentCleaner.name)
+      .gte('date',new Date().toISOString().slice(0,7)+'-01');
+    if(avRes.data){
+      availableDays = new Set(avRes.data.filter(r=>r.available).map(r=>r.date));
+    }
     // Only show checkouts for properties this cleaner covers
     const propIds = Object.keys(PROPS);
     myBookingCheckouts = (bookRes.data||[])
@@ -480,7 +500,7 @@ function renderHome() {
       return `<div class="clean-card ${isToday?'today-card':''}" onclick="openInventory('${c.id}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
           <div>
-            <div style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;line-height:1">${parseInt(d)||'?'}</div>
+            <div style="font-family:Syne,sans-serif;font-size:2rem;font-weight:800;line-height:1">${parseInt(d)||'?'}</div>
             <div style="font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">${m?MONTHS_S[parseInt(m)-1]:''} ${y||''}</div>
           </div>
           <span class="status-pill ${isToday?'pill-today':'pill-scheduled'}">${isToday?'Today':'Upcoming'}</span>
@@ -497,42 +517,91 @@ function renderHome() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="card" style="border-left:3px solid var(--green)">
         <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Earned this month</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--green)">R${earned.toLocaleString()}</div>
+        <div style="font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;color:var(--green)">R${earned.toLocaleString()}</div>
       </div>
       <div class="card" style="border-left:3px solid var(--accent)">
         <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Upcoming cleans</div>
-        <div style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--accent)">${scheduled}</div>
+        <div style="font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;color:var(--accent)">${scheduled}</div>
       </div>
     </div>`;
 }
 
 // ── Cleans ────────────────────────────────────────────────────────────────────
+function setCleanFilter(f) {
+  cleansFilter = f;
+  const upBtn = document.getElementById('filter-upcoming-btn');
+  const coBtn = document.getElementById('filter-completed-btn');
+  if (upBtn) { upBtn.style.background = f==='upcoming'?'var(--accent)':'transparent'; upBtn.style.color = f==='upcoming'?'#fff':'var(--muted)'; }
+  if (coBtn) { coBtn.style.background = f==='completed'?'var(--accent)':'transparent'; coBtn.style.color = f==='completed'?'#fff':'var(--muted)'; }
+  renderCleans();
+}
+
+function renderCheckoutsNeeded() {
+  const td = tod();
+  const el = document.getElementById('checkouts-needed');
+  if (!el) return;
+  // Get upcoming checkout dates from bookings
+  const upcoming = myBookingCheckouts
+    .filter(b => b.date >= td)
+    .sort((a,b) => a.date.localeCompare(b.date))
+    .slice(0, 5);
+  if (!upcoming.length) { el.innerHTML=''; return; }
+  // Check which dates already have a clean scheduled
+  const scheduledDates = new Set(myCleans.map(c=>c.date));
+  el.innerHTML = '<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">🧹 Upcoming Checkouts</div>'
+    + upcoming.map(b => {
+      const hasClean = scheduledDates.has(b.date);
+      const [y,m,d] = b.date.split('-');
+      const cleanForDate = myCleans.find(c=>c.date===b.date);
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--card);border:1px solid '+(hasClean?'rgba(45,212,160,.3)':'rgba(193,127,60,.3)')+';border-radius:10px;margin-bottom:6px">'
+        + '<div style="display:flex;align-items:center;gap:10px">'
+        + '<div style="text-align:center;min-width:32px"><div style="font-family:Syne,sans-serif;font-size:1.1rem;font-weight:800">'+parseInt(d)+'</div><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase">'+MONTHS_S[parseInt(m)-1]+'</div></div>'
+        + '<div><div style="font-weight:600;font-size:.84rem">'+b.prop+'</div><div style="font-size:.72rem;color:var(--muted)">'+b.guest+' checks out</div></div>'
+        + '</div>'
+        + '<span style="font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:10px;background:'+(hasClean?'rgba(45,212,160,.15)':'rgba(193,127,60,.15)')+';color:'+(hasClean?'var(--green)':'var(--accent)')+'">'
+        + (hasClean ? '✓ '+(cleanForDate?.cleaner||'Booked') : '⚠ Needed')
+        + '</span>'
+        + '</div>';
+    }).join('')
+    + '<div style="height:16px"></div>';
+}
+
 function renderCleans() {
   const td=tod();
+  renderCheckoutsNeeded();
   const el=document.getElementById('cleans-list');
-  if(!myCleans.length){el.innerHTML=`<div class="card" style="text-align:center;padding:28px;color:var(--muted)">No cleans found</div>`;return;}
-  const sorted=[...myCleans].sort((a,b)=>a.date.localeCompare(b.date));
-  el.innerHTML=sorted.map(c=>{
+  if(!myCleans.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px;color:var(--muted)">No cleans found</div>';return;}
+
+  // Filter by toggle
+  const filtered = cleansFilter === 'upcoming'
+    ? [...myCleans].filter(c=>c.status!=='completed').sort((a,b)=>a.date.localeCompare(b.date))
+    : [...myCleans].filter(c=>c.status==='completed').sort((a,b)=>b.date.localeCompare(a.date)); // completed: newest first
+
+  if(!filtered.length){
+    el.innerHTML='<div class="card" style="text-align:center;padding:28px;color:var(--muted)">No '+cleansFilter+' cleans</div>';
+    return;
+  }
+
+  el.innerHTML=filtered.map(c=>{
     const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
     const[y,m,d]=(c.date||'').split('-');
     const done=c.status==='completed';
     const isToday=c.date===td;
-    return `<div class="clean-card ${isToday?'today-card':''} ${done?'':''}">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="text-align:center;min-width:36px">
-            <div style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:800">${parseInt(d)||'?'}</div>
-            <div style="font-size:.62rem;color:var(--muted);text-transform:uppercase">${m?MONTHS_S[parseInt(m)-1]:''}</div>
-          </div>
-          <div>
-            <div style="font-weight:600;font-size:.88rem">${prop.name}</div>
-            <div style="font-size:.76rem;color:var(--muted)">${c.time||'10:00'} · R${c.amount_paid||getRate(currentCleaner,c.property_id)}</div>
-          </div>
-        </div>
-        <span class="status-pill ${done?'pill-completed':isToday?'pill-today':'pill-scheduled'}">${done?'Done':isToday?'Today':'Scheduled'}</span>
-      </div>
-      ${!done?`<div onclick="openInventory('${c.id}')" style="font-size:.74rem;color:var(--accent);font-weight:600;cursor:pointer">Tap to submit inventory →</div>`:''}
-    </div>`;
+    return '<div class="clean-card '+(isToday?'today-card':'')+'">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px">'
+      +'<div style="display:flex;align-items:center;gap:12px">'
+      +'<div style="text-align:center;min-width:36px">'
+      +'<div style="font-family:Syne,sans-serif;font-size:1.2rem;font-weight:800">'+(parseInt(d)||'?')+'</div>'
+      +'<div style="font-size:.62rem;color:var(--muted);text-transform:uppercase">'+(m?MONTHS_S[parseInt(m)-1]:'')+'</div>'
+      +'</div>'
+      +'<div>'
+      +'<div style="font-weight:600;font-size:.88rem">'+prop.name+'</div>'
+      +'<div style="font-size:.76rem;color:var(--muted)">'+(c.time||'10:00')+' · R'+(c.amount_paid||getRate(currentCleaner,c.property_id))+'</div>'
+      +'</div></div>'
+      +'<span class="status-pill '+(done?'pill-completed':isToday?'pill-today':'pill-scheduled')+'">'+(done?'Done':isToday?'Today':'Scheduled')+'</span>'
+      +'</div>'
+      +(!done?'<div onclick="openInventory(\''+c.id+'\')" style="font-size:.74rem;color:var(--accent);font-weight:600;cursor:pointer">Tap to submit inventory →</div>':'')
+      +'</div>';
   }).join('');
 }
 
@@ -640,40 +709,50 @@ function renderAvail() {
   const firstDay=new Date(availYear,availMonth,1).getDay();
   const daysCount=new Date(availYear,availMonth+1,0).getDate();
   const monthStr=availYear+'-'+String(availMonth+1).padStart(2,'0');
-  document.getElementById('avail-month-label').textContent=`${MONTHS[availMonth]} ${availYear}`;
+  document.getElementById('avail-month-label').textContent=MONTHS[availMonth]+' '+availYear;
   const cleanDates=new Set(myCleans.filter(c=>c.date&&c.date.startsWith(monthStr)).map(c=>c.date));
-  const checkoutDates=new Map(myBookingCheckouts.filter(b=>b.date&&b.date.startsWith(monthStr)).map(b=>[b.date,b]));
-  let html=['S','M','T','W','T','F','S'].map(d=>'<div class="avail-day-head">'+d+'</div>').join('');
+  const checkoutMap=new Map(myBookingCheckouts.filter(b=>b.date&&b.date.startsWith(monthStr)).map(b=>[b.date,b]));
+  let html=['S','M','T','W','T','F','S'].map(function(d){return '<div class="avail-day-head">'+d+'</div>';}).join('');
   for(let i=0;i<firstDay;i++) html+='<div class="avail-cell empty"></div>';
   for(let d=1;d<=daysCount;d++){
     const ds=monthStr+'-'+String(d).padStart(2,'0');
-    const isPast=ds<td,isBooked=cleanDates.has(ds),isUnavail=unavailableDays.has(ds),isToday=ds===td;
-    const checkout=checkoutDates.get(ds);
+    const isPast=ds<td;
+    const isBooked=cleanDates.has(ds);
+    const isAvail=availableDays.has(ds);
+    const isToday=ds===td;
+    const checkout=checkoutMap.get(ds);
     let cls='avail-cell';
     let extra='';
-    if(isPast) cls+=' past';
-    else if(isBooked){cls+=' booked';extra=' title="Clean scheduled"';}
-    else if(isUnavail) cls+=' unavailable';
-    else if(isToday) cls+=' today';
-    // Show checkout indicator even if not yet booked for cleaning
-    var checkoutDot = (checkout && !isBooked) ? '<span style="position:absolute;bottom:1px;right:1px;width:5px;height:5px;border-radius:50%;background:var(--accent);display:block"></span>' : '';
-    var cellStyle = (checkout && !isBooked) ? 'position:relative;box-shadow:0 0 0 1.5px rgba(193,127,60,.4);' : 'position:relative;';
-    var clickAttr = (!isPast && !isBooked) ? ('onclick="toggleUnavail(\'' + ds + '\')"') : '';
-    html += '<div class="' + cls + '" style="' + cellStyle + '" ' + extra + ' ' + clickAttr + '>' + d + checkoutDot + '</div>';
+    let style='position:relative;';
+    if(isPast){ cls+=' past'; }
+    else if(isBooked){ cls+=' booked'; extra='title="Clean booked"'; }
+    else if(isAvail){ cls+=' available'; }
+    else if(isToday){ cls+=' today'; }
+    if(checkout&&!isBooked) style+='box-shadow:0 0 0 2px rgba(193,127,60,.6);';
+    var dot=(checkout&&!isBooked)?'<span style="position:absolute;bottom:1px;right:1px;width:5px;height:5px;border-radius:50%;background:var(--accent);display:block"></span>':'';
+    var clickStr=(!isPast&&!isBooked)?(' onclick="toggleAvail(this.dataset.ds)" data-ds="'+ds+'"'):'';
+    html+='<div class="'+cls+'" style="'+style+'" '+extra+clickStr+'>'+d+dot+'</div>';
   }
   document.getElementById('avail-cal').innerHTML=html;
 }
 
-function toggleUnavail(ds){ unavailableDays.has(ds)?unavailableDays.delete(ds):unavailableDays.add(ds); renderAvail(); }
+function toggleAvail(el){ var ds=typeof el==='string'?el:el.dataset.ds; availableDays.has(ds)?availableDays.delete(ds):availableDays.add(ds); renderAvail(); }
 function availNav(dir){ availMonth+=dir; if(availMonth>11){availMonth=0;availYear++;} if(availMonth<0){availMonth=11;availYear--;} renderAvail(); }
 
 async function saveAvailability() {
-  if(!db||!currentCleaner) { toast('Not connected','err'); return; }
-  // Store availability in kb_articles as a simple note (no dedicated table yet)
-  const key=`avail_${currentCleaner.name}`;
-  const days=[...unavailableDays].filter(d=>d>=tod()).sort();
-  // Save to localStorage as backup
-  localStorage.setItem(key,JSON.stringify(days));
+  if(!db||!currentCleaner){toast('Not connected','err');return;}
+  const td=tod();
+  const monthStr=availYear+'-'+String(availMonth+1).padStart(2,'0');
+  // Get all days in current month
+  const daysCount=new Date(availYear,availMonth+1,0).getDate();
+  const upserts=[];
+  for(let d=1;d<=daysCount;d++){
+    const ds=monthStr+'-'+String(d).padStart(2,'0');
+    if(ds<td) continue;
+    upserts.push({cleaner:currentCleaner.name,date:ds,available:availableDays.has(ds)});
+  }
+  const{error}=await db.from('cleaner_availability').upsert(upserts,{onConflict:'cleaner,date'});
+  if(error){toast('Save error: '+error.message,'err');return;}
   toast('Availability saved ✓','ok');
 }
 
@@ -695,7 +774,7 @@ function renderEarnings() {
   document.getElementById('earnings-content').innerHTML=`
     <div class="card" style="border-left:3px solid var(--green);margin-bottom:20px">
       <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">This month</div>
-      <div style="font-family:'Syne',sans-serif;font-size:2.5rem;font-weight:800;color:var(--green);line-height:1">R${thisTotal.toLocaleString()}</div>
+      <div style="font-family:Syne,sans-serif;font-size:2.5rem;font-weight:800;color:var(--green);line-height:1">R${thisTotal.toLocaleString()}</div>
       <div style="font-size:.78rem;color:var(--muted);margin-top:4px;margin-bottom:12px">${(byMonth[thisMonth]||{cleans:0}).cleans} clean${(byMonth[thisMonth]||{cleans:0}).cleans!==1?'s':''} completed</div>
       <div style="font-size:.74rem;color:var(--muted)">All time total: <strong style="color:var(--text)">R${allTime.toLocaleString()}</strong></div>
     </div>
@@ -706,7 +785,7 @@ function renderEarnings() {
         return `<div class="earn-row">
           <div><div style="font-weight:600;font-size:.88rem">${MONTHS[parseInt(mo)-1]} ${y}</div>
           <div style="font-size:.76rem;color:var(--muted)">${byMonth[m].cleans} clean${byMonth[m].cleans!==1?'s':''}</div></div>
-          <div style="font-family:'Syne',sans-serif;font-weight:700;color:var(--green)">R${byMonth[m].total.toLocaleString()}</div>
+          <div style="font-family:Syne,sans-serif;font-weight:700;color:var(--green)">R${byMonth[m].total.toLocaleString()}</div>
         </div>`;
       }).join(''):'<div style="color:var(--muted);text-align:center;padding:20px;font-size:.85rem">No completed cleans yet</div>'}
     </div>`;
