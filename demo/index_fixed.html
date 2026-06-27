@@ -573,6 +573,12 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
             <div class="dom-grid" id="dom-grid"></div>
           </div>
 
+          <!-- Cleaner Availability -->
+          <div class="card" style="margin-top:16px">
+            <div class="card-title" style="margin-bottom:12px">📅 Cleaner Availability</div>
+            <div id="dom-availability"><div style="color:var(--muted);font-size:.82rem;text-align:center;padding:16px">No availability data yet</div></div>
+          </div>
+
           <!-- Inventory Reports from cleaners -->
           <div class="card" style="margin-top:16px">
             <div class="card-title" style="margin-bottom:12px">🔍 Inventory Reports</div>
@@ -1233,6 +1239,7 @@ const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 let currentUser = null, currentProp = 'all', currentTab = 'dashboard';
 let taskFilter = 'open', bookingFilter = 'upcoming';
 let inventoryReports = [];
+let cleanerAvailability = []; // [{cleaner, date, available}]
 let taskAssigneeFilter = 'all'; // 'all' | 'Nicole' | 'Silja' | 'Nina Williams'
 let taskPriorityFilter = 'all';  // 'all' | 'high' | 'medium' | 'low'
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
@@ -1784,6 +1791,10 @@ async function loadData() {
     if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
     if (invRes && invRes.data) inventoryReports = invRes.data;
 
+    // Load cleaner availability
+    const avRes = await db.from('cleaner_availability').select('*').gte('date', today);
+    if (avRes.data) cleanerAvailability = avRes.data;
+
     // Load booking checklists into ninaBTaskProgress
     const clRes = await db.from('booking_checklists').select('*');
     if (clRes.data) {
@@ -2222,7 +2233,8 @@ function renderDashboard() {
 
     let out = '';
     if (cur) {
-      const nightsLeft = Math.round((new Date(cur.check_out)-now)/86400000);
+      const today_sast = todaySAST();
+      const nightsLeft = cur.check_out > today_sast ? Math.ceil((new Date(cur.check_out)-new Date(today_sast))/86400000) : 0;
       const col = PLAT_COLORS[cur.platform]||'var(--accent)';
       out += `<div style="background:var(--ocean-light);border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--ocean)">
         <div style="font-size:.68rem;font-weight:700;color:var(--ocean);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Currently staying</div>
@@ -2514,7 +2526,8 @@ function renderLaneView() {
 
     // Occupied status — warm neutral
     const isOccupied = !!current;
-    const nightsLeft = current ? Math.round((new Date(current.check_out)-new Date())/86400000) : 0;
+    const today_sast2 = todaySAST();
+    const nightsLeft = current ? (current.check_out > today_sast2 ? Math.ceil((new Date(current.check_out)-new Date(today_sast2))/86400000) : 0) : 0;
     const statusBg   = isOccupied ? '#e0f2fe' : '#f0fdf4';
     const statusCol  = isOccupied ? '#0369a1' : '#15803d';
     const statusText = isOccupied ? '🏠 Occupied' : '✓ Available';
@@ -3479,6 +3492,42 @@ function renderDomesticCalView() {
 
   // Render earnings
   renderDomEarnings();
+
+  // Render cleaner availability
+  const availEl = document.getElementById('dom-availability');
+  if (availEl && cleanerAvailability.length) {
+    const td = todaySAST();
+    const nextDays = [];
+    for (let i=0; i<14; i++) {
+      const d = new Date(); d.setDate(d.getDate()+i);
+      nextDays.push(d.toISOString().slice(0,10));
+    }
+    const CLEANERS = ['Blessing','Fatima','Patricia','Spiwe'];
+    const COLORS = {'Blessing':'#f59e0b','Fatima':'#8b5cf6','Patricia':'#2dd4a0','Spiwe':'#5b8ef0'};
+    availEl.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.75rem">'
+      + '<tr><th style="text-align:left;padding:4px 8px;color:var(--muted);font-weight:600">Cleaner</th>'
+      + nextDays.map(d=>'<th style="padding:4px 3px;color:var(--muted);font-weight:600;text-align:center;min-width:32px">'+parseInt(d.slice(8))+'<br><span style="font-size:.6rem">'+['Su','Mo','Tu','We','Th','Fr','Sa'][new Date(d).getDay()]+'</span></th>').join('')
+      + '</tr>'
+      + CLEANERS.map(name => {
+        const c = COLORS[name]||'#64748b';
+        return '<tr>'
+          + '<td style="padding:5px 8px;font-weight:600;color:'+c+'">'+name+'</td>'
+          + nextDays.map(d => {
+            const rec = cleanerAvailability.find(r=>r.cleaner===name&&r.date===d);
+            const isAvail = rec?.available === true;
+            const hasClean = domestics.some(dom=>dom.cleaner===name&&dom.date===d);
+            const bg = hasClean ? 'rgba(45,212,160,.3)' : isAvail ? 'rgba(45,212,160,.1)' : 'rgba(255,107,107,.1)';
+            const icon = hasClean ? '🧹' : isAvail ? '✓' : '–';
+            const col = hasClean ? 'var(--green)' : isAvail ? 'var(--green)' : 'var(--muted)';
+            return '<td style="text-align:center;padding:4px 2px"><span style="display:inline-block;width:24px;height:24px;border-radius:6px;background:'+bg+';color:'+col+';font-size:.7rem;line-height:24px">'+icon+'</span></td>';
+          }).join('')
+          + '</tr>';
+      }).join('')
+      + '</table></div>'
+      + '<div style="display:flex;gap:12px;margin-top:8px;font-size:.72rem;color:var(--muted)">'
+      + '<span>🧹 Clean booked</span><span style="color:var(--green)">✓ Available</span><span>– Unavailable</span>'
+      + '</div>';
+  }
 
   // Render inventory reports
   const invEl = document.getElementById('dom-inv-reports');
