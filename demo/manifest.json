@@ -1,0 +1,24 @@
+{
+  "name": "S&N Staff Portal",
+  "short_name": "S&N Staff",
+  "description": "S&N Apt Management — Domestic Staff Portal",
+  "start_url": "/domestic",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#c17f3c",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
