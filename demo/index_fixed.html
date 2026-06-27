@@ -959,6 +959,8 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
             <div class="card-title" style="margin:0">📊 Net Revenue by Month — Speranta (completed months only)</div>
             <span style="font-size:.72rem;color:var(--muted);font-style:italic">Updated after each month closes</span>
           </div>
+          <!-- S&N Income — Speranta only -->
+          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏠 Speranta — S&N Rental Income</div>
           <div class="table-wrap"><table>
             <thead><tr>
               <th>Month</th>
@@ -971,7 +973,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
               <tr><td><strong>Jan 2026</strong></td><td style="color:var(--muted)">—</td><td style="color:var(--green)">R24,347</td><td style="color:var(--muted)">—</td><td><strong style="color:var(--green)">R24,347</strong></td></tr>
               <tr style="background:var(--surface-2)"><td><strong>Feb 2026</strong></td><td style="color:var(--muted)">—</td><td style="color:var(--green)">R11,448</td><td style="color:var(--muted)">—</td><td><strong style="color:var(--green)">R11,448</strong></td></tr>
               <tr><td><strong>Mar 2026</strong></td><td style="color:var(--muted)">—</td><td style="color:var(--green)">R5,627</td><td style="color:var(--muted)">—</td><td><strong style="color:var(--green)">R5,627</strong></td></tr>
-              <tr style="background:var(--surface-2)"><td><strong>Apr 2026</strong></td><td style="color:var(--green)">R14,391</td><td style="color:var(--green)">R3,915</td><td style="color:var(--green)">R13,662 <span style="font-size:.68rem;color:var(--muted)">(SP R2,097 + TV R11,565)</span></td><td><strong style="color:var(--green)">R31,968</strong></td></tr>
+              <tr style="background:var(--surface-2)"><td><strong>Apr 2026</strong></td><td style="color:var(--green)">R14,391</td><td style="color:var(--green)">R3,915</td><td style="color:var(--green)">R2,097</td><td><strong style="color:var(--green)">R20,403</strong></td></tr>
               <tr><td><strong>May 2026</strong></td><td style="color:var(--green)">R6,240</td><td style="color:var(--green)">R5,108</td><td style="color:var(--green)">R1,805</td><td><strong style="color:var(--green)">R13,153</strong></td></tr>
               <tr style="background:#fef3c7"><td><strong>Jun 2026</strong> 🔄</td><td style="color:var(--muted);font-size:.78rem">TBC</td><td style="color:var(--muted);font-size:.78rem">TBC</td><td style="color:var(--muted);font-size:.78rem">R6,542+ so far</td><td style="color:var(--muted)"><em>In progress</em></td></tr>
             </tbody>
@@ -980,15 +982,47 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
                 <td><strong>Jan–May total</strong></td>
                 <td style="color:var(--green)"><strong>R20,631</strong></td>
                 <td style="color:var(--green)"><strong>R50,445</strong></td>
-                <td style="color:var(--green)"><strong>R15,467</strong></td>
-                <td style="color:var(--green)"><strong>R86,543</strong></td>
+                <td style="color:var(--green)"><strong>R3,902</strong></td>
+                <td style="color:var(--green)"><strong>R74,978</strong></td>
               </tr>
             </tfoot>
           </table></div>
-          <div style="font-size:.72rem;color:var(--muted);margin-top:8px">LekkeSlaap April includes Dimakatso TV House (R11,565) + Speranta payouts (R2,097). June figures will be confirmed after month close.</div>
-          <div style="margin-top:10px;padding:10px 14px;background:rgba(45,212,160,.08);border:1px solid rgba(45,212,160,.2);border-radius:8px;font-size:.78rem">
-            🏆 <strong>Best month: April 2026</strong> — R31,968 net (Dimakatso TV House + strong Airbnb + BDC) &nbsp;|&nbsp;
-            📈 <strong>June 2026</strong> — R6,542 LekkeSlaap received so far, Airbnb + BDC still to confirm
+
+          <!-- TV House Management Fee Income -->
+          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:18px;margin-bottom:8px">🏡 TV House — S&N Management Fee Income</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Month</th><th>Management Fee</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Jan 2026</strong></td><td style="color:var(--green)">R6,000</td><td style="font-size:.74rem;color:var(--muted)">Billed to Mirka & Antonin</td></tr>
+              <tr style="background:var(--surface-2)"><td><strong>Feb 2026</strong></td><td style="color:var(--green)">R6,000</td><td style="font-size:.74rem;color:var(--muted)">Billed to Mirka & Antonin</td></tr>
+              <tr><td><strong>Mar 2026</strong></td><td style="color:var(--green)">R6,000</td><td style="font-size:.74rem;color:var(--muted)">Billed to Mirka & Antonin</td></tr>
+              <tr style="background:var(--surface-2)"><td><strong>Apr 2026</strong></td><td style="color:var(--green)">R6,000</td><td style="font-size:.74rem;color:var(--muted)">Billed to Mirka & Antonin</td></tr>
+              <tr><td><strong>May 2026</strong></td><td style="color:var(--green)">R6,000</td><td style="font-size:.74rem;color:var(--muted)">Billed to Mirka & Antonin</td></tr>
+              <tr style="background:#fef3c7"><td><strong>Jun 2026</strong> 🔄</td><td style="color:var(--muted)">TBC</td><td style="font-size:.74rem;color:var(--muted)">In progress</td></tr>
+            </tbody>
+            <tfoot>
+              <tr style="border-top:2px solid var(--border)">
+                <td><strong>Jan–May total</strong></td>
+                <td style="color:var(--green)"><strong>R30,000</strong></td>
+                <td style="font-size:.74rem;color:var(--muted)">Pool costs managed by S&N within fee</td>
+              </tr>
+            </tfoot>
+          </table></div>
+
+          <!-- TV House owner rental — for reference only -->
+          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:18px;margin-bottom:8px">📋 TV House — Owner Rental Income (reference only, not S&N revenue)</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Month</th><th>Platform</th><th>Guest</th><th>Gross Payout</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Apr 2026</strong></td><td style="color:#f59e0b">LekkeSlaap</td><td>Dimakatso</td><td style="color:var(--muted)">R11,565</td></tr>
+              <tr style="background:var(--surface-2)"><td colspan="3" style="color:var(--muted);font-style:italic;font-size:.78rem">Other months — awaiting TV House platform statements</td><td style="color:var(--muted)">TBC</td></tr>
+            </tbody>
+          </table></div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:8px">TV House rental proceeds are passed through to owners Mirka & Antonin against their monthly invoice. These are not included in S&N revenue figures above.</div>
+
+          <div style="margin-top:12px;padding:10px 14px;background:rgba(45,212,160,.08);border:1px solid rgba(45,212,160,.2);border-radius:8px;font-size:.78rem">
+            💰 <strong>S&N total income Jan–May 2026:</strong> Speranta R74,978 + Management fees R30,000 = <strong>R104,978</strong> &nbsp;|&nbsp;
+            📈 <strong>June 2026 on track</strong> — Speranta looking strong, update after month close
           </div>
         </div>
 
