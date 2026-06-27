@@ -249,13 +249,13 @@ const PROPS = {
 
 // ⚠ CHANGE PINS BEFORE SHARING WITH CLEANERS
 const CLEANERS = [
-  {name:'Blessing', pin:'1234', color:'#f59e0b', initials:'BL',
+  {name:'Blessing', pin:'0314', color:'#f59e0b', initials:'BL',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350, default:350}},
-  {name:'Fatima',   pin:'2345', color:'#8b5cf6', initials:'FA',
+  {name:'Fatima',   pin:'0722', color:'#8b5cf6', initials:'FA',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350,'83b2a84a-5451-4be5-a84f-2efc0d2602d5':450, default:350}},
-  {name:'Patricia', pin:'3456', color:'#2dd4a0', initials:'PM',
+  {name:'Patricia', pin:'1105', color:'#2dd4a0', initials:'PM',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350,'83b2a84a-5451-4be5-a84f-2efc0d2602d5':450, default:350}},
-  {name:'Spiwe',    pin:'4567', color:'#5b8ef0', initials:'SP',
+  {name:'Spiwe',    pin:'0918', color:'#5b8ef0', initials:'SP',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350, default:350}},
 ];
 
@@ -668,7 +668,11 @@ async function submitInventory() {
   const report={
     org_id:       ORG_ID,
     domestic_id:  String(currentInventoryClean.id),
-    property_id:  currentInventoryClean.property_id,
+    property_id:  currentInventoryClean.property_id === 'speranta'
+      ? 'e9737638-d83a-4947-940a-8746789e4d9f'
+      : currentInventoryClean.property_id === 'tvhouse'
+      ? '83b2a84a-5451-4be5-a84f-2efc0d2602d5'
+      : currentInventoryClean.property_id,
     cleaner:      currentCleaner.name,
     clean_date:   currentInventoryClean.date,
     submitted_at: new Date().toISOString(),
