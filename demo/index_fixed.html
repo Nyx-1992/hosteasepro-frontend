@@ -1944,6 +1944,7 @@ function renderDomesticEarnings() {
 
 // ── DATA LOAD ─────────────────────────────────────────────────
 async function loadData() {
+  const today = todaySAST();
   bookings = SAMPLE_BOOKINGS.map(nb);
   tasks = SAMPLE_TASKS.map(nt);
   domestics = SAMPLE_DOMESTICS.map(nd);
