@@ -5023,8 +5023,10 @@ const amt = b.revenue || b.total_amount || 0;
   const occEl = document.getElementById('report-occupancy');
   if (occEl) {
     // Calculate occupancy: nights booked / days in period
+    const todayStr = todaySAST();
+    const pastNights = spPaid.filter(b => (b.check_out_date||b.check_out||'') < todayStr).reduce((s,b) => s+(b.nights||0), 0);
     const periodDays = monthsBack > 0 ? monthsBack * 30 : 600;
-    const occRate = Math.min(100, Math.round(totalNights / periodDays * 100));
+    const occRate = Math.min(100, Math.round(pastNights / periodDays * 100));
     // Nights by platform
     const platNights = platOrder.map(p => ({p, n: byPlat[p]?.nights||0})).filter(x=>x.n>0);
     const maxN = Math.max(1, ...platNights.map(x=>x.n));
@@ -5033,7 +5035,7 @@ const amt = b.revenue || b.total_amount || 0;
         <div style="font-size:2.2rem;font-weight:700;font-family:'DM Serif Display',serif;color:var(--accent)">${occRate}%</div>
         <div>
           <div style="font-weight:600;font-size:.88rem">Occupancy Rate</div>
-          <div style="font-size:.76rem;color:var(--muted)">${totalNights} booked nights · ${periodDays} day period</div>
+         <div style="font-size:.76rem;color:var(--muted)">${pastNights} booked nights · ${periodDays} day period</div>
         </div>
       </div>
       ${platNights.map(({p,n}) => {
