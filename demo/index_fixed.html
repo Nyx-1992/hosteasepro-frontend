@@ -5047,9 +5047,7 @@ const isPast = m < todayMo;
 
     const totals = {airbnb:0, booking:0, lekkeslaap:0, manual:0, total:0};
     pastMonths.forEach(m => { plats.forEach(p => { totals[p] += netMonthly[m][p]||0; }); totals.total += netMonthly[m].total||0; });
-    const rangeLabel = pastMonths.length > 1
-      ? `${moName(pastMonths[0])}–${moName(pastMonths[pastMonths.length-1])} total`
-      : pastMonths.length === 1 ? `${moName(pastMonths[0])} total` : 'Total';
+    const rangeLabel = 'Total';
     netFoot.innerHTML = `<tr style="border-top:2px solid var(--border)">
       <td><strong>${rangeLabel}</strong></td>
       ${plats.map(p => totals[p] ? `<td style="color:var(--green)"><strong>${fmt2(totals[p])}</strong></td>` : `<td style="color:var(--muted)">—</td>`).join('')}
