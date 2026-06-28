@@ -1484,15 +1484,14 @@ function buildMobileNav() {
   const inner = document.getElementById('mob-nav-inner');
   if (!nav || !inner || !currentUser) return;
 
-  const MOB_NAV = [
-    {id:'dashboard', icon:'🏠', label:'Home'},
-    {id:'bookings',  icon:'📋', label:'Bookings'},
-    {id:'calendar',  icon:'📅', label:'Calendar'},
-    {id:'tasks',     icon:'✅', label:'Tasks'},
-    {id:'reports',   icon:'📊', label:'Reports'},
+ const MOB_NAV = [
+    {id:'dashboard', icon:'🏠', label:'Home',     roles:['admin','host']},
+    {id:'bookings',  icon:'📋', label:'Bookings', roles:['admin','host']},
+    {id:'calendar',  icon:'📅', label:'Calendar', roles:['admin','host']},
+    {id:'tasks',     icon:'✅', label:'Tasks',     roles:['admin','host']},
+    {id:'reports',   icon:'📊', label:'Reports',  roles:['admin']},
   ];
-
-  inner.innerHTML = MOB_NAV.map(item => `
+  inner.innerHTML = MOB_NAV.filter(item => item.roles.includes(currentUser.role)).map(item => `
     <div onclick="switchTab('${item.id}')"
       style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;cursor:pointer;flex:1;
              color:${currentTab===item.id ? '#FF385C' : 'rgba(255,255,255,0.6)'};
