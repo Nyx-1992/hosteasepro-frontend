@@ -127,6 +127,115 @@ h1,h2,h3{font-family:Syne,sans-serif}
 .toast.ok{border-color:rgba(45,212,160,.4);color:var(--green)}
 .toast.err{border-color:rgba(255,107,107,.4);color:var(--red)}
 @keyframes toastIn{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+
+/* ── Nina Coordinator View ─────────────────────────────────────────── */
+#nina-view{display:none;min-height:100vh;background:var(--bg);font-family:'DM Sans',sans-serif;}
+.nina-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px;background:var(--card);border-bottom:1px solid var(--border);}
+.nina-header-left{display:flex;align-items:center;gap:10px;}
+.nina-avatar{width:36px;height:36px;border-radius:50%;background:#6c47ff;color:#fff;font-weight:800;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:Syne,sans-serif;}
+.nina-name{font-weight:700;font-size:.95rem;font-family:Syne,sans-serif;}
+.nina-role{font-size:.75rem;color:var(--muted);}
+.nina-signout{font-size:.75rem;color:var(--muted);background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;font-family:inherit;}
+.nina-tabs{display:flex;background:var(--card);border-bottom:1.5px solid var(--border);padding:0 12px;gap:4px;}
+.nina-tab{padding:10px 16px;font-size:.83rem;font-weight:700;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1.5px;transition:all .15s;font-family:Syne,sans-serif;}
+.nina-tab.active{color:#6c47ff;border-bottom-color:#6c47ff;}
+.nina-tab-content{padding:16px;}
+.nina-section{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;}
+.nina-section-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap;}
+.nina-section-title{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:#6c47ff;font-family:Syne,sans-serif;}
+.nina-section-sub{font-size:.72rem;color:var(--muted);margin-top:2px;}
+.nina-filter-row select{font-size:.78rem;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card2);color:var(--text);}
+.nina-loading{font-size:.82rem;color:var(--muted);padding:12px 0;}
+.nina-checkout-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--card2);}
+.nina-checkout-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px;}
+.nina-checkout-guest{font-weight:700;font-size:.9rem;}
+.nina-checkout-date{font-size:.75rem;color:var(--muted);}
+.nina-prop-badge{font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.05em;font-family:Syne,sans-serif;}
+.nina-prop-badge.speranta{background:rgba(108,71,255,.2);color:#a78bfa;}
+.nina-prop-badge.tvhouse{background:rgba(45,212,160,.15);color:var(--green);}
+.nina-checkout-bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.nina-assigned-tag{font-size:.75rem;color:var(--green);font-weight:600;}
+.nina-unassigned-tag{font-size:.75rem;color:var(--accent);font-weight:600;}
+.nina-assign-btn{font-size:.75rem;padding:5px 12px;border-radius:6px;border:1.5px solid #6c47ff;color:#a78bfa;background:none;cursor:pointer;font-weight:700;transition:all .12s;}
+.nina-assign-btn:hover{background:#6c47ff;color:#fff;}
+.nina-assign-btn.reassign{border-color:var(--border);color:var(--muted);}
+.nina-sched-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.nina-sched-row:last-child{border-bottom:none;}
+.nina-sched-date{font-size:.78rem;font-weight:700;min-width:72px;}
+.nina-sched-cleaner{font-size:.82rem;flex:1;}
+.nina-sched-status{font-size:.7rem;padding:2px 8px;border-radius:10px;font-weight:700;}
+.nina-sched-status.scheduled{background:rgba(91,142,240,.15);color:var(--blue);}
+.nina-sched-status.completed{background:rgba(45,212,160,.15);color:var(--green);}
+.nina-sched-status.cancelled{background:rgba(255,107,107,.15);color:var(--red);}
+.nina-mark-done{font-size:.72rem;padding:3px 9px;border-radius:6px;border:1px solid var(--green);color:var(--green);background:none;cursor:pointer;font-family:inherit;}
+.nina-avail-grid{overflow-x:auto;}
+.nina-avail-table{border-collapse:collapse;width:100%;font-size:.7rem;}
+.nina-avail-table th{font-size:.62rem;font-weight:700;color:var(--muted);padding:4px 6px;text-align:center;font-family:Syne,sans-serif;}
+.nina-avail-table td{padding:4px 6px;text-align:center;}
+.nina-avail-name{font-weight:700;font-size:.75rem;text-align:left !important;white-space:nowrap;padding-right:10px !important;}
+.nina-avail-cell{width:28px;height:26px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;}
+.nina-avail-cell.avail{background:rgba(45,212,160,.2);color:var(--green);}
+.nina-avail-cell.unavail{background:rgba(255,255,255,.04);color:var(--border);}
+.nina-avail-cell.unknown{background:transparent;color:var(--border);}
+.nina-last-insp-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--card2);}
+.nina-insp-prop{font-weight:700;font-size:.9rem;}
+.nina-insp-meta{font-size:.75rem;color:var(--muted);margin-top:2px;}
+.nina-insp-rating-badge{font-size:.72rem;font-weight:800;padding:4px 10px;border-radius:20px;font-family:Syne,sans-serif;}
+.nina-insp-rating-badge.excellent{background:rgba(45,212,160,.15);color:var(--green);}
+.nina-insp-rating-badge.good{background:rgba(91,142,240,.15);color:var(--blue);}
+.nina-insp-rating-badge.fair{background:rgba(193,127,60,.15);color:var(--accent);}
+.nina-insp-rating-badge.poor{background:rgba(255,107,107,.15);color:var(--red);}
+.nina-link{font-size:.78rem;color:#a78bfa;text-decoration:none;font-weight:600;}
+.nina-link:hover{text-decoration:underline;}
+.nina-insp-step{}
+.nina-form-row{margin-bottom:12px;}
+.nina-form-row label{display:block;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;}
+.nina-form-row select,.nina-form-row input[type="date"],.nina-form-row input[type="time"],.nina-form-row input[type="text"],.nina-form-row textarea{width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;background:var(--card2);color:var(--text);box-sizing:border-box;font-family:inherit;}
+.nina-form-row textarea{resize:vertical;min-height:60px;}
+.nina-rating-row{display:flex;gap:6px;flex-wrap:wrap;}
+.nina-rating-btn{padding:7px 13px;border-radius:8px;border:1.5px solid var(--border);background:var(--card2);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .12s;color:var(--text);font-family:Syne,sans-serif;}
+.nina-rating-btn.selected{background:#6c47ff;border-color:#6c47ff;color:#fff;}
+.nina-cl-section{margin-bottom:10px;}
+.nina-cl-section-label{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:4px;font-family:Syne,sans-serif;}
+.nina-cl-item{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;background:var(--card2);border-radius:7px;margin-bottom:5px;border:1px solid var(--border);}
+.nina-cl-label{font-size:.84rem;flex:1;}
+.nina-cl-btns{display:flex;gap:4px;}
+.nina-cl-btns button{padding:4px 10px;border-radius:5px;border:1px solid var(--border);font-size:.72rem;font-weight:700;cursor:pointer;background:var(--card);color:var(--muted);font-family:inherit;}
+.nina-cl-btns button.ok{background:rgba(45,212,160,.15);border-color:var(--green);color:var(--green);}
+.nina-cl-btns button.issue{background:rgba(255,107,107,.15);border-color:var(--red);color:var(--red);}
+.nina-cl-btns button.na{background:rgba(255,255,255,.06);border-color:var(--muted);color:var(--muted);}
+.nina-photo-drop{border:2px dashed var(--border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin-bottom:12px;transition:border-color .15s;}
+.nina-photo-drop:hover{border-color:#6c47ff;}
+.nina-photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:6px;}
+.nina-photo-thumb{position:relative;aspect-ratio:1;border-radius:7px;overflow:hidden;background:var(--card2);}
+.nina-photo-thumb img{width:100%;height:100%;object-fit:cover;}
+.nina-photo-rm{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:.62rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.nina-review-block{font-size:.85rem;margin-bottom:12px;}
+.nina-review-row{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);}
+.nina-review-row:last-child{border-bottom:none;}
+.nina-review-label{width:110px;flex-shrink:0;font-weight:700;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.nina-review-issues{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.2);border-radius:7px;padding:8px 10px;margin-top:8px;font-size:.8rem;color:var(--red);}
+.nina-status-msg{padding:9px 12px;border-radius:8px;font-size:.83rem;margin-bottom:10px;}
+.nina-status-msg.error{background:rgba(255,107,107,.1);color:var(--red);border:1px solid rgba(255,107,107,.3);}
+.nina-status-msg.loading{background:rgba(91,142,240,.1);color:var(--blue);}
+.nina-status-msg.success{background:rgba(45,212,160,.1);color:var(--green);}
+.nina-btn-row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;}
+.nina-btn-primary,.nina-btn-secondary,.nina-btn-submit{padding:10px 18px;border-radius:8px;font-size:.85rem;font-weight:700;cursor:pointer;border:none;transition:opacity .15s;font-family:Syne,sans-serif;}
+.nina-btn-primary{background:#6c47ff;color:#fff;}
+.nina-btn-secondary{background:var(--card2);color:var(--text);border:1px solid var(--border);}
+.nina-btn-submit{background:var(--green);color:#0f1117;padding:11px 22px;}
+.nina-btn-primary:disabled,.nina-btn-submit:disabled{opacity:.4;cursor:not-allowed;}
+.nina-avail-legend{font-size:.7rem;color:var(--muted);margin-top:8px;display:flex;gap:14px;flex-wrap:wrap;}
+.nina-avail-legend span{display:flex;align-items:center;gap:5px;}
+/* Modal */
+.nina-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-end;z-index:9999;}
+.nina-modal{background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px 36px;width:100%;max-height:90vh;overflow-y:auto;border-top:1px solid var(--border);}
+.nina-modal-title{font-size:1rem;font-weight:800;margin-bottom:14px;font-family:Syne,sans-serif;}
+.nina-assign-context{font-size:.83rem;color:var(--muted);background:var(--card2);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.5;border:1px solid var(--border);}
+.nina-avail-note{font-size:.78rem;padding:7px 10px;border-radius:7px;margin-bottom:8px;min-height:28px;}
+.nina-avail-note.avail{background:rgba(45,212,160,.1);color:var(--green);}
+.nina-avail-note.unavail{background:rgba(255,107,107,.1);color:var(--red);}
+.nina-avail-note.unknown{background:var(--card2);color:var(--muted);}
 </style>
 </head>
 <body>
@@ -150,7 +259,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
   </div>
 </div>
 
-<!-- APP -->
+<!-- CLEANER APP -->
 <div id="app">
   <div class="app-header">
     <div style="display:flex;align-items:center;gap:10px">
@@ -160,16 +269,12 @@ h1,h2,h3{font-family:Syne,sans-serif}
     <button class="logout-btn" onclick="doLogout()">Sign out</button>
   </div>
   <div class="app-content">
-
-    <!-- Home -->
     <div class="screen active" id="screen-home">
       <div class="section-label" style="margin-bottom:12px">Next up</div>
       <div id="home-cleans"></div>
       <div class="section-label" style="margin-top:20px;margin-bottom:10px">This month</div>
       <div id="home-stats"></div>
     </div>
-
-    <!-- My Cleans -->
     <div class="screen" id="screen-cleans">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div class="section-title" style="margin:0">My Cleans</div>
@@ -180,14 +285,9 @@ h1,h2,h3{font-family:Syne,sans-serif}
             style="padding:5px 12px;border-radius:7px;border:none;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .2s">Completed</button>
         </div>
       </div>
-
-      <!-- Checkout dates needing cleaning -->
       <div id="checkouts-needed"></div>
-
       <div id="cleans-list"></div>
     </div>
-
-    <!-- Inventory -->
     <div class="screen" id="screen-inventory">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
         <button onclick="showScreen('cleans')" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;color:var(--text);font-size:.82rem;cursor:pointer;font-family:inherit">← Back</button>
@@ -197,17 +297,12 @@ h1,h2,h3{font-family:Syne,sans-serif}
         </div>
       </div>
       <div id="inventory-form"></div>
-
-      <!-- General ping/note -->
       <div class="ping-box">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">📌 Note for Nicole & Silja</div>
         <textarea class="ping-textarea" id="inv-note" placeholder="Anything else to mention? e.g. geyser making noise, gate stiff, neighbour complaint…"></textarea>
       </div>
-
       <button class="submit-btn green" onclick="submitInventory()">✓ Submit Inventory Report</button>
     </div>
-
-    <!-- Availability -->
     <div class="screen" id="screen-avail">
       <div class="section-title">My Availability</div>
       <div class="section-sub">Tap a day to mark yourself unavailable</div>
@@ -225,20 +320,167 @@ h1,h2,h3{font-family:Syne,sans-serif}
       <div class="avail-cal" id="avail-cal"></div>
       <button class="submit-btn" onclick="saveAvailability()">Save Availability</button>
     </div>
-
-    <!-- Earnings -->
     <div class="screen" id="screen-earnings">
       <div class="section-title">My Earnings</div>
       <div id="earnings-content"></div>
     </div>
-
   </div>
-
   <div class="bottom-nav">
     <div class="nav-item active" onclick="showScreen('home')" id="nav-home"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></div>
     <div class="nav-item" onclick="showScreen('cleans')" id="nav-cleans"><div class="nav-icon">🧹</div><div class="nav-label">Cleans</div></div>
     <div class="nav-item" onclick="showScreen('avail')" id="nav-avail"><div class="nav-icon">📅</div><div class="nav-label">Availability</div></div>
     <div class="nav-item" onclick="showScreen('earnings')" id="nav-earnings"><div class="nav-icon">💰</div><div class="nav-label">Earnings</div></div>
+  </div>
+</div>
+
+<!-- NINA COORDINATOR VIEW -->
+<div id="nina-view">
+  <div class="nina-header">
+    <div class="nina-header-left">
+      <div class="nina-avatar">N</div>
+      <div>
+        <div class="nina-name">Nina Williams</div>
+        <div class="nina-role">Property Coordinator</div>
+      </div>
+    </div>
+    <button class="nina-signout" onclick="ninaSignOut()">Sign out</button>
+  </div>
+  <div class="nina-tabs">
+    <button class="nina-tab active" id="ntab-schedule" onclick="switchNinaTab('schedule')">📋 Schedule</button>
+    <button class="nina-tab" id="ntab-inspect" onclick="switchNinaTab('inspect')">🔍 Inspect</button>
+  </div>
+
+  <!-- SCHEDULE TAB -->
+  <div id="nina-tab-schedule" class="nina-tab-content">
+    <div class="nina-section">
+      <div class="nina-section-header">
+        <div><div class="nina-section-title">Upcoming Checkouts</div><div class="nina-section-sub">Next 30 days · assign a cleaner</div></div>
+      </div>
+      <div id="nina-checkouts-list"><div class="nina-loading">Loading…</div></div>
+    </div>
+    <div class="nina-section">
+      <div class="nina-section-header">
+        <div class="nina-section-title">Scheduled Cleanings</div>
+        <div class="nina-filter-row">
+          <select id="nina-sched-filter" onchange="loadNinaSchedule()">
+            <option value="upcoming">Upcoming</option>
+            <option value="all">All</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+      <div id="nina-schedule-list"><div class="nina-loading">Loading…</div></div>
+    </div>
+    <div class="nina-section">
+      <div class="nina-section-header">
+        <div><div class="nina-section-title">Cleaner Availability</div><div class="nina-section-sub">Next 14 days</div></div>
+      </div>
+      <div id="nina-availability-grid"><div class="nina-loading">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- INSPECT TAB -->
+  <div id="nina-tab-inspect" class="nina-tab-content" style="display:none;">
+    <div class="nina-section">
+      <div class="nina-section-header">
+        <div class="nina-section-title">Last Inspection</div>
+      </div>
+      <div id="nina-last-inspections"><div class="nina-loading">Loading…</div></div>
+      <div style="margin-top:10px;text-align:right;">
+        <a href="https://hosteasepro-frontend.vercel.app" target="_blank" class="nina-link">View all reports in HEP →</a>
+      </div>
+    </div>
+    <div class="nina-section">
+      <div class="nina-section-header"><div class="nina-section-title">New Inspection</div></div>
+      <!-- Step 1 -->
+      <div id="nina-insp-step1">
+        <div class="nina-form-row">
+          <label>Property</label>
+          <select id="nina-insp-property">
+            <option value="">Select…</option>
+            <option value="e9737638-d83a-4947-940a-8746789e4d9f" data-key="speranta">Speranta Flat</option>
+            <option value="83b2a84a-5451-4be5-a84f-2efc0d2602d5" data-key="tvhouse">TV House</option>
+          </select>
+        </div>
+        <div class="nina-form-row"><label>Date</label><input type="date" id="nina-insp-date"/></div>
+        <button class="nina-btn-primary" onclick="ninaInspNext(1)">Continue →</button>
+      </div>
+      <!-- Step 2 -->
+      <div id="nina-insp-step2" style="display:none;">
+        <div id="nina-insp-checklist"></div>
+        <div class="nina-form-row" style="margin-top:14px;">
+          <label>Overall Condition</label>
+          <div class="nina-rating-row" id="nina-insp-rating">
+            <button class="nina-rating-btn" data-val="excellent" onclick="ninaSetRating('excellent')">✅ Excellent</button>
+            <button class="nina-rating-btn" data-val="good" onclick="ninaSetRating('good')">👍 Good</button>
+            <button class="nina-rating-btn" data-val="fair" onclick="ninaSetRating('fair')">⚠️ Fair</button>
+            <button class="nina-rating-btn" data-val="poor" onclick="ninaSetRating('poor')">❌ Poor</button>
+          </div>
+        </div>
+        <div class="nina-form-row"><label>Breakages / Damage</label><textarea id="nina-insp-breakages" rows="2" placeholder="None if all okay"></textarea></div>
+        <div class="nina-form-row"><label>Notes</label><textarea id="nina-insp-notes" rows="2" placeholder="Anything to flag for owners"></textarea></div>
+        <div class="nina-btn-row">
+          <button class="nina-btn-secondary" onclick="ninaInspBack(2)">← Back</button>
+          <button class="nina-btn-primary" onclick="ninaInspNext(2)">Continue →</button>
+        </div>
+      </div>
+      <!-- Step 3 -->
+      <div id="nina-insp-step3" style="display:none;">
+        <div class="nina-photo-drop" onclick="document.getElementById('nina-insp-photos').click()">
+          <div style="font-size:1.8rem;">📷</div>
+          <div style="font-size:.85rem;color:var(--muted);margin-top:4px;">Tap to add photos (max 10)</div>
+          <input type="file" id="nina-insp-photos" accept="image/*" multiple capture="environment" onchange="ninaHandlePhotos(this)" style="display:none;"/>
+        </div>
+        <div id="nina-photo-grid" class="nina-photo-grid"></div>
+        <div id="nina-photo-count" style="font-size:.78rem;color:var(--muted);margin:4px 0 12px;"></div>
+        <div class="nina-btn-row">
+          <button class="nina-btn-secondary" onclick="ninaInspBack(3)">← Back</button>
+          <button class="nina-btn-primary" onclick="ninaInspNext(3)">Review →</button>
+        </div>
+      </div>
+      <!-- Step 4 -->
+      <div id="nina-insp-step4" style="display:none;">
+        <div id="nina-insp-review" class="nina-review-block"></div>
+        <div id="nina-insp-status" style="display:none;" class="nina-status-msg"></div>
+        <div class="nina-btn-row">
+          <button class="nina-btn-secondary" onclick="ninaInspBack(4)">← Back</button>
+          <button class="nina-btn-submit" id="nina-insp-submit" onclick="ninaSubmitInspection()">Submit Inspection</button>
+        </div>
+      </div>
+      <!-- Success -->
+      <div id="nina-insp-success" style="display:none;text-align:center;padding:30px 0;">
+        <div style="font-size:2.5rem;">✅</div>
+        <div style="font-weight:800;margin:8px 0 4px;font-family:Syne,sans-serif;">Inspection submitted</div>
+        <div id="nina-insp-success-ref" style="font-size:.82rem;color:var(--muted);margin-bottom:20px;"></div>
+        <button class="nina-btn-primary" onclick="ninaInspReset()">New Inspection</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ASSIGN MODAL -->
+<div id="nina-assign-modal" class="nina-modal-overlay" style="display:none;" onclick="closeAssignModal(event)">
+  <div class="nina-modal">
+    <div class="nina-modal-title">Assign Cleaning</div>
+    <div id="nina-assign-context" class="nina-assign-context"></div>
+    <div class="nina-form-row"><label>Cleaner</label><select id="nina-assign-cleaner" onchange="checkAssignAvailability()"></select></div>
+    <div class="nina-form-row"><label>Date</label><input type="date" id="nina-assign-date" onchange="checkAssignAvailability()"/></div>
+    <div class="nina-form-row"><label>Time</label><input type="time" id="nina-assign-time" value="10:00"/></div>
+    <div class="nina-form-row">
+      <label>Type</label>
+      <select id="nina-assign-type">
+        <option value="turnover">Turnover clean</option>
+        <option value="deep_clean">Deep clean</option>
+        <option value="inspection_prep">Inspection prep</option>
+      </select>
+    </div>
+    <div class="nina-form-row"><label>Notes</label><input type="text" id="nina-assign-notes" placeholder="Optional"/></div>
+    <div id="nina-assign-availability" class="nina-avail-note"></div>
+    <div id="nina-assign-status" style="display:none;" class="nina-status-msg"></div>
+    <div class="nina-btn-row" style="margin-top:14px;">
+      <button class="nina-btn-secondary" onclick="document.getElementById('nina-assign-modal').style.display='none'">Cancel</button>
+      <button class="nina-btn-submit" id="nina-assign-btn" onclick="saveAssignment()">Confirm Assignment</button>
+    </div>
   </div>
 </div>
 
@@ -254,7 +496,6 @@ const PROPS = {
   '83b2a84a-5451-4be5-a84f-2efc0d2602d5': {name:'TV House',      short:'TV House'},
 };
 
-// ⚠ CHANGE PINS BEFORE SHARING WITH CLEANERS
 const CLEANERS = [
   {name:'Blessing', pin:'0314', color:'#f59e0b', initials:'BL',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350, default:350}},
@@ -264,83 +505,50 @@ const CLEANERS = [
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350,'83b2a84a-5451-4be5-a84f-2efc0d2602d5':450, default:350}},
   {name:'Spiwe',    pin:'0918', color:'#5b8ef0', initials:'SP',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350, default:350}},
+  {name:'Nina',     pin:'7021', color:'#6c47ff', initials:'NW',
+   rate:{default:0}},
 ];
 
+const NINA_CLEANERS_BY_PROP = {
+  speranta: ['Blessing','Fatima','Patricia','Spiwe'],
+  tvhouse:  ['Tino','Keithy'],
+};
+
+const NINA_CHECKLISTS = {
+  speranta: {
+    'Living & Common':['Lounge clean & tidy','TV & remote working','Curtains/blinds OK','No wall/furniture damage','Floors clean'],
+    'Bedroom':        ['Linen clean & undamaged','Pillows & duvet present','No guest items left'],
+    'Kitchen':        ['Appliances clean','Stovetop & oven clean','Crockery/cutlery present','Fridge empty & clean'],
+    'Bathroom':       ['Toilet clean & functional','Shower/bath clean','Towels accounted for','No leaks visible'],
+  },
+  tvhouse: {
+    'Living & Lounge':['Lounge clean & tidy','TV & remote working','Dining area clean','Floors clean'],
+    'Bedrooms':       ['All beds linen clean','Pillows & duvets present','No guest items left','No furniture damage'],
+    'Kitchen':        ['Appliances clean','Stovetop & oven clean','Crockery/cutlery present','Fridge empty & clean'],
+    'Bathrooms':      ['All toilets clean','Showers/baths clean','Towels accounted for','No leaks visible'],
+    'Outdoor':        ['Entrance tidy','Gate/access working','Garden tidy'],
+    'Utilities':      ['Water: no visible leaks','Electricity: note any issues'],
+  },
+};
+
 const INVENTORY = {
-  // ── Speranta Flat ──────────────────────────────────────────────────────────
   'e9737638-d83a-4947-940a-8746789e4d9f': [
-    {room:'Kitchen', icon:'🍳', items:[
-      'Plates (×4)','Bowls (×4)','Mugs (×4)','Glasses (×4)',
-      'Cutlery set (×4)','Pots & pans','Kettle','Toaster','Microwave',
-      'Chopping board','Dish cloths (×2)','Washing liquid present',
-      'Washing machine tablet (×1)',
-      'Coffee plunger present','Mixer/blender present',
-    ]},
-    {room:'Bathroom', icon:'🚿', items:[
-      'Bath towels (×2)','Hand towels (×2)',
-      'Wiper/squeegee present','Hair dryer present',
-    ]},
-    {room:'Bedroom 1', icon:'🛏', items:[
-      'Pillows (×2)','Pillow cases (×2)','Duvet & cover',
-      'Mattress protector','Hangers (≥6)','Bedside lamp working',
-    ]},
-    {room:'Bedroom 2', icon:'🛏', items:[
-      'Pillows (×2)','Pillow cases (×2)','Duvet & cover',
-      'Mattress protector','Hangers (≥6)','Bedside lamp working',
-    ]},
-    {room:'Living Room', icon:'🛋', items:[
-      'TV remote present',
-      'Fan remote present',
-      'Cushions (all present)','Throw blanket',
-      'All lights working',
-    ]},
-    {room:'General', icon:'🔑', items:[
-      'Remote for entry present',
-      'Welcome book present',
-      'No visible damage to walls/furniture',
-      'Windows & doors lock properly',
-      'Rubbish removed',
-    ]},
+    {room:'Kitchen', icon:'🍳', items:['Plates (×4)','Bowls (×4)','Mugs (×4)','Glasses (×4)','Cutlery set (×4)','Pots & pans','Kettle','Toaster','Microwave','Chopping board','Dish cloths (×2)','Washing liquid present','Washing machine tablet (×1)','Coffee plunger present','Mixer/blender present']},
+    {room:'Bathroom', icon:'🚿', items:['Bath towels (×2)','Hand towels (×2)','Wiper/squeegee present','Hair dryer present']},
+    {room:'Bedroom 1', icon:'🛏', items:['Pillows (×2)','Pillow cases (×2)','Duvet & cover','Mattress protector','Hangers (≥6)','Bedside lamp working']},
+    {room:'Bedroom 2', icon:'🛏', items:['Pillows (×2)','Pillow cases (×2)','Duvet & cover','Mattress protector','Hangers (≥6)','Bedside lamp working']},
+    {room:'Living Room', icon:'🛋', items:['TV remote present','Fan remote present','Cushions (all present)','Throw blanket','All lights working']},
+    {room:'General', icon:'🔑', items:['Remote for entry present','Welcome book present','No visible damage to walls/furniture','Windows & doors lock properly','Rubbish removed']},
   ],
-  // ── TV House ───────────────────────────────────────────────────────────────
   '83b2a84a-5451-4be5-a84f-2efc0d2602d5': [
-    {room:'Kitchen', icon:'🍳', items:[
-      'Plates (×6)','Bowls (×6)','Mugs (×6)','Glasses (×6)','Wine glasses (×4)',
-      'Cutlery set (×6)','Pots & pans','Kettle','Toaster','Microwave',
-      'Chopping boards (×2)','Dish cloths (×2)','Washing liquid present',
-      'Washing machine tablet (×1)',
-    ]},
-    {room:'Main Bathroom', icon:'🚿', items:[
-      'Bath towels (×2)','Hand towels (×2)',
-      'Hair dryer present','Shower/bath clean',
-    ]},
-    {room:'Guest WC', icon:'🚽', items:[
-      'Hand towel (×1)','Toilet clean',
-    ]},
-    {room:'Main Bedroom', icon:'🛏', items:[
-      'Pillows (×2)','Pillow cases (×2)','Duvet & cover',
-      'Mattress protector','Hangers (≥8)','Bedside lamps (×2) working',
-    ]},
-    {room:'Bedroom 2', icon:'🛏', items:[
-      'Pillows (×2)','Pillow cases (×2)','Duvet & cover',
-      'Mattress protector','Hangers (≥6)','Light working',
-    ]},
-    {room:'Bedroom 3', icon:'🛏', items:[
-      'Pillows (×2)','Pillow cases (×2)','Duvet & cover',
-      'Mattress protector','Hangers (≥6)','Light working',
-    ]},
-    {room:'Living Room', icon:'🛋', items:[
-      'TV remote present',
-      'Cushions (all present)','All lights working',
-    ]},
-    {room:'General', icon:'🔑', items:[
-      'Remote for entry present',
-      'No visible damage to walls/furniture',
-      'Windows & doors lock properly',
-      'Pool gate locked','Garden furniture in order',
-      'Rubbish removed',
-      'Gas bottle — check if empty',
-    ]},
+    {room:'Kitchen', icon:'🍳', items:['Plates (×6)','Bowls (×6)','Mugs (×6)','Glasses (×6)','Wine glasses (×4)','Cutlery set (×6)','Pots & pans','Kettle','Toaster','Microwave','Chopping boards (×2)','Dish cloths (×2)','Washing liquid present','Washing machine tablet (×1)']},
+    {room:'Main Bathroom', icon:'🚿', items:['Bath towels (×2)','Hand towels (×2)','Hair dryer present','Shower/bath clean']},
+    {room:'Guest WC', icon:'🚽', items:['Hand towel (×1)','Toilet clean']},
+    {room:'Main Bedroom', icon:'🛏', items:['Pillows (×2)','Pillow cases (×2)','Duvet & cover','Mattress protector','Hangers (≥8)','Bedside lamps (×2) working']},
+    {room:'Bedroom 2', icon:'🛏', items:['Pillows (×2)','Pillow cases (×2)','Duvet & cover','Mattress protector','Hangers (≥6)','Light working']},
+    {room:'Bedroom 3', icon:'🛏', items:['Pillows (×2)','Pillow cases (×2)','Duvet & cover','Mattress protector','Hangers (≥6)','Light working']},
+    {room:'Living Room', icon:'🛋', items:['TV remote present','Cushions (all present)','All lights working']},
+    {room:'General', icon:'🔑', items:['Remote for entry present','No visible damage to walls/furniture','Windows & doors lock properly','Pool gate locked','Garden furniture in order','Rubbish removed','Gas bottle — check if empty']},
   ],
 };
 
@@ -350,15 +558,22 @@ const MONTHS_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','N
 let db = null;
 let currentCleaner = null;
 let myCleans = [];
-let cleansFilter = 'upcoming'; // 'upcoming' | 'completed'
-let myBookingCheckouts = []; // checkout dates for properties this cleaner covers
-let availableDays = new Set(); // days marked as available (default = unavailable)
+let cleansFilter = 'upcoming';
+let myBookingCheckouts = [];
+let availableDays = new Set();
 let availYear = new Date().getFullYear();
 let availMonth = new Date().getMonth();
 let currentInventoryClean = null;
 let inventoryState = {};
 let pinInput = '';
 let selectedCleaner = null;
+
+// Nina state
+let ninaInspStep = 1;
+let ninaInspRating = '';
+let ninaInspPhotos = [];
+let ninaInspChecklist = {};
+let ninaAssignContext = null;
 
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){}
 
@@ -381,19 +596,41 @@ function toast(msg, type='') {
 function safeKey(str) {
   return str.replace(/[^a-zA-Z0-9]/g,'_').slice(0,40)+'_'+Math.abs(str.split('').reduce((a,c)=>a+c.charCodeAt(0),0));
 }
+function daysFromNow(ds) {
+  const d=new Date(ds+'T00:00:00'); const now=new Date(); now.setHours(0,0,0,0);
+  return Math.round((d-now)/86400000);
+}
+function propKeyFromId(id) {
+  if(id==='e9737638-d83a-4947-940a-8746789e4d9f'||id==='speranta') return 'speranta';
+  if(id==='83b2a84a-5451-4be5-a84f-2efc0d2602d5'||id==='tvhouse') return 'tvhouse';
+  return id;
+}
+function propNameFromKey(k) { return k==='speranta'?'Speranta Flat':'TV House'; }
+function propRateFromKey(k) { return k==='tvhouse'?450:350; }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 function buildAuth() {
-  document.getElementById('cleaner-grid').innerHTML = CLEANERS.map(c=>`
+  // All cleaners except Nina in the grid (Nina has her own button)
+  const gridCleaners = CLEANERS.filter(c=>c.name!=='Nina');
+  let gridHTML = gridCleaners.map(c=>`
     <button class="cleaner-btn" onclick="selectCleaner('${c.name}')">
       <div class="av" style="background:${c.color}">${c.initials}</div>
       <div class="nm">${c.name}</div>
     </button>`).join('');
+  // Nina gets a full-width coordinator button
+  gridHTML += `
+    <button class="cleaner-btn" style="grid-column:1/-1;flex-direction:row;justify-content:center;gap:12px;border-color:rgba(108,71,255,.4);background:rgba(108,71,255,.08);" onclick="selectCleaner('Nina')">
+      <div class="av" style="background:#6c47ff">NW</div>
+      <div><div class="nm" style="color:#a78bfa">Nina Williams</div><div style="font-size:.7rem;color:var(--muted);">Coordinator</div></div>
+    </button>`;
+  document.getElementById('cleaner-grid').innerHTML = gridHTML;
+
   const numpad = document.getElementById('numpad');
   [1,2,3,4,5,6,7,8,9,'',0,'⌫'].forEach(n=>{
     const b=document.createElement('button');
     b.className='num-btn'+(n===''?' empty':n==='⌫'?' del':'');
-    b.textContent=n; if(n===''){b.style.visibility='hidden';b.disabled=true;b.style.pointerEvents='none';}else{b.style.visibility='visible';}
+    b.textContent=n;
+    if(n===''){b.style.visibility='hidden';b.disabled=true;b.style.pointerEvents='none';}
     if(n!=='') b.onclick=()=>numPress(n);
     numpad.appendChild(b);
   });
@@ -422,6 +659,10 @@ function updatePinDots() {
 }
 
 function checkPin() {
+  if(pinInput==='7021') {
+    showNinaView();
+    return;
+  }
   if(pinInput===selectedCleaner.pin) {
     doLogin(selectedCleaner);
   } else {
@@ -455,29 +696,443 @@ function doLogout() {
   updatePinDots();
 }
 
-// ── Data ──────────────────────────────────────────────────────────────────────
+// ── Nina entry/exit ───────────────────────────────────────────────────────────
+function showNinaView() {
+  pinInput=''; updatePinDots();
+  document.getElementById('auth').style.display='none';
+  document.getElementById('nina-view').style.display='block';
+  document.getElementById('nina-insp-date').value = tod();
+  loadNinaCheckouts();
+  loadNinaSchedule();
+  loadNinaAvailability();
+  loadNinaLastInspections();
+}
+
+function ninaSignOut() {
+  document.getElementById('nina-view').style.display='none';
+  document.getElementById('auth').style.display='flex';
+  selectedCleaner=null; pinInput='';
+  document.querySelectorAll('.cleaner-btn').forEach(b=>b.classList.remove('selected'));
+  document.getElementById('pin-section').style.display='none';
+  updatePinDots();
+}
+
+function switchNinaTab(tab) {
+  document.querySelectorAll('.nina-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.nina-tab-content').forEach(c=>c.style.display='none');
+  document.getElementById('ntab-'+tab).classList.add('active');
+  document.getElementById('nina-tab-'+tab).style.display='';
+}
+
+// ── Nina: Schedule ────────────────────────────────────────────────────────────
+async function loadNinaCheckouts() {
+  const el=document.getElementById('nina-checkouts-list');
+  try {
+    const today=tod();
+    const in30=new Date(Date.now()+30*86400000).toISOString().split('T')[0];
+    const {data:bookings,error}=await db.from('bookings')
+      .select('id,guest_name,property_id,check_out,status')
+      .gte('check_out',today).lte('check_out',in30+'T23:59:59')
+      .neq('status','cancelled').order('check_out',{ascending:true});
+    if(error) throw error;
+    if(!bookings||!bookings.length){el.innerHTML='<div class="nina-loading">No checkouts in the next 30 days.</div>';return;}
+
+    const dates=bookings.map(b=>b.check_out.split('T')[0]);
+    const {data:sched}=await db.from('domestics').select('date,cleaner,property_id,status').in('date',dates).neq('status','cancelled');
+    const schedMap={};
+    (sched||[]).forEach(s=>{schedMap[`${propKeyFromId(s.property_id)}-${s.date}`]=s;});
+
+    el.innerHTML=bookings.map(b=>{
+      const pk=propKeyFromId(b.property_id);
+      const coDate=b.check_out.split('T')[0];
+      const assigned=schedMap[`${pk}-${coDate}`];
+      const days=daysFromNow(coDate);
+      const urgStyle=days<=2?'color:var(--red);font-weight:700;':days<=5?'color:var(--accent);':'color:var(--muted);';
+      const gn=(b.guest_name||'Guest').replace(/'/g,"\\'");
+      return `<div class="nina-checkout-card">
+        <div class="nina-checkout-top">
+          <span class="nina-checkout-guest">${b.guest_name||'Guest'}</span>
+          <span class="nina-prop-badge ${pk}">${propNameFromKey(pk)}</span>
+        </div>
+        <div class="nina-checkout-date" style="${urgStyle}">
+          Checkout: ${fmtDate(coDate)} ${days===0?'· TODAY':days===1?'· tomorrow':'· in '+days+' days'}
+        </div>
+        <div class="nina-checkout-bottom">
+          ${assigned
+            ?`<span class="nina-assigned-tag">✓ ${assigned.cleaner} assigned</span>
+              <button class="nina-assign-btn reassign" onclick="openAssignModal('${b.property_id}','${pk}','${gn}','${coDate}')">Reassign</button>`
+            :`<span class="nina-unassigned-tag">⚠ No cleaner assigned</span>
+              <button class="nina-assign-btn" onclick="openAssignModal('${b.property_id}','${pk}','${gn}','${coDate}')">Assign →</button>`
+          }
+        </div>
+      </div>`;
+    }).join('');
+  } catch(err){el.innerHTML=`<div class="nina-loading" style="color:var(--red);">Error: ${err.message}</div>`;}
+}
+
+async function loadNinaSchedule() {
+  const el=document.getElementById('nina-schedule-list');
+  const filter=document.getElementById('nina-sched-filter').value;
+  el.innerHTML='<div class="nina-loading">Loading…</div>';
+  try {
+    const today=tod();
+    let q=db.from('domestics').select('id,cleaner,property_id,date,type,status,amount_paid,notes').order('date',{ascending:false}).limit(40);
+    if(filter==='upcoming') q=q.gte('date',today);
+    if(filter==='completed') q=q.eq('status','completed');
+    const {data,error}=await q;
+    if(error) throw error;
+    if(!data||!data.length){el.innerHTML='<div class="nina-loading">No entries found.</div>';return;}
+    const typeLabel={turnover:'Turnover',deep_clean:'Deep clean',inspection_prep:'Insp. prep'};
+    el.innerHTML=data.map(d=>{
+      const pk=propKeyFromId(d.property_id);
+      return `<div class="nina-sched-row">
+        <span class="nina-sched-date">${fmtDate(d.date)}</span>
+        <span class="nina-sched-cleaner">
+          <strong>${d.cleaner}</strong>
+          <span style="color:var(--muted);font-size:.74rem;"> · ${propNameFromKey(pk)} · ${typeLabel[d.type]||d.type}</span>
+          ${d.amount_paid?`<span style="color:var(--muted);font-size:.72rem;"> · R${d.amount_paid}</span>`:''}
+        </span>
+        <span class="nina-sched-status ${d.status}">${d.status}</span>
+        ${d.status==='scheduled'&&daysFromNow(d.date)<=0
+          ?`<button class="nina-mark-done" onclick="ninaMarkDone('${d.id}')">Mark done</button>`:''}
+      </div>`;
+    }).join('');
+  } catch(err){el.innerHTML=`<div class="nina-loading" style="color:var(--red);">Error: ${err.message}</div>`;}
+}
+
+async function ninaMarkDone(id) {
+  try {
+    const {error}=await db.from('domestics').update({status:'completed'}).eq('id',id);
+    if(error) throw error;
+    toast('Marked as done ✓','ok');
+    loadNinaSchedule();
+  } catch(err){toast('Error: '+err.message,'err');}
+}
+
+async function loadNinaAvailability() {
+  const el=document.getElementById('nina-availability-grid');
+  try {
+    const today=new Date();
+    const dates=[];
+    for(let i=0;i<14;i++){
+      const d=new Date(today); d.setDate(today.getDate()+i);
+      dates.push(d.toISOString().split('T')[0]);
+    }
+    const {data,error}=await db.from('cleaner_availability').select('cleaner,date,available').in('date',dates).not('cleaner','ilike','%test%');
+    if(error) throw error;
+    const lookup={};
+    (data||[]).forEach(r=>{lookup[`${r.cleaner}-${r.date}`]=r.available;});
+    const allCleaners=['Blessing','Fatima','Patricia','Spiwe','Tino','Keithy'];
+    const shortDates=dates.map(d=>{
+      const dt=new Date(d+'T00:00:00');
+      return dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+    });
+    let html=`<div class="nina-avail-grid"><table class="nina-avail-table"><thead><tr><th></th>${shortDates.map(sd=>`<th>${sd}</th>`).join('')}</tr></thead><tbody>`;
+    allCleaners.forEach(cleaner=>{
+      html+=`<tr><td class="nina-avail-name">${cleaner}</td>`;
+      dates.forEach(d=>{
+        const val=lookup[`${cleaner}-${d}`];
+        if(val===true) html+=`<td><div class="nina-avail-cell avail">✓</div></td>`;
+        else if(val===false) html+=`<td><div class="nina-avail-cell unavail">✗</div></td>`;
+        else html+=`<td><div class="nina-avail-cell unknown">·</div></td>`;
+      });
+      html+='</tr>';
+    });
+    html+='</tbody></table></div>';
+    html+='<div class="nina-avail-legend"><span><div style="width:10px;height:10px;border-radius:3px;background:rgba(45,212,160,.3);display:inline-block;"></div> Available</span><span><div style="width:10px;height:10px;border-radius:3px;background:rgba(255,255,255,.05);border:1px solid var(--border);display:inline-block;"></div> Unavailable</span><span>· Not submitted</span></div>';
+    el.innerHTML=html;
+  } catch(err){el.innerHTML=`<div class="nina-loading" style="color:var(--red);">Error: ${err.message}</div>`;}
+}
+
+// ── Nina: Assign modal ────────────────────────────────────────────────────────
+function openAssignModal(propertyId, propertyKey, guestName, checkoutDate) {
+  ninaAssignContext={propertyId,propertyKey,guestName,checkoutDate};
+  document.getElementById('nina-assign-context').innerHTML=
+    `<strong>${propNameFromKey(propertyKey)}</strong> · ${guestName}<br>Checkout: <strong>${fmtDate(checkoutDate)}</strong>`;
+  const sel=document.getElementById('nina-assign-cleaner');
+  const cleanerList=NINA_CLEANERS_BY_PROP[propertyKey]||['Blessing','Fatima','Patricia','Spiwe'];
+  sel.innerHTML=cleanerList.map(c=>`<option value="${c}">${c}</option>`).join('');
+  document.getElementById('nina-assign-date').value=checkoutDate;
+  document.getElementById('nina-assign-notes').value='';
+  document.getElementById('nina-assign-status').style.display='none';
+  document.getElementById('nina-assign-btn').disabled=false;
+  checkAssignAvailability();
+  document.getElementById('nina-assign-modal').style.display='flex';
+}
+
+function closeAssignModal(e) {
+  if(e&&e.target!==document.getElementById('nina-assign-modal')) return;
+  document.getElementById('nina-assign-modal').style.display='none';
+}
+
+async function checkAssignAvailability() {
+  const cleaner=document.getElementById('nina-assign-cleaner').value;
+  const date=document.getElementById('nina-assign-date').value;
+  const noteEl=document.getElementById('nina-assign-availability');
+  if(!cleaner||!date){noteEl.innerHTML='';noteEl.className='nina-avail-note';return;}
+  try {
+    const {data}=await db.from('cleaner_availability').select('available').eq('cleaner',cleaner).eq('date',date).maybeSingle();
+    if(!data){noteEl.innerHTML=`${cleaner} hasn't submitted availability for this date`;noteEl.className='nina-avail-note unknown';}
+    else if(data.available){noteEl.innerHTML=`✓ ${cleaner} is available on ${fmtDate(date)}`;noteEl.className='nina-avail-note avail';}
+    else{noteEl.innerHTML=`✗ ${cleaner} is unavailable on ${fmtDate(date)} — consider another cleaner or date`;noteEl.className='nina-avail-note unavail';}
+  } catch{noteEl.innerHTML='';noteEl.className='nina-avail-note';}
+}
+
+async function saveAssignment() {
+  const btn=document.getElementById('nina-assign-btn');
+  const statusEl=document.getElementById('nina-assign-status');
+  const cleaner=document.getElementById('nina-assign-cleaner').value;
+  const date=document.getElementById('nina-assign-date').value;
+  const time=document.getElementById('nina-assign-time').value||'10:00';
+  const type=document.getElementById('nina-assign-type').value;
+  const notes=document.getElementById('nina-assign-notes').value.trim();
+  const {propertyKey}=ninaAssignContext;
+  const rate=propRateFromKey(propertyKey);
+  btn.disabled=true;
+  statusEl.style.display=''; statusEl.className='nina-status-msg loading'; statusEl.textContent='Saving…';
+  try {
+    const propShort=propertyKey==='speranta'?'SP':'TV';
+    const {error}=await db.from('domestics').insert([{
+      cleaner, property_id:propertyKey, date, time, type,
+      status:'scheduled', amount_paid:rate,
+      notes:notes||`${propShort}-DOM-${cleaner} ${date} | R${rate}`,
+      checklist:{living:false,kitchen:false,laundry:false,bedrooms:false,bathrooms:false},
+    }]);
+    if(error) throw error;
+    statusEl.className='nina-status-msg success'; statusEl.textContent=`✓ ${cleaner} assigned for ${fmtDate(date)}`;
+    setTimeout(()=>{
+      document.getElementById('nina-assign-modal').style.display='none';
+      loadNinaCheckouts(); loadNinaSchedule();
+    },1200);
+  } catch(err){
+    statusEl.className='nina-status-msg error'; statusEl.textContent='Error: '+err.message;
+    btn.disabled=false;
+  }
+}
+
+// ── Nina: Inspect ─────────────────────────────────────────────────────────────
+async function loadNinaLastInspections() {
+  const el=document.getElementById('nina-last-inspections');
+  try {
+    const {data,error}=await db.from('property_inspections')
+      .select('property_id,inspection_date,overall_condition,inspector_name,issues')
+      .eq('org_id',ORG_ID).order('inspection_date',{ascending:false}).limit(20);
+    if(error) throw error;
+    const latest={};
+    (data||[]).forEach(r=>{if(!latest[r.property_id])latest[r.property_id]=r;});
+    const propIds=['e9737638-d83a-4947-940a-8746789e4d9f','83b2a84a-5451-4be5-a84f-2efc0d2602d5'];
+    el.innerHTML=propIds.map(pid=>{
+      const pk=propKeyFromId(pid);
+      const rec=latest[pid];
+      if(!rec) return `<div class="nina-last-insp-card"><div><div class="nina-insp-prop">${propNameFromKey(pk)}</div><div class="nina-insp-meta">No inspection recorded yet</div></div><span class="nina-insp-rating-badge fair">—</span></div>`;
+      const issueCount=Array.isArray(rec.issues)?rec.issues.length:0;
+      return `<div class="nina-last-insp-card">
+        <div>
+          <div class="nina-insp-prop">${propNameFromKey(pk)}</div>
+          <div class="nina-insp-meta">${fmtFull(rec.inspection_date)} · ${rec.inspector_name||'Nina'}${issueCount>0?' · <span style="color:var(--accent);">'+issueCount+' issue'+(issueCount>1?'s':'')+'</span>':' · No issues'}</div>
+        </div>
+        <span class="nina-insp-rating-badge ${rec.overall_condition||'fair'}">${rec.overall_condition?rec.overall_condition.charAt(0).toUpperCase()+rec.overall_condition.slice(1):'—'}</span>
+      </div>`;
+    }).join('');
+  } catch(err){el.innerHTML=`<div class="nina-loading" style="color:var(--red);">Error: ${err.message}</div>`;}
+}
+
+function ninaInspNext(step) {
+  if(step===1){
+    const prop=document.getElementById('nina-insp-property').value;
+    const date=document.getElementById('nina-insp-date').value;
+    if(!prop||!date){toast('Select a property and date','err');return;}
+    const sel=document.getElementById('nina-insp-property');
+    const pk=sel.options[sel.selectedIndex].getAttribute('data-key');
+    ninaInspChecklist={};
+    buildNinaChecklist(pk);
+  }
+  if(step===2&&!ninaInspRating){toast('Select an overall condition','err');return;}
+  if(step===3) buildNinaInspReview();
+  document.getElementById(`nina-insp-step${step}`).style.display='none';
+  document.getElementById(`nina-insp-step${step+1}`).style.display='';
+  ninaInspStep=step+1;
+}
+
+function ninaInspBack(step) {
+  document.getElementById(`nina-insp-step${step}`).style.display='none';
+  document.getElementById(`nina-insp-step${step-1}`).style.display='';
+  ninaInspStep=step-1;
+}
+
+function buildNinaChecklist(pk) {
+  const container=document.getElementById('nina-insp-checklist');
+  const def=NINA_CHECKLISTS[pk]||{};
+  container.innerHTML='';
+  Object.keys(def).forEach(section=>{
+    const secEl=document.createElement('div');
+    secEl.className='nina-cl-section';
+    secEl.innerHTML=`<div class="nina-cl-section-label">${section}</div>`;
+    def[section].forEach((label,idx)=>{
+      const key=`${pk}-${section}-${idx}`;
+      ninaInspChecklist[key]=null;
+      const item=document.createElement('div');
+      item.className='nina-cl-item';
+      item.innerHTML=`<span class="nina-cl-label">${label}</span><div class="nina-cl-btns"><button id="ncl-ok-${key}" onclick="ninaSetCl('${key}','ok')">✓ OK</button><button id="ncl-issue-${key}" onclick="ninaSetCl('${key}','issue')">⚠</button><button id="ncl-na-${key}" onclick="ninaSetCl('${key}','na')">N/A</button></div>`;
+      secEl.appendChild(item);
+    });
+    container.appendChild(secEl);
+  });
+}
+
+function ninaSetCl(key,val) {
+  ninaInspChecklist[key]=val;
+  ['ok','issue','na'].forEach(v=>{
+    const btn=document.getElementById(`ncl-${v}-${key}`);
+    if(btn) btn.className=val===v?v:'';
+  });
+}
+
+function ninaSetRating(val) {
+  ninaInspRating=val;
+  document.querySelectorAll('.nina-rating-btn').forEach(b=>b.classList.toggle('selected',b.getAttribute('data-val')===val));
+}
+
+function ninaHandlePhotos(input) {
+  ninaInspPhotos=[...ninaInspPhotos,...Array.from(input.files)].slice(0,10);
+  const grid=document.getElementById('nina-photo-grid');
+  grid.innerHTML='';
+  ninaInspPhotos.forEach((f,i)=>{
+    const url=URL.createObjectURL(f);
+    const wrap=document.createElement('div');
+    wrap.className='nina-photo-thumb';
+    wrap.innerHTML=`<img src="${url}"/><button class="nina-photo-rm" onclick="ninaRemovePhoto(${i})">✕</button>`;
+    grid.appendChild(wrap);
+  });
+  const ct=document.getElementById('nina-photo-count');
+  ct.textContent=ninaInspPhotos.length?`${ninaInspPhotos.length} photo${ninaInspPhotos.length>1?'s':''} added`:'';
+  input.value='';
+}
+
+function ninaRemovePhoto(idx) {
+  ninaInspPhotos.splice(idx,1);
+  const grid=document.getElementById('nina-photo-grid');
+  grid.innerHTML='';
+  ninaInspPhotos.forEach((f,i)=>{
+    const url=URL.createObjectURL(f);
+    const wrap=document.createElement('div');
+    wrap.className='nina-photo-thumb';
+    wrap.innerHTML=`<img src="${url}"/><button class="nina-photo-rm" onclick="ninaRemovePhoto(${i})">✕</button>`;
+    grid.appendChild(wrap);
+  });
+  document.getElementById('nina-photo-count').textContent=ninaInspPhotos.length?`${ninaInspPhotos.length} photos added`:'';
+}
+
+function buildNinaInspReview() {
+  const sel=document.getElementById('nina-insp-property');
+  const propName=sel.options[sel.selectedIndex].text;
+  const pk=sel.options[sel.selectedIndex].getAttribute('data-key');
+  const date=document.getElementById('nina-insp-date').value;
+  const breakages=document.getElementById('nina-insp-breakages').value.trim();
+  const notes=document.getElementById('nina-insp-notes').value.trim();
+  const def=NINA_CHECKLISTS[pk]||{};
+  const issues=[];
+  Object.keys(def).forEach(s=>def[s].forEach((label,idx)=>{
+    if(ninaInspChecklist[`${pk}-${s}-${idx}`]==='issue') issues.push(label);
+  }));
+  const rLabels={excellent:'✅ Excellent',good:'👍 Good',fair:'⚠️ Fair',poor:'❌ Poor'};
+  let html=`
+    <div class="nina-review-row"><span class="nina-review-label">Property</span><span>${propName}</span></div>
+    <div class="nina-review-row"><span class="nina-review-label">Date</span><span>${fmtFull(date)}</span></div>
+    <div class="nina-review-row"><span class="nina-review-label">Rating</span><span>${rLabels[ninaInspRating]||ninaInspRating}</span></div>
+    <div class="nina-review-row"><span class="nina-review-label">Photos</span><span>${ninaInspPhotos.length}</span></div>`;
+  if(breakages) html+=`<div class="nina-review-row"><span class="nina-review-label">Breakages</span><span>${breakages}</span></div>`;
+  if(notes) html+=`<div class="nina-review-row"><span class="nina-review-label">Notes</span><span>${notes}</span></div>`;
+  if(issues.length) html+=`<div class="nina-review-issues"><strong>⚠ ${issues.length} flagged:</strong><ul style="margin:4px 0 0;padding-left:16px;">${issues.map(i=>`<li>${i}</li>`).join('')}</ul></div>`;
+  document.getElementById('nina-insp-review').innerHTML=html;
+}
+
+async function ninaSubmitInspection() {
+  const btn=document.getElementById('nina-insp-submit');
+  const statusEl=document.getElementById('nina-insp-status');
+  btn.disabled=true;
+  const show=(msg,type)=>{statusEl.style.display='';statusEl.className=`nina-status-msg ${type}`;statusEl.textContent=msg;};
+  try {
+    const sel=document.getElementById('nina-insp-property');
+    const propId=sel.value;
+    const pk=sel.options[sel.selectedIndex].getAttribute('data-key');
+    const date=document.getElementById('nina-insp-date').value;
+    const breakages=document.getElementById('nina-insp-breakages').value.trim();
+    const notes=document.getElementById('nina-insp-notes').value.trim();
+    const def=NINA_CHECKLISTS[pk]||{};
+    const snapshot={},issuesList=[];
+    Object.keys(def).forEach(s=>{
+      snapshot[s]={};
+      def[s].forEach((label,idx)=>{
+        const key=`${pk}-${s}-${idx}`;
+        snapshot[s][label]=ninaInspChecklist[key]||'unchecked';
+        if(ninaInspChecklist[key]==='issue') issuesList.push(label);
+      });
+    });
+    show('Uploading photos…','loading');
+    const photoUrls=[];
+    const slug=`${pk}-${date}-${Date.now()}`;
+    for(let i=0;i<ninaInspPhotos.length;i++){
+      const f=ninaInspPhotos[i];
+      const ext=f.name.split('.').pop()||'jpg';
+      const path=`${slug}/photo-${i+1}.${ext}`;
+      const {error:upErr}=await db.storage.from('inspection-photos').upload(path,f,{upsert:false});
+      if(upErr) throw new Error(`Photo ${i+1}: ${upErr.message}`);
+      const {data:urlData}=db.storage.from('inspection-photos').getPublicUrl(path);
+      photoUrls.push(urlData.publicUrl);
+    }
+    show('Saving inspection…','loading');
+    const {data:inserted,error:insErr}=await db.from('property_inspections').insert([{
+      property_id:propId, org_id:ORG_ID, inspection_date:date,
+      inspector_name:'Nina Williams', overall_condition:ninaInspRating,
+      checklist:snapshot, issues:issuesList,
+      breakages:breakages||null, notes:notes||null,
+      photo_urls:photoUrls, created_at:new Date().toISOString(),
+    }]).select('id').single();
+    if(insErr) throw new Error(insErr.message);
+    document.getElementById('nina-insp-step4').style.display='none';
+    document.getElementById('nina-insp-success').style.display='';
+    const ref=inserted?.id?.toString().slice(0,8).toUpperCase()||slug;
+    document.getElementById('nina-insp-success-ref').textContent=`Ref: ${ref} · ${propNameFromKey(pk)} · ${fmtFull(date)}`;
+    loadNinaLastInspections();
+  } catch(err){show('Error: '+err.message,'error');btn.disabled=false;}
+}
+
+function ninaInspReset() {
+  ninaInspStep=1; ninaInspRating=''; ninaInspPhotos=[]; ninaInspChecklist={};
+  document.getElementById('nina-insp-property').value='';
+  document.getElementById('nina-insp-date').value=tod();
+  document.getElementById('nina-insp-breakages').value='';
+  document.getElementById('nina-insp-notes').value='';
+  document.getElementById('nina-insp-checklist').innerHTML='';
+  document.getElementById('nina-photo-grid').innerHTML='';
+  document.getElementById('nina-photo-count').textContent='';
+  document.getElementById('nina-insp-status').style.display='none';
+  document.getElementById('nina-insp-submit').disabled=false;
+  document.getElementById('nina-insp-success').style.display='none';
+  ['step1','step2','step3','step4'].forEach((s,i)=>{
+    document.getElementById(`nina-insp-${s}`).style.display=i===0?'':'none';
+  });
+  document.querySelectorAll('.nina-rating-btn').forEach(b=>b.classList.remove('selected'));
+}
+
+// ── Cleaner app: Data ─────────────────────────────────────────────────────────
 async function loadData() {
   if(!db||!currentCleaner) return;
-
   try {
     const [cleanRes, bookRes] = await Promise.all([
       db.from('domestics').select('*').eq('cleaner',currentCleaner.name).order('date',{ascending:true}),
       db.from('bookings').select('check_out_date,property_id,guest_name,nights').eq('is_active',true).gte('check_out_date',tod()).order('check_out_date',{ascending:true}).limit(60),
     ]);
     myCleans = cleanRes.data||[];
-    // Load availability for current month
     const avRes = await db.from('cleaner_availability')
-      .select('date,available')
-      .eq('cleaner',currentCleaner.name)
+      .select('date,available').eq('cleaner',currentCleaner.name)
       .gte('date',new Date().toISOString().slice(0,7)+'-01');
-    if(avRes.data){
-      availableDays = new Set(avRes.data.filter(r=>r.available).map(r=>r.date));
-    }
-    // Only show checkouts for properties this cleaner covers
+    if(avRes.data) availableDays = new Set(avRes.data.filter(r=>r.available).map(r=>r.date));
     const propIds = Object.keys(PROPS);
     myBookingCheckouts = (bookRes.data||[])
-      .filter(b => propIds.includes(b.property_id))
-      .map(b => ({date:b.check_out_date, prop:PROPS[b.property_id]?.short||'—', guest:b.guest_name||'Guest'}));
+      .filter(b=>propIds.includes(b.property_id))
+      .map(b=>({date:b.check_out_date, prop:PROPS[b.property_id]?.short||'—', guest:b.guest_name||'Guest'}));
   } catch(e){ console.warn('Load:',e); }
 }
 
@@ -485,9 +1140,9 @@ async function loadData() {
 function showScreen(name) {
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const sc = document.getElementById('screen-'+name);
+  const sc=document.getElementById('screen-'+name);
   if(sc) sc.classList.add('active');
-  const nav = document.getElementById('nav-'+name);
+  const nav=document.getElementById('nav-'+name);
   if(nav) nav.classList.add('active');
   window.scrollTo(0,0);
   if(name==='home') renderHome();
@@ -498,26 +1153,22 @@ function showScreen(name) {
 
 // ── Home ──────────────────────────────────────────────────────────────────────
 function renderHome() {
-  const td = tod();
-  const upcoming = myCleans.filter(c=>c.date>=td&&c.status!=='completed').slice(0,3);
-  const thisMonth = myCleans.filter(c=>c.date&&c.date.startsWith(td.slice(0,7)));
-  const earned = thisMonth.filter(c=>c.status==='completed')
-    .reduce((s,c)=>s+(c.amount_paid||getRate(currentCleaner,c.property_id)),0);
-
-  const nextEl = document.getElementById('home-cleans');
-  if(!upcoming.length) {
+  const td=tod();
+  const upcoming=myCleans.filter(c=>c.date>=td&&c.status!=='completed').slice(0,3);
+  const thisMonth=myCleans.filter(c=>c.date&&c.date.startsWith(td.slice(0,7)));
+  const earned=thisMonth.filter(c=>c.status==='completed').reduce((s,c)=>s+(c.amount_paid||getRate(currentCleaner,c.property_id)),0);
+  const nextEl=document.getElementById('home-cleans');
+  if(!upcoming.length){
     nextEl.innerHTML=`<div class="card" style="text-align:center;padding:28px"><div style="font-size:2rem;margin-bottom:8px">✨</div><div style="color:var(--muted);font-size:.88rem">No upcoming cleans scheduled</div></div>`;
   } else {
-    nextEl.innerHTML = upcoming.map((c,i)=>{
+    nextEl.innerHTML=upcoming.map(c=>{
       const isToday=c.date===td;
       const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
-      const [y,m,d]=(c.date||'-- -').split('-');
+      const[y,m,d]=(c.date||'-- -').split('-');
       return `<div class="clean-card ${isToday?'today-card':''}" onclick="openInventory('${c.id}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
-          <div>
-            <div style="font-family:Syne,sans-serif;font-size:2rem;font-weight:800;line-height:1">${parseInt(d)||'?'}</div>
-            <div style="font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">${m?MONTHS_S[parseInt(m)-1]:''} ${y||''}</div>
-          </div>
+          <div><div style="font-family:Syne,sans-serif;font-size:2rem;font-weight:800;line-height:1">${parseInt(d)||'?'}</div>
+          <div style="font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">${m?MONTHS_S[parseInt(m)-1]:''} ${y||''}</div></div>
           <span class="status-pill ${isToday?'pill-today':'pill-scheduled'}">${isToday?'Today':'Upcoming'}</span>
         </div>
         <div style="font-weight:600;font-size:.9rem;margin-bottom:3px">📍 ${prop.name}</div>
@@ -526,8 +1177,7 @@ function renderHome() {
       </div>`;
     }).join('');
   }
-
-  const scheduled = myCleans.filter(c=>c.date>=td&&c.status!=='completed').length;
+  const scheduled=myCleans.filter(c=>c.date>=td&&c.status!=='completed').length;
   document.getElementById('home-stats').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="card" style="border-left:3px solid var(--green)">
@@ -543,42 +1193,34 @@ function renderHome() {
 
 // ── Cleans ────────────────────────────────────────────────────────────────────
 function setCleanFilter(f) {
-  cleansFilter = f;
-  const upBtn = document.getElementById('filter-upcoming-btn');
-  const coBtn = document.getElementById('filter-completed-btn');
-  if (upBtn) { upBtn.style.background = f==='upcoming'?'var(--accent)':'transparent'; upBtn.style.color = f==='upcoming'?'#fff':'var(--muted)'; }
-  if (coBtn) { coBtn.style.background = f==='completed'?'var(--accent)':'transparent'; coBtn.style.color = f==='completed'?'#fff':'var(--muted)'; }
+  cleansFilter=f;
+  const upBtn=document.getElementById('filter-upcoming-btn');
+  const coBtn=document.getElementById('filter-completed-btn');
+  if(upBtn){upBtn.style.background=f==='upcoming'?'var(--accent)':'transparent';upBtn.style.color=f==='upcoming'?'#fff':'var(--muted)';}
+  if(coBtn){coBtn.style.background=f==='completed'?'var(--accent)':'transparent';coBtn.style.color=f==='completed'?'#fff':'var(--muted)';}
   renderCleans();
 }
 
 function renderCheckoutsNeeded() {
-  const td = tod();
-  const el = document.getElementById('checkouts-needed');
-  if (!el) return;
-  // Get upcoming checkout dates from bookings
-  const upcoming = myBookingCheckouts
-    .filter(b => b.date >= td)
-    .sort((a,b) => a.date.localeCompare(b.date))
-    .slice(0, 5);
-  if (!upcoming.length) { el.innerHTML=''; return; }
-  // Check which dates already have a clean scheduled
-  const scheduledDates = new Set(myCleans.map(c=>c.date));
-  el.innerHTML = '<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">🧹 Upcoming Checkouts</div>'
-    + upcoming.map(b => {
-      const hasClean = scheduledDates.has(b.date);
-      const [y,m,d] = b.date.split('-');
-      const cleanForDate = myCleans.find(c=>c.date===b.date);
+  const td=tod();
+  const el=document.getElementById('checkouts-needed');
+  if(!el) return;
+  const upcoming=myBookingCheckouts.filter(b=>b.date>=td).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
+  if(!upcoming.length){el.innerHTML='';return;}
+  const scheduledDates=new Set(myCleans.map(c=>c.date));
+  el.innerHTML='<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">🧹 Upcoming Checkouts</div>'
+    +upcoming.map(b=>{
+      const hasClean=scheduledDates.has(b.date);
+      const[y,m,d]=b.date.split('-');
+      const cleanForDate=myCleans.find(c=>c.date===b.date);
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--card);border:1px solid '+(hasClean?'rgba(45,212,160,.3)':'rgba(193,127,60,.3)')+';border-radius:10px;margin-bottom:6px">'
-        + '<div style="display:flex;align-items:center;gap:10px">'
-        + '<div style="text-align:center;min-width:32px"><div style="font-family:Syne,sans-serif;font-size:1.1rem;font-weight:800">'+parseInt(d)+'</div><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase">'+MONTHS_S[parseInt(m)-1]+'</div></div>'
-        + '<div><div style="font-weight:600;font-size:.84rem">'+b.prop+'</div><div style="font-size:.72rem;color:var(--muted)">'+b.guest+' checks out</div></div>'
-        + '</div>'
-        + '<span style="font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:10px;background:'+(hasClean?'rgba(45,212,160,.15)':'rgba(193,127,60,.15)')+';color:'+(hasClean?'var(--green)':'var(--accent)')+'">'
-        + (hasClean ? '✓ '+(cleanForDate?.cleaner||'Booked') : '⚠ Needed')
-        + '</span>'
-        + '</div>';
-    }).join('')
-    + '<div style="height:16px"></div>';
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="text-align:center;min-width:32px"><div style="font-family:Syne,sans-serif;font-size:1.1rem;font-weight:800">'+parseInt(d)+'</div><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase">'+MONTHS_S[parseInt(m)-1]+'</div></div>'
+        +'<div><div style="font-weight:600;font-size:.84rem">'+b.prop+'</div><div style="font-size:.72rem;color:var(--muted)">'+b.guest+' checks out</div></div>'
+        +'</div>'
+        +'<span style="font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:10px;background:'+(hasClean?'rgba(45,212,160,.15)':'rgba(193,127,60,.15)')+';color:'+(hasClean?'var(--green)':'var(--accent)')+'">'+( hasClean?'✓ '+(cleanForDate?.cleaner||'Booked'):'⚠ Needed')+'</span>'
+        +'</div>';
+    }).join('')+'<div style="height:16px"></div>';
 }
 
 function renderCleans() {
@@ -586,17 +1228,10 @@ function renderCleans() {
   renderCheckoutsNeeded();
   const el=document.getElementById('cleans-list');
   if(!myCleans.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px;color:var(--muted)">No cleans found</div>';return;}
-
-  // Filter by toggle
-  const filtered = cleansFilter === 'upcoming'
-    ? [...myCleans].filter(c=>c.status!=='completed').sort((a,b)=>a.date.localeCompare(b.date))
-    : [...myCleans].filter(c=>c.status==='completed').sort((a,b)=>b.date.localeCompare(a.date)); // completed: newest first
-
-  if(!filtered.length){
-    el.innerHTML='<div class="card" style="text-align:center;padding:28px;color:var(--muted)">No '+cleansFilter+' cleans</div>';
-    return;
-  }
-
+  const filtered=cleansFilter==='upcoming'
+    ?[...myCleans].filter(c=>c.status!=='completed').sort((a,b)=>a.date.localeCompare(b.date))
+    :[...myCleans].filter(c=>c.status==='completed').sort((a,b)=>b.date.localeCompare(a.date));
+  if(!filtered.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px;color:var(--muted)">No '+cleansFilter+' cleans</div>';return;}
   el.innerHTML=filtered.map(c=>{
     const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
     const[y,m,d]=(c.date||'').split('-');
@@ -605,14 +1240,9 @@ function renderCleans() {
     return '<div class="clean-card '+(isToday?'today-card':'')+'">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px">'
       +'<div style="display:flex;align-items:center;gap:12px">'
-      +'<div style="text-align:center;min-width:36px">'
-      +'<div style="font-family:Syne,sans-serif;font-size:1.2rem;font-weight:800">'+(parseInt(d)||'?')+'</div>'
-      +'<div style="font-size:.62rem;color:var(--muted);text-transform:uppercase">'+(m?MONTHS_S[parseInt(m)-1]:'')+'</div>'
+      +'<div style="text-align:center;min-width:36px"><div style="font-family:Syne,sans-serif;font-size:1.2rem;font-weight:800">'+(parseInt(d)||'?')+'</div><div style="font-size:.62rem;color:var(--muted);text-transform:uppercase">'+(m?MONTHS_S[parseInt(m)-1]:'')+'</div></div>'
+      +'<div><div style="font-weight:600;font-size:.88rem">'+prop.name+'</div><div style="font-size:.76rem;color:var(--muted)">'+(c.time||'10:00')+' · R'+(c.amount_paid||getRate(currentCleaner,c.property_id))+'</div></div>'
       +'</div>'
-      +'<div>'
-      +'<div style="font-weight:600;font-size:.88rem">'+prop.name+'</div>'
-      +'<div style="font-size:.76rem;color:var(--muted)">'+(c.time||'10:00')+' · R'+(c.amount_paid||getRate(currentCleaner,c.property_id))+'</div>'
-      +'</div></div>'
       +'<span class="status-pill '+(done?'pill-completed':isToday?'pill-today':'pill-scheduled')+'">'+(done?'Done':isToday?'Today':'Scheduled')+'</span>'
       +'</div>'
       +(!done?'<div onclick="openInventory(\''+c.id+'\')" style="font-size:.74rem;color:var(--accent);font-weight:600;cursor:pointer">Tap to submit inventory →</div>':'')
@@ -624,34 +1254,25 @@ function renderCleans() {
 function openInventory(cleanId) {
   const clean=myCleans.find(c=>String(c.id)===String(cleanId));
   if(!clean) return;
-  currentInventoryClean=clean;
-  inventoryState={};
+  currentInventoryClean=clean; inventoryState={};
   const prop=PROPS[clean.property_id]||{name:'Property'};
   document.getElementById('inv-title').textContent=prop.name;
   document.getElementById('inv-sub').textContent=fmtFull(clean.date)+' · '+(clean.time||'10:00');
   document.getElementById('inv-note').value='';
-
   const rooms=INVENTORY[clean.property_id]||INVENTORY['e9737638-d83a-4947-940a-8746789e4d9f'];
   document.getElementById('inventory-form').innerHTML=rooms.map(room=>`
     <div class="room-section">
-      <div class="room-header">
-        <span class="room-icon">${room.icon}</span>
-        <span class="room-name">${room.room}</span>
-      </div>
+      <div class="room-header"><span class="room-icon">${room.icon}</span><span class="room-name">${room.room}</span></div>
       ${room.items.map(item=>{
         const k=safeKey(room.room+'::'+item);
         return `<div class="item-row" id="ir-${k}" onclick="toggleItem('${room.room}','${item}','${k}')">
-          <span class="item-name">${item}</span>
-          <div class="item-toggle" id="it-${k}">✓</div>
+          <span class="item-name">${item}</span><div class="item-toggle" id="it-${k}">✓</div>
         </div>
         <div class="flag-note" id="fn-${k}">
-          <input class="flag-input" placeholder="Describe issue…"
-            onchange="setNote('${room.room}','${item}',this.value)"
-            onclick="event.stopPropagation()"/>
+          <input class="flag-input" placeholder="Describe issue…" onchange="setNote('${room.room}','${item}',this.value)" onclick="event.stopPropagation()"/>
         </div>`;
       }).join('')}
     </div>`).join('');
-
   showScreen('inventory');
 }
 
@@ -675,51 +1296,32 @@ function setNote(room,item,val) {
 
 async function submitInventory() {
   if(!currentInventoryClean) return;
-  const flagged=Object.entries(inventoryState)
-    .filter(([k,v])=>v.flagged)
-    .map(([k,v])=>({room:k.split('::')[0],item:k.split('::')[1],note:v.note||''}));
+  const flagged=Object.entries(inventoryState).filter(([k,v])=>v.flagged).map(([k,v])=>({room:k.split('::')[0],item:k.split('::')[1],note:v.note||''}));
   const generalNote=document.getElementById('inv-note').value.trim();
-
   const report={
-    org_id:       ORG_ID,
-    domestic_id:  String(currentInventoryClean.id),
-    property_id:  currentInventoryClean.property_id === 'speranta'
-      ? 'e9737638-d83a-4947-940a-8746789e4d9f'
-      : currentInventoryClean.property_id === 'tvhouse'
-      ? '83b2a84a-5451-4be5-a84f-2efc0d2602d5'
-      : currentInventoryClean.property_id,
-    cleaner:      currentCleaner.name,
-    clean_date:   currentInventoryClean.date,
-    submitted_at: new Date().toISOString(),
-    flagged_items: flagged,
-    all_ok:       flagged.length===0 && !generalNote,
-    notes:        generalNote||null,
-    reviewed:     false,
-    task_created: false,
+    org_id:ORG_ID,
+    domestic_id:String(currentInventoryClean.id),
+    property_id:currentInventoryClean.property_id==='speranta'?'e9737638-d83a-4947-940a-8746789e4d9f':currentInventoryClean.property_id==='tvhouse'?'83b2a84a-5451-4be5-a84f-2efc0d2602d5':currentInventoryClean.property_id,
+    cleaner:currentCleaner.name,
+    clean_date:currentInventoryClean.date,
+    submitted_at:new Date().toISOString(),
+    flagged_items:flagged,
+    all_ok:flagged.length===0&&!generalNote,
+    notes:generalNote||null,
+    reviewed:false,
+    task_created:false,
   };
-
-  if(!db){ toast('Offline — cannot save','err'); return; }
+  if(!db){toast('Offline — cannot save','err');return;}
   try {
-    // 1. Save inventory report
-    const {error:rErr} = await db.from('inventory_reports').insert([report]);
+    const{error:rErr}=await db.from('inventory_reports').insert([report]);
     if(rErr) throw rErr;
-
-    // 2. Mark domestic as completed
     await db.from('domestics').update({status:'completed'}).eq('id',currentInventoryClean.id);
-
-    // 3. Update local state
     const c=myCleans.find(x=>String(x.id)===String(currentInventoryClean.id));
     if(c) c.status='completed';
-
-    const msg = flagged.length>0
-      ? `✓ Submitted — ${flagged.length} item${flagged.length>1?'s':''} flagged`
-      : generalNote ? '✓ Submitted with note' : '✓ All good! Inventory submitted';
+    const msg=flagged.length>0?`✓ Submitted — ${flagged.length} item${flagged.length>1?'s':''} flagged`:generalNote?'✓ Submitted with note':'✓ All good! Inventory submitted';
     toast(msg,'ok');
     setTimeout(()=>showScreen('home'),1200);
-  } catch(e) {
-    console.error(e);
-    toast('Save error: '+e.message,'err');
-  }
+  } catch(e){console.error(e);toast('Save error: '+e.message,'err');}
 }
 
 // ── Availability ──────────────────────────────────────────────────────────────
@@ -731,7 +1333,7 @@ function renderAvail() {
   document.getElementById('avail-month-label').textContent=MONTHS[availMonth]+' '+availYear;
   const cleanDates=new Set(myCleans.filter(c=>c.date&&c.date.startsWith(monthStr)).map(c=>c.date));
   const checkoutMap=new Map(myBookingCheckouts.filter(b=>b.date&&b.date.startsWith(monthStr)).map(b=>[b.date,b]));
-  let html=['S','M','T','W','T','F','S'].map(function(d){return '<div class="avail-day-head">'+d+'</div>';}).join('');
+  let html=['S','M','T','W','T','F','S'].map(d=>'<div class="avail-day-head">'+d+'</div>').join('');
   for(let i=0;i<firstDay;i++) html+='<div class="avail-cell empty"></div>';
   for(let d=1;d<=daysCount;d++){
     const ds=monthStr+'-'+String(d).padStart(2,'0');
@@ -741,28 +1343,26 @@ function renderAvail() {
     const isToday=ds===td;
     const checkout=checkoutMap.get(ds);
     let cls='avail-cell';
-    let extra='';
     let style='position:relative;';
-    if(isPast){ cls+=' past'; }
-    else if(isBooked){ cls+=' booked'; extra='title="Clean booked"'; }
-    else if(isAvail){ cls+=' available'; }
-    else if(isToday){ cls+=' today'; }
+    if(isPast) cls+=' past';
+    else if(isBooked) cls+=' booked';
+    else if(isAvail) cls+=' available';
+    else if(isToday) cls+=' today';
     if(checkout&&!isBooked) style+='box-shadow:0 0 0 2px rgba(193,127,60,.6);';
-    var dot=(checkout&&!isBooked)?'<span style="position:absolute;bottom:1px;right:1px;width:5px;height:5px;border-radius:50%;background:var(--accent);display:block"></span>':'';
-    var clickStr=(!isPast&&!isBooked)?(' onclick="toggleAvail(this.dataset.ds)" data-ds="'+ds+'"'):'';
-    html+='<div class="'+cls+'" style="'+style+'" '+extra+clickStr+'>'+d+dot+'</div>';
+    const dot=(checkout&&!isBooked)?'<span style="position:absolute;bottom:1px;right:1px;width:5px;height:5px;border-radius:50%;background:var(--accent);display:block"></span>':'';
+    const clickStr=(!isPast&&!isBooked)?' onclick="toggleAvail(this.dataset.ds)" data-ds="'+ds+'"':'';
+    html+='<div class="'+cls+'" style="'+style+'"'+clickStr+'>'+d+dot+'</div>';
   }
   document.getElementById('avail-cal').innerHTML=html;
 }
 
-function toggleAvail(el){ var ds=typeof el==='string'?el:el.dataset.ds; availableDays.has(ds)?availableDays.delete(ds):availableDays.add(ds); renderAvail(); }
-function availNav(dir){ availMonth+=dir; if(availMonth>11){availMonth=0;availYear++;} if(availMonth<0){availMonth=11;availYear--;} renderAvail(); }
+function toggleAvail(ds){availableDays.has(ds)?availableDays.delete(ds):availableDays.add(ds);renderAvail();}
+function availNav(dir){availMonth+=dir;if(availMonth>11){availMonth=0;availYear++;}if(availMonth<0){availMonth=11;availYear--;}renderAvail();}
 
 async function saveAvailability() {
   if(!db||!currentCleaner){toast('Not connected','err');return;}
   const td=tod();
   const monthStr=availYear+'-'+String(availMonth+1).padStart(2,'0');
-  // Get all days in current month
   const daysCount=new Date(availYear,availMonth+1,0).getDate();
   const upserts=[];
   for(let d=1;d<=daysCount;d++){
@@ -781,7 +1381,7 @@ function renderEarnings() {
   const done=myCleans.filter(c=>c.status==='completed');
   const byMonth={};
   done.forEach(c=>{
-    const m=(c.date||'').slice(0,7); if(!m) return;
+    const m=(c.date||'').slice(0,7);if(!m)return;
     if(!byMonth[m]){byMonth[m]={cleans:0,total:0};}
     byMonth[m].cleans++;
     byMonth[m].total+=(c.amount_paid||getRate(currentCleaner,c.property_id));
@@ -801,67 +1401,34 @@ function renderEarnings() {
     <div class="card">
       ${months.length?months.map(m=>{
         const[y,mo]=m.split('-');
-        return `<div class="earn-row">
-          <div><div style="font-weight:600;font-size:.88rem">${MONTHS[parseInt(mo)-1]} ${y}</div>
-          <div style="font-size:.76rem;color:var(--muted)">${byMonth[m].cleans} clean${byMonth[m].cleans!==1?'s':''}</div></div>
-          <div style="font-family:Syne,sans-serif;font-weight:700;color:var(--green)">R${byMonth[m].total.toLocaleString()}</div>
-        </div>`;
+        return `<div class="earn-row"><div><div style="font-weight:600;font-size:.88rem">${MONTHS[parseInt(mo)-1]} ${y}</div><div style="font-size:.76rem;color:var(--muted)">${byMonth[m].cleans} clean${byMonth[m].cleans!==1?'s':''}</div></div><div style="font-family:Syne,sans-serif;font-weight:700;color:var(--green)">R${byMonth[m].total.toLocaleString()}</div></div>`;
       }).join(''):'<div style="color:var(--muted);text-align:center;padding:20px;font-size:.85rem">No completed cleans yet</div>'}
     </div>`;
 }
 
 buildAuth();
 
-// Register service worker for PWA
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function() {
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
     navigator.serviceWorker.register('/sw.js')
-      .then(function(reg) { console.log('SW registered'); })
-      .catch(function(err) { console.log('SW failed:', err); });
+      .then(function(){console.log('SW registered');})
+      .catch(function(err){console.log('SW failed:',err);});
   });
 }
 
-// Generate app icon dynamically and cache it
-(function generateIcon() {
-  try {
-    [192, 512].forEach(function(size) {
-      var c = document.createElement('canvas');
-      c.width = size; c.height = size;
-      var ctx = c.getContext('2d');
-      // Background
-      ctx.fillStyle = '#0f1117';
-      ctx.fillRect(0, 0, size, size);
-      // Rounded rect overlay
-      ctx.fillStyle = '#1a1d27';
-      var r = size * 0.15;
-      ctx.beginPath();
-      ctx.moveTo(r, 0); ctx.lineTo(size-r, 0);
-      ctx.quadraticCurveTo(size, 0, size, r);
-      ctx.lineTo(size, size-r);
-      ctx.quadraticCurveTo(size, size, size-r, size);
-      ctx.lineTo(r, size);
-      ctx.quadraticCurveTo(0, size, 0, size-r);
-      ctx.lineTo(0, r);
-      ctx.quadraticCurveTo(0, 0, r, 0);
-      ctx.closePath();
-      ctx.fill();
-      // S&N text
-      ctx.fillStyle = '#c17f3c';
-      ctx.font = 'bold ' + Math.round(size*0.32) + 'px Syne,sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('S&N', size/2, size*0.42);
-      // Subtitle
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      ctx.font = Math.round(size*0.11) + 'px sans-serif';
-      ctx.fillText('STAFF', size/2, size*0.65);
-      // Store as link for apple-touch-icon
-      if (size === 192) {
-        var link = document.querySelector('link[rel="apple-touch-icon"]');
-        if (link) link.href = c.toDataURL('image/png');
-      }
+(function generateIcon(){
+  try{
+    [192,512].forEach(function(size){
+      var c=document.createElement('canvas');c.width=size;c.height=size;
+      var ctx=c.getContext('2d');
+      ctx.fillStyle='#0f1117';ctx.fillRect(0,0,size,size);
+      ctx.fillStyle='#1a1d27';var r=size*0.15;
+      ctx.beginPath();ctx.moveTo(r,0);ctx.lineTo(size-r,0);ctx.quadraticCurveTo(size,0,size,r);ctx.lineTo(size,size-r);ctx.quadraticCurveTo(size,size,size-r,size);ctx.lineTo(r,size);ctx.quadraticCurveTo(0,size,0,size-r);ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#c17f3c';ctx.font='bold '+Math.round(size*0.32)+'px Syne,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('S&N',size/2,size*0.42);
+      ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font=Math.round(size*0.11)+'px sans-serif';ctx.fillText('STAFF',size/2,size*0.65);
+      if(size===192){var link=document.querySelector('link[rel="apple-touch-icon"]');if(link)link.href=c.toDataURL('image/png');}
     });
-  } catch(e) {}
+  }catch(e){}
 })();
 </script>
 </body>
