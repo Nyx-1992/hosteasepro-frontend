@@ -5066,9 +5066,34 @@ const isPast = m < todayMo;
   const activeStyle = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px';
   const inactiveStyle = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px';
   document.getElementById('rsub-revenue-btn').style.cssText = sub === 'revenue' ? activeStyle : inactiveStyle;
-  document.getElementById('rsub-property-btn').style.cssText = sub === 'property' ? activeStyle : inactiveStyle;
+  document.getElementById('rsub-property-btn').style.cssText = sub === 'property' ? activeStyle : inactiveStyle;  
 }
-  
+
+let _showForecast = true;
+function toggleForecast() {
+  _showForecast = !_showForecast;
+  const btn = document.getElementById('forecast-toggle-btn');
+  if (btn) btn.textContent = _showForecast ? '✦ Hide forecast' : '✦ Show forecast';
+  const labels = document.querySelectorAll('#report-month-labels div');
+  const bars = document.querySelectorAll('#report-monthly-chart > div');
+  const todayMo = todaySAST().slice(0,7);
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  bars.forEach((bar, i) => {
+    const label = labels[i];
+    if (!label) return;
+    const txt = label.textContent.replace(' ✦','').trim();
+    const parts = txt.split("'");
+    if (parts.length < 2) return;
+    const moIdx = months.indexOf(parts[0]);
+    const yr = '20' + parts[1];
+    const moStr = yr + '-' + String(moIdx+1).padStart(2,'0');
+    if (moStr > todayMo) {
+      bar.style.display = _showForecast ? '' : 'none';
+      label.style.display = _showForecast ? '' : 'none';
+    }
+  });
+}
+
 function setReportTimeframe(months, btn) {
   document.querySelectorAll('#report-timeframe-btns .btn').forEach(b => {
     b.className = 'btn btn-sm btn-ghost';
