@@ -5003,7 +5003,8 @@ const isPast = m < todayMo;
     const plats = ['airbnb','booking','lekkeslaap','manual'];
 
     const netMonthly = {};
-   spAll.filter(b => !['cancelled','blocked','owner'].includes(b.status)
+  spAll.filter(b => !['cancelled','blocked','owner'].includes(b.status)
+      && (!cutoff || b.check_in >= cutoff)
       && !( (b.guest_name||'').toLowerCase().includes('owner')
          || (b.guest_name||'').toLowerCase().includes('test')
          || (b.guest_name||'').toLowerCase().includes('nyx') )
