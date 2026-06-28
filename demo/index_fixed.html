@@ -4864,8 +4864,10 @@ const isPast = m < todayMo;
       return `<div style="flex:1;min-width:24px;display:flex;flex-direction:column;align-items:center;position:relative" 
         onmouseover="showChartTooltip('${m}',${JSON.stringify(d)})" onmouseout="hideChartTooltip()">
         <div style="font-size:.58rem;font-weight:700;color:var(--muted);margin-bottom:3px;white-space:nowrap">${total>=1000?fmtK(total):''}</div>
-        <div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:172px;border-radius:4px 4px 0 0;overflow:hidden;cursor:pointer;opacity:${isForecast?'0.45':'1'};
+       <div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:172px;border-radius:4px 4px 0 0;overflow:hidden;cursor:pointer;opacity:${isForecast?'0.45':'1'};
           ${isNow?'outline:2px solid var(--accent);outline-offset:1px':''}${isForecast?';outline:2px dashed var(--muted);outline-offset:1px':''}">
+          ${segs.join('')}
+        </div>
       </div>`;
     }).join('');
     labelEl.innerHTML = months.map(m =>
