@@ -5054,7 +5054,7 @@ const isPast = m < todayMo;
       </tr>`;
     }
 
-    netBody.innerHTML = rows || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No data</td></tr>';
+    netBody.innerHTML = currentRow + rows || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No data</td></tr>';
 
     const totals = {airbnb:0, booking:0, lekkeslaap:0, manual:0, total:0};
     pastMonths.forEach(m => { plats.forEach(p => { totals[p] += netMonthly[m][p]||0; }); totals.total += netMonthly[m].total||0; });
