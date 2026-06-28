@@ -5049,6 +5049,7 @@ const isPast = m < todayMo;
   function switchReportSub(sub) {
   document.getElementById('rsub-revenue').style.display = sub === 'revenue' ? '' : 'none';
   document.getElementById('rsub-property').style.display = sub === 'property' ? '' : 'none';
+  if (sub === 'property') { renderReports(); renderReportInspections(); renderReportInventory(); }
   const activeStyle = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px';
   const inactiveStyle = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px';
   document.getElementById('rsub-revenue-btn').style.cssText = sub === 'revenue' ? activeStyle : inactiveStyle;
