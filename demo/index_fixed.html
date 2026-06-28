@@ -5016,7 +5016,7 @@ const isPast = m < todayMo;
     });
 
     const netMonths = Object.keys(netMonthly).sort();
-    const pastMonths = netMonths.filter(m => m < todayMoStr);
+    const pastMonths = netMonths.filter(m => m < todayMoStr).reverse();
     const currentMonth = netMonths.find(m => m === todayMoStr);
 
     const moName = m => {
