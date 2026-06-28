@@ -342,6 +342,11 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
     <div class="field-group"><label>Email</label><input type="email" id="login-email" placeholder="your@email.com"/></div>
     <div class="field-group"><label>Password</label><input type="password" id="login-password" onkeydown="if(event.key==='Enter'){if(typeof doLogin==='function')doLogin();else setTimeout(doLogin,100);}"/></div>
     <button class="btn btn-primary btn-full" id="signin-btn" onclick="if(typeof doLogin==='function'){doLogin();}else{setTimeout(doLogin,100);}">Sign In</button>
+    <div style="margin-top:12px;text-align:center">
+      <a href="domestic.html" style="display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border-radius:20px;border:1.5px solid var(--border);font-size:.82rem;font-weight:600;color:var(--muted);text-decoration:none;background:var(--sand);transition:all .2s" onmouseover="this.style.borderColor='var(--ocean)';this.style.color='var(--ocean)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        🧹 Staff Portal
+      </a>
+    </div>
   </div>
 </div>
 
