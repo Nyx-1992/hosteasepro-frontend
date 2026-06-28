@@ -4788,7 +4788,6 @@ async function renderReports(monthsBack) {
 const spAll  = allBookings.filter(b => b.property_id==='speranta' && b.status!=='cancelled');
   const spPaid = spAll.filter(b => (b.revenue||0) > 0 && (!cutoff || b.check_in >= cutoff));
 const platOrder = ['airbnb','booking','lekkeslaap','manual'];
-console.log('spAll:', spAll.length, 'spPaid:', spPaid.length, 'sample:', JSON.stringify(spPaid[0]));
 
   // ── Aggregates ──
   const byPlat = {};
