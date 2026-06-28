@@ -4856,8 +4856,8 @@ const isPast = m < todayMo;
         const v = d[p]||0; if (!v) return '';
         const h = Math.round(v/maxMonthTotal*172);
         const textColor = p==='lekkeslaap' ? '#1a1a2e' : '#fff';
-        return `<div style="width:100%;height:${h}px;background:${pColors[p]};flex-shrink:0;cursor:pointer;transition:opacity .15s" 
-          onmouseover="showChartTooltip('${m}',${JSON.stringify(d)})" 
+       return `<div style="width:100%;height:${h}px;background:${pColors[p]};flex-shrink:0;cursor:pointer;transition:opacity .15s" 
+          onmouseover="showChartTooltip('${m}',window._chartData['${m}'])" 
           onmouseout="hideChartTooltip()"
           title="${pNames[p]}: ${fmt(v)}"></div>`;
       }).filter(Boolean);
