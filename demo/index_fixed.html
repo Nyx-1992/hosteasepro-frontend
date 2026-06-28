@@ -5002,23 +5002,8 @@ const isPast = m < todayMo;
     const fmt2 = n => n ? 'R' + Math.round(n).toLocaleString('en-ZA') : '—';
     const plats = ['airbnb','booking','lekkeslaap','manual'];
 
-    const netMonthly = {};
-  spAll.filter(b => !['cancelled','blocked','owner'].includes(b.status)
-      && (!cutoff || b.check_in >= cutoff)
-      && !( (b.guest_name||'').toLowerCase().includes('owner')
-         || (b.guest_name||'').toLowerCase().includes('test')
-         || (b.guest_name||'').toLowerCase().includes('nyx') )
-      && (b.revenue||b.total_amount||0) > 0
-    ).forEach(b => {
-      const mo = (b.check_in_date||b.check_in||'').slice(0,7);
-      if (!mo || mo.length < 7) return;
-      if (!netMonthly[mo]) netMonthly[mo] = {airbnb:0, booking:0, lekkeslaap:0, manual:0, total:0};
-      const p = b.platform === 'direct' ? 'manual' : (b.platform||'manual');
-      const amt = b.revenue || b.total_amount || 0;
-      netMonthly[mo][p] = (netMonthly[mo][p]||0) + amt;
-      netMonthly[mo].total += amt;
-    });
-
+    const netMonthly = monthlyData;
+    
     const netMonths = Object.keys(netMonthly).sort();
     const pastMonths = netMonths.filter(m => m < todayMoStr).reverse();
     const currentMonth = netMonths.find(m => m === todayMoStr);
