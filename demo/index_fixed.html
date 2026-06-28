@@ -4781,6 +4781,7 @@ async function renderReports(monthsBack) {
   if (monthsBack > 0) {
     const d = new Date();
     d.setMonth(d.getMonth() - monthsBack);
+    d.setDate(1);
     cutoff = d.toISOString().slice(0,10);
   }
 
