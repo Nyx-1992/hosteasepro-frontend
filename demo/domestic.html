@@ -348,6 +348,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
   <div class="nina-tabs">
     <button class="nina-tab active" id="ntab-schedule" onclick="switchNinaTab('schedule')">📋 Schedule</button>
     <button class="nina-tab" id="ntab-inspect" onclick="switchNinaTab('inspect')">🔍 Inspect</button>
+    <button class="nina-tab" id="ntab-reports" onclick="switchNinaTab('reports')">📁 Reports</button>
   </div>
 
   <!-- SCHEDULE TAB -->
@@ -456,6 +457,45 @@ h1,h2,h3{font-family:Syne,sans-serif}
       </div>
     </div>
   </div>
+
+  <!-- REPORTS TAB -->
+  <div id="nina-tab-reports" class="nina-tab-content" style="display:none;">
+
+    <!-- Filter row -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+      <div style="display:flex;gap:6px;">
+        <button class="nina-tab-filter active" id="nrep-filter-all" onclick="setNinaReportProp('all',this)" style="padding:5px 12px;border-radius:20px;border:1.5px solid #6c47ff;background:#6c47ff;color:#fff;font-size:.75rem;font-weight:700;cursor:pointer;font-family:Syne,sans-serif;">All</button>
+        <button class="nina-tab-filter" id="nrep-filter-speranta" onclick="setNinaReportProp('speranta',this)" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:none;color:var(--muted);font-size:.75rem;font-weight:700;cursor:pointer;font-family:Syne,sans-serif;">Speranta</button>
+        <button class="nina-tab-filter" id="nrep-filter-tvhouse" onclick="setNinaReportProp('tvhouse',this)" style="padding:5px 12px;border-radius:20px;border:1.5px solid var(--border);background:none;color:var(--muted);font-size:.75rem;font-weight:700;cursor:pointer;font-family:Syne,sans-serif;">TV House</button>
+      </div>
+    </div>
+
+    <!-- Inspection history -->
+    <div class="nina-section">
+      <div class="nina-section-header">
+        <div><div class="nina-section-title">Inspection History</div><div class="nina-section-sub">All submitted inspection reports</div></div>
+      </div>
+      <div id="nina-rep-inspections"><div class="nina-loading">Loading…</div></div>
+    </div>
+
+    <!-- Inventory reports -->
+    <div class="nina-section" style="margin-top:14px;">
+      <div class="nina-section-header">
+        <div><div class="nina-section-title">Inventory Reports</div><div class="nina-section-sub">Submitted by cleaners after each job</div></div>
+      </div>
+      <div id="nina-rep-inventory"><div class="nina-loading">Loading…</div></div>
+    </div>
+
+    <!-- Cleaner activity -->
+    <div class="nina-section" style="margin-top:14px;">
+      <div class="nina-section-header">
+        <div><div class="nina-section-title">Cleaner Activity</div><div class="nina-section-sub">All cleans · completed & scheduled</div></div>
+      </div>
+      <div id="nina-rep-cleans"><div class="nina-loading">Loading…</div></div>
+    </div>
+
+  </div><!-- /nina-tab-reports -->
+
 </div>
 
 <!-- ASSIGN MODAL -->
@@ -722,6 +762,7 @@ function switchNinaTab(tab) {
   document.querySelectorAll('.nina-tab-content').forEach(c=>c.style.display='none');
   document.getElementById('ntab-'+tab).classList.add('active');
   document.getElementById('nina-tab-'+tab).style.display='';
+  if(tab==='reports') loadNinaReports();
 }
 
 // ── Nina: Schedule ────────────────────────────────────────────────────────────
@@ -1114,6 +1155,144 @@ function ninaInspReset() {
     document.getElementById(`nina-insp-${s}`).style.display=i===0?'':'none';
   });
   document.querySelectorAll('.nina-rating-btn').forEach(b=>b.classList.remove('selected'));
+}
+
+
+// ── Nina: Reports tab ─────────────────────────────────────────────────────────
+let ninaReportPropFilter = 'all';
+
+function setNinaReportProp(val, btn) {
+  ninaReportPropFilter = val;
+  document.querySelectorAll('.nina-tab-filter').forEach(b => {
+    b.style.background = 'none';
+    b.style.borderColor = 'var(--border)';
+    b.style.color = 'var(--muted)';
+  });
+  btn.style.background = '#6c47ff';
+  btn.style.borderColor = '#6c47ff';
+  btn.style.color = '#fff';
+  loadNinaReports();
+}
+
+async function loadNinaReports() {
+  loadNinaRepInspections();
+  loadNinaRepInventory();
+  loadNinaRepCleans();
+}
+
+async function loadNinaRepInspections() {
+  const el = document.getElementById('nina-rep-inspections');
+  if (!el) return;
+  el.innerHTML = '<div class="nina-loading">Loading…</div>';
+  try {
+    let q = db.from('property_inspections')
+      .select('id,property_id,inspection_date,overall_condition,inspector_name,issues,notes,breakages,photo_urls')
+      .eq('org_id', ORG_ID)
+      .order('inspection_date', {ascending: false})
+      .limit(20);
+    const {data, error} = await q;
+    if (error) throw error;
+    let rows = (data || []);
+    if (ninaReportPropFilter !== 'all') {
+      const pidMap = {
+        speranta: 'e9737638-d83a-4947-940a-8746789e4d9f',
+        tvhouse:  '83b2a84a-5451-4be5-a84f-2efc0d2602d5',
+      };
+      rows = rows.filter(r => r.property_id === pidMap[ninaReportPropFilter]);
+    }
+    if (!rows.length) { el.innerHTML = '<div class="nina-loading">No inspections found.</div>'; return; }
+    const ratingColors = {excellent:'var(--green)',good:'var(--blue)',fair:'var(--accent)',poor:'var(--red)'};
+    el.innerHTML = rows.map(r => {
+      const pk = propKeyFromId(r.property_id);
+      const issueCount = Array.isArray(r.issues) ? r.issues.length : 0;
+      const photoCount = Array.isArray(r.photo_urls) ? r.photo_urls.length : 0;
+      const rc = ratingColors[r.overall_condition] || 'var(--muted)';
+      return `<div class="nina-checkout-card" style="margin-bottom:8px;">
+        <div class="nina-checkout-top">
+          <span style="font-weight:700;font-size:.88rem;">${fmtFull(r.inspection_date)}</span>
+          <span class="nina-prop-badge ${pk}">${propNameFromKey(pk)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
+          <span style="font-size:.78rem;font-weight:700;color:${rc};text-transform:capitalize;">${r.overall_condition||'—'}</span>
+          <span style="font-size:.74rem;color:var(--muted);">${r.inspector_name||'Nina'}</span>
+          ${issueCount > 0 ? `<span style="font-size:.72rem;color:var(--accent);font-weight:600;">⚠ ${issueCount} issue${issueCount>1?'s':''}</span>` : '<span style="font-size:.72rem;color:var(--green);">✓ No issues</span>'}
+          ${photoCount > 0 ? `<span style="font-size:.72rem;color:var(--muted);">📷 ${photoCount}</span>` : ''}
+        </div>
+        ${r.notes ? `<div style="font-size:.78rem;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">${r.notes}</div>` : ''}
+        ${r.breakages ? `<div style="font-size:.78rem;color:var(--red);margin-top:4px;">⚠ Breakage: ${r.breakages}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(err) { el.innerHTML = `<div class="nina-loading" style="color:var(--red);">Error: ${err.message}</div>`; }
+}
+
+async function loadNinaRepInventory() {
+  const el = document.getElementById('nina-rep-inventory');
+  if (!el) return;
+  el.innerHTML = '<div class="nina-loading">Loading…</div>';
+  try {
+    let q = db.from('inventory_reports')
+      .select('id,property_id,cleaner,clean_date,all_ok,flagged_items,notes,submitted_at')
+      .eq('org_id', ORG_ID)
+      .order('clean_date', {ascending: false})
+      .limit(25);
+    const {data, error} = await q;
+    if (error) throw error;
+    let rows = (data || []);
+    if (ninaReportPropFilter !== 'all') {
+      const pidMap = {
+        speranta: 'e9737638-d83a-4947-940a-8746789e4d9f',
+        tvhouse:  '83b2a84a-5451-4be5-a84f-2efc0d2602d5',
+      };
+      rows = rows.filter(r => r.property_id === pidMap[ninaReportPropFilter] || r.property_id === ninaReportPropFilter);
+    }
+    if (!rows.length) { el.innerHTML = '<div class="nina-loading">No inventory reports found.</div>'; return; }
+    el.innerHTML = rows.map(r => {
+      const pk = propKeyFromId(r.property_id);
+      const flagged = Array.isArray(r.flagged_items) ? r.flagged_items : [];
+      return `<div class="nina-sched-row">
+        <span class="nina-sched-date">${fmtDate(r.clean_date)}</span>
+        <span class="nina-sched-cleaner">
+          <strong>${r.cleaner||'—'}</strong>
+          <span style="color:var(--muted);font-size:.74rem;"> · ${propNameFromKey(pk)}</span>
+        </span>
+        ${r.all_ok
+          ? '<span style="font-size:.72rem;font-weight:700;color:var(--green);">✓ All OK</span>'
+          : `<span style="font-size:.72rem;font-weight:700;color:var(--accent);">⚠ ${flagged.length} flagged</span>`}
+      </div>
+      ${flagged.length ? `<div style="font-size:.74rem;color:var(--muted);padding:4px 0 8px 80px;">${flagged.map(f=>f.item+(f.note?' — '+f.note:'')).join(' · ')}</div>` : ''}`;
+    }).join('');
+  } catch(err) { el.innerHTML = `<div class="nina-loading" style="color:var(--red);">Error: ${err.message}</div>`; }
+}
+
+async function loadNinaRepCleans() {
+  const el = document.getElementById('nina-rep-cleans');
+  if (!el) return;
+  el.innerHTML = '<div class="nina-loading">Loading…</div>';
+  try {
+    let q = db.from('domestics')
+      .select('id,cleaner,property_id,date,type,status,amount_paid,notes')
+      .order('date', {ascending: false})
+      .limit(30);
+    const {data, error} = await q;
+    if (error) throw error;
+    let rows = (data || []);
+    if (ninaReportPropFilter !== 'all') {
+      rows = rows.filter(r => propKeyFromId(r.property_id) === ninaReportPropFilter);
+    }
+    if (!rows.length) { el.innerHTML = '<div class="nina-loading">No cleans found.</div>'; return; }
+    const typeLabel = {turnover:'Turnover', deep_clean:'Deep clean', inspection_prep:'Insp. prep'};
+    el.innerHTML = rows.map(d => {
+      const pk = propKeyFromId(d.property_id);
+      return `<div class="nina-sched-row">
+        <span class="nina-sched-date">${fmtDate(d.date)}</span>
+        <span class="nina-sched-cleaner">
+          <strong>${d.cleaner}</strong>
+          <span style="color:var(--muted);font-size:.74rem;"> · ${propNameFromKey(pk)} · ${typeLabel[d.type]||d.type}</span>
+        </span>
+        <span class="nina-sched-status ${d.status}">${d.status}</span>
+      </div>`;
+    }).join('');
+  } catch(err) { el.innerHTML = `<div class="nina-loading" style="color:var(--red);">Error: ${err.message}</div>`; }
 }
 
 // ── Cleaner app: Data ─────────────────────────────────────────────────────────
