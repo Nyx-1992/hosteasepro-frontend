@@ -2279,7 +2279,7 @@ function renderDashboard() {
   const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
 
   // ── Base stats ──
-  const active    = fb.filter(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
+  const active    = fb.filter(b=>b.check_in<=today&&b.check_out>=today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
   const checkIns  = fb.filter(b=>b.check_in===today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
   const checkOuts = fb.filter(b=>b.check_out===today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
   const checkInLabels  = checkIns.map(b=>b.display_name+' ('+propName(b.property_id)+')').join(', ')||'None today';
