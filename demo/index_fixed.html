@@ -5037,10 +5037,14 @@ const isPast = m < todayMo;
         <td style="color:var(--muted)"><em>In progress</em></td>
       </tr>`;
     }
-    let rows = pastMonths.map((m,i) => {
+  let rows = pastMonths.map((m,i) => {
       const d = netMonthly[m];
-      return `<tr style="${i%2===1?
+      return `<tr style="${i%2===1?'background:var(--surface-2)':''}">
         <td><strong>${moName(m)}</strong></td>
+        ${plats.map(p => d[p] ? `<td style="color:var(--green)">${fmt2(d[p])}</td>` : `<td style="color:var(--muted)">—</td>`).join('')}
+        <td><strong style="color:var(--green)">${fmt2(d.total)}</strong></td>
+      </tr>`;
+    }).join('');
         ${plats.map(p => d[p] ? `<td style="color:var(--green)">${fmt2(d[p])}</td>` : `<td style="color:var(--muted)">—</td>`).join('')}
         <td><strong style="color:var(--green)">${fmt2(d.total)}</strong></td>
       </tr>`;
