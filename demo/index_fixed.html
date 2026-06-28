@@ -846,6 +846,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         <div class="card mb-6">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
             <div class="card-title" style="margin:0">📊 Monthly Revenue by Platform</div>
+            <button id="forecast-toggle-btn" onclick="toggleForecast()" style="padding:5px 12px;font-size:.75rem;font-weight:600;border:1.5px solid var(--border);border-radius:20px;background:var(--sand);cursor:pointer;color:var(--muted)">✦ Hide forecast</button>>
             <div style="display:flex;gap:14px;flex-wrap:wrap" id="report-legend"></div>
           </div>
           <div style="overflow-x:auto">
