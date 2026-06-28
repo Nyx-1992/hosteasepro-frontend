@@ -5045,11 +5045,7 @@ const isPast = m < todayMo;
         <td><strong style="color:var(--green)">${fmt2(d.total)}</strong></td>
       </tr>`;
     }).join('');
-        ${plats.map(p => d[p] ? `<td style="color:var(--green)">${fmt2(d[p])}</td>` : `<td style="color:var(--muted)">—</td>`).join('')}
-        <td><strong style="color:var(--green)">${fmt2(d.total)}</strong></td>
-      </tr>`;
-    }).join('');
-
+        
     netBody.innerHTML = (currentRow + rows) || '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">No data</td></tr>';
 
     const totals = {airbnb:0, booking:0, lekkeslaap:0, manual:0, total:0};
