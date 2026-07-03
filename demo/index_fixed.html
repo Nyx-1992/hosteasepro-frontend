@@ -2644,12 +2644,12 @@ function invRender() {
     '<div style="padding:7px 10px">'+
       '<div style="font-size:7px;color:#444;margin-bottom:5px">Kind regards,</div>'+
       '<div style="display:flex;gap:16px">'+
-        '<div style="flex:1"><div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:14px;color:#1A2340;margin-bottom:2px">Nicole Babczyk</div><div style="height:0.5px;background:#D4C9BC;margin-bottom:2px"></div><div style="font-size:6.5px;color:#B8962E;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
-        '<div style="flex:1"><div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:14px;color:#1A2340;margin-bottom:2px">Silja Faltin</div><div style="height:0.5px;background:#D4C9BC;margin-bottom:2px"></div><div style="font-size:6.5px;color:#B8962E;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
+        '<div style="flex:1"><div style="font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:14px;color:#1A2340;margin-bottom:2px">Nicole Babczyk</div><div style="height:0.5px;background:#D4C9BC;margin-bottom:2px"></div><div style="font-size:6.5px;color:#B8962E;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
+        '<div style="flex:1"><div style="font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:14px;color:#1A2340;margin-bottom:2px">Silja Faltin</div><div style="height:0.5px;background:#D4C9BC;margin-bottom:2px"></div><div style="font-size:6.5px;color:#B8962E;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
       '</div>'+
     '</div>'+
     '<div style="background:#1A2340;padding:4px 10px;text-align:center;border-radius:0 0 6px 6px">'+
-      '<div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:8px;color:#B8962E">Beyond the booking</div>'+
+      '<div style="font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:8px;color:#B8962E">Beyond the booking</div>'+
       '<div style="font-size:6px;color:rgba(184,150,46,.6);letter-spacing:.06em;margin-top:1px">S&N APT MANAGEMENT · SN_Apt_Management@outlook.com · CURATED STAYS · PERSONAL SERVICE</div>'+
     '</div>';
 }
@@ -2737,7 +2737,7 @@ function generateInvoicePDF() {
     '<style>body{margin:0;padding:20px;background:#F5EFE6;font-family:Arial,sans-serif}@media print{body{margin:0;padding:0}}</style>',
     '</head><body>',
     preview.innerHTML,
-    '<script>window.print()<\/script>',
+    '<scr'+'ipt>window.print()<\/scr'+'ipt>',
     '</body></html>'
   ].join('');
   w.document.write(html);
