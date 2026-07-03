@@ -1999,6 +1999,7 @@ function renderTab(id) {
   else if (id==='team')      renderTeam();
   else if (id==='finance')   renderFinance();
   else if (id==='reports')   { renderReports(); renderReportInspections(); renderReportInventory(); }
+  else if (id==='invoices')  renderInvoicesTab();
 }
 
 function renderDomesticEarnings() {
@@ -2744,25 +2745,19 @@ function generateInvoicePDF() {
   w.document.close();
 }
 
-// Override switchTab to init invoice tab on first open
-const _origSwitchTab = window.switchTab;
-window.switchTab = function(tab) {
-  if(_origSwitchTab) _origSwitchTab(tab);
-  if(tab==='invoices'){
-    setTimeout(function(){
-      const today = new Date().toISOString().split('T')[0];
-      const due   = new Date(); due.setDate(due.getDate()+7);
-      const dEl = document.getElementById('inv-date');
-      const vEl = document.getElementById('inv-valid');
-      if(dEl && !dEl.value) dEl.value = today;
-      if(vEl && !vEl.value) vEl.value = due.toISOString().split('T')[0];
-      invRenderLines();
-      invRender();
-      invLoadBookings();
-      loadInvHistory();
-    },50);
-  }
-};
+// Invoices tab renderer — called by renderTab
+function renderInvoicesTab() {
+  const today = new Date().toISOString().split('T')[0];
+  const due   = new Date(); due.setDate(due.getDate()+7);
+  const dEl = document.getElementById('inv-date');
+  const vEl = document.getElementById('inv-valid');
+  if(dEl && !dEl.value) dEl.value = today;
+  if(vEl && !vEl.value) vEl.value = due.toISOString().split('T')[0];
+  invRenderLines();
+  invRender();
+  invLoadBookings();
+  loadInvHistory();
+}
 
 // ── FILTERS ───────────────────────────────────────────────────
 function filteredBookings() {
