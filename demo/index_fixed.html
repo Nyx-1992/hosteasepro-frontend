@@ -946,6 +946,174 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         </div>
         </div><!-- end rsub-property -->
           
+      <!-- ══ INVOICES ═════════════════════════════════════════════════════════ -->
+      <div class="tab-pane" id="tab-invoices">
+
+        <!-- Sub-tab nav -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0">
+          <button id="isub-guest-btn" onclick="switchInvoiceSub('guest')"
+            style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px">
+            🧾 Guest Invoices
+          </button>
+          <button id="isub-outgoing-btn" onclick="switchInvoiceSub('outgoing')"
+            style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
+            📤 Outgoing
+          </button>
+          <button id="isub-incoming-btn" onclick="switchInvoiceSub('incoming')"
+            style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
+            📥 Incoming
+          </button>
+        </div>
+
+        <!-- ── GUEST INVOICES ──────────────────────────────────── -->
+        <div id="isub-guest">
+          <div class="grid-2 mb-6" style="align-items:start">
+
+            <!-- LEFT: Form -->
+            <div class="card">
+              <div class="card-title" style="margin-bottom:16px">New document</div>
+
+              <div style="display:flex;gap:6px;margin-bottom:16px">
+                <button id="inv-type-quot" onclick="setInvType('QUOTATION',this)"
+                  style="flex:1;padding:8px;font-size:.8rem;font-weight:700;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer">
+                  Quotation
+                </button>
+                <button id="inv-type-inv" onclick="setInvType('INVOICE',this)"
+                  style="flex:1;padding:8px;font-size:.8rem;font-weight:700;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer">
+                  Invoice
+                </button>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div><label class="form-label">Document No.</label><input type="text" class="form-input" id="inv-number" value="SNQ-2026-001" oninput="invRender()"></div>
+                <div><label class="form-label">Date issued</label><input type="date" class="form-input" id="inv-date" oninput="invRender()"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div><label class="form-label" id="inv-valid-lbl">Valid until</label><input type="date" class="form-input" id="inv-valid" oninput="invRender()"></div>
+                <div>
+                  <label class="form-label">Reference <span style="font-size:.7rem;color:var(--muted);font-weight:400">(auto)</span></label>
+                  <input type="text" class="form-input" id="inv-ref" oninput="invRefManual=true;invRender()">
+                </div>
+              </div>
+
+              <div style="margin-bottom:12px">
+                <label class="form-label">Link to booking <span style="font-size:.7rem;color:var(--muted);font-weight:400">(optional — auto-fills fields)</span></label>
+                <select class="form-input" id="inv-booking" onchange="invPullBooking()">
+                  <option value="">— select to auto-fill —</option>
+                </select>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div><label class="form-label">Guest name</label><input type="text" class="form-input" id="inv-guest" placeholder="John Smith" oninput="invRefManual=false;invRender()"></div>
+                <div><label class="form-label">Company (optional)</label><input type="text" class="form-input" id="inv-company" placeholder="ABC (Pty) Ltd" oninput="invRefManual=false;invRender()"></div>
+              </div>
+              <div style="margin-bottom:12px"><label class="form-label">Email</label><input type="text" class="form-input" id="inv-email" placeholder="guest@email.com" oninput="invRender()"></div>
+              <div style="margin-bottom:12px"><label class="form-label">Address (optional)</label><textarea class="form-input" id="inv-addr" placeholder="Leave blank or add if needed" rows="2" style="resize:vertical" oninput="invRender()"></textarea></div>
+
+              <div style="margin-bottom:12px"><label class="form-label">Property</label>
+                <select class="form-input" id="inv-prop" oninput="invRender()">
+                  <option>Speranta Flat — 35 Athens Road, Tableview</option>
+                  <option>TV House</option>
+                </select>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div><label class="form-label">Dates &amp; nights</label><input type="text" class="form-input" id="inv-dates" placeholder="14–21 Jul (7 nights)" oninput="invRender()"></div>
+                <div><label class="form-label">Platform</label>
+                  <select class="form-input" id="inv-platform" oninput="invRender()">
+                    <option>Direct Booking</option><option>Airbnb</option><option>Booking.com</option><option>LekkeSlaap</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="margin-bottom:6px">
+                <label class="form-label">Line items</label>
+                <div id="inv-lines"></div>
+                <button onclick="invAddLine()" style="font-size:.78rem;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--muted);margin-top:4px">+ Add line item</button>
+              </div>
+
+              <div style="margin-bottom:16px;margin-top:12px">
+                <label class="form-label">Notes <span style="font-size:.7rem;color:var(--muted);font-weight:400">(one per line)</span></label>
+                <textarea class="form-input" id="inv-notes" rows="3" style="resize:vertical" oninput="invRender()">Please confirm your booking to secure the dates.
+Full payment is required to confirm your reservation.</textarea>
+              </div>
+
+              <button onclick="generateInvoicePDF()" style="width:100%;padding:12px;border-radius:8px;border:none;background:#1A2340;color:#F5EFE6;font-size:.9rem;font-weight:700;cursor:pointer;letter-spacing:.04em">
+                Download PDF
+              </button>
+            </div>
+
+            <!-- RIGHT: Live preview -->
+            <div id="inv-preview-wrap" style="position:sticky;top:80px">
+              <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">Live preview</div>
+              <div id="inv-preview" style="background:#F5EFE6;border-radius:10px;padding:16px;border:1px solid var(--border)"></div>
+            </div>
+
+          </div>
+
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div class="card-title" style="margin:0">Past documents</div>
+              <select class="form-input" id="inv-hist-filter" onchange="loadInvHistory()" style="width:auto;font-size:.8rem">
+                <option value="all">All</option><option value="QUOTATION">Quotations</option><option value="INVOICE">Invoices</option>
+              </select>
+            </div>
+            <div id="inv-history"><div class="text-muted text-sm">Invoice history will appear here once generated documents are saved.</div></div>
+          </div>
+        </div>
+
+        <!-- ── OUTGOING ──────────────────────────────────────────── -->
+        <div id="isub-outgoing" style="display:none">
+          <div class="card mb-6">
+            <div class="card-title">📤 Outgoing — Management Fee Invoices</div>
+            <div style="font-size:.83rem;color:var(--muted);margin-bottom:16px">Monthly R6,000 management fee billed to Mirka &amp; Antonin (TV House owners). Future clients will appear here once added.</div>
+            <div id="inv-outgoing-list"><div class="text-muted">Loading…</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px">Generate management fee invoice</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
+              <div><label class="form-label">Month</label><input type="month" class="form-input" id="mgmt-month"></div>
+              <div><label class="form-label">Amount</label><input type="number" class="form-input" id="mgmt-amount" value="6000"></div>
+              <div><label class="form-label">Billed to</label><input type="text" class="form-input" id="mgmt-billed" value="Mirka &amp; Antonin"></div>
+            </div>
+            <button onclick="generateMgmtInvoice()" style="padding:10px 22px;border-radius:8px;border:none;background:#1A2340;color:#F5EFE6;font-size:.85rem;font-weight:700;cursor:pointer">
+              Generate &amp; Download PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- ── INCOMING ──────────────────────────────────────────── -->
+        <div id="isub-incoming" style="display:none">
+          <div class="stat-grid mb-6" id="inv-expense-stats"></div>
+          <div class="card mb-6">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+              <div class="card-title" style="margin:0">📥 Expense Ledger</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <select class="form-input" id="inv-exp-prop" onchange="loadIncoming()" style="width:auto;font-size:.8rem">
+                  <option value="all">All properties</option><option value="speranta">Speranta</option><option value="tvhouse">TV House</option><option value="both">Shared</option>
+                </select>
+                <select class="form-input" id="inv-exp-cat" onchange="loadIncoming()" style="width:auto;font-size:.8rem">
+                  <option value="all">All categories</option>
+                  <option value="cleaning">Cleaning</option><option value="maintenance">Maintenance</option>
+                  <option value="nina_management">Nina — Management</option><option value="levies">Levies</option>
+                  <option value="electricity">Electricity</option><option value="gardener">Gardener</option>
+                  <option value="wifi_internet">WiFi / Internet</option><option value="city_rates">City Rates</option>
+                  <option value="bank_fees">Bank Fees</option><option value="other_expense">Other</option>
+                </select>
+                <select class="form-input" id="inv-exp-period" onchange="loadIncoming()" style="width:auto;font-size:.8rem">
+                  <option value="3">Last 3 months</option><option value="6">Last 6 months</option>
+                  <option value="12">Last 12 months</option><option value="0">All time</option>
+                </select>
+              </div>
+            </div>
+            <div class="table-wrap"><table id="inv-incoming-table">
+              <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Property</th><th style="text-align:right">Amount</th></tr></thead>
+              <tbody id="inv-incoming-body"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px">Loading…</td></tr></tbody>
+            </table></div>
+          </div>
+        </div>
+
+      </div><!-- /tab-invoices -->
+
       <!-- ══ SETTINGS ══════════════════════════════════════════════════════ -->
       <div class="tab-pane" id="tab-settings">
         <div style="margin-bottom:24px">
@@ -1471,6 +1639,7 @@ const NAV = [
   {id:'messages', label:'Messages',     icon:'💬',roles:['admin','host']},
   {id:'knowledge',label:'Knowledge Base',icon:'📚',roles:['admin','host']},
   {id:'team',     label:'Team',         icon:'👥',roles:['admin']},
+  {id:'invoices', label:'Invoices',     icon:'🧾',roles:['admin']},
   {id:'reports',  label:'Reports',      icon:'📊',roles:['admin']},
   {id:'settings',  label:'Settings',     icon:'⚙️', roles:['admin']},
 ];
@@ -2255,6 +2424,336 @@ function scheduleICalSync() {
   // Re-sync every 30 minutes while app is open
   setInterval(() => syncICalFeeds(true), 30 * 60 * 1000);
 }
+
+
+// ── INVOICES TAB ──────────────────────────────────────────────
+let invType      = 'QUOTATION';
+let invLines     = [{desc:'Accommodation', amount:7000},{desc:'Cleaning fee', amount:350}];
+let invRefManual = false;
+
+const INV_COMPANY = {
+  name:'S&N Apt Management',
+  addr:'35 Athens Road, Tableview, 7441, Cape Town',
+  reg:'2024/643198/07',
+  tax:'9008226327',
+  email:'SN_Apt_Management@outlook.com',
+  bank:{name:'SN Apt Management',bank:'Nedbank',acc:'1292867345',type:'Current Account',branch:'198765',ref_email:'SN_Apt_Management@outlook.com'}
+};
+
+const CAT_LABELS = {
+  cleaning:'Cleaning', maintenance:'Maintenance', nina_management:'Nina — Management',
+  levies:'Levies', electricity:'Electricity', gardener:'Gardener',
+  wifi_internet:'WiFi / Internet', city_rates:'City Rates', bank_fees:'Bank Fees',
+  other_expense:'Other', owner_payout:'Owner Payout'
+};
+
+function switchInvoiceSub(sub) {
+  ['guest','outgoing','incoming'].forEach(s => {
+    document.getElementById('isub-'+s).style.display = s===sub ? '' : 'none';
+    const btn = document.getElementById('isub-'+s+'-btn');
+    const active   = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px';
+    const inactive = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px';
+    btn.style.cssText = s===sub ? active : inactive;
+  });
+  if(sub==='outgoing') loadOutgoing();
+  if(sub==='incoming') loadIncoming();
+  if(sub==='guest')    { invLoadBookings(); loadInvHistory(); }
+}
+
+function setInvType(t, btn) {
+  invType = t;
+  const aStyle = 'flex:1;padding:8px;font-size:.8rem;font-weight:700;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer';
+  const iStyle = 'flex:1;padding:8px;font-size:.8rem;font-weight:700;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer';
+  document.getElementById('inv-type-quot').style.cssText = t==='QUOTATION' ? aStyle : iStyle;
+  document.getElementById('inv-type-inv').style.cssText  = t==='INVOICE'   ? aStyle : iStyle;
+  document.getElementById('inv-valid-lbl').textContent = t==='QUOTATION' ? 'Valid until' : 'Due date';
+  invRender();
+}
+
+function invBuildRef(guest, company, dateVal) {
+  const parts = [];
+  if(company) parts.push(company.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10));
+  const surname = (guest||'').trim().split(' ').pop();
+  parts.push((surname||'GUEST').toUpperCase().slice(0,8));
+  if(dateVal) {
+    const d = new Date(dateVal+'T00:00:00');
+    const mon = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
+    parts.push(mon + String(d.getFullYear()).slice(2));
+  }
+  return parts.join('-');
+}
+
+function invGetRef() {
+  if(invRefManual) return invV('inv-ref');
+  return invBuildRef(invV('inv-guest'), invV('inv-company'), invV('inv-date'));
+}
+
+function invV(id) { return (document.getElementById(id)||{}).value||''; }
+
+function invFmtDate(val) {
+  if(!val) return '';
+  const d = new Date(val+'T00:00:00');
+  return d.toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'});
+}
+
+function invFmt(n) {
+  return 'R ' + Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+async function invLoadBookings() {
+  const sel = document.getElementById('inv-booking');
+  if(!sel || !db) return;
+  try {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-90);
+    const {data} = await db.from('bookings')
+      .select('id,guest_name,property_id,check_in,check_out,nights,revenue,platform,status')
+      .gte('check_in', cutoff.toISOString().split('T')[0])
+      .not('status','eq','cancelled')
+      .order('check_in',{ascending:false})
+      .limit(60);
+    if(!data) return;
+    sel.innerHTML = '<option value="">— select to auto-fill —</option>' + data.map(b => {
+      const prop = b.property_id==='e9737638-d83a-4947-940a-8746789e4d9f' ? 'Speranta Flat — 35 Athens Road, Tableview'
+                 : b.property_id==='83b2a84a-5451-4be5-a84f-2efc0d2602d5' ? 'TV House' : b.property_id;
+      const nights = b.nights||1;
+      const rev    = parseFloat(b.revenue)||0;
+      const rate   = rev && nights ? Math.round(rev/nights) : 1000;
+      return '<option value="'+b.id+'"'+
+        ' data-name="'+(b.guest_name||'').replace(/"/g,'')+'"'+
+        ' data-prop="'+prop+'"'+
+        ' data-dates="'+invFmtDate(b.check_in)+' – '+invFmtDate(b.check_out)+' ('+nights+' nights)"'+
+        ' data-nights="'+nights+'"'+
+        ' data-rate="'+rate+'"'+
+        ' data-platform="'+(b.platform||'Direct Booking')+'">'+(b.guest_name||'Guest')+' · '+(prop.split(' — ')[0])+' · '+invFmtDate(b.check_in)+'</option>';
+    }).join('');
+  } catch(e) { console.warn('invLoadBookings:', e); }
+}
+
+function invPullBooking() {
+  const sel = document.getElementById('inv-booking');
+  const opt = sel.options[sel.selectedIndex];
+  if(!opt.value) { invRefManual=false; invRender(); return; }
+  document.getElementById('inv-guest').value   = opt.dataset.name||'';
+  document.getElementById('inv-company').value = '';
+  document.getElementById('inv-email').value   = '';
+  document.getElementById('inv-addr').value    = '';
+  document.getElementById('inv-dates').value   = opt.dataset.dates||'';
+  const propEl = document.getElementById('inv-prop');
+  for(let i=0;i<propEl.options.length;i++){ if(propEl.options[i].text===opt.dataset.prop){propEl.selectedIndex=i;break;} }
+  const platEl = document.getElementById('inv-platform');
+  const plat = opt.dataset.platform||'Direct Booking';
+  for(let i=0;i<platEl.options.length;i++){ if(platEl.options[i].text===plat){platEl.selectedIndex=i;break;} }
+  const nights = parseInt(opt.dataset.nights)||1;
+  const rate   = parseInt(opt.dataset.rate)||1000;
+  invLines[0] = {desc:'Accommodation — '+nights+' night'+(nights>1?'s':'')+' @ R'+rate.toLocaleString()+'/night', amount:nights*rate};
+  invRefManual = false;
+  invRenderLines();
+  invRender();
+}
+
+function invRenderLines() {
+  const c = document.getElementById('inv-lines');
+  if(!c) return;
+  c.innerHTML = invLines.map((l,i)=>
+    '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">'+
+    '<input type="text" value="'+(l.desc||'').replace(/"/g,'&quot;')+'" placeholder="Description" class="form-input" style="flex:1;font-size:.82rem" onchange="invLines['+i+'].desc=this.value;invRender()">'+
+    '<input type="number" value="'+l.amount+'" placeholder="Amount" class="form-input" style="width:90px;font-size:.82rem" onchange="invLines['+i+'].amount=parseFloat(this.value)||0;invRender()">'+
+    '<button onclick="invLines.splice('+i+',1);invRenderLines();invRender()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;color:var(--muted);font-size:.8rem">&#x2715;</button>'+
+    '</div>'
+  ).join('');
+}
+
+function invAddLine() { invLines.push({desc:'',amount:0}); invRenderLines(); invRender(); }
+
+function invRender() {
+  const preview = document.getElementById('inv-preview');
+  if(!preview) return;
+  const ref = invGetRef()||'—';
+  if(!invRefManual){ const el=document.getElementById('inv-ref'); if(el) el.value=invGetRef(); }
+  const num        = invV('inv-number')||'SNQ-2026-001';
+  const dateIssued = invFmtDate(invV('inv-date'))||'—';
+  const dateValid  = invFmtDate(invV('inv-valid'));
+  const guest      = invV('inv-guest')||'Guest Name';
+  const company    = invV('inv-company');
+  const email      = invV('inv-email');
+  const addr       = invV('inv-addr');
+  const prop       = invV('inv-prop');
+  const dates      = invV('inv-dates');
+  const platform   = invV('inv-platform');
+  const notes      = (invV('inv-notes')||'').split('\n').filter(n=>n.trim());
+  const total      = invLines.reduce((s,l)=>s+Number(l.amount),0);
+  const bk         = INV_COMPANY.bank;
+  preview.innerHTML =
+    '<div style="background:#1A2340;padding:10px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start">'+
+      '<div>'+
+        '<div style="color:#F5EFE6;font-size:9px;font-weight:700;letter-spacing:.08em">SN APARTMENTS®</div>'+
+        '<div style="font-size:8px;color:#B8962E;font-style:italic;margin-top:1px">Beyond the booking</div>'+
+        '<div style="font-size:6.5px;color:rgba(184,150,46,.7);letter-spacing:.06em;margin-top:1px">CURATED STAYS · PERSONAL SERVICE</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="color:#B8962E;font-size:12px;font-weight:700;letter-spacing:.05em">'+invType+'</div>'+
+        '<div style="color:rgba(245,239,230,.6);font-size:7px;margin-top:2px;line-height:1.6">No: '+num+'<br>Date: '+dateIssued+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="height:1.5px;background:#B8962E"></div>'+
+    '<div style="display:flex;justify-content:space-between;padding:5px 10px;font-size:7.5px;background:#FAF7F2;border-bottom:0.5px solid #E8E4DE">'+
+      '<div><span style="font-weight:700;color:#B8962E;margin-right:4px">'+(invType==='QUOTATION'?'VALID UNTIL:':'DUE DATE:')+'</span>'+(dateValid||'—')+'</div>'+
+      '<div><span style="font-weight:700;color:#B8962E;margin-right:4px">REFERENCE:</span>'+ref+'</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:0.5px solid #E8E4DE">'+
+      '<div style="padding:8px 10px;border-right:0.5px solid #E8E4DE">'+
+        '<div style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em;margin-bottom:3px">ISSUED BY</div>'+
+        '<div style="font-size:8px;font-weight:700;color:#1A2340">'+INV_COMPANY.name+'</div>'+
+        '<div style="font-size:7px;color:#444;margin-top:1px">'+INV_COMPANY.addr+'</div>'+
+        '<div style="font-size:6.5px;color:#999;margin-top:2px">Reg: '+INV_COMPANY.reg+' · Tax: '+INV_COMPANY.tax+'<br>'+INV_COMPANY.email+'</div>'+
+      '</div>'+
+      '<div style="padding:8px 10px">'+
+        '<div style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em;margin-bottom:3px">BILLED TO</div>'+
+        '<div style="font-size:8px;font-weight:700;color:#1A2340">'+guest+(company?' — '+company:'')+'</div>'+
+        (addr?'<div style="font-size:7px;color:#444;margin-top:1px">'+addr.replace(/\n/g,'<br>')+'</div>':'')+
+        '<div style="font-size:6.5px;color:#999;margin-top:2px">'+(email||'')+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="padding:7px 10px;border-bottom:0.5px solid #E8E4DE">'+
+      '<div style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em;margin-bottom:4px">BOOKING DETAILS</div>'+
+      [['Property:',prop],['Guest stay:',dates||'—'],['Platform:',platform],['Host contact:','Your dedicated host, Nina Williams, will reach out shortly.']].map(function(kv){
+        return '<div style="display:flex;gap:4px;font-size:7px;margin-bottom:2px"><span style="font-weight:700;color:#1A2340;min-width:60px">'+kv[0]+'</span><span style="color:#222">'+kv[1]+'</span></div>';
+      }).join('')+
+    '</div>'+
+    '<div>'+
+      '<div style="display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px solid #1A2340">'+
+        '<span style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em">DESCRIPTION</span>'+
+        '<span style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em">AMOUNT</span>'+
+      '</div>'+
+      invLines.map(function(l){
+        return '<div style="display:flex;justify-content:space-between;padding:4px 10px;border-bottom:0.5px solid #f0f0f0"><span style="font-size:7.5px;color:#222">'+(l.desc||'—')+'</span><span style="font-size:7.5px;color:#222;font-weight:500">'+invFmt(l.amount)+'</span></div>';
+      }).join('')+
+      '<div style="display:flex;justify-content:flex-end;padding:5px 10px">'+
+        '<div style="background:#1A2340;color:#F5EFE6;padding:3px 10px;border-radius:3px;display:flex;gap:12px;align-items:center">'+
+          '<span style="font-size:7px;font-weight:700;letter-spacing:.04em">TOTAL AMOUNT</span>'+
+          '<span style="font-size:8px;font-weight:700;color:#B8962E">'+invFmt(total)+'</span>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:7px 10px;gap:4px;border-top:0.5px solid #E8E4DE;border-bottom:0.5px solid #E8E4DE">'+
+      [['Account name',bk.name],['Acc type',bk.type],['Payment due',dateValid||'On confirmation'],['Bank',bk.bank],['Branch code',bk.branch],['Proof of pmt',bk.ref_email],['Acc number',bk.acc],['Reference',ref]].map(function(kv){
+        return '<div style="font-size:7px"><div style="font-weight:700;color:#1A2340">'+kv[0]+'</div><div style="color:#333">'+kv[1]+'</div></div>';
+      }).join('')+
+    '</div>'+
+    (notes.length?'<div style="padding:7px 10px;border-bottom:0.5px solid #E8E4DE"><div style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em;margin-bottom:4px">NOTES</div>'+notes.map(function(n){return '<div style="font-size:7px;color:#333;display:flex;gap:4px;margin-bottom:2px"><span style="color:#B8962E;font-weight:700">•</span><span>'+n+'</span></div>';}).join('')+'</div>':'')+
+    '<div style="padding:7px 10px">'+
+      '<div style="font-size:7px;color:#444;margin-bottom:5px">Kind regards,</div>'+
+      '<div style="display:flex;gap:16px">'+
+        '<div style="flex:1"><div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:14px;color:#1A2340;margin-bottom:2px">Nicole Babczyk</div><div style="height:0.5px;background:#D4C9BC;margin-bottom:2px"></div><div style="font-size:6.5px;color:#B8962E;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
+        '<div style="flex:1"><div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:14px;color:#1A2340;margin-bottom:2px">Silja Faltin</div><div style="height:0.5px;background:#D4C9BC;margin-bottom:2px"></div><div style="font-size:6.5px;color:#B8962E;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="background:#1A2340;padding:4px 10px;text-align:center;border-radius:0 0 6px 6px">'+
+      '<div style="font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-size:8px;color:#B8962E">Beyond the booking</div>'+
+      '<div style="font-size:6px;color:rgba(184,150,46,.6);letter-spacing:.06em;margin-top:1px">S&N APT MANAGEMENT · SN_Apt_Management@outlook.com · CURATED STAYS · PERSONAL SERVICE</div>'+
+    '</div>';
+}
+
+async function loadOutgoing() {
+  const el = document.getElementById('inv-outgoing-list');
+  if(!el||!db) return;
+  try {
+    const {data,error} = await db.from('finance_transactions').select('id,date,month,description,amount,notes').eq('category','owner_mgmt_fee').order('date',{ascending:false});
+    if(error) throw error;
+    if(!data||!data.length){el.innerHTML='<div class="text-muted">No management fee entries found.</div>';return;}
+    const total = data.reduce((s,r)=>s+Number(r.amount),0);
+    el.innerHTML = '<div style="margin-bottom:12px;padding:10px 14px;background:var(--warm);border-radius:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:.82rem;font-weight:600">'+data.length+' invoices · Total received</span><span style="font-size:1rem;font-weight:700;color:var(--green2)">R'+Math.round(total).toLocaleString('en-ZA')+'</span></div>'+
+      '<div class="table-wrap"><table><thead><tr><th>Month</th><th>Description</th><th>Notes</th><th style="text-align:right">Amount</th></tr></thead><tbody>'+
+      data.map(function(r,i){ return '<tr style="'+(i%2===1?'background:var(--surface-2)':'')+'"><td style="font-size:.8rem;font-weight:600">'+(r.month||r.date)+'</td><td style="font-size:.8rem">'+(r.description||'—')+'</td><td style="font-size:.78rem;color:var(--muted)">'+(r.notes||'—')+'</td><td style="text-align:right;font-size:.8rem;font-weight:600;color:var(--green2)">R'+Number(r.amount).toLocaleString('en-ZA')+'</td></tr>'; }).join('')+
+      '</tbody></table></div>';
+  } catch(e){el.innerHTML='<div class="text-muted" style="color:var(--red)">Error: '+e.message+'</div>';}
+}
+
+function generateMgmtInvoice() {
+  const month  = document.getElementById('mgmt-month').value;
+  const amount = document.getElementById('mgmt-amount').value;
+  const billed = document.getElementById('mgmt-billed').value;
+  if(!month){ alert('Please select a month.'); return; }
+  const d = new Date(month+'-01T00:00:00');
+  const monthName = d.toLocaleDateString('en-ZA',{month:'long',year:'numeric'});
+  document.getElementById('inv-guest').value   = billed;
+  document.getElementById('inv-company').value = 'TV House Owners';
+  document.getElementById('inv-email').value   = '';
+  document.getElementById('inv-addr').value    = '';
+  document.getElementById('inv-dates').value   = monthName;
+  invLines = [{desc:'Property Management Fee — '+monthName, amount:parseFloat(amount)||6000}];
+  invRefManual = false;
+  invRenderLines();
+  switchInvoiceSub('guest');
+  const propEl = document.getElementById('inv-prop');
+  for(let i=0;i<propEl.options.length;i++){ if(propEl.options[i].text==='TV House'){propEl.selectedIndex=i;break;} }
+  invRender();
+}
+
+async function loadIncoming() {
+  const body    = document.getElementById('inv-incoming-body');
+  const statsEl = document.getElementById('inv-expense-stats');
+  if(!body||!db) return;
+  body.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px">Loading…</td></tr>';
+  const propFilter   = (document.getElementById('inv-exp-prop')||{}).value||'all';
+  const catFilter    = (document.getElementById('inv-exp-cat')||{}).value||'all';
+  const periodMonths = parseInt((document.getElementById('inv-exp-period')||{}).value||'3');
+  try {
+    let q = db.from('finance_transactions').select('id,date,month,description,category,subcategory,amount,property_id,notes').eq('type','expense').not('category','eq','owner_payout').order('date',{ascending:false}).limit(200);
+    if(propFilter!=='all') q = q.eq('property_id', propFilter);
+    if(catFilter!=='all')  q = q.eq('category', catFilter);
+    if(periodMonths>0){ const cutoff=new Date(); cutoff.setMonth(cutoff.getMonth()-periodMonths); q=q.gte('date',cutoff.toISOString().split('T')[0]); }
+    const {data,error} = await q;
+    if(error) throw error;
+    if(!data||!data.length){ body.innerHTML='<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px">No expenses found.</td></tr>'; if(statsEl)statsEl.innerHTML=''; return; }
+    const total = data.reduce((s,r)=>s+Number(r.amount),0);
+    const bycat = {};
+    data.forEach(function(r){ bycat[r.category]=(bycat[r.category]||0)+Number(r.amount); });
+    const topCat = Object.entries(bycat).sort(function(a,b){return b[1]-a[1];}).slice(0,4);
+    if(statsEl) {
+      statsEl.innerHTML =
+        '<div class="stat-card" style="border-left:3px solid var(--red)"><div class="stat-label">Total expenses</div><div class="stat-value" style="color:var(--red)">R'+Math.round(total).toLocaleString('en-ZA')+'</div><div class="stat-sub">'+data.length+' entries</div></div>'+
+        topCat.map(function(e){ return '<div class="stat-card"><div class="stat-label">'+(CAT_LABELS[e[0]]||e[0])+'</div><div class="stat-value">R'+Math.round(e[1]).toLocaleString('en-ZA')+'</div><div class="stat-sub">'+Math.round(e[1]/total*100)+'% of total</div></div>'; }).join('');
+    }
+    const propName = function(id){ return id==='speranta'?'Speranta':id==='tvhouse'?'TV House':id==='both'?'Shared':id||'—'; };
+    body.innerHTML = data.map(function(r,i){
+      return '<tr style="'+(i%2===1?'background:var(--surface-2)':'')+'"><td style="font-size:.8rem;white-space:nowrap">'+(r.date||'—')+'</td><td style="font-size:.8rem">'+(r.description||'—')+'</td><td><span style="font-size:.72rem;padding:2px 8px;border-radius:10px;background:var(--warm);color:var(--ink)">'+(CAT_LABELS[r.category]||r.category)+'</span></td><td style="font-size:.78rem;color:var(--muted)">'+propName(r.property_id||r.subcategory)+'</td><td style="text-align:right;font-size:.8rem;font-weight:600;color:var(--red)">R'+Number(r.amount).toLocaleString('en-ZA')+'</td></tr>';
+    }).join('');
+  } catch(e){ body.innerHTML='<tr><td colspan="5" style="color:var(--red);text-align:center;padding:16px">Error: '+e.message+'</td></tr>'; }
+}
+
+function loadInvHistory() {
+  const el = document.getElementById('inv-history');
+  if(el) el.innerHTML = '<div class="text-muted text-sm">Invoice history will appear here once generated documents are saved.</div>';
+}
+
+function generateInvoicePDF() {
+  const preview = document.getElementById('inv-preview');
+  if(!preview) return;
+  const w = window.open('','_blank');
+  w.document.write('<html><head><title>S&N Invoice</title><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap" rel="stylesheet"><style>body{margin:0;padding:20px;background:#F5EFE6;font-family:Arial,sans-serif}@media print{body{margin:0;padding:0}}</style></head><body>'+preview.innerHTML+'<script>window.print()<\/script></body></html>');
+  w.document.close();
+}
+
+// Override switchTab to init invoice tab on first open
+const _origSwitchTab = window.switchTab;
+window.switchTab = function(tab) {
+  if(_origSwitchTab) _origSwitchTab(tab);
+  if(tab==='invoices'){
+    setTimeout(function(){
+      const today = new Date().toISOString().split('T')[0];
+      const due   = new Date(); due.setDate(due.getDate()+7);
+      const dEl = document.getElementById('inv-date');
+      const vEl = document.getElementById('inv-valid');
+      if(dEl && !dEl.value) dEl.value = today;
+      if(vEl && !vEl.value) vEl.value = due.toISOString().split('T')[0];
+      invRenderLines();
+      invRender();
+      invLoadBookings();
+      loadInvHistory();
+    },50);
+  }
+};
 
 // ── FILTERS ───────────────────────────────────────────────────
 function filteredBookings() {
