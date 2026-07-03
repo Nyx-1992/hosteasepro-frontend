@@ -2731,7 +2731,16 @@ function generateInvoicePDF() {
   const preview = document.getElementById('inv-preview');
   if(!preview) return;
   const w = window.open('','_blank');
-  w.document.write('<html><head><title>S&N Invoice</title><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap" rel="stylesheet"><style>body{margin:0;padding:20px;background:#F5EFE6;font-family:Arial,sans-serif}@media print{body{margin:0;padding:0}}</style></head><body>'+preview.innerHTML+'<script>window.print()<\/script></body></html>');
+  const html = [
+    '<html><head><title>S&N Invoice</title>',
+    '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap" rel="stylesheet">',
+    '<style>body{margin:0;padding:20px;background:#F5EFE6;font-family:Arial,sans-serif}@media print{body{margin:0;padding:0}}</style>',
+    '</head><body>',
+    preview.innerHTML,
+    '<script>window.print()<\/script>',
+    '</body></html>'
+  ].join('');
+  w.document.write(html);
   w.document.close();
 }
 
