@@ -947,7 +947,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         </div><!-- end rsub-property -->
           
       <!-- ══ INVOICES ═════════════════════════════════════════════════════════ -->
-      <div class="tab-pane" id="tab-invoices">
+      <div class="tab-pane" id="tab-invoices" style="min-height:600px">
 
         <!-- Sub-tab nav -->
         <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:2px solid var(--border);padding-bottom:0">
@@ -1033,8 +1033,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
 
               <div style="margin-bottom:16px;margin-top:12px">
                 <label class="form-label">Notes <span style="font-size:.7rem;color:var(--muted);font-weight:400">(one per line)</span></label>
-                <textarea class="form-input" id="inv-notes" rows="3" style="resize:vertical" oninput="invRender()">Please confirm your booking to secure the dates.
-Full payment is required to confirm your reservation.</textarea>
+                <textarea class="form-input" id="inv-notes" rows="3" style="resize:vertical" oninput="invRender()"></textarea>
               </div>
 
               <button onclick="generateInvoicePDF()" style="width:100%;padding:12px;border-radius:8px;border:none;background:#1A2340;color:#F5EFE6;font-size:.9rem;font-weight:700;cursor:pointer;letter-spacing:.04em">
@@ -2803,8 +2802,11 @@ function renderInvoicesTab() {
   const due   = new Date(); due.setDate(due.getDate()+7);
   const dEl = document.getElementById('inv-date');
   const vEl = document.getElementById('inv-valid');
+  const nEl = document.getElementById('inv-notes');
   if(dEl && !dEl.value) dEl.value = today;
   if(vEl && !vEl.value) vEl.value = due.toISOString().split('T')[0];
+  if(nEl && !nEl.value) nEl.value = 'Please confirm your booking to secure the dates.\nFull payment is required to confirm your reservation.';
+  switchInvoiceSub('guest');
   invRenderLines();
   invRender();
   invLoadBookings();
