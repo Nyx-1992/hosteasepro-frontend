@@ -778,15 +778,25 @@ async function loadNinaCheckouts() {
     if(error) throw error;
     if(!bookings||!bookings.length){el.innerHTML='<div class="nina-loading">No checkouts in the next 30 days.</div>';return;}
 
-    const dates=bookings.map(b=>b.check_out.split('T')[0]);
-    const {data:sched}=await db.from('domestics').select('date,cleaner,property_id,status').in('date',dates).neq('status','cancelled');
+    // Build a date window: checkout date AND the day after (cleans are often scheduled next-day)
+    const dateSet=new Set();
+    bookings.forEach(b=>{
+      const co=b.check_out.split('T')[0];
+      dateSet.add(co);
+      const nxt=new Date(co+'T00:00:00'); nxt.setDate(nxt.getDate()+1);
+      dateSet.add(nxt.toISOString().split('T')[0]);
+    });
+    const {data:sched}=await db.from('domestics').select('date,cleaner,property_id,status').in('date',Array.from(dateSet)).neq('status','cancelled');
+    // Map keyed by property+date for both same-day and next-day lookup
     const schedMap={};
     (sched||[]).forEach(s=>{schedMap[`${propKeyFromId(s.property_id)}-${s.date}`]=s;});
 
     el.innerHTML=bookings.map(b=>{
       const pk=propKeyFromId(b.property_id);
       const coDate=b.check_out.split('T')[0];
-      const assigned=schedMap[`${pk}-${coDate}`];
+      const nextDate=(()=>{const d=new Date(coDate+'T00:00:00');d.setDate(d.getDate()+1);return d.toISOString().split('T')[0];})();
+      // Match a clean on the checkout day OR the day after
+      const assigned=schedMap[`${pk}-${coDate}`]||schedMap[`${pk}-${nextDate}`];
       const days=daysFromNow(coDate);
       const urgStyle=days<=2?'color:var(--red);font-weight:700;':days<=5?'color:var(--accent);':'color:var(--muted);';
       const gn=(b.guest_name||'Guest').replace(/'/g,"\\'");
