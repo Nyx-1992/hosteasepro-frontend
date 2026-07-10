@@ -2582,6 +2582,8 @@ function invPullBooking() {
   document.getElementById('inv-email').value   = '';
   document.getElementById('inv-addr').value    = '';
   document.getElementById('inv-dates').value   = opt.dataset.dates||'';
+  document.getElementById('inv-checkin').value = opt.dataset.ci||'';
+  document.getElementById('inv-checkout').value= opt.dataset.co||'';
   const propEl = document.getElementById('inv-prop');
   for(let i=0;i<propEl.options.length;i++){ if(propEl.options[i].text===opt.dataset.prop){propEl.selectedIndex=i;break;} }
   const platEl = document.getElementById('inv-platform');
