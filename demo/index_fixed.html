@@ -2738,9 +2738,69 @@ async function loadIncoming() {
   } catch(e){ body.innerHTML='<tr><td colspan="5" style="color:var(--red);text-align:center;padding:16px">Error: '+e.message+'</td></tr>'; }
 }
 
-function loadInvHistory() {
+async function loadInvHistory() {
   const el = document.getElementById('inv-history');
-  if(el) el.innerHTML = '<div class="text-muted text-sm">Invoice history will appear here once generated documents are saved.</div>';
+  if(!el) return;
+  const filterEl = document.getElementById('inv-hist-filter');
+  const filter = filterEl ? filterEl.value : 'all';
+  el.innerHTML = '<div class="text-muted text-sm">Loading…</div>';
+  try {
+    let q = db.from('invoices')
+      .select('id,doc_type,number,reference,guest_name,company,total,date_issued,status,created_at')
+      .order('created_at',{ascending:false})
+      .limit(100);
+    if(filter !== 'all') q = q.eq('doc_type', filter);
+    const {data,error} = await q;
+    if(error) throw error;
+    if(!data || !data.length){
+      el.innerHTML = '<div class="text-muted text-sm">No documents yet. Generate one above and it will be saved here.</div>';
+      return;
+    }
+    el.innerHTML = '<div class="table-wrap"><table>'+
+      '<thead><tr><th>Number</th><th>Type</th><th>Guest</th><th>Reference</th><th>Date</th><th style="text-align:right">Total</th><th>Status</th></tr></thead>'+
+      '<tbody>'+ data.map((r,i)=>{
+        const badge = r.doc_type==='QUOTATION'
+          ? '<span style="font-size:.68rem;padding:1px 7px;border-radius:10px;background:var(--bg-accent,#eef);color:var(--text-accent,#25f)">Quote</span>'
+          : '<span style="font-size:.68rem;padding:1px 7px;border-radius:10px;background:var(--warm);color:var(--ink)">Invoice</span>';
+        const stColor = {draft:'var(--muted)',sent:'#2E75B6',paid:'var(--green2)',cancelled:'var(--red)'}[r.status]||'var(--muted)';
+        return '<tr style="'+(i%2?'background:var(--surface-2)':'')+'">'+
+          '<td style="font-size:.8rem;font-weight:600">'+(r.number||'—')+'</td>'+
+          '<td>'+badge+'</td>'+
+          '<td style="font-size:.8rem">'+(r.guest_name||'—')+(r.company?' · '+r.company:'')+'</td>'+
+          '<td style="font-size:.75rem;color:var(--muted)">'+(r.reference||'—')+'</td>'+
+          '<td style="font-size:.78rem;white-space:nowrap">'+(r.date_issued||(r.created_at||'').slice(0,10))+'</td>'+
+          '<td style="text-align:right;font-size:.8rem;font-weight:600">R'+Number(r.total||0).toLocaleString('en-ZA',{minimumFractionDigits:2})+'</td>'+
+          '<td style="font-size:.72rem;color:'+stColor+';text-transform:capitalize">'+(r.status||'draft')+'</td>'+
+        '</tr>';
+      }).join('')+'</tbody></table></div>';
+  } catch(e){
+    el.innerHTML = '<div class="text-muted text-sm" style="color:var(--red)">Could not load history: '+e.message+' — has the invoices table been created?</div>';
+  }
+}
+
+async function saveInvoiceRecord(payload, total){
+  try {
+    const num = payload.number || 'SNQ-0000';
+    await db.from('invoices').upsert({
+      org_id:      '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+      doc_type:    payload.docType,
+      number:      num,
+      reference:   payload.reference,
+      guest_name:  payload.guest,
+      company:     payload.company || null,
+      email:       payload.email || null,
+      property:    payload.property,
+      dates:       payload.dates,
+      platform:    payload.platform,
+      line_items:  payload.lineItems,
+      total:       total,
+      notes:       payload.notes,
+      date_issued: invV('inv-date') || null,
+      date_valid:  invV('inv-valid') || null,
+      created_by:  (window.currentUser && currentUser.name) || 'unknown'
+    }, {onConflict:'number'});
+    loadInvHistory();
+  } catch(e){ console.warn('saveInvoiceRecord failed (table may not exist yet):', e.message); }
 }
 
 async function generateInvoicePDF() {
@@ -2766,6 +2826,9 @@ async function generateInvoicePDF() {
       lineItems:  invLines.map(l => ({desc: l.desc, amount: Number(l.amount)})),
       notes:      (invV('inv-notes')||'').split('\n').filter(n=>n.trim()),
     };
+
+    const invTotal = invLines.reduce((s,l)=>s+Number(l.amount),0);
+    saveInvoiceRecord(payload, invTotal);
 
     const res = await fetch('/api/generate-invoice', {
       method: 'POST',
