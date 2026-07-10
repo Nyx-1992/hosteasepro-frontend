@@ -2486,8 +2486,7 @@ function setInvType(t, btn) {
   document.getElementById('inv-type-quot').style.cssText = t==='QUOTATION' ? aStyle : iStyle;
   document.getElementById('inv-type-inv').style.cssText  = t==='INVOICE'   ? aStyle : iStyle;
   document.getElementById('inv-valid-lbl').textContent = t==='QUOTATION' ? 'Valid until' : 'Due date';
-  const numEl = document.getElementById('inv-number');
-  if(numEl){ numEl.value = t==='INVOICE' ? numEl.value.replace(/^SNQ/,'SNI') : numEl.value.replace(/^SNI/,'SNQ'); }
+  invRefreshNumber();
   invRender();
 }
 
