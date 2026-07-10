@@ -774,7 +774,7 @@ async function loadNinaCheckouts() {
     const {data:bookings,error}=await db.from('bookings')
       .select('id,guest_name,property_id,check_out,status')
       .gte('check_out',today).lte('check_out',in30+'T23:59:59')
-      .neq('status','cancelled').order('check_out',{ascending:true});
+      .neq('status','cancelled').neq('status','blocked').order('check_out',{ascending:true});
     if(error) throw error;
     if(!bookings||!bookings.length){el.innerHTML='<div class="nina-loading">No checkouts in the next 30 days.</div>';return;}
 
