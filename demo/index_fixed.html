@@ -2491,11 +2491,32 @@ function setInvType(t, btn) {
   invRender();
 }
 
-function invBuildRef(guest, company, dateVal) {
+const PLATFORM_REF_PREFIX = {
+  'Direct Booking': 'DIRECT',
+  'Airbnb':         'AIRBNB',
+  'Booking.com':    'BOOKING',
+  'LekkeSlaap':     'LEKKESLAAP',
+};
+
+function invUpdateDatesField() {
+  const ci = invV('inv-checkin');
+  const co = invV('inv-checkout');
+  if (!ci || !co) return;
+  const d1 = new Date(ci+'T00:00:00');
+  const d2 = new Date(co+'T00:00:00');
+  const nights = Math.round((d2-d1)/86400000);
+  if (nights <= 0) { toast('Check-out must be after check-in','error'); return; }
+  const opt = {day:'numeric', month:'short'};
+  const startStr = d1.toLocaleDateString('en-ZA', opt);
+  const endStr   = d2.toLocaleDateString('en-ZA', opt);
+  document.getElementById('inv-dates').value = startStr+'–'+endStr+' ('+nights+' night'+(nights>1?'s':'')+')';
+}
+
+function invBuildRef(guest, platform, dateVal) {
   const parts = [];
-  if(company) parts.push(company.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,10));
+  parts.push(PLATFORM_REF_PREFIX[platform] || 'DIRECT');
   const surname = (guest||'').trim().split(' ').pop();
-  parts.push((surname||'GUEST').toUpperCase().slice(0,8));
+  parts.push((surname||'GUEST').toUpperCase().slice(0,10));
   if(dateVal) {
     const d = new Date(dateVal+'T00:00:00');
     const mon = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
@@ -2506,7 +2527,7 @@ function invBuildRef(guest, company, dateVal) {
 
 function invGetRef() {
   if(invRefManual) return invV('inv-ref');
-  return invBuildRef(invV('inv-guest'), invV('inv-company'), invV('inv-date'));
+  return invBuildRef(invV('inv-guest'), invV('inv-platform'), invV('inv-date'));
 }
 
 function invV(id) { return (document.getElementById(id)||{}).value||''; }
