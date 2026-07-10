@@ -778,25 +778,40 @@ async function loadNinaCheckouts() {
     if(error) throw error;
     if(!bookings||!bookings.length){el.innerHTML='<div class="nina-loading">No checkouts in the next 30 days.</div>';return;}
 
-    // Build a date window: checkout date AND the day after (cleans are often scheduled next-day)
-    const dateSet=new Set();
+    // Fetch ALL non-cancelled cleans in a broad window and match flexibly.
+    // Primary match: linked_booking_id (reliable). Fallback: same property within ±2 days of checkout.
+    const allDates=new Set();
     bookings.forEach(b=>{
       const co=b.check_out.split('T')[0];
-      dateSet.add(co);
-      const nxt=new Date(co+'T00:00:00'); nxt.setDate(nxt.getDate()+1);
-      dateSet.add(nxt.toISOString().split('T')[0]);
+      for(let off=-1; off<=2; off++){
+        const d=new Date(co+'T00:00:00'); d.setDate(d.getDate()+off);
+        allDates.add(d.toISOString().split('T')[0]);
+      }
     });
-    const {data:sched}=await db.from('domestics').select('date,cleaner,property_id,status').in('date',Array.from(dateSet)).neq('status','cancelled');
-    // Map keyed by property+date for both same-day and next-day lookup
-    const schedMap={};
-    (sched||[]).forEach(s=>{schedMap[`${propKeyFromId(s.property_id)}-${s.date}`]=s;});
+    const {data:sched}=await db.from('domestics')
+      .select('id,date,cleaner,property_id,status,linked_booking_id')
+      .or(`date.in.(${Array.from(allDates).join(',')}),linked_booking_id.in.(${bookings.map(b=>b.id).join(',')})`)
+      .neq('status','cancelled');
+    const cleans=sched||[];
+
+    function findClean(b){
+      const pk=propKeyFromId(b.property_id);
+      const coDate=b.check_out.split('T')[0];
+      // 1) Match by explicit link
+      const byLink=cleans.find(c=>String(c.linked_booking_id)===String(b.id));
+      if(byLink) return byLink;
+      // 2) Match by same property within ±2 days of checkout
+      return cleans.find(c=>{
+        if(propKeyFromId(c.property_id)!==pk) return false;
+        const diff=Math.abs(new Date(c.date+'T00:00:00')-new Date(coDate+'T00:00:00'));
+        return diff<=2*86400000;
+      });
+    }
 
     el.innerHTML=bookings.map(b=>{
       const pk=propKeyFromId(b.property_id);
       const coDate=b.check_out.split('T')[0];
-      const nextDate=(()=>{const d=new Date(coDate+'T00:00:00');d.setDate(d.getDate()+1);return d.toISOString().split('T')[0];})();
-      // Match a clean on the checkout day OR the day after
-      const assigned=schedMap[`${pk}-${coDate}`]||schedMap[`${pk}-${nextDate}`];
+      const assigned=findClean(b);
       const days=daysFromNow(coDate);
       const urgStyle=days<=2?'color:var(--red);font-weight:700;':days<=5?'color:var(--accent);':'color:var(--muted);';
       const gn=(b.guest_name||'Guest').replace(/'/g,"\\'");
@@ -811,9 +826,9 @@ async function loadNinaCheckouts() {
         <div class="nina-checkout-bottom">
           ${assigned
             ?`<span class="nina-assigned-tag">✓ ${assigned.cleaner} assigned</span>
-              <button class="nina-assign-btn reassign" onclick="openAssignModal('${b.property_id}','${pk}','${gn}','${coDate}')">Reassign</button>`
+              <button class="nina-assign-btn reassign" onclick="openAssignModal('${b.property_id}','${pk}','${gn}','${coDate}','${b.id}')">Reassign</button>`
             :`<span class="nina-unassigned-tag">⚠ No cleaner assigned</span>
-              <button class="nina-assign-btn" onclick="openAssignModal('${b.property_id}','${pk}','${gn}','${coDate}')">Assign →</button>`
+              <button class="nina-assign-btn" onclick="openAssignModal('${b.property_id}','${pk}','${gn}','${coDate}','${b.id}')">Assign →</button>`
           }
         </div>
       </div>`;
@@ -896,8 +911,8 @@ async function loadNinaAvailability() {
 }
 
 // ── Nina: Assign modal ────────────────────────────────────────────────────────
-function openAssignModal(propertyId, propertyKey, guestName, checkoutDate) {
-  ninaAssignContext={propertyId,propertyKey,guestName,checkoutDate};
+function openAssignModal(propertyId, propertyKey, guestName, checkoutDate, bookingId) {
+  ninaAssignContext={propertyId,propertyKey,guestName,checkoutDate,bookingId:bookingId||null};
   document.getElementById('nina-assign-context').innerHTML=
     `<strong>${propNameFromKey(propertyKey)}</strong> · ${guestName}<br>Checkout: <strong>${fmtDate(checkoutDate)}</strong>`;
   const sel=document.getElementById('nina-assign-cleaner');
@@ -937,24 +952,45 @@ async function saveAssignment() {
   const time=document.getElementById('nina-assign-time').value||'10:00';
   const type=document.getElementById('nina-assign-type').value;
   const notes=document.getElementById('nina-assign-notes').value.trim();
-  const {propertyKey}=ninaAssignContext;
+  const {propertyKey,bookingId}=ninaAssignContext;
   const rate=propRateFromKey(propertyKey);
   btn.disabled=true;
   statusEl.style.display=''; statusEl.className='nina-status-msg loading'; statusEl.textContent='Saving…';
   try {
     const propShort=propertyKey==='speranta'?'SP':'TV';
-    const {error}=await db.from('domestics').insert([{
-      cleaner, property_id:propertyKey, date, time, type,
-      status:'scheduled', amount_paid:rate,
-      notes:notes||`${propShort}-DOM-${cleaner} ${date} | R${rate}`,
-      checklist:{living:false,kitchen:false,laundry:false,bedrooms:false,bathrooms:false},
-    }]);
-    if(error) throw error;
-    statusEl.className='nina-status-msg success'; statusEl.textContent=`✓ ${cleaner} assigned for ${fmtDate(date)}`;
+    // Guard against duplicates: is there already a scheduled clean for this property + date?
+    const {data:existing}=await db.from('domestics')
+      .select('id,cleaner,linked_booking_id')
+      .eq('property_id',propertyKey).eq('date',date)
+      .neq('status','cancelled');
+    if(existing && existing.length){
+      // Update the existing row instead of inserting a duplicate
+      const {error:upErr}=await db.from('domestics')
+        .update({cleaner, time, type, status:'scheduled', amount_paid:rate,
+                 linked_booking_id: bookingId || existing[0].linked_booking_id || null,
+                 notes:notes||`${propShort}-DOM-${cleaner} ${date} | R${rate}`})
+        .eq('id',existing[0].id);
+      if(upErr) throw upErr;
+      statusEl.className='nina-status-msg success';
+      statusEl.textContent=`✓ Updated — ${cleaner} assigned for ${fmtDate(date)}`;
+    } else {
+      const {error}=await db.from('domestics').insert([{
+        cleaner, property_id:propertyKey, date, time, type,
+        status:'scheduled', amount_paid:rate,
+        linked_booking_id: bookingId || null,
+        notes:notes||`${propShort}-DOM-${cleaner} ${date} | R${rate}`,
+        checklist:{living:false,kitchen:false,laundry:false,bedrooms:false,bathrooms:false},
+      }]);
+      if(error) throw error;
+      statusEl.className='nina-status-msg success';
+      statusEl.textContent=`✓ ${cleaner} assigned for ${fmtDate(date)}`;
+    }
+    // Refresh immediately and again shortly after, so the list always reflects the change
+    await Promise.all([loadNinaCheckouts(), loadNinaSchedule()]);
     setTimeout(()=>{
       document.getElementById('nina-assign-modal').style.display='none';
       loadNinaCheckouts(); loadNinaSchedule();
-    },1200);
+    },1000);
   } catch(err){
     statusEl.className='nina-status-msg error'; statusEl.textContent='Error: '+err.message;
     btn.disabled=false;
