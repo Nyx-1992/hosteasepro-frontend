@@ -2843,9 +2843,7 @@ async function generateInvoicePDF() {
     const payload = {
       docType:    invType,
       number:     invV('inv-number') || 'SNQ-2026-001',
-      dateIssued: invFmtDate(invV('inv-date')) || new Date().toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'}),
-      dateValid:  invFmtDate(invV('inv-valid')),
-      reference:  invGetRef() || 'DIRECT-JUL26',
+      reference:  invGetRef() || 'DIRECT-GUEST-JUL26',
       guest:      invV('inv-guest') || 'Guest',
       company:    invV('inv-company'),
       email:      invV('inv-email'),
@@ -2856,55 +2854,30 @@ async function generateInvoicePDF() {
       lineItems:  invLines.map(l => ({desc: l.desc, amount: Number(l.amount)})),
       notes:      (invV('inv-notes')||'').split('\n').filter(n=>n.trim()),
     };
-
     const invTotal = invLines.reduce((s,l)=>s+Number(l.amount),0);
     saveInvoiceRecord(payload, invTotal);
 
-    const res = await fetch('/api/generate-invoice', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({error: 'Unknown error'}));
-      throw new Error(err.error || 'Server error');
-    }
-
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const guest = (invV('inv-guest')||'Guest').split(' ').pop().toUpperCase();
-    a.download = invType+'-'+( invV('inv-number')||'SNQ-2026-001')+'-'+guest+'.pdf';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch(err) {
-    // Fallback to print dialog if API not available yet
     const preview = document.getElementById('inv-preview');
-    if (preview) {
-      const w = window.open('','_blank');
-      if (w) {
-        const html = [
-          '<html><head><title>S&N Invoice</title>',
-          '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap" rel="stylesheet">',
-          '<style>body{margin:0;padding:20px;background:#F5EFE6;font-family:Arial,sans-serif}@media print{body{margin:0;padding:0}}</style>',
-          '</head><body>', preview.innerHTML,
-          '<scr'+'ipt>window.print()<\/scr'+'ipt></body></html>'
-        ].join('');
-        w.document.write(html);
-        w.document.close();
-      }
-    }
-    console.warn('PDF API not available, used print fallback:', err.message);
+    const guest = (invV('inv-guest')||'Guest').split(' ').pop().toUpperCase();
+    const filename = invType+'-'+(invV('inv-number')||'SNQ-2026-001')+'-'+guest+'.pdf';
+
+    await html2pdf().set({
+      margin: 0,
+      filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#F5EFE6' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(preview).save();
+
+    toast('PDF downloaded ✓','success');
+  } catch(err) {
+    console.warn('PDF generation failed:', err);
+    toast('PDF generation failed — check console','error');
   } finally {
     btn.textContent = origText;
     btn.disabled = false;
   }
 }
-
 // Invoices tab renderer — called by renderTab
 function renderInvoicesTab() {
   const today = new Date().toISOString().split('T')[0];
