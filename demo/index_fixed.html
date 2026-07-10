@@ -4772,6 +4772,14 @@ async function saveDomestic() {
     amount_paid: computedRate,
   };
   const editId = window._editCleanId;
+  // Preserve an existing booking link on edit if the form fields came back empty
+  // (guards against nulling the link when the linked booking isn't in the loaded list)
+  if (editId && !row.linked_booking_id) {
+    const existing = domestics.find(d=>String(d.id)===String(editId));
+    if (existing && existing.linked_booking_id) {
+      row.linked_booking_id = existing.linked_booking_id;
+    }
+  }
   if (editId && db) {
     const {data,error} = await db.from('domestics').update(row).eq('id',editId).select().single();
     if (error) { toast('Update error: '+error.message,'error'); return; }
