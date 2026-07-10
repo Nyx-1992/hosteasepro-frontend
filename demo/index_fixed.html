@@ -1024,10 +1024,14 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
                   <option>TV House</option>
                 </select>
               </div>
+             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div><label class="form-label">Check-in</label><input type="date" class="form-input" id="inv-checkin" onchange="invUpdateDatesField();invRender()"></div>
+                <div><label class="form-label">Check-out</label><input type="date" class="form-input" id="inv-checkout" onchange="invUpdateDatesField();invRender()"></div>
+              </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-                <div><label class="form-label">Dates &amp; nights</label><input type="text" class="form-input" id="inv-dates" placeholder="14–21 Jul (7 nights)" oninput="invRender()"></div>
+                <div><label class="form-label">Dates &amp; nights <span style="font-size:.7rem;color:var(--muted);font-weight:400">(auto)</span></label><input type="text" class="form-input" id="inv-dates" placeholder="14–21 Jul (7 nights)" oninput="invRender()"></div>
                 <div><label class="form-label">Platform</label>
-                  <select class="form-input" id="inv-platform" oninput="invRender()">
+                  <select class="form-input" id="inv-platform" oninput="invRefManual=false;invRender()">
                     <option>Direct Booking</option><option>Airbnb</option><option>Booking.com</option><option>LekkeSlaap</option>
                   </select>
                 </div>
