@@ -2560,10 +2560,12 @@ async function invLoadBookings() {
       const nights = b.nights||1;
       const rev    = parseFloat(b.revenue)||0;
       const rate   = rev && nights ? Math.round(rev/nights) : 1000;
-      return '<option value="'+b.id+'"'+
+    return '<option value="'+b.id+'"'+
         ' data-name="'+(b.guest_name||'').replace(/"/g,'')+'"'+
         ' data-prop="'+prop+'"'+
         ' data-dates="'+invFmtDate(b.check_in)+' – '+invFmtDate(b.check_out)+' ('+nights+' nights)"'+
+        ' data-ci="'+(b.check_in||'').slice(0,10)+'"'+
+        ' data-co="'+(b.check_out||'').slice(0,10)+'"'+
         ' data-nights="'+nights+'"'+
         ' data-rate="'+rate+'"'+
         ' data-platform="'+(b.platform||'Direct Booking')+'">'+(b.guest_name||'Guest')+' · '+(prop.split(' — ')[0])+' · '+invFmtDate(b.check_in)+'</option>';
