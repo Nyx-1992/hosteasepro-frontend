@@ -2612,10 +2612,12 @@ function invV(id) { return (document.getElementById(id)||{}).value||''; }
 
 function invFmtDate(val) {
   if(!val) return '';
-  const d = new Date(val+'T00:00:00');
+  const datePart = String(val).slice(0,10);
+  const d = new Date(datePart+'T00:00:00');
+  if (isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'});
 }
-
+  
 function invFmt(n) {
   return 'R ' + Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
