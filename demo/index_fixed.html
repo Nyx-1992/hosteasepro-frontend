@@ -2238,12 +2238,12 @@ function parseICalText(text, feed) {
     } else if (isManualBlock) {
       status    = 'blocked';
       guestName = '🔒 Blocked';
-    } else {
+   } else {
       status    = 'confirmed';
-      // Show customer name if parsed, otherwise the LS reference, otherwise platform guest
-      guestName = parsedCustomerName || parsedRef || 'Guest';
+      // Show customer name if parsed, otherwise the LS reference, otherwise a platform-labelled placeholder
+      guestName = parsedCustomerName || parsedRef || (feed.platform==='booking' ? 'Booking.com Guest' : 'Guest');
     }
-
+    
     events.push({
       uid,
       property_id:      feed.property_id,
