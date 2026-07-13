@@ -2869,10 +2869,11 @@ async function generateInvoicePDF() {
   btn.textContent = 'Generating…';
   btn.disabled = true;
 
+  let wrapper = null;
   try {
     const payload = {
       docType:    invType,
-      number:     invV('inv-number') || 'SNQ-2026-001',
+      number:     invV('inv-number') || 'SNA-QUOTE-2026-001',
       reference:  invGetRef() || 'DIRECT-GUEST-JUL26',
       guest:      invV('inv-guest') || 'Guest',
       company:    invV('inv-company'),
@@ -2887,27 +2888,41 @@ async function generateInvoicePDF() {
     const invTotal = invLines.reduce((s,l)=>s+Number(l.amount),0);
     saveInvoiceRecord(payload, invTotal);
 
-    const preview = document.getElementById('inv-preview');
+    const original = document.getElementById('inv-preview');
     const guest = (invV('inv-guest')||'Guest').split(' ').pop().toUpperCase();
-    const filename = invType+'-'+(invV('inv-number')||'SNQ-2026-001')+'-'+guest+'.pdf';
+    const filename = invType+'-'+(invV('inv-number')||'SNA-QUOTE-2026-001')+'-'+guest+'.pdf';
+
+    // Clone the preview and scale it up so it fills a real A4 page
+    const a4WidthPx = 793; // ~210mm at 96dpi
+    const scale = a4WidthPx / original.offsetWidth;
+    const clone = original.cloneNode(true);
+    wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position:fixed;top:-99999px;left:-99999px;width:'+a4WidthPx+'px;background:#F5EFE6';
+    clone.style.width = original.offsetWidth+'px';
+    clone.style.transform = 'scale('+scale+')';
+    clone.style.transformOrigin = 'top left';
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
 
     await html2pdf().set({
-      margin: 0,
+      margin: 10,
       filename,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#F5EFE6' },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(preview).save();
+    }).from(wrapper).save();
 
     toast('PDF downloaded ✓','success');
   } catch(err) {
     console.warn('PDF generation failed:', err);
     toast('PDF generation failed — check console','error');
   } finally {
+    if (wrapper) document.body.removeChild(wrapper);
     btn.textContent = origText;
     btn.disabled = false;
   }
 }
+  
 // Invoices tab renderer — called by renderTab
 function renderInvoicesTab() {
   const today = new Date().toISOString().split('T')[0];
