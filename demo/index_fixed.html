@@ -2454,20 +2454,32 @@ let invLines     = [{desc:'Accommodation', amount:7000},{desc:'Cleaning fee', am
 let invRefManual = false;
 let invLinesManual = false;
 
-const SEASON_RATES = [
-  {name:'Peak Summer', rate:1500, months:[11,0,1,2]},   // Dec–Mar
-  {name:'Shoulder',    rate:1200, months:[3,4,8,9,10]}, // Apr, May, Sep, Oct, Nov
-  {name:'Winter',      rate:950,  months:[5,6,7]},      // Jun–Aug
-];
+const PROPERTY_SEASON_RATES = {
+  speranta: [
+    {name:'Peak Summer', rate:1500, months:[11,0,1,2]},
+    {name:'Shoulder',    rate:1200, months:[3,4,8,9,10]},
+    {name:'Winter',      rate:950,  months:[5,6,7]},
+  ],
+  tvhouse: [
+    {name:'Peak Summer', rate:2500, months:[11,0,1,2]},
+    {name:'Shoulder',    rate:2000, months:[3,4,8,9,10]},
+    {name:'Winter',      rate:1500, months:[5,6,7]},
+  ],
+};
 
-function invSeasonForDate(dateStr) {
-  if(!dateStr) return SEASON_RATES[2];
+function invPropKey() {
+  return invV('inv-prop').includes('TV House') ? 'tvhouse' : 'speranta';
+}
+
+function invSeasonForDate(dateStr, propKey) {
+  const rates = PROPERTY_SEASON_RATES[propKey] || PROPERTY_SEASON_RATES.speranta;
+  if(!dateStr) return rates[2];
   const m = new Date(dateStr+'T00:00:00').getMonth();
-  return SEASON_RATES.find(s=>s.months.includes(m)) || SEASON_RATES[2];
+  return rates.find(s=>s.months.includes(m)) || rates[2];
 }
 
 function invPropCleaningFee() {
-  return invV('inv-prop').includes('TV House') ? 550 : 400;
+  return invPropKey() === 'tvhouse' ? 550 : 400;
 }
 
 function invUpdateAutoLines() {
@@ -2477,7 +2489,8 @@ function invUpdateAutoLines() {
   if (!ci || !co) return;
   const nights = Math.round((new Date(co+'T00:00:00')-new Date(ci+'T00:00:00'))/86400000);
   if (nights <= 0) return;
-  const season = invSeasonForDate(ci);
+  const propKey = invPropKey();
+  const season = invSeasonForDate(ci, propKey);
   invLines[0] = {desc:'Accommodation — '+nights+' night'+(nights>1?'s':'')+' @ R'+season.rate.toLocaleString()+'/night ('+season.name+')', amount: nights*season.rate};
   invLines[1] = {desc:'Cleaning fee', amount: invPropCleaningFee()};
   invRenderLines();
