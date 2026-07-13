@@ -2708,74 +2708,73 @@ function invRender() {
   const total      = invLines.reduce((s,l)=>s+Number(l.amount),0);
   const bk         = INV_COMPANY.bank;
   preview.innerHTML =
-    '<div style="background:#1A2340;padding:10px 12px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start">'+
+    '<div style="background:#F5EFE6;padding:22px 28px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #B8962E">'+
       '<div>'+
-        '<div style="color:#F5EFE6;font-size:9px;font-weight:700;letter-spacing:.08em">SN APARTMENTS®</div>'+
-        '<div style="font-size:8px;color:#B8962E;font-style:italic;margin-top:1px">Beyond the booking</div>'+
-        '<div style="font-size:6.5px;color:rgba(184,150,46,.7);letter-spacing:.06em;margin-top:1px">CURATED STAYS · PERSONAL SERVICE</div>'+
+        '<div style="color:#1A2340;font-size:16px;font-weight:700;letter-spacing:.08em">SN APARTMENTS®</div>'+
+        '<div style="font-size:13px;color:#8b5e2a;font-style:italic;margin-top:3px">Beyond the booking</div>'+
+        '<div style="font-size:10px;color:#a68a5b;letter-spacing:.06em;margin-top:2px">CURATED STAYS · PERSONAL SERVICE</div>'+
       '</div>'+
       '<div style="text-align:right">'+
-        '<div style="color:#B8962E;font-size:12px;font-weight:700;letter-spacing:.05em">'+invType+'</div>'+
-        '<div style="color:rgba(245,239,230,.6);font-size:7px;margin-top:2px;line-height:1.6">No: '+num+'<br>Date: '+dateIssued+'</div>'+
+        '<div style="color:#8b5e2a;font-size:19px;font-weight:700;letter-spacing:.05em">'+invType+'</div>'+
+        '<div style="color:#555;font-size:11px;margin-top:4px;line-height:1.7">No: '+num+'<br>Date: '+dateIssued+'</div>'+
       '</div>'+
     '</div>'+
-    '<div style="height:1.5px;background:#B8962E"></div>'+
-    '<div style="display:flex;justify-content:space-between;padding:5px 10px;font-size:7.5px;background:#FAF7F2;border-bottom:0.5px solid #E8E4DE">'+
-      '<div><span style="font-weight:700;color:#B8962E;margin-right:4px">'+(invType==='QUOTATION'?'VALID UNTIL:':'DUE DATE:')+'</span>'+(dateValid||'—')+'</div>'+
-      '<div><span style="font-weight:700;color:#B8962E;margin-right:4px">REFERENCE:</span>'+ref+'</div>'+
+    '<div style="display:flex;justify-content:space-between;padding:10px 28px;font-size:11.5px;background:#FAF7F2;border-bottom:1px solid #E8E4DE">'+
+      '<div><span style="font-weight:700;color:#8b5e2a;margin-right:6px">'+(invType==='QUOTATION'?'VALID UNTIL:':'DUE DATE:')+'</span>'+(dateValid||'—')+'</div>'+
+      '<div><span style="font-weight:700;color:#8b5e2a;margin-right:6px">REFERENCE:</span>'+ref+'</div>'+
     '</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:0.5px solid #E8E4DE">'+
-      '<div style="padding:8px 10px;border-right:0.5px solid #E8E4DE">'+
-        '<div style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em;margin-bottom:3px">ISSUED BY</div>'+
-        '<div style="font-size:8px;font-weight:700;color:#1A2340">'+INV_COMPANY.name+'</div>'+
-        '<div style="font-size:7px;color:#444;margin-top:1px">'+INV_COMPANY.addr+'</div>'+
-        '<div style="font-size:6.5px;color:#999;margin-top:2px">Reg: '+INV_COMPANY.reg+' · Tax: '+INV_COMPANY.tax+'<br>'+INV_COMPANY.email+'</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #E8E4DE">'+
+      '<div style="padding:18px 28px;border-right:1px solid #E8E4DE">'+
+        '<div style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em;margin-bottom:8px">ISSUED BY</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#1A2340">'+INV_COMPANY.name+'</div>'+
+        '<div style="font-size:11px;color:#444;margin-top:3px;line-height:1.5">'+INV_COMPANY.addr+'</div>'+
+        '<div style="font-size:10px;color:#999;margin-top:6px;line-height:1.6">Reg: '+INV_COMPANY.reg+' · Tax: '+INV_COMPANY.tax+'<br>'+INV_COMPANY.email+'</div>'+
       '</div>'+
-      '<div style="padding:8px 10px">'+
-        '<div style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em;margin-bottom:3px">BILLED TO</div>'+
-        '<div style="font-size:8px;font-weight:700;color:#1A2340">'+guest+(company?' — '+company:'')+'</div>'+
-        (addr?'<div style="font-size:7px;color:#444;margin-top:1px">'+addr.replace(/\n/g,'<br>')+'</div>':'')+
-        '<div style="font-size:6.5px;color:#999;margin-top:2px">'+(email||'')+'</div>'+
+      '<div style="padding:18px 28px">'+
+        '<div style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em;margin-bottom:8px">BILLED TO</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#1A2340">'+guest+(company?' — '+company:'')+'</div>'+
+        (addr?'<div style="font-size:11px;color:#444;margin-top:3px;line-height:1.5">'+addr.replace(/\n/g,'<br>')+'</div>':'')+
+        '<div style="font-size:10px;color:#999;margin-top:6px">'+(email||'')+'</div>'+
       '</div>'+
     '</div>'+
-    '<div style="padding:7px 10px;border-bottom:0.5px solid #E8E4DE">'+
-      '<div style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em;margin-bottom:4px">BOOKING DETAILS</div>'+
+    '<div style="padding:16px 28px;border-bottom:1px solid #E8E4DE">'+
+      '<div style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em;margin-bottom:8px">BOOKING DETAILS</div>'+
       [['Property:',prop],['Guest stay:',dates||'—'],['Platform:',platform],['Host contact:','Your dedicated host, Nina Williams, will reach out shortly.']].map(function(kv){
-        return '<div style="display:flex;gap:4px;font-size:7px;margin-bottom:2px"><span style="font-weight:700;color:#1A2340;min-width:60px">'+kv[0]+'</span><span style="color:#222">'+kv[1]+'</span></div>';
+        return '<div style="display:flex;gap:8px;font-size:11px;margin-bottom:6px"><span style="font-weight:700;color:#1A2340;min-width:100px">'+kv[0]+'</span><span style="color:#333">'+kv[1]+'</span></div>';
       }).join('')+
     '</div>'+
     '<div>'+
-      '<div style="display:flex;justify-content:space-between;padding:5px 10px;border-bottom:1px solid #1A2340">'+
-        '<span style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em">DESCRIPTION</span>'+
-        '<span style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em">AMOUNT</span>'+
+      '<div style="display:flex;justify-content:space-between;padding:10px 28px;border-bottom:2px solid #1A2340">'+
+        '<span style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em">DESCRIPTION</span>'+
+        '<span style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em">AMOUNT</span>'+
       '</div>'+
       invLines.map(function(l){
-        return '<div style="display:flex;justify-content:space-between;padding:4px 10px;border-bottom:0.5px solid #f0f0f0"><span style="font-size:7.5px;color:#222">'+(l.desc||'—')+'</span><span style="font-size:7.5px;color:#222;font-weight:500">'+invFmt(l.amount)+'</span></div>';
+        return '<div style="display:flex;justify-content:space-between;padding:9px 28px;border-bottom:1px solid #f0f0f0"><span style="font-size:12px;color:#222">'+(l.desc||'—')+'</span><span style="font-size:12px;color:#222;font-weight:500">'+invFmt(l.amount)+'</span></div>';
       }).join('')+
-      '<div style="display:flex;justify-content:flex-end;padding:5px 10px">'+
-        '<div style="background:#1A2340;color:#F5EFE6;padding:3px 10px;border-radius:3px;display:flex;gap:12px;align-items:center">'+
-          '<span style="font-size:7px;font-weight:700;letter-spacing:.04em">TOTAL AMOUNT</span>'+
-          '<span style="font-size:8px;font-weight:700;color:#B8962E">'+invFmt(total)+'</span>'+
+      '<div style="display:flex;justify-content:flex-end;padding:14px 28px">'+
+        '<div style="background:#1A2340;color:#F5EFE6;padding:8px 18px;border-radius:4px;display:flex;gap:20px;align-items:center">'+
+          '<span style="font-size:11px;font-weight:700;letter-spacing:.04em">TOTAL AMOUNT</span>'+
+          '<span style="font-size:14px;font-weight:700;color:#B8962E">'+invFmt(total)+'</span>'+
         '</div>'+
       '</div>'+
     '</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:7px 10px;gap:4px;border-top:0.5px solid #E8E4DE;border-bottom:0.5px solid #E8E4DE">'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:16px 28px;gap:10px;border-top:1px solid #E8E4DE;border-bottom:1px solid #E8E4DE">'+
       [['Account name',bk.name],['Acc type',bk.type],['Payment due',dateValid||'On confirmation'],['Bank',bk.bank],['Branch code',bk.branch],['Proof of pmt',bk.ref_email],['Acc number',bk.acc],['Reference',ref]].map(function(kv){
-        return '<div style="font-size:7px"><div style="font-weight:700;color:#1A2340">'+kv[0]+'</div><div style="color:#333">'+kv[1]+'</div></div>';
+        return '<div style="font-size:11px;margin-bottom:8px"><div style="font-weight:700;color:#1A2340">'+kv[0]+'</div><div style="color:#333;margin-top:2px">'+kv[1]+'</div></div>';
       }).join('')+
     '</div>'+
-    (notes.length?'<div style="padding:7px 10px;border-bottom:0.5px solid #E8E4DE"><div style="font-size:6.5px;font-weight:700;color:#B8962E;letter-spacing:.08em;margin-bottom:4px">NOTES</div>'+notes.map(function(n){return '<div style="font-size:7px;color:#333;display:flex;gap:4px;margin-bottom:2px"><span style="color:#B8962E;font-weight:700">•</span><span>'+n+'</span></div>';}).join('')+'</div>':'')+
-    '<div style="padding:7px 10px">'+
-      '<div style="font-size:7px;color:#444;margin-bottom:5px">Kind regards,</div>'+
-      '<div style="display:flex;gap:16px">'+
-        '<div style="flex:1"><div style="font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:14px;color:#1A2340;margin-bottom:2px">Nicole Babczyk</div><div style="height:0.5px;background:#D4C9BC;margin-bottom:2px"></div><div style="font-size:6.5px;color:#B8962E;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
-        '<div style="flex:1"><div style="font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:14px;color:#1A2340;margin-bottom:2px">Silja Faltin</div><div style="height:0.5px;background:#D4C9BC;margin-bottom:2px"></div><div style="font-size:6.5px;color:#B8962E;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
+    (notes.length?'<div style="padding:16px 28px;border-bottom:1px solid #E8E4DE"><div style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em;margin-bottom:8px">NOTES</div>'+notes.map(function(n){return '<div style="font-size:11px;color:#333;display:flex;gap:6px;margin-bottom:5px"><span style="color:#8b5e2a;font-weight:700">•</span><span>'+n+'</span></div>';}).join('')+'</div>':'')+
+    '<div style="padding:20px 28px">'+
+      '<div style="font-size:11px;color:#444;margin-bottom:12px">Kind regards,</div>'+
+      '<div style="display:flex;gap:40px">'+
+        '<div style="flex:1"><div style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#1A2340;margin-bottom:5px">Nicole Babczyk</div><div style="height:1px;background:#D4C9BC;margin-bottom:5px"></div><div style="font-size:10px;color:#8b5e2a;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
+        '<div style="flex:1"><div style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#1A2340;margin-bottom:5px">Silja Faltin</div><div style="height:1px;background:#D4C9BC;margin-bottom:5px"></div><div style="font-size:10px;color:#8b5e2a;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
       '</div>'+
     '</div>'+
-    '<div style="background:#EFE7D8;padding:4px 10px;text-align:center;border-radius:0 0 6px 6px;border-top:1px solid #B8962E">'+
-      '<div style="font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-size:8px;color:#8b5e2a">Beyond the booking</div>'+
-      '<div style="font-size:6px;color:rgba(139,94,42,.7);letter-spacing:.06em;margin-top:1px">S&N APT MANAGEMENT · SN_Apt_Management@outlook.com · CURATED STAYS · PERSONAL SERVICE</div>'+
- '</div>';
+    '<div style="background:#1A2340;padding:14px 20px;text-align:center;border-radius:0 0 6px 6px">'+
+      '<div style="font-family:Georgia,serif;font-style:italic;font-size:14px;color:#B8962E">Beyond the booking</div>'+
+      '<div style="font-size:9.5px;color:rgba(184,150,46,.7);letter-spacing:.06em;margin-top:4px">S&N APT MANAGEMENT · SN_Apt_Management@outlook.com · CURATED STAYS · PERSONAL SERVICE</div>'+
+    '</div>';
 }
 
 async function loadOutgoing() {
