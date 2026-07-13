@@ -2203,7 +2203,9 @@ function parseICalText(text, feed) {
       sumLower.includes('owner') ||
       desc.includes('owner');
 
-    // MANUAL BLOCK: platform placeholder text (not a real guest)
+   // MANUAL BLOCK: platform placeholder text (not a real guest)
+    // Note: Booking.com anonymises genuine reservations as bare "Reserved" (no guest name) —
+    // that's a real booking, not a block. Only Airbnb uses "Reserved" as a block placeholder.
     const isManualBlock =
       !isOwnerStayEvent && (
         sumTrim === '-' ||
@@ -2213,7 +2215,7 @@ function parseICalText(text, feed) {
         sumLower.includes('closed') ||
         sumLower.includes('airbnb (not available)') ||
         sumLower.includes('booking.com (not available)') ||
-        sumLower.includes('reserved') ||       // Airbnb generic block
+        (feed.platform === 'airbnb' && sumLower.includes('reserved')) ||
         sumLower.includes('unavailable') ||
         sumLower === 'blocked'
       );
