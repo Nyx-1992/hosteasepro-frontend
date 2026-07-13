@@ -2453,6 +2453,38 @@ let invType      = 'QUOTATION';
 let invLines     = [{desc:'Accommodation', amount:7000},{desc:'Cleaning fee', amount:350}];
 let invRefManual = false;
 let invLinesManual = false;
+let invNumberManual = false;
+
+const INV_TYPE_CODE = { QUOTATION: 'QUOTE', INVOICE: 'INV' };
+
+async function invGenerateNextNumber(type) {
+  const year   = new Date().getFullYear();
+  const code   = INV_TYPE_CODE[type] || 'QUOTE';
+  const prefix = 'SNA-'+code+'-'+year+'-';
+  let next = 1;
+  if (db) {
+    try {
+      const {data} = await db.from('invoices')
+        .select('number')
+        .ilike('number', prefix+'%')
+        .order('number', {ascending:false})
+        .limit(1);
+      if (data && data.length) {
+        const lastNum = parseInt(data[0].number.slice(prefix.length), 10);
+        if (!isNaN(lastNum)) next = lastNum + 1;
+      }
+    } catch(e) { console.warn('invGenerateNextNumber:', e); }
+  }
+  return prefix + String(next).padStart(3,'0');
+}
+
+async function invRefreshNumber() {
+  if (invNumberManual) return;
+  const numEl = document.getElementById('inv-number');
+  if (!numEl) return;
+  numEl.value = await invGenerateNextNumber(invType);
+  invRender();
+}
 
 const PROPERTY_SEASON_RATES = {
   speranta: [
