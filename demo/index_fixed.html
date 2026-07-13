@@ -2869,7 +2869,6 @@ async function generateInvoicePDF() {
   btn.textContent = 'Generating…';
   btn.disabled = true;
 
-  let wrapper = null;
   try {
     const payload = {
       docType:    invType,
@@ -2892,32 +2891,26 @@ async function generateInvoicePDF() {
     const guest = (invV('inv-guest')||'Guest').split(' ').pop().toUpperCase();
     const filename = invType+'-'+(invV('inv-number')||'SNA-QUOTE-2026-001')+'-'+guest+'.pdf';
 
-    // Clone the preview and scale it up so it fills a real A4 page
-    const a4WidthPx = 793; // ~210mm at 96dpi
-    const scale = a4WidthPx / original.offsetWidth;
-    const clone = original.cloneNode(true);
-    wrapper = document.createElement('div');
-    wrapper.style.cssText = 'position:fixed;top:-99999px;left:-99999px;width:'+a4WidthPx+'px;background:#F5EFE6';
-    clone.style.width = original.offsetWidth+'px';
-    clone.style.transform = 'scale('+scale+')';
-    clone.style.transformOrigin = 'top left';
-    wrapper.appendChild(clone);
-    document.body.appendChild(wrapper);
+    const canvas = await html2canvas(original, { scale: 2, useCORS: true, backgroundColor: '#F5EFE6' });
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
 
-    await html2pdf().set({
-      margin: 10,
-      filename,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#F5EFE6' },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(wrapper).save();
+    const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!jsPDFCtor) throw new Error('jsPDF library not loaded');
+    const pdf = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+    const pageWidth  = pdf.internal.pageSize.getWidth();
+    const margin     = 10;
+    const imgWidth   = pageWidth - margin*2;
+    const imgHeight  = imgWidth * (canvas.height / canvas.width);
+
+    pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+    pdf.save(filename);
 
     toast('PDF downloaded ✓','success');
   } catch(err) {
     console.warn('PDF generation failed:', err);
     toast('PDF generation failed — check console','error');
   } finally {
-    if (wrapper) document.body.removeChild(wrapper);
     btn.textContent = origText;
     btn.disabled = false;
   }
