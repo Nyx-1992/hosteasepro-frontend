@@ -2940,25 +2940,34 @@ async function generateInvoicePDF() {
     const guest = (invV('inv-guest')||'Guest').split(' ').pop().toUpperCase();
     const filename = invType+'-'+(invV('inv-number')||'SNA-QUOTE-2026-001')+'-'+guest+'.pdf';
 
-    const canvas = await html2canvas(original, { scale: 2, useCORS: true, backgroundColor: '#F5EFE6' });
+   const canvas = await html2canvas(original, { scale: 2, useCORS: true, backgroundColor: '#F5EFE6' });
     const imgData = canvas.toDataURL('image/jpeg', 0.98);
 
     const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
     if (!jsPDFCtor) throw new Error('jsPDF library not loaded');
     const pdf = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
-   const pageWidth  = pdf.internal.pageSize.getWidth();
+    const pageWidth  = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin      = 10;
-    const maxWidth    = pageWidth - margin*2;
-    const maxHeight   = pageHeight - margin*2;
-    const ratio       = canvas.height / canvas.width;
-    let imgWidth  = maxWidth;
-    let imgHeight = imgWidth * ratio;
-    if (imgHeight > maxHeight) { imgHeight = maxHeight; imgWidth = imgHeight / ratio; }
-    const offsetX = margin + (maxWidth - imgWidth)/2;
+    const margin      = 8;
+    const imgWidth    = pageWidth - margin*2;
+    const imgHeight   = imgWidth * (canvas.height / canvas.width);
+    const usableH     = pageHeight - margin*2;
 
-    pdf.addImage(imgData, 'JPEG', offsetX, margin, imgWidth, imgHeight);
+    if (imgHeight <= usableH) {
+      pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+    } else {
+      let heightLeft = imgHeight;
+      let y = margin;
+      pdf.addImage(imgData, 'JPEG', margin, y, imgWidth, imgHeight);
+      heightLeft -= usableH;
+      while (heightLeft > 0) {
+        y = margin - (imgHeight - heightLeft);
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', margin, y, imgWidth, imgHeight);
+        heightLeft -= usableH;
+      }
+    }
     pdf.save(filename);
 
     toast('PDF downloaded ✓','success');
