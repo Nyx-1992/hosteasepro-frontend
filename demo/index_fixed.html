@@ -2901,12 +2901,18 @@ async function generateInvoicePDF() {
     if (!jsPDFCtor) throw new Error('jsPDF library not loaded');
     const pdf = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
-    const pageWidth  = pdf.internal.pageSize.getWidth();
-    const margin     = 10;
-    const imgWidth   = pageWidth - margin*2;
-    const imgHeight  = imgWidth * (canvas.height / canvas.width);
+   const pageWidth  = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin      = 10;
+    const maxWidth    = pageWidth - margin*2;
+    const maxHeight   = pageHeight - margin*2;
+    const ratio       = canvas.height / canvas.width;
+    let imgWidth  = maxWidth;
+    let imgHeight = imgWidth * ratio;
+    if (imgHeight > maxHeight) { imgHeight = maxHeight; imgWidth = imgHeight / ratio; }
+    const offsetX = margin + (maxWidth - imgWidth)/2;
 
-    pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
+    pdf.addImage(imgData, 'JPEG', offsetX, margin, imgWidth, imgHeight);
     pdf.save(filename);
 
     toast('PDF downloaded ✓','success');
