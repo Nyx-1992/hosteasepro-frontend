@@ -1018,8 +1018,8 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
               <div style="margin-bottom:12px"><label class="form-label">Email</label><input type="text" class="form-input" id="inv-email" placeholder="guest@email.com" oninput="invRender()"></div>
               <div style="margin-bottom:12px"><label class="form-label">Address (optional)</label><textarea class="form-input" id="inv-addr" placeholder="Leave blank or add if needed" rows="2" style="resize:vertical" oninput="invRender()"></textarea></div>
 
-              <div style="margin-bottom:12px"><label class="form-label">Property</label>
-                <select class="form-input" id="inv-prop" oninput="invRender()">
+             <div style="margin-bottom:12px"><label class="form-label">Property</label>
+                <select class="form-input" id="inv-prop" oninput="invUpdateAutoLines();invRender()">
                   <option>Speranta Flat — 35 Athens Road, Tableview</option>
                   <option>TV House</option>
                 </select>
@@ -2539,6 +2539,7 @@ function invUpdateDatesField() {
   const startStr = d1.toLocaleDateString('en-ZA', opt);
   const endStr   = d2.toLocaleDateString('en-ZA', opt);
   document.getElementById('inv-dates').value = startStr+'–'+endStr+' ('+nights+' night'+(nights>1?'s':'')+')';
+  invUpdateAutoLines();
 }
 
 function invBuildRef(guest, platform, dateVal) {
@@ -2631,8 +2632,8 @@ function invRenderLines() {
   if(!c) return;
   c.innerHTML = invLines.map((l,i)=>
     '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center">'+
-    '<input type="text" value="'+(l.desc||'').replace(/"/g,'&quot;')+'" placeholder="Description" class="form-input" style="flex:1;font-size:.82rem" onchange="invLines['+i+'].desc=this.value;invRender()">'+
-    '<input type="number" value="'+l.amount+'" placeholder="Amount" class="form-input" style="width:90px;font-size:.82rem" onchange="invLines['+i+'].amount=parseFloat(this.value)||0;invRender()">'+
+    '<input type="text" value="'+(l.desc||'').replace(/"/g,'&quot;')+'" placeholder="Description" class="form-input" style="flex:1;font-size:.82rem" onchange="invLinesManual=true;invLines['+i+'].desc=this.value;invRender()">'+
+    '<input type="number" value="'+l.amount+'" placeholder="Amount" class="form-input" style="width:90px;font-size:.82rem" onchange="invLinesManual=true;invLines['+i+'].amount=parseFloat(this.value)||0;invRender()">'+
     '<button onclick="invLines.splice('+i+',1);invRenderLines();invRender()" style="padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:transparent;cursor:pointer;color:var(--muted);font-size:.8rem">&#x2715;</button>'+
     '</div>'
   ).join('');
