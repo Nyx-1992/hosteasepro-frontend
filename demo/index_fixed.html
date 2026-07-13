@@ -2449,6 +2449,36 @@ function scheduleICalSync() {
 let invType      = 'QUOTATION';
 let invLines     = [{desc:'Accommodation', amount:7000},{desc:'Cleaning fee', amount:350}];
 let invRefManual = false;
+let invLinesManual = false;
+
+const SEASON_RATES = [
+  {name:'Peak Summer', rate:1500, months:[11,0,1,2]},   // Dec–Mar
+  {name:'Shoulder',    rate:1200, months:[3,4,8,9,10]}, // Apr, May, Sep, Oct, Nov
+  {name:'Winter',      rate:950,  months:[5,6,7]},      // Jun–Aug
+];
+
+function invSeasonForDate(dateStr) {
+  if(!dateStr) return SEASON_RATES[2];
+  const m = new Date(dateStr+'T00:00:00').getMonth();
+  return SEASON_RATES.find(s=>s.months.includes(m)) || SEASON_RATES[2];
+}
+
+function invPropCleaningFee() {
+  return invV('inv-prop').includes('TV House') ? 550 : 400;
+}
+
+function invUpdateAutoLines() {
+  if (invLinesManual) return;
+  const ci = invV('inv-checkin');
+  const co = invV('inv-checkout');
+  if (!ci || !co) return;
+  const nights = Math.round((new Date(co+'T00:00:00')-new Date(ci+'T00:00:00'))/86400000);
+  if (nights <= 0) return;
+  const season = invSeasonForDate(ci);
+  invLines[0] = {desc:'Accommodation — '+nights+' night'+(nights>1?'s':'')+' @ R'+season.rate.toLocaleString()+'/night ('+season.name+')', amount: nights*season.rate};
+  invLines[1] = {desc:'Cleaning fee', amount: invPropCleaningFee()};
+  invRenderLines();
+}
 
 const INV_COMPANY = {
   name:'S&N Apt Management',
