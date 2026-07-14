@@ -1025,9 +1025,12 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
                   <option>TV House</option>
                 </select>
               </div>
-             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-                <div><label class="form-label">Check-in</label><input type="date" class="form-input" id="inv-checkin" onchange="invUpdateDatesField();invRender()"></div>
-                <div><label class="form-label">Check-out</label><input type="date" class="form-input" id="inv-checkout" onchange="invUpdateDatesField();invRender()"></div>
+            <div style="margin-bottom:12px;position:relative">
+                <label class="form-label">Check-in / Check-out</label>
+                <input type="text" class="form-input" id="inv-daterange-display" readonly placeholder="Click to select dates" onclick="invOpenDatePicker(event)" style="cursor:pointer;background:#fff">
+                <input type="hidden" id="inv-checkin">
+                <input type="hidden" id="inv-checkout">
+                <div id="inv-datepicker-popover" style="display:none;position:absolute;z-index:80;top:100%;left:0;margin-top:4px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--sh);padding:14px;width:290px"></div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
                 <div><label class="form-label">Dates &amp; nights <span style="font-size:.7rem;color:var(--muted);font-weight:400">(auto)</span></label><input type="text" class="form-input" id="inv-dates" placeholder="14–21 Jul (7 nights)" oninput="invRender()"></div>
