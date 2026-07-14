@@ -1197,13 +1197,28 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         </div>
 
         <!-- Business info -->
-        <div class="card">
+        <div class="card" style="margin-bottom:18px">
           <div style="font-weight:700;font-size:1rem;margin-bottom:12px">🏦 Business Info</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.82rem">
             <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Business Name</div>SN Apt Management</div>
             <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Registration</div>2024/643198/07</div>
             <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Tax Number</div>9008226327</div>
             <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Bank</div>Nedbank · 198765</div>
+          </div>
+        </div>
+
+        <!-- Display preferences -->
+        <div class="card">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🌍 Display Preferences</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Controls what counts as "today" across the dashboard, calendar and reports.</div>
+          <div class="form-field" style="max-width:320px">
+            <label>Time Zone</label>
+            <select id="settings-timezone" onchange="saveUserSetting('timezone', this.value)">
+              <option value="Africa/Johannesburg">South Africa (SAST, UTC+2)</option>
+              <option value="Europe/Warsaw">Poland (CET/CEST)</option>
+              <option value="Europe/Berlin">Germany (CET/CEST)</option>
+              <option value="Europe/London">United Kingdom (GMT/BST)</option>
+            </select>
           </div>
         </div>
       </div>
@@ -1223,7 +1238,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
         <div class="form-field"><label>Platform</label><select id="b-platform"><option value="airbnb">Airbnb</option><option value="booking">Booking.com</option><option value="lekkeslaap">LekkeSlaap</option><option value="manual">Manual/Direct</option></select></div>
         <div class="form-field"><label>Check-in *</label><input type="date" id="b-checkin"/></div>
         <div class="form-field"><label>Check-out *</label><input type="date" id="b-checkout"/></div>
-        <div class="form-field"><label>Revenue (ZAR)</label><input type="number" id="b-revenue" placeholder="0"/></div>
+        <div class="form-field" id="b-revenue-field"><label>Revenue (ZAR)</label><input type="number" id="b-revenue" placeholder="0"/></div>
         <div class="form-field"><label>Guests</label><input type="number" id="b-guests" value="1" min="1"/></div>
         <div class="form-field"><label>Guest Email</label><input type="email" id="b-email" placeholder="Optional"/></div>
         <div class="form-field"><label>Guest Phone</label><input type="tel" id="b-phone" placeholder="Optional"/></div>
@@ -1560,10 +1575,31 @@ const SAMPLE_KB = [
 
 // ── HELPERS ───────────────────────────────────────────────────
 // SAST date helper (UTC+2) — prevents date being one day behind late at night
+let userSettings = JSON.parse(localStorage.getItem('hep_settings')||'{}');
+if (!userSettings.timezone) userSettings.timezone = 'Africa/Johannesburg';
+
 function todaySAST() {
-  const d = new Date();
-  d.setHours(d.getHours() + 2); // shift to SAST
-  return d.toISOString().slice(0,10);
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: userSettings.timezone || 'Africa/Johannesburg',
+      year:'numeric', month:'2-digit', day:'2-digit'
+    }).format(new Date());
+  } catch(e) {
+    const d = new Date();
+    d.setHours(d.getHours() + 2);
+    return d.toISOString().slice(0,10);
+  }
+}
+
+function saveUserSetting(key, val) {
+  userSettings[key] = val;
+  localStorage.setItem('hep_settings', JSON.stringify(userSettings));
+  renderTab(currentTab);
+  toast('Setting saved ✓','success');
+}
+function renderSettingsPrefs() {
+  const sel = document.getElementById('settings-timezone');
+  if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
 }
 
 function nb(b) {
@@ -1635,6 +1671,11 @@ function fillUser(i) { document.getElementById('login-email').value=USERS[i].ema
 window._doLogin = function(prefilledUser) {
   if(prefilledUser){currentUser=prefilledUser;_afterLogin(prefilledUser);return;}
 }
+function applyRoleUI() {
+  const hide = currentUser && currentUser.role === 'host';
+  const revField = document.getElementById('b-revenue-field');
+  if (revField) revField.style.display = hide ? 'none' : '';
+}
 function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-password').value;
@@ -1648,12 +1689,12 @@ function doLogin() {
   document.getElementById('user-avatar').textContent=user.initials;
   document.getElementById('user-name').textContent=user.name;
   document.getElementById('user-role').textContent=user.role;
-  buildNav(); buildMobileNav(); loadData();
+  buildNav(); buildMobileNav(); loadData(); applyRoleUI();
 }
 function _afterLogin(user) {
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
-  buildNav(); buildMobileNav(); loadData(); scheduleICalSync();
+  buildNav(); buildMobileNav(); loadData(); scheduleICalSync(); applyRoleUI();
 }
 function doLogout() { currentUser=null; // Force mobile nav check on resize (handles orientation changes on iPhone)
 window.addEventListener('resize', () => { buildMobileNav(); });
@@ -2035,6 +2076,7 @@ function renderTab(id) {
   else if (id==='reports')   { renderReports(); renderReportInspections(); renderReportInventory(); }
   else if (id==='invoices')  renderInvoicesTab();
   else if (id==='roadmap')   renderRoadmapTab();
+  else if (id==='settings')  renderSettingsPrefs();
 }
 
 function renderDomesticEarnings() {
@@ -3778,6 +3820,7 @@ function openBookingDetail(bookingId) {
   const today = todaySAST();
   const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
   const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#c17f3c'));
+  const canManage = currentUser.role !== 'host';
 
   document.getElementById('day-modal-title').textContent = b.display_name||'Booking';
   document.getElementById('day-modal-body').innerHTML = `
@@ -3802,7 +3845,7 @@ function openBookingDetail(bookingId) {
         <div><strong style="color:var(--ink)">🛬</strong> ${fmtDate(b.check_in)}</div>
         <div><strong style="color:var(--ink)">🛫</strong> ${fmtDate(b.check_out)}</div>
         <div><strong style="color:var(--ink)">🌙</strong> ${nights} nights</div>
-        ${b.revenue?`<div><strong style="color:var(--green)">💰</strong> R${Number(b.revenue).toLocaleString()}</div>`:''}
+        ${b.revenue&&canManage?`<div><strong style="color:var(--green)">💰</strong> R${Number(b.revenue).toLocaleString()}</div>`:''}
       </div>
       <!-- Contact info — editable inline -->
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:7px">
@@ -3857,11 +3900,11 @@ function openBookingDetail(bookingId) {
       <button onclick="declineBooking(${b.id});closeModal('day-modal')"
         style="flex:1;background:#fee2e2;color:#dc2626;border:none;border-radius:10px;padding:10px;font-size:.84rem;cursor:pointer;font-weight:600">✗ Decline</button>
     </div>`:''}
-    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-      <button onclick="deleteBooking('${b.id}');closeModal('day-modal')"
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:${canManage?'space-between':'flex-end'};align-items:center">
+      ${canManage?`<button onclick="deleteBooking('${b.id}');closeModal('day-modal')"
         style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;padding:6px 14px;font-size:.78rem;cursor:pointer;font-weight:600">
         🗑 Delete booking
-      </button>
+      </button>`:''}
       <button onclick="closeModal('day-modal')"
         style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:.78rem;cursor:pointer;color:var(--muted)">
         Close
