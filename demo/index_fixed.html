@@ -1020,7 +1020,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
               <div style="margin-bottom:12px"><label class="form-label">Address (optional)</label><textarea class="form-input" id="inv-addr" placeholder="Leave blank or add if needed" rows="2" style="resize:vertical" oninput="invRender()"></textarea></div>
 
              <div style="margin-bottom:12px"><label class="form-label">Property</label>
-                <select class="form-input" id="inv-prop" oninput="invUpdateAutoLines();invRender()">
+                <select class="form-input" id="inv-prop" oninput="invUpdateAutoLines();invRender();invRenderDatePicker()">
                   <option>Speranta Flat — 35 Athens Road, Tableview</option>
                   <option>TV House</option>
                 </select>
