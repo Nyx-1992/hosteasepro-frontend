@@ -2927,6 +2927,7 @@ async function generateInvoicePDF() {
   btn.textContent = 'Generating…';
   btn.disabled = true;
 
+  let clone = null;
   try {
     const payload = {
       docType:    invType,
@@ -2949,7 +2950,17 @@ async function generateInvoicePDF() {
     const guest = (invV('inv-guest')||'Guest').split(' ').pop().toUpperCase();
     const filename = invType+'-'+(invV('inv-number')||'SNA-QUOTE-2026-001')+'-'+guest+'.pdf';
 
-   const canvas = await html2canvas(original, { scale: 2, useCORS: true, backgroundColor: '#F5EFE6' });
+    // Render at a fixed, print-proportioned width so the PDF layout is
+    // consistent regardless of the on-screen sidebar width.
+    const printWidth = 700;
+    clone = original.cloneNode(true);
+    clone.style.width = printWidth+'px';
+    clone.style.position = 'fixed';
+    clone.style.top = '0';
+    clone.style.left = '-99999px';
+    document.body.appendChild(clone);
+
+    const canvas = await html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: '#F5EFE6', width: printWidth });
     const imgData = canvas.toDataURL('image/jpeg', 0.98);
 
     const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
@@ -2958,25 +2969,20 @@ async function generateInvoicePDF() {
 
     const pageWidth  = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
-    const margin      = 8;
-    const imgWidth    = pageWidth - margin*2;
-    const imgHeight   = imgWidth * (canvas.height / canvas.width);
-    const usableH     = pageHeight - margin*2;
+    const margin     = 8;
+    const maxWidth   = pageWidth - margin*2;
+    const maxHeight  = pageHeight - margin*2;
+    const ratio      = canvas.height / canvas.width;
 
-    if (imgHeight <= usableH) {
-      pdf.addImage(imgData, 'JPEG', margin, margin, imgWidth, imgHeight);
-    } else {
-      let heightLeft = imgHeight;
-      let y = margin;
-      pdf.addImage(imgData, 'JPEG', margin, y, imgWidth, imgHeight);
-      heightLeft -= usableH;
-      while (heightLeft > 0) {
-        y = margin - (imgHeight - heightLeft);
-        pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', margin, y, imgWidth, imgHeight);
-        heightLeft -= usableH;
-      }
+    let imgWidth  = maxWidth;
+    let imgHeight = imgWidth * ratio;
+    if (imgHeight > maxHeight) {
+      imgHeight = maxHeight;
+      imgWidth  = imgHeight / ratio;
     }
+    const offsetX = margin + (maxWidth - imgWidth) / 2;
+
+    pdf.addImage(imgData, 'JPEG', offsetX, margin, imgWidth, imgHeight);
     pdf.save(filename);
 
     toast('PDF downloaded ✓','success');
@@ -2984,6 +2990,7 @@ async function generateInvoicePDF() {
     console.warn('PDF generation failed:', err);
     toast('PDF generation failed — check console','error');
   } finally {
+    if (clone) document.body.removeChild(clone);
     btn.textContent = origText;
     btn.disabled = false;
   }
