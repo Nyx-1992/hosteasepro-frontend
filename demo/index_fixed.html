@@ -1565,8 +1565,16 @@ function nb(b) {
   else if (b.property_name) { const pn = b.property_name.toLowerCase(); pid = pn.includes('speranta') ? 'speranta' : pn.includes('tv') ? 'tvhouse' : 'speranta'; }
   if (pid !== 'speranta' && pid !== 'tvhouse') pid = 'speranta';
   const gn = b.guest_name || [b.guest_first_name, b.guest_last_name].filter(Boolean).join(' ') || null;
+  // Safety net: a 'blocked' row that actually carries a real guest name is a
+  // misclassified booking (iCal feed quirk), not a true placeholder block — treat it as confirmed.
+  const BLOCK_PLACEHOLDERS = ['', 'blocked', '🔒 blocked', 'not available', 'guest'];
+  let status = b.status;
+  if (status === 'blocked' && gn && !BLOCK_PLACEHOLDERS.includes(gn.trim().toLowerCase())) {
+    status = 'confirmed';
+  }
   return {
     ...b,
+    status,
     guest_name: gn,
     display_name: gn || (b.platform ? b.platform.charAt(0).toUpperCase()+b.platform.slice(1)+' Guest' : 'Guest'),
     check_in:  String(b.check_in_date  || b.check_in  || '').slice(0,10),
@@ -1575,6 +1583,7 @@ function nb(b) {
     property_id: pid,
   };
 }
+  
 function nt(t) {
   // Map DB status → app status
   const statusMap = {'pending':'open','in_progress':'open','completed':'done','cancelled':'cancelled'};
