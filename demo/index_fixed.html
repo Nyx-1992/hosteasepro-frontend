@@ -2583,7 +2583,8 @@ function invOutsideClosePicker(e) {
   const pop = document.getElementById('inv-datepicker-popover');
   const disp = document.getElementById('inv-daterange-display');
   if (!pop) return;
-  if (pop.contains(e.target) || e.target === disp) {
+  const path = e.composedPath ? e.composedPath() : [];
+  if (path.includes(pop) || e.target === disp) {
     document.addEventListener('click', invOutsideClosePicker, {once:true});
     return;
   }
