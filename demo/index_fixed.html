@@ -2540,6 +2540,123 @@ function invUpdateAutoLines() {
   invRenderLines();
 }
 
+// ── Custom date-range picker (greys out booked dates) ─────────────
+let invPickYear  = new Date().getFullYear();
+let invPickMonth = new Date().getMonth();
+let invPickStart = '';
+let invPickEnd   = '';
+
+function invIsDateBooked(dateStr) {
+  const propKey = invPropKey();
+  return bookings.some(b => {
+    if (b.property_id !== propKey) return false;
+    if (['cancelled'].includes(b.status)) return false;
+    return dateStr >= b.check_in && dateStr < b.check_out;
+  });
+}
+
+function invSyncDisplayFromHidden() {
+  invPickStart = invV('inv-checkin');
+  invPickEnd   = invV('inv-checkout');
+  const disp = document.getElementById('inv-daterange-display');
+  if (!disp) return;
+  disp.value = (invPickStart && invPickEnd)
+    ? invFmtDate(invPickStart)+' → '+invFmtDate(invPickEnd)
+    : '';
+}
+
+function invOpenDatePicker(e) {
+  if (e) e.stopPropagation();
+  const pop = document.getElementById('inv-datepicker-popover');
+  if (!pop) return;
+  const opening = pop.style.display !== 'block';
+  pop.style.display = opening ? 'block' : 'none';
+  if (opening) {
+    invRenderDatePicker();
+    setTimeout(() => {
+      document.addEventListener('click', invOutsideClosePicker, {once:true});
+    }, 0);
+  }
+}
+
+function invOutsideClosePicker(e) {
+  const pop = document.getElementById('inv-datepicker-popover');
+  const disp = document.getElementById('inv-daterange-display');
+  if (!pop) return;
+  if (pop.contains(e.target) || e.target === disp) {
+    document.addEventListener('click', invOutsideClosePicker, {once:true});
+    return;
+  }
+  pop.style.display = 'none';
+}
+
+function invPickNav(dir) {
+  invPickMonth += dir;
+  if (invPickMonth > 11) { invPickMonth = 0; invPickYear++; }
+  if (invPickMonth < 0)  { invPickMonth = 11; invPickYear--; }
+  invRenderDatePicker();
+}
+
+function invPickDay(dateStr) {
+  if (invIsDateBooked(dateStr)) return;
+  if (!invPickStart || (invPickStart && invPickEnd)) {
+    invPickStart = dateStr;
+    invPickEnd = '';
+  } else if (dateStr > invPickStart) {
+    invPickEnd = dateStr;
+  } else {
+    invPickStart = dateStr;
+    invPickEnd = '';
+  }
+  document.getElementById('inv-checkin').value  = invPickStart;
+  document.getElementById('inv-checkout').value = invPickEnd;
+  invSyncDisplayFromHidden();
+  invRenderDatePicker();
+  if (invPickStart && invPickEnd) {
+    invUpdateDatesField();
+    document.getElementById('inv-datepicker-popover').style.display = 'none';
+  }
+}
+
+function invRenderDatePicker() {
+  const pop = document.getElementById('inv-datepicker-popover');
+  if (!pop || pop.style.display === 'none') return;
+  const MONTHS_L = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const firstDay  = new Date(invPickYear, invPickMonth, 1).getDay();
+  const daysCount = new Date(invPickYear, invPickMonth+1, 0).getDate();
+  const today = todaySAST();
+
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <button type="button" onclick="invPickNav(-1)" style="background:var(--sand);border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer">←</button>
+    <div style="font-weight:700;font-size:.86rem">${MONTHS_L[invPickMonth]} ${invPickYear}</div>
+    <button type="button" onclick="invPickNav(1)" style="background:var(--sand);border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer">→</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;font-size:.68rem;font-weight:700;color:var(--muted);margin-bottom:4px">
+    ${['S','M','T','W','T','F','S'].map(d=>`<div>${d}</div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">`;
+
+  for (let i=0;i<firstDay;i++) html += '<div></div>';
+  for (let d=1; d<=daysCount; d++) {
+    const ds = invPickYear+'-'+String(invPickMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const booked = invIsDateBooked(ds);
+    const isPast = ds < today;
+    const isStart = ds === invPickStart;
+    const isEnd   = ds === invPickEnd;
+    const inRange = invPickStart && invPickEnd && ds > invPickStart && ds < invPickEnd;
+    const disabled = booked || isPast;
+    let bg = 'transparent', col = 'var(--ink)', cursor = 'pointer';
+    if (disabled) { bg = '#f1f1ee'; col = '#c4c2ba'; cursor = 'not-allowed'; }
+    if (inRange)  { bg = '#fde9d2'; }
+    if (isStart || isEnd) { bg = 'var(--accent)'; col = '#fff'; }
+    html += `<div ${disabled?'':`onclick="invPickDay('${ds}')"`}
+      title="${booked?'Booked':''}"
+      style="padding:5px 0;text-align:center;border-radius:5px;font-size:.76rem;background:${bg};color:${col};cursor:${cursor}">${d}</div>`;
+  }
+  html += '</div>';
+  pop.innerHTML = html;
+}
+
 const INV_COMPANY = {
   name:'S&N Apt Management',
   addr:'35 Athens Road, Tableview, 7441, Cape Town',
