@@ -331,24 +331,16 @@ function openDrawer(){const d=document.getElementById('mob-drawer');const o=docu
 function closeDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d){d.style.transform='translateX(-110%)';d.style.webkitTransform='translateX(-110%)';}if(o)o.style.display='none';}
 function toggleMobSidebar(){openDrawer();}
 function _buildMobileNavStub(){/* replaced by main script */}
-function fillUser(i){const u=[['sn_apt_management@outlook.com','Sevilla2015!'],['s.faltin@tischlerei-faltin.de','Admin2024!'],['vanwyk.nina@gmail.com','HelloWorld1!']][i];if(u){document.getElementById('login-email').value=u[0];document.getElementById('login-password').value=u[1];}}
-function doLogin(){const email=document.getElementById('login-email').value.trim();const pass=document.getElementById('login-password').value;const USERS=[{id:'1',email:'sn_apt_management@outlook.com',password:'Sevilla2015!',name:'Nicole',role:'owner',initials:'N'},{id:'2',email:'s.faltin@tischlerei-faltin.de',password:'Admin2024!',name:'Silja',role:'admin',initials:'S'},{id:'3',email:'vanwyk.nina@gmail.com',password:'HelloWorld1!',name:'Nina Williams',role:'host',initials:'NW'}];const user=USERS.find(u=>u.email===email&&u.password===pass);if(!user){const e=document.getElementById('auth-error');if(e){e.textContent='Invalid email or password.';e.style.display='block';}return;}setTimeout(function(){if(typeof window._doLogin==='function')window._doLogin(user);},50);}
 </script>
 
 <div id="auth-screen">
   <div class="auth-card">
     <div class="auth-logo">🏠 HostEase Pro</div>
     <div class="auth-sub">Property Management Platform</div>
-    <div class="quick-fill">
-      <span>Quick fill:</span>
-      <button class="quick-btn" onclick="if(typeof fillUser==='function')fillUser(0);else{document.getElementById('login-email').value='sn_apt_management@outlook.com';document.getElementById('login-password').value='Sevilla2015!';}">Nicole (Admin)</button>
-      <button class="quick-btn" onclick="if(typeof fillUser==='function')fillUser(1);else{document.getElementById('login-email').value='s.faltin@tischlerei-faltin.de';document.getElementById('login-password').value='Admin2024!';}">Silja (Admin)</button>
-      <button class="quick-btn" onclick="if(typeof fillUser==='function')fillUser(2);else{document.getElementById('login-email').value='vanwyk.nina@gmail.com';document.getElementById('login-password').value='HelloWorld1!';}">Nina (Host)</button>
-    </div>
     <div class="error-box" id="auth-error"></div>
     <div class="field-group"><label>Email</label><input type="email" id="login-email" placeholder="your@email.com"/></div>
-    <div class="field-group"><label>Password</label><input type="password" id="login-password" onkeydown="if(event.key==='Enter'){if(typeof doLogin==='function')doLogin();else setTimeout(doLogin,100);}"/></div>
-    <button class="btn btn-primary btn-full" id="signin-btn" onclick="if(typeof doLogin==='function'){doLogin();}else{setTimeout(doLogin,100);}">Sign In</button>
+    <div class="field-group"><label>Password</label><input type="password" id="login-password" onkeydown="if(event.key==='Enter')doLogin();"/></div>
+    <button class="btn btn-primary btn-full" id="signin-btn" onclick="doLogin()">Sign In</button>
     <div style="margin-top:12px;text-align:center">
       <a href="./domestic.html" style="display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border-radius:20px;border:1.5px solid var(--border);font-size:.82rem;font-weight:600;color:var(--muted);text-decoration:none;background:var(--sand);transition:all .2s" onmouseover="this.style.borderColor='var(--ocean)';this.style.color='var(--ocean)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
         🧹 Staff Portal
@@ -1420,7 +1412,7 @@ function doLogin(){const email=document.getElementById('login-email').value.trim
 //  2. Replace PROPS with their property names/addresses/UUIDs
 //  3. Replace UUID_MAP with their property UUIDs
 //  4. Replace CLEANERS with their staff
-//  5. Replace USERS with their team logins
+//  5. Team logins now come from Supabase Auth + profiles table — no code change needed per client
 //  6. Replace CLIENT_BRAND with their company name/colours
 //  7. Replace ICAL_FEEDS with their iCal URLs
 //  8. Replace BOOKING_TASKS label wording if needed
@@ -1465,12 +1457,7 @@ const CLEANERS = [
   {name:'Spiwe',    phone:'084 915 0894', payment:'ewallet', properties:['speranta'],           rate:350,                      birthday:'1990-09-18', note:'Spiwe Gwingwizna.'},
 ];
 
-// ── Team logins ──
-const USERS = [
-  {id:'1', email:'sn_apt_management@outlook.com', password:'Sevilla2015!', name:'Nicole',       role:'owner', initials:'N'},
-  {id:'2', email:'s.faltin@tischlerei-faltin.de',  password:'Admin2024!',  name:'Silja',        role:'admin', initials:'S'},
-  {id:'3', email:'vanwyk.nina@gmail.com',           password:'HelloWorld1!',name:'Nina Williams',role:'host',  initials:'NW'},
-];
+// ── Team logins now live in Supabase Auth + the `profiles` table ──
 
 // ── Guest task checklist (host workflow per booking) ──
 const NINA_BOOKING_TASKS = [
@@ -1493,6 +1480,7 @@ const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 
 // ── STATE ─────────────────────────────────────────────────────
 let currentUser = null, currentProp = 'all', currentTab = 'dashboard';
+restoreSession();
 let taskFilter = 'open', bookingFilter = 'upcoming';
 let inventoryReports = [];
 let cleanerAvailability = []; // [{cleaner, date, available}]
@@ -1667,42 +1655,79 @@ function getCleanerRate(cleaner, propId) {
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
-function fillUser(i) { document.getElementById('login-email').value=USERS[i].email; document.getElementById('login-password').value=USERS[i].password; }
-window._doLogin = function(prefilledUser) {
-  if(prefilledUser){currentUser=prefilledUser;_afterLogin(prefilledUser);return;}
+async function fetchProfile(userId, email) {
+  if (!db) return null;
+  try {
+    const { data, error } = await db.from('profiles').select('*').eq('id', userId).limit(1);
+    if (error || !data || !data.length) return null;
+    const p = data[0];
+    return { id: userId, email, name: p.name, role: p.role, initials: p.initials };
+  } catch(e) { console.warn('fetchProfile:', e); return null; }
 }
 function applyRoleUI() {
   const hide = currentUser && currentUser.role === 'host';
   const revField = document.getElementById('b-revenue-field');
   if (revField) revField.style.display = hide ? 'none' : '';
 }
-function doLogin() {
+async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-password').value;
-  const user  = USERS.find(u=>u.email===email&&u.password===pass);
   const errEl = document.getElementById('auth-error');
-  if (!user) { errEl.textContent='Invalid email or password.'; errEl.style.display='block'; return; }
-  errEl.style.display='none'; currentUser=user;
-  document.getElementById('auth-screen').style.display='none';
-  document.getElementById('app-screen').style.display='block';
-  setTimeout(() => buildMobileNav(), 50);
-  document.getElementById('user-avatar').textContent=user.initials;
-  document.getElementById('user-name').textContent=user.name;
-  document.getElementById('user-role').textContent=user.role;
-  buildNav(); buildMobileNav(); loadData(); applyRoleUI();
+  const btn   = document.getElementById('signin-btn');
+  errEl.style.display = 'none';
+  if (!db) { errEl.textContent = 'Not connected to the server. Please refresh and try again.'; errEl.style.display = 'block'; return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+  try {
+    const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+    if (error || !data.user) {
+      errEl.textContent = 'Invalid email or password.'; errEl.style.display = 'block'; return;
+    }
+    const profile = await fetchProfile(data.user.id, data.user.email);
+    if (!profile) {
+      errEl.textContent = 'Signed in, but no profile found for this account. Contact Nicole.';
+      errEl.style.display = 'block';
+      await db.auth.signOut();
+      return;
+    }
+    currentUser = profile;
+    _afterLogin(profile);
+  } catch(e) {
+    errEl.textContent = 'Something went wrong signing in. Please try again.'; errEl.style.display = 'block';
+    console.warn('doLogin:', e);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+  }
 }
 function _afterLogin(user) {
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
+  document.getElementById('user-avatar').textContent = user.initials;
+  document.getElementById('user-name').textContent = user.name;
+  document.getElementById('user-role').textContent = user.role;
   buildNav(); buildMobileNav(); loadData(); scheduleICalSync(); applyRoleUI();
 }
-function doLogout() { currentUser=null; // Force mobile nav check on resize (handles orientation changes on iPhone)
+async function restoreSession() {
+  if (!db) return;
+  try {
+    const { data } = await db.auth.getSession();
+    const session = data && data.session;
+    if (!session || !session.user) return;
+    const profile = await fetchProfile(session.user.id, session.user.email);
+    if (!profile) return;
+    currentUser = profile;
+    _afterLogin(profile);
+  } catch(e) { console.warn('restoreSession:', e); }
+}
+async function doLogout() {
+  currentUser = null;
+  if (db) { try { await db.auth.signOut(); } catch(e) { console.warn('signOut:', e); } }
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app-screen').style.display='none';
+}
+// Mobile nav responsiveness — registered once
 window.addEventListener('resize', () => { buildMobileNav(); });
-// Run on load too - catches Safari's initial render
 document.addEventListener('DOMContentLoaded', () => { setTimeout(buildMobileNav, 50); });
 window.addEventListener('load', () => { setTimeout(buildMobileNav, 100); setTimeout(buildMobileNav, 500); setTimeout(buildMobileNav, 1000); });
-document.addEventListener('DOMContentLoaded', () => { setTimeout(buildMobileNav, 50); });
-document.getElementById('auth-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
 
 // ── NAV ───────────────────────────────────────────────────────
 const NAV = [
