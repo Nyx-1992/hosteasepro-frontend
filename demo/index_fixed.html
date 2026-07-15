@@ -2714,10 +2714,12 @@ let INV_COMPANY = {
 };
 
 async function loadOrgSettings() {
-  if (!db) return;
+  if (!db) { toast('org_settings: no DB connection','error'); return; }
   try {
     const { data, error } = await db.from('org_settings').select('*').limit(1);
-    if (error || !data || !data.length) return; // silently keep hardcoded fallback
+    if (error) { toast('org_settings error: '+error.message,'error'); return; }
+    if (!data || !data.length) { toast('org_settings: table returned 0 rows','error'); return; }
+    toast('org_settings loaded: '+data[0].business_name,'success');
     const s = data[0];
     INV_COMPANY = {
       name: s.business_name || INV_COMPANY.name,
