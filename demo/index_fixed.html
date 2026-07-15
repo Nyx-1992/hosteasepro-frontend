@@ -3192,6 +3192,7 @@ async function generateInvoicePDF() {
   
 // Invoices tab renderer — called by renderTab
 function renderInvoicesTab() {
+  loadOrgSettings().then(() => invRender());
   const today = new Date().toISOString().split('T')[0];
   const due   = new Date(); due.setDate(due.getDate()+7);
   const dEl = document.getElementById('inv-date');
