@@ -3218,16 +3218,13 @@ const ROADMAP = [
   {k:'now-4',t:'PayFast — chase pending account verification',n:'Live merchant key needed; then add ID+KEY to Vercel env vars',c:'Website'},
   {k:'now-5',t:'Deploy domestic.html with Nina coordinator view (PIN 7021)',n:'Already built — upload to demo/ folder',c:'Domestic'}]},
  {id:'p0',lbl:'Phase 0 — Foundation',meta:'Weeks 1–6',col:'#D97706',tasks:[
-  {k:'p0-1',t:'Convert HEP repo to Next.js structure (pages/api support)',n:'Prerequisite for proper PDF download API',c:'Architecture'},
-  {k:'p0-2',t:'Port invoice PDF to API route (pdfkit) — replace print dialog',n:'pages/api/generate-invoice.ts once repo is Next.js',c:'HEP'},
-  {k:'p0-3',t:'Create invoices table in Supabase — save every generated doc',n:'Powers the Past documents history list',c:'HEP'},
+ {k:'p0-3',t:'Create invoices table in Supabase — save every generated doc',n:'Powers the Past documents history list',c:'HEP'},
   {k:'p0-4',t:'org_settings table — move INV_COMPANY out of client JS',n:'Banking, address, reg per org — multi-tenant ready',c:'HEP'},
   {k:'p0-5',t:'Supabase Auth migration — remove plaintext USERS array',n:'Also removes quick-fill login buttons',c:'Security'},
   {k:'p0-6',t:'Fix domestics RLS — remove anon_all policy',n:'Org-scoped policies before any second org exists',c:'Security'},
   {k:'p0-7',t:'Staging environment — separate Supabase project + preview branch',n:'Stop shipping straight to production',c:'DevOps'},
   {k:'p0-8',t:'Rebrand booking site Nestora → S&N Apartments',n:'Copy, meta tags, footer; keep Beyond the booking',c:'Website'},
   {k:'p0-9',t:'Add TV House to booking site (data/listings.ts)',n:'Dynamic route already supports it',c:'Website'},
- {k:'p0-10',t:'info@snapartments.co.za via Resend — DNS records in Xneelo',n:'Verification records then switch From address',c:'Website'},
   {k:'p0-11',t:'Replace free public CORS proxies for iCal sync',n:'5/6 feeds failed in one sync run — rate-limited/blocked; needs a dedicated proxy or own serverless relay',c:'Architecture'},
   {k:'p0-12',t:'Custom calendar widget for invoice date pickers',n:'Native browser date input cannot grey out booked dates — needs a real custom-built calendar component',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
