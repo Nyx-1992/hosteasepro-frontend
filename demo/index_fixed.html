@@ -2056,16 +2056,31 @@ function renderReportInventory(filter) {
     const noteHtml = r.notes ? '<div style="font-size:.78rem;color:var(--muted);font-style:italic;margin-bottom:8px">📌 "'+r.notes+'"</div>' : '';
     const createBtn = flags.length > 0
       ? '<button onclick="createTaskFromFlag(\'' + r.id + '\')" style="padding:4px 12px;border-radius:8px;background:#fef3c7;border:1px solid #fcd34d;font-size:.74rem;cursor:pointer;color:#92400e">⚡ Create task</button>' : '';
-    const rid = r.id;
+const rid = r.id;
     const actionsHtml = !r.reviewed
       ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"><button data-rid="'+rid+'" onclick="markReviewed(this.dataset.rid);renderReportInventory()" style="padding:4px 12px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);font-size:.74rem;cursor:pointer;color:var(--ink)">✓ Mark reviewed</button>'+createBtn+'</div>'
+      : '';
+    const canManage = currentUser && currentUser.role !== 'host';
+    const deleteBtn = canManage
+      ? '<button onclick="deleteInventoryReport(\''+rid+'\')" style="padding:4px 12px;border-radius:8px;background:#fee2e2;border:1px solid #fca5a5;font-size:.74rem;cursor:pointer;color:#dc2626;margin-top:8px">🗑 Delete</button>'
       : '';
     return '<div style="border:1.5px solid '+borderCol+';border-radius:12px;padding:14px;margin-bottom:8px">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px">'
       + '<div><strong style="font-size:.9rem">'+r.cleaner+'</strong><span style="color:var(--muted);font-size:.78rem"> · '+propN+' · '+fmtDate(r.clean_date)+'</span></div>'
       + '<div style="display:flex;gap:5px;align-items:center">'+statusBadge+reviewedBadge+'</div>'
-      + '</div>'+flagsHtml+noteHtml+actionsHtml+'</div>';
+      + '</div>'+flagsHtml+noteHtml+'<div style="display:flex;gap:6px;flex-wrap:wrap">'+actionsHtml+deleteBtn+'</div></div>';
   }).join('');
+}
+
+async function deleteInventoryReport(id) {
+  if (!confirm('Delete this inventory report? This cannot be undone.')) return;
+  if (db) {
+    const { error } = await db.from('inventory_reports').delete().eq('id', id);
+    if (error) { toast('Delete error: '+error.message,'error'); return; }
+  }
+  inventoryReports = inventoryReports.filter(r => r.id !== id);
+  toast('Report deleted','info');
+  renderReportInventory();
 }
 
 function renderReportInspections() {
