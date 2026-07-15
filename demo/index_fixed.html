@@ -3264,7 +3264,7 @@ const ROADMAP = [
   {k:'p0-7',t:'Staging environment — separate Supabase project + preview branch',n:'Stop shipping straight to production',c:'DevOps'},
   {k:'p0-8',t:'Rebrand booking site Nestora → S&N Apartments',n:'Copy, meta tags, footer; keep Beyond the booking',c:'Website'},
   {k:'p0-9',t:'Add TV House to booking site (data/listings.ts)',n:'Dynamic route already supports it',c:'Website'},
-  {k:'p0-11',t:'Replace free public CORS proxies for iCal sync',n:'5/6 feeds failed in one sync run — rate-limited/blocked; needs a dedicated proxy or own serverless relay',c:'Architecture'},
+ {k:'p0-11',t:'Replace free public CORS proxies for iCal sync',n:'DONE — own /api/ical-proxy relay live, 5/6 feeds now succeed. LekkeSlaap TV House feed blocks bots at robots.txt level — likely needs manual-entry fallback, not a proxy fix',c:'Architecture'},
   {k:'p0-12',t:'Custom calendar widget for invoice date pickers',n:'Native browser date input cannot grey out booked dates — needs a real custom-built calendar component',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'Load from properties table by org_id',c:'Architecture'},
@@ -3280,7 +3280,8 @@ const ROADMAP = [
   {k:'p2-4',t:'Validate 15% direct-booking adoption assumption',n:'Replace estimate with a real number',c:'Business'},
   {k:'p2-5',t:'External dev review — RLS + auth only',n:'Data isolation before first paid customer',c:'Security'},
  {k:'p2-6',t:'Go / no-go: partner uses HEP unprompted?',n:'If not, pause Phase 3 spend and iterate',c:'GTM'},
-  {k:'p2-7',t:'Multi-room / guesthouse support (nice to have)',n:'11-room guesthouse test case — needs room-level bookings & calendars, not just property-level. Scope only after confirming his actual booking model (whole-property vs per-room)',c:'Architecture'}]},
+  {k:'p2-7',t:'Multi-room / guesthouse support (nice to have)',n:'11-room guesthouse test case — needs room-level bookings & calendars, not just property-level. Scope only after confirming his actual booking model (whole-property vs per-room)',c:'Architecture'},
+  {k:'p2-8',t:'Fix service worker Cache errors (PATCH/POST unsupported)',n:'Console noise from domestic.html PWA caching API responses it shouldn\'t — queued for when we\'re next in that file',c:'HEP'}]},
  {id:'p3',lbl:'Phase 3 — Go-to-market',meta:'Weeks 28–48',col:'#7F77DD',tasks:[
   {k:'p3-1',t:'HEP marketing landing page + waitlist',n:'Value clear to a stranger in 10 seconds',c:'GTM'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
