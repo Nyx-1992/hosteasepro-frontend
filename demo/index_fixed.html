@@ -2704,7 +2704,7 @@ function invRenderDatePicker() {
   pop.innerHTML = html;
 }
 
-const INV_COMPANY = {
+let INV_COMPANY = {
   name:'S&N Apt Management',
   addr:'35 Athens Road, Tableview, 7441, Cape Town',
   reg:'2024/643198/07',
@@ -2712,6 +2712,30 @@ const INV_COMPANY = {
   email:'SN_Apt_Management@outlook.com',
   bank:{name:'SN Apt Management',bank:'Nedbank',acc:'1292867345',type:'Current Account',branch:'198765',ref_email:'SN_Apt_Management@outlook.com'}
 };
+
+async function loadOrgSettings() {
+  if (!db) return;
+  try {
+    const { data, error } = await db.from('org_settings').select('*').limit(1);
+    if (error || !data || !data.length) return; // silently keep hardcoded fallback
+    const s = data[0];
+    INV_COMPANY = {
+      name: s.business_name || INV_COMPANY.name,
+      addr: s.address || INV_COMPANY.addr,
+      reg:  s.reg_number || INV_COMPANY.reg,
+      tax:  s.tax_number || INV_COMPANY.tax,
+      email: s.email || INV_COMPANY.email,
+      bank: {
+        name: s.account_name || INV_COMPANY.bank.name,
+        bank: s.bank_name || INV_COMPANY.bank.bank,
+        acc: s.account_number || INV_COMPANY.bank.acc,
+        type: s.account_type || INV_COMPANY.bank.type,
+        branch: s.branch_code || INV_COMPANY.bank.branch,
+        ref_email: s.email || INV_COMPANY.bank.ref_email,
+      },
+    };
+  } catch(e) { console.warn('loadOrgSettings:', e); }
+}
 
 const CAT_LABELS = {
   cleaning:'Cleaning', maintenance:'Maintenance', nina_management:'Nina — Management',
