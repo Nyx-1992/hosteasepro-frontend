@@ -3299,7 +3299,8 @@ const ROADMAP = [
   {k:'p0-11',t:'Replace free public CORS proxies for iCal sync',n:'DONE — own /api/ical-proxy relay live, 5/6 feeds now succeed. LekkeSlaap TV House feed blocks bots at robots.txt level — likely needs manual-entry fallback, not a proxy fix',c:'Architecture'},
   {k:'p0-12',t:'Custom calendar widget for invoice date pickers',n:'Native browser date input cannot grey out booked dates — needs a real custom-built calendar component',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
-  {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'org_id done (getOrgId() reads from logged-in profile) — property/PROPS/UUID_MAP still hardcoded, needs its own session (properties table lacks cleaning_fee column)',c:'Architecture'},
+  {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE — org_id and PROPS/UUID_MAP both load from Supabase now, hardcoded values kept only as fallback',c:'Architecture'},
+  {k:'p1-1b',t:'Generalize Dashboard + sidebar dropdown beyond 2 properties',n:'Both are still hand-built for exactly Speranta/TV House — a 3rd property gets no dashboard column or dropdown entry yet',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
   {k:'p1-3',t:'Self-serve staff invitations (coordinator / cleaner)',n:'Invite link + Supabase Auth self-registration',c:'Architecture'},
   {k:'p1-4',t:'Per-org commission rates from org_settings',n:'Airbnb 17.8 / Booking 15 / LS 22.1 currently hardcoded',c:'Architecture'},
