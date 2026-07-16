@@ -3756,7 +3756,7 @@ function renderLaneView() {
       Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000;
   });
 
-  laneEl.innerHTML = Object.entries(PROPS).map(([pid, prop]) => {
+  laneEl.innerHTML = Object.entries(PROPS).filter(([pid]) => currentProp==='all' || currentProp===pid).map(([pid, prop]) => {
     const allProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false && !isOwnerStay(b) && b.status!=='blocked');
     const current = allProp.find(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b));
     const pending = allProp.filter(b=>b.status==='pending');
