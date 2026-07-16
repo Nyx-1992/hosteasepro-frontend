@@ -1437,7 +1437,8 @@ const CLIENT_BRAND = {
 
 // ── Database (Supabase) ──
 const SUPABASE_URL = 'https://rwsfbgtvqbkunbfvviiz.supabase.co';
-   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3c2ZiZ3R2cWJrdW5iZnZ2aWl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxODcxNzUsImV4cCI6MjA5OTc2MzE3NX0.f4RhNOm_Hz05dVgXr8y1gouq6eQ6AQJ6Ge72AiDHz9c';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3c2ZiZ3R2cWJrdW5iZnZ2aWl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxODcxNzUsImV4cCI6MjA5OTc2MzE3NX0.f4RhNOm_Hz05dVgXr8y1gouq6eQ6AQJ6Ge72AiDHz9c';
+
 // ── Properties ──
 const UUID_MAP = {
   'e9737638-d83a-4947-940a-8746789e4d9f': 'speranta',
@@ -1479,6 +1480,12 @@ const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 
 // ── STATE ─────────────────────────────────────────────────────
 let currentUser = null, currentProp = 'all', currentTab = 'dashboard';
+let CURRENT_ORG_ID = null;
+function getOrgId() {
+  // Falls back to S&N's org while multi-tenancy is still in progress —
+  // once org-creation flow (p1-2) exists, this fallback should be removed.
+  return CURRENT_ORG_ID || '5966bc67-5c2f-45ae-8519-9b7eaeee09f4';
+}
 restoreSession();
 let taskFilter = 'open', bookingFilter = 'upcoming';
 let inventoryReports = [];
@@ -1660,7 +1667,7 @@ async function fetchProfile(userId, email) {
     const { data, error } = await db.from('profiles').select('*').eq('id', userId).limit(1);
     if (error || !data || !data.length) return null;
     const p = data[0];
-    return { id: userId, email, name: p.name, role: p.role, initials: p.initials };
+    return { id: userId, email, name: p.name, role: p.role, initials: p.initials, org_id: p.org_id };
   } catch(e) { console.warn('fetchProfile:', e); return null; }
 }
 function applyRoleUI() {
@@ -1698,6 +1705,7 @@ async function doLogin() {
   }
 }
 function _afterLogin(user) {
+  CURRENT_ORG_ID = user.org_id || null;
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
   document.getElementById('user-avatar').textContent = user.initials;
@@ -2480,7 +2488,7 @@ async function syncICalFeeds(silent = false) {
           const { uid: _localUid, ...evtForInsert } = evt; // 'uid' is only for local matching, not a DB column
           const { error } = await db.from('bookings').insert([{
             ...evtForInsert,
-            org_id: '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+            org_id: getOrgId(),
             guest_first_name: evt.guest_name.split(' ')[0],
             guest_last_name:  evt.guest_name.split(' ').slice(1).join(' '),
             number_of_guests: 1,
@@ -3132,7 +3140,7 @@ async function saveInvoiceRecord(payload, total){
   try {
     const num = payload.number || 'SNQ-0000';
     await db.from('invoices').upsert({
-      org_id:      '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+      org_id:      getOrgId(),
       doc_type:    payload.docType,
       number:      num,
       reference:   payload.reference,
@@ -3256,14 +3264,14 @@ const ROADMAP = [
   {k:'now-4',t:'PayFast — chase pending account verification',n:'Live merchant key needed; then add ID+KEY to Vercel env vars',c:'Website'},
   {k:'now-5',t:'Deploy domestic.html with Nina coordinator view (PIN 7021)',n:'Already built — upload to demo/ folder',c:'Domestic'}]},
  {id:'p0',lbl:'Phase 0 — Foundation',meta:'Weeks 1–6',col:'#D97706',tasks:[
- {k:'p0-3',t:'Create invoices table in Supabase — save every generated doc',n:'Powers the Past documents history list',c:'HEP'},
+  {k:'p0-3',t:'Create invoices table in Supabase — save every generated doc',n:'Powers the Past documents history list',c:'HEP'},
   {k:'p0-4',t:'org_settings table — move INV_COMPANY out of client JS',n:'Banking, address, reg per org — multi-tenant ready',c:'HEP'},
   {k:'p0-5',t:'Supabase Auth migration — remove plaintext USERS array',n:'Auth + profiles table live; current_org_id() fixed (was a stub returning NULL)',c:'Security'},
   {k:'p0-6',t:'Fix domestics RLS — remove anon_all policy',n:'Done as part of the wider 8-table RLS sweep (bookings, tasks, domestics, kb_articles, finance, invoices, etc.)',c:'Security'},
-  {k:'p0-7',t:'Staging environment — separate Supabase project + preview branch',n:'Stop shipping straight to production',c:'DevOps'},
+  {k:'p0-7',t:'Staging environment — separate Supabase project + preview branch',n:'DONE — hep-staging project, staging git branch, auto-deploys via Vercel preview. Remember: bulk SQL table creation needs explicit GRANT statements (Supabase UI does this automatically, raw SQL doesn\'t)',c:'DevOps'},
   {k:'p0-8',t:'Rebrand booking site Nestora → S&N Apartments',n:'Copy, meta tags, footer; keep Beyond the booking',c:'Website'},
-  {k:'p0-9',t:'Add TV House to booking site (data/listings.ts)',n:'Dynamic route already supports it',c:'Website'},
- {k:'p0-11',t:'Replace free public CORS proxies for iCal sync',n:'DONE — own /api/ical-proxy relay live, 5/6 feeds now succeed. LekkeSlaap TV House feed blocks bots at robots.txt level — likely needs manual-entry fallback, not a proxy fix',c:'Architecture'},
+  {k:'p0-9',t:'Add TV House to booking site (data/listings.ts)',n:'DONE — real photos live on the site',c:'Website'},
+  {k:'p0-11',t:'Replace free public CORS proxies for iCal sync',n:'DONE — own /api/ical-proxy relay live, 5/6 feeds now succeed. LekkeSlaap TV House feed blocks bots at robots.txt level — likely needs manual-entry fallback, not a proxy fix',c:'Architecture'},
   {k:'p0-12',t:'Custom calendar widget for invoice date pickers',n:'Native browser date input cannot grey out booked dates — needs a real custom-built calendar component',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'Load from properties table by org_id',c:'Architecture'},
@@ -3271,14 +3279,14 @@ const ROADMAP = [
   {k:'p1-3',t:'Self-serve staff invitations (coordinator / cleaner)',n:'Invite link + Supabase Auth self-registration',c:'Architecture'},
   {k:'p1-4',t:'Per-org commission rates from org_settings',n:'Airbnb 17.8 / Booking 15 / LS 22.1 currently hardcoded',c:'Architecture'},
   {k:'p1-5',t:'Migrate S&N as first tenant — zero regression',n:'All existing data preserved and re-scoped',c:'Architecture'},
-  {k:'p1-6',t:'Confirm VAT status with accountant',n:'Tax ref confirmed; VAT number TBC',c:'Legal'}]},
+  {k:'p1-6',t:'Confirm VAT status with accountant',n:'DONE — not VAT registered, not planning to register',c:'Legal'}]},
  {id:'p2',lbl:'Phase 2 — Design partner',meta:'Weeks 16–28',col:'#1D9E75',tasks:[
   {k:'p2-1',t:'Recruit 1–2 Cape Town design partners',n:'Free access for structured feedback, 1+ month active use',c:'GTM'},
   {k:'p2-2',t:'Stripe subscription billing — one tier',n:'First mechanism to actually charge a customer',c:'Business'},
   {k:'p2-3',t:'Direct-booking tracking for the 5% fee',n:'Which bookings came via the direct page',c:'Business'},
   {k:'p2-4',t:'Validate 15% direct-booking adoption assumption',n:'Replace estimate with a real number',c:'Business'},
   {k:'p2-5',t:'External dev review — RLS + auth only',n:'Data isolation before first paid customer',c:'Security'},
- {k:'p2-6',t:'Go / no-go: partner uses HEP unprompted?',n:'If not, pause Phase 3 spend and iterate',c:'GTM'},
+  {k:'p2-6',t:'Go / no-go: partner uses HEP unprompted?',n:'If not, pause Phase 3 spend and iterate',c:'GTM'},
   {k:'p2-7',t:'Multi-room / guesthouse support (nice to have)',n:'11-room guesthouse test case — needs room-level bookings & calendars, not just property-level. Scope only after confirming his actual booking model (whole-property vs per-room)',c:'Architecture'},
   {k:'p2-8',t:'Fix service worker Cache errors (PATCH/POST unsupported)',n:'Console noise from domestic.html PWA caching API responses it shouldn\'t — queued for when we\'re next in that file',c:'HEP'}]},
  {id:'p3',lbl:'Phase 3 — Go-to-market',meta:'Weeks 28–48',col:'#7F77DD',tasks:[
@@ -4117,7 +4125,7 @@ async function saveBooking() {
   };
   const propUuid = PROP_UUIDS[pid] || pid;
   const row = {
-    org_id:       '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+    org_id:       getOrgId(),
     property_id:  propUuid,
     guest_name:guest, guest_first_name:guest.split(' ')[0], guest_last_name:guest.split(' ').slice(1).join(' '),
     platform:document.getElementById('b-platform').value,
@@ -5550,7 +5558,7 @@ async function toggleNinaTask(bookingId, taskKey) {
     } else {
       await db.from('booking_checklists').insert([{
         booking_id:  bookingId,
-        org_id:      '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+        org_id:      getOrgId(),
         property_id: propUuid,
         ...update,
       }]);
@@ -5602,7 +5610,7 @@ async function saveTask() {
     due_at:      document.getElementById('t-due').value || null,
     task_date:   document.getElementById('t-due').value || null,
     property_id: propUuidModal,
-    org_id:      '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+    org_id:      getOrgId(),
   }; window._kanbanCol=null;
   const assigned = document.getElementById('t-assign').value;
   if(db){
@@ -5857,7 +5865,7 @@ async function saveKB() {
   const title=document.getElementById('kb-title').value.trim(); const content=document.getElementById('kb-content-input').value.trim();
   if(!title||!content){toast('Title and content required','error');return;}
   const tags=document.getElementById('kb-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  const row={category:document.getElementById('kb-cat').value,title,content,tags,org_id:'5966bc67-5c2f-45ae-8519-9b7eaeee09f4'};
+  const row={category:document.getElementById('kb-cat').value,title,content,tags,org_id:getOrgId()};
   if(db){const{data,error}=await db.from('kb_articles').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}kbArticles.unshift(data);}
   else{kbArticles.unshift({...row,id:'k'+Date.now()});}
   toast('Article published ✓','success');closeModal('kb-modal');renderKB();
@@ -6702,7 +6710,7 @@ async function saveTaskDrawer() {
       status:        toDbStatus(newStatus),
       kanban_status: newStatus,
       type:          toDbType('project'),
-      org_id:        '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+      org_id:        getOrgId(),
       property_id:   propUuid,
       due_at:        newDue || null,
       task_date:     newDue || null,
@@ -6756,7 +6764,7 @@ async function createTaskFromFlag(reportId) {
   const row = {
     title, description:notes, priority:'high', status:'pending',
     kanban_status:'todo', type:'other',
-    org_id:'5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+    org_id:getOrgId(),
     property_id:propUuid,
   };
   if(db) {
