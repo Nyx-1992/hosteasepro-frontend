@@ -3286,9 +3286,6 @@ const ROADMAP = [
   {k:'p0-12',t:'Custom calendar widget for invoice date pickers',n:'Native browser date input cannot grey out booked dates — needs a real custom-built calendar component',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'org_id done (getOrgId() reads from logged-in profile) — property/PROPS/UUID_MAP still hardcoded, needs its own session (properties table lacks cleaning_fee column)',c:'Architecture'},
-   {k:'p1-1b',t:'Generalize Dashboard + sidebar dropdown beyond 2 properties',n:'DONE — Dashboard and all 3 switcher dropdowns now build from live properties table',c:'Architecture'},
-  {k:'p1-1c',t:'Bookings lane view should respect the property dropdown filter',n:'Currently always shows all properties side-by-side regardless of sidebar selection',c:'HEP'},
-  {k:'p1-1d',t:'Multi-select property filter (view 2+ of N at once)',n:'Idea from testing p1-1b — bigger UI change: checkboxes instead of single-select, filter logic rework across tabs',c:'HEP'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
   {k:'p1-3',t:'Self-serve staff invitations (coordinator / cleaner)',n:'Invite link + Supabase Auth self-registration',c:'Architecture'},
   {k:'p1-4',t:'Per-org commission rates from org_settings',n:'Airbnb 17.8 / Booking 15 / LS 22.1 currently hardcoded',c:'Architecture'},
@@ -3759,7 +3756,7 @@ function renderLaneView() {
       Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000;
   });
 
-  laneEl.innerHTML = Object.entries(PROPS).map(([pid, prop]) => {
+  laneEl.innerHTML = Object.entries(PROPS).filter(([pid]) => currentProp==='all' || currentProp===pid).map(([pid, prop]) => {
     const allProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false && !isOwnerStay(b) && b.status!=='blocked');
     const current = allProp.find(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b));
     const pending = allProp.filter(b=>b.status==='pending');
