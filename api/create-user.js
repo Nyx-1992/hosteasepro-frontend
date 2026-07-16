@@ -47,8 +47,13 @@ export default async function handler(req, res) {
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
     );
     const profileData = await profileRes.json();
-    if (!profileData.length || profileData[0].role !== 'owner') {
-      return res.status(403).json({ error: 'Only an owner can create new users' });
+   if (!Array.isArray(profileData) || !profileData.length || profileData[0].role !== 'owner') {
+      return res.status(403).json({
+        error: 'Only an owner can create new users',
+        callerId: caller.id,
+        profileStatus: profileRes.status,
+        profileData: profileData
+      });
     }
 
     // 3. Validate input
