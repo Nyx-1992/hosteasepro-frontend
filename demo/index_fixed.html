@@ -1480,6 +1480,12 @@ const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 
 // ── STATE ─────────────────────────────────────────────────────
 let currentUser = null, currentProp = 'all', currentTab = 'dashboard';
+let CURRENT_ORG_ID = null;
+function getOrgId() {
+  // Falls back to S&N's org while multi-tenancy is still in progress —
+  // once org-creation flow (p1-2) exists, this fallback should be removed.
+  return CURRENT_ORG_ID || '5966bc67-5c2f-45ae-8519-9b7eaeee09f4';
+}
 restoreSession();
 let taskFilter = 'open', bookingFilter = 'upcoming';
 let inventoryReports = [];
@@ -1661,7 +1667,7 @@ async function fetchProfile(userId, email) {
     const { data, error } = await db.from('profiles').select('*').eq('id', userId).limit(1);
     if (error || !data || !data.length) return null;
     const p = data[0];
-    return { id: userId, email, name: p.name, role: p.role, initials: p.initials };
+    return { id: userId, email, name: p.name, role: p.role, initials: p.initials, org_id: p.org_id };
   } catch(e) { console.warn('fetchProfile:', e); return null; }
 }
 function applyRoleUI() {
@@ -1699,6 +1705,7 @@ async function doLogin() {
   }
 }
 function _afterLogin(user) {
+  CURRENT_ORG_ID = user.org_id || null;
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
   document.getElementById('user-avatar').textContent = user.initials;
@@ -2481,7 +2488,7 @@ async function syncICalFeeds(silent = false) {
           const { uid: _localUid, ...evtForInsert } = evt; // 'uid' is only for local matching, not a DB column
           const { error } = await db.from('bookings').insert([{
             ...evtForInsert,
-            org_id: '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+            org_id: getOrgId(),
             guest_first_name: evt.guest_name.split(' ')[0],
             guest_last_name:  evt.guest_name.split(' ').slice(1).join(' '),
             number_of_guests: 1,
@@ -3133,7 +3140,7 @@ async function saveInvoiceRecord(payload, total){
   try {
     const num = payload.number || 'SNQ-0000';
     await db.from('invoices').upsert({
-      org_id:      '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+      org_id:      getOrgId(),
       doc_type:    payload.docType,
       number:      num,
       reference:   payload.reference,
@@ -4118,7 +4125,7 @@ async function saveBooking() {
   };
   const propUuid = PROP_UUIDS[pid] || pid;
   const row = {
-    org_id:       '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+    org_id:       getOrgId(),
     property_id:  propUuid,
     guest_name:guest, guest_first_name:guest.split(' ')[0], guest_last_name:guest.split(' ').slice(1).join(' '),
     platform:document.getElementById('b-platform').value,
@@ -5551,7 +5558,7 @@ async function toggleNinaTask(bookingId, taskKey) {
     } else {
       await db.from('booking_checklists').insert([{
         booking_id:  bookingId,
-        org_id:      '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+        org_id:      getOrgId(),
         property_id: propUuid,
         ...update,
       }]);
@@ -5603,7 +5610,7 @@ async function saveTask() {
     due_at:      document.getElementById('t-due').value || null,
     task_date:   document.getElementById('t-due').value || null,
     property_id: propUuidModal,
-    org_id:      '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+    org_id:      getOrgId(),
   }; window._kanbanCol=null;
   const assigned = document.getElementById('t-assign').value;
   if(db){
@@ -5858,7 +5865,7 @@ async function saveKB() {
   const title=document.getElementById('kb-title').value.trim(); const content=document.getElementById('kb-content-input').value.trim();
   if(!title||!content){toast('Title and content required','error');return;}
   const tags=document.getElementById('kb-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  const row={category:document.getElementById('kb-cat').value,title,content,tags,org_id:'5966bc67-5c2f-45ae-8519-9b7eaeee09f4'};
+  const row={category:document.getElementById('kb-cat').value,title,content,tags,org_id:getOrgId()};
   if(db){const{data,error}=await db.from('kb_articles').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}kbArticles.unshift(data);}
   else{kbArticles.unshift({...row,id:'k'+Date.now()});}
   toast('Article published ✓','success');closeModal('kb-modal');renderKB();
@@ -6703,7 +6710,7 @@ async function saveTaskDrawer() {
       status:        toDbStatus(newStatus),
       kanban_status: newStatus,
       type:          toDbType('project'),
-      org_id:        '5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+      org_id:        getOrgId(),
       property_id:   propUuid,
       due_at:        newDue || null,
       task_date:     newDue || null,
@@ -6757,7 +6764,7 @@ async function createTaskFromFlag(reportId) {
   const row = {
     title, description:notes, priority:'high', status:'pending',
     kanban_status:'todo', type:'other',
-    org_id:'5966bc67-5c2f-45ae-8519-9b7eaeee09f4',
+    org_id:getOrgId(),
     property_id:propUuid,
   };
   if(db) {
