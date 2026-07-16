@@ -3,7 +3,7 @@
 // used here is NOT the anon key — it must be set as a Vercel environment variable,
 // never pasted into index_fixed.html.
 
-const SUPABASE_URL = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
+const SUPABASE_URL = 'https://rwsfbgtvqbkunbfvviiz.supabase.co';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
