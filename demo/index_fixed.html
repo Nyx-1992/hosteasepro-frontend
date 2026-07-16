@@ -1439,15 +1439,39 @@ const CLIENT_BRAND = {
 const SUPABASE_URL = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRreXpiemxzaHJ4ZHdldHlrbWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMzkyMTUsImV4cCI6MjA3ODYxNTIxNX0.d4K89mdZVzG4Rv4H44MYnhV4VlW3V1vSgbYZcjcPMQw';
 
-// ── Properties ──
-const UUID_MAP = {
+// ── Properties (hardcoded values below are the fallback if the DB fetch fails) ──
+let UUID_MAP = {
   'e9737638-d83a-4947-940a-8746789e4d9f': 'speranta',
   '83b2a84a-5451-4be5-a84f-2efc0d2602d5': 'tvhouse',
 };
-const PROPS = {
+let PROPS = {
   speranta: {name:'Speranta Flat', short:'Speranta', address:'35 Athens Road, Blouberg',    uuid:'e9737638-d83a-4947-940a-8746789e4d9f', cleaningFee:400},
   tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5', cleaningFee:550},
 };
+
+async function loadProperties() {
+  if (!db) return;
+  try {
+    const { data, error } = await db.from('properties').select('*').eq('org_id', getOrgId());
+    if (error || !data || !data.length) return; // keep hardcoded fallback above
+    const newProps = {}, newUuidMap = {};
+    data.forEach(p => {
+      const n = (p.name||'').toLowerCase();
+      const key = n.includes('speranta') ? 'speranta' : n.includes('tv') ? 'tvhouse' : (p.code||p.id).toLowerCase();
+      const old = PROPS[key] || {};
+      newProps[key] = {
+        name: p.name || old.name,
+        short: p.name || old.short,
+        address: [p.address_line1, p.city].filter(Boolean).join(', ') || old.address || '',
+        uuid: p.id,
+        cleaningFee: (p.cleaning_fee ?? old.cleaningFee) || 0,
+      };
+      newUuidMap[p.id] = key;
+    });
+    PROPS = newProps;
+    UUID_MAP = newUuidMap;
+  } catch(e) { console.warn('loadProperties:', e); }
+}
 
 // ── Domestic staff ──
 const CLEANERS = [
@@ -1696,7 +1720,7 @@ async function doLogin() {
       return;
     }
     currentUser = profile;
-    _afterLogin(profile);
+    await _afterLogin(profile);
   } catch(e) {
     errEl.textContent = 'Something went wrong signing in. Please try again.'; errEl.style.display = 'block';
     console.warn('doLogin:', e);
@@ -1704,8 +1728,9 @@ async function doLogin() {
     if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
   }
 }
-function _afterLogin(user) {
+async function _afterLogin(user) {
   CURRENT_ORG_ID = user.org_id || null;
+  await loadProperties();
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
   document.getElementById('user-avatar').textContent = user.initials;
@@ -1722,7 +1747,7 @@ async function restoreSession() {
     const profile = await fetchProfile(session.user.id, session.user.email);
     if (!profile) return;
     currentUser = profile;
-    _afterLogin(profile);
+    await _afterLogin(profile);
   } catch(e) { console.warn('restoreSession:', e); }
 }
 async function doLogout() {
