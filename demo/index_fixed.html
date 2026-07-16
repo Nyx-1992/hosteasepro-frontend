@@ -390,40 +390,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div class="stat-grid" id="dash-stats" style="margin-bottom:18px"></div>
 
         <!-- Next arrivals: Speranta + TV House side by side -->
-        <div class="grid-2" style="margin-bottom:18px">
-          <div class="card" style="padding:16px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-              <span style="width:10px;height:10px;border-radius:50%;background:#FF385C;display:inline-block"></span>
-              <div class="card-title" style="margin:0;font-size:.88rem">Speranța Flat — Next Arrivals</div>
-            </div>
-            <div id="dash-arrivals-speranta"></div>
-          </div>
-          <div class="card" style="padding:16px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-              <span style="width:10px;height:10px;border-radius:50%;background:#4ABBA5;display:inline-block"></span>
-              <div class="card-title" style="margin:0;font-size:.88rem">TV House — Next Arrivals</div>
-            </div>
-            <div id="dash-arrivals-tvhouse"></div>
-          </div>
-        </div>
+        <div class="grid-2" style="margin-bottom:18px" id="dash-arrivals-grid"></div>
 
-        <!-- Mini calendars: Speranta + TV House + Urgent Tasks -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 320px;gap:18px;align-items:start;width:100%;box-sizing:border-box" id="dash-lower-grid">
-          <div class="card" style="padding:14px">
-            <div class="card-title" style="font-size:.84rem;margin-bottom:10px">📅 Speranța Calendar</div>
-            <div id="dash-cal-speranta"></div>
-          </div>
-          <div class="card" style="padding:14px">
-            <div class="card-title" style="font-size:.84rem;margin-bottom:10px">📅 TV House Calendar</div>
-            <div id="dash-cal-tvhouse"></div>
-          </div>
-          <div class="card" style="padding:14px;background:var(--ink);color:#fff">
-            <div style="font-family:'DM Serif Display',serif;font-size:.9rem;margin-bottom:12px;color:#fff;display:flex;align-items:center;gap:6px">
-              <span style="animation:pulse 2s infinite">🔔</span> Urgent Actions
-            </div>
-            <div id="dash-urgent"></div>
-          </div>
-        </div>
+        <!-- Mini calendars: one per property + Urgent Tasks — built dynamically in JS -->
+        <div style="display:grid;gap:18px;align-items:start;width:100%;box-sizing:border-box" id="dash-lower-grid"></div>
       </div>
 
       <!-- BOOKINGS -->
@@ -1357,7 +1327,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
 <div class="mob-drawer" id="mob-drawer">
   <div class="s-logo" style="padding:24px 20px 16px;flex-shrink:0"><span class="s-logo-text">HostEase Pro</span><small>S&N Apt Management</small></div>
   <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0">
-    <select onchange="switchProperty(this.value);closeDrawer()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none">
+    <select id="mob-prop-select" onchange="switchProperty(this.value);closeDrawer()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none">
       <option value="all">All Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option>
     </select>
   </div>
@@ -1378,7 +1348,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
       <small>Property Management</small>
     </div>
     <div class="s-prop" style="padding:10px 14px">
-      <select onchange="switchProperty(this.value);toggleMobSidebar()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none">
+      <select id="mob-sidebar-prop-select" onchange="switchProperty(this.value);toggleMobSidebar()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none">
         <option value="all">All Properties</option>
         <option value="speranta">Speranta Flat</option>
         <option value="tvhouse">TV House</option>
@@ -1470,7 +1440,23 @@ async function loadProperties() {
     });
     PROPS = newProps;
     UUID_MAP = newUuidMap;
+    refreshPropSelects();
   } catch(e) { console.warn('loadProperties:', e); }
+}
+
+function propSelectOptionsHtml() {
+  let html = '<option value="all">All Properties</option>';
+  Object.keys(PROPS).forEach(key => { html += `<option value="${key}">${PROPS[key].name}</option>`; });
+  return html;
+}
+function refreshPropSelects() {
+  ['prop-select', 'mob-prop-select', 'mob-sidebar-prop-select'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = propSelectOptionsHtml();
+    el.value = PROPS[cur] ? cur : 'all';
+  });
 }
 
 // ── Domestic staff ──
@@ -3299,11 +3285,10 @@ const ROADMAP = [
   {k:'p0-11',t:'Replace free public CORS proxies for iCal sync',n:'DONE — own /api/ical-proxy relay live, 5/6 feeds now succeed. LekkeSlaap TV House feed blocks bots at robots.txt level — likely needs manual-entry fallback, not a proxy fix',c:'Architecture'},
   {k:'p0-12',t:'Custom calendar widget for invoice date pickers',n:'Native browser date input cannot grey out booked dates — needs a real custom-built calendar component',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
-  {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE — org_id and PROPS/UUID_MAP both load from Supabase now, hardcoded values kept only as fallback',c:'Architecture'},
-  {k:'p1-1b',t:'Generalize Dashboard + sidebar dropdown beyond 2 properties',n:'Both are still hand-built for exactly Speranta/TV House — a 3rd property gets no dashboard column or dropdown entry yet',c:'Architecture'},
+  {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'org_id done (getOrgId() reads from logged-in profile) — property/PROPS/UUID_MAP still hardcoded, needs its own session (properties table lacks cleaning_fee column)',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
   {k:'p1-3',t:'Self-serve staff invitations (coordinator / cleaner)',n:'Invite link + Supabase Auth self-registration',c:'Architecture'},
-  {k:'p1-4',t:'Add commission-adjusted net revenue to Reports',n:'Not built yet — Reports currently show gross revenue only, no platform take-rate applied anywhere. Real feature to design, not a relocation',c:'Architecture'},
+  {k:'p1-4',t:'Per-org commission rates from org_settings',n:'Airbnb 17.8 / Booking 15 / LS 22.1 currently hardcoded',c:'Architecture'},
   {k:'p1-5',t:'Migrate S&N as first tenant — zero regression',n:'All existing data preserved and re-scoped',c:'Architecture'},
   {k:'p1-6',t:'Confirm VAT status with accountant',n:'DONE — not VAT registered, not planning to register',c:'Legal'}]},
  {id:'p2',lbl:'Phase 2 — Design partner',meta:'Weeks 16–28',col:'#1D9E75',tasks:[
@@ -3406,8 +3391,41 @@ function filteredDomestics() {
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
+const DASH_PROP_COLORS = ['#FF385C','#4ABBA5','#f59e0b','#8b5cf6','#0ea5e9','#ec4899'];
+function renderDashboardPropertyColumns() {
+  const keys = Object.keys(PROPS);
+  const arrivalsGrid = document.getElementById('dash-arrivals-grid');
+  const lowerGrid = document.getElementById('dash-lower-grid');
+  if (!arrivalsGrid || !lowerGrid) return;
+
+  arrivalsGrid.innerHTML = keys.map((key,i) => `
+    <div class="card" style="padding:16px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+        <span style="width:10px;height:10px;border-radius:50%;background:${DASH_PROP_COLORS[i%DASH_PROP_COLORS.length]};display:inline-block"></span>
+        <div class="card-title" style="margin:0;font-size:.88rem">${PROPS[key].name} — Next Arrivals</div>
+      </div>
+      <div id="dash-arrivals-${key}"></div>
+    </div>`).join('');
+
+  const calCards = keys.map(key => `
+    <div class="card" style="padding:14px">
+      <div class="card-title" style="font-size:.84rem;margin-bottom:10px">📅 ${PROPS[key].name} Calendar</div>
+      <div id="dash-cal-${key}"></div>
+    </div>`).join('');
+
+  lowerGrid.style.gridTemplateColumns = keys.map(()=>'1fr').join(' ') + ' 320px';
+  lowerGrid.innerHTML = calCards + `
+    <div class="card" style="padding:14px;background:var(--ink);color:#fff">
+      <div style="font-family:'DM Serif Display',serif;font-size:.9rem;margin-bottom:12px;color:#fff;display:flex;align-items:center;gap:6px">
+        <span style="animation:pulse 2s infinite">🔔</span> Urgent Actions
+      </div>
+      <div id="dash-urgent"></div>
+    </div>`;
+}
+
 function renderDashboard() {
   if (!currentUser) return; // Guard: don't run before login
+  renderDashboardPropertyColumns();
   // Re-filter from live bookings array (handles deleted bookings)
   const today = todaySAST();
   const now   = new Date();
@@ -3489,8 +3507,7 @@ function renderDashboard() {
     }).join('');
     el.innerHTML = out;
   }
-  renderArrivals('speranta','dash-arrivals-speranta');
-  renderArrivals('tvhouse',  'dash-arrivals-tvhouse');
+  Object.keys(PROPS).forEach(key => renderArrivals(key, 'dash-arrivals-'+key));
 
   // ── Mini calendars ──
   function renderMiniCal(pid, elId) {
@@ -3543,8 +3560,7 @@ function renderDashboard() {
     grid += '</div>';
     el.innerHTML = grid;
   }
-  renderMiniCal('speranta','dash-cal-speranta');
-  renderMiniCal('tvhouse', 'dash-cal-tvhouse');
+  Object.keys(PROPS).forEach(key => renderMiniCal(key, 'dash-cal-'+key));
 
   // ── Urgent actions ──
   const urgentEl = document.getElementById('dash-urgent');
