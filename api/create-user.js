@@ -26,7 +26,19 @@ export default async function handler(req, res) {
     const callerRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${callerToken}` },
     });
-    if (!callerRes.ok) return res.status(401).json({ error: 'Invalid session' });
+    if (!callerRes.ok) {
+      let keyInfo = 'not-a-jwt';
+      try {
+        const p = JSON.parse(Buffer.from(SERVICE_ROLE_KEY.split('.')[1], 'base64').toString());
+        keyInfo = p.role + ' / ' + p.ref;
+      } catch (e) {}
+      return res.status(401).json({
+        error: 'Invalid session',
+        supabaseStatus: callerRes.status,
+        urlUsed: SUPABASE_URL,
+        keyIs: keyInfo
+      });
+    }
     const caller = await callerRes.json();
 
     // 2. Check the caller is actually an 'owner' — only owners can create new orgs/users
