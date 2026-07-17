@@ -1357,7 +1357,7 @@ async function loadData() {
     const propIds = Object.keys(PROPS);
     myBookingCheckouts = (bookRes.data||[])
       .filter(b=>propIds.includes(b.property_id))
-      .map(b=>({date:b.check_out_date, prop:PROPS[b.property_id]?.short||'—', guest:b.guest_name||'Guest'}));
+      .map(b=>({date:b.check_out_date, prop:PROPS[b.property_id]?.short||'—', guest:(b.guest_name||'Guest').trim().split(/\s+/)[0]}));
   } catch(e){ console.warn('Load:',e); }
 }
 
@@ -1454,7 +1454,7 @@ function renderCleans() {
   const el=document.getElementById('cleans-list');
   if(!myCleans.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px;color:var(--muted)">No cleans found</div>';return;}
   const filtered=cleansFilter==='upcoming'
-    ?[...myCleans].filter(c=>c.status!=='completed').sort((a,b)=>a.date.localeCompare(b.date))
+    ?[...myCleans].filter(c=>c.date>=td&&c.status!=='completed').sort((a,b)=>a.date.localeCompare(b.date))
     :[...myCleans].filter(c=>c.status==='completed').sort((a,b)=>b.date.localeCompare(a.date));
   if(!filtered.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px;color:var(--muted)">No '+cleansFilter+' cleans</div>';return;}
   el.innerHTML=filtered.map(c=>{
