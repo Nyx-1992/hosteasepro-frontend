@@ -2522,6 +2522,9 @@ async function syncICalFeeds(silent = false) {
       try {
         const feedUids = new Set(events.map(ev => ev.uid).filter(Boolean));
         const todayStr = new Date().toISOString().slice(0,10);
+        // Horizon guard: only judge rows within the window this feed actually covers.
+        // A block beyond the feed's last event isn't "removed" — it's out of range.
+        const maxFeedDate = events.reduce((m,ev)=>(ev.check_out_date>m?ev.check_out_date:m),'');
         const { data: staleBlocks } = await db.from('bookings')
           .select('id, source_uid, check_in_date, check_out_date')
           .eq('property_id', feed.property_id)
@@ -2531,8 +2534,16 @@ async function syncICalFeeds(silent = false) {
           .not('source_uid', 'is', null)
           .gte('check_out_date', todayStr);
         for (const row of (staleBlocks || [])) {
-          if (!feedUids.has(row.source_uid)) {
-            await db.from('bookings').update({ is_active: false, cancelled_at: new Date().toISOString() }).eq('id', row.id);
+          if (feedUids.has(row.source_uid)) continue;
+          if (maxFeedDate && row.check_out_date > maxFeedDate) continue; // beyond feed horizon
+          // .select() forces PostgREST to return the updated row — an RLS-blocked
+          // update comes back empty instead of silently "succeeding".
+          const { data: rel, error: relErr } = await db.from('bookings')
+            .update({ is_active: false, cancelled_at: new Date().toISOString() })
+            .eq('id', row.id).select('id');
+          if (relErr || !rel || !rel.length) {
+            console.warn('[iCal] Release FAILED (RLS?):', feed.property_name, row.check_in_date, '→', row.check_out_date, relErr?.message||'0 rows updated');
+          } else {
             totalReleased++;
             console.log('[iCal] Released stale block:', feed.property_name, row.check_in_date, '→', row.check_out_date);
           }
