@@ -1361,6 +1361,16 @@ async function loadData() {
     myBookingCheckouts = (bookRes.data||[])
       .filter(b=>propIds.includes(b.property_id))
       .map(b=>({date:b.check_out_date, pid:b.property_id, prop:PROPS[b.property_id]?.short||'—', guest:(b.guest_name||'Guest').trim().split(/\s+/)[0]}));
+    // Collapse to one card per property per day — multiple platforms can report
+    // the same physical checkout (e.g. a block mirrored on BDC + Airbnb).
+    // Prefer a real guest name over a blocked placeholder.
+    const isBlockedGuest=g=>/🔒|^blocked$/i.test((g||'').trim());
+    myBookingCheckouts.sort((a,b)=>a.date.localeCompare(b.date)||((isBlockedGuest(a.guest)?1:0)-(isBlockedGuest(b.guest)?1:0)));
+    const seenCo={};
+    myBookingCheckouts=myBookingCheckouts.filter(b=>{
+      const k=propKeyFromId(b.pid)+'|'+b.date;
+      if(seenCo[k]) return false; seenCo[k]=true; return true;
+    });
   } catch(e){ console.warn('Load:',e); }
 }
 
