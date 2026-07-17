@@ -3,7 +3,9 @@
 // used here is NOT the anon key — it must be set as a Vercel environment variable,
 // never pasted into index_fixed.html.
 
-const SUPABASE_URL = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
+// Environment-driven: Vercel env var SUPABASE_URL (Production = prod project,
+// Preview = hep-staging). Same file on every branch.
+const SUPABASE_URL = process.env.SUPABASE_URL;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -11,8 +13,8 @@ export default async function handler(req, res) {
   }
 
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!SERVICE_ROLE_KEY) {
-    return res.status(500).json({ error: 'Server not configured — missing service role key' });
+  if (!SERVICE_ROLE_KEY || !SUPABASE_URL) {
+    return res.status(500).json({ error: 'Server not configured — missing SUPABASE_URL or service role key' });
   }
 
   const authHeader = req.headers.authorization || '';
