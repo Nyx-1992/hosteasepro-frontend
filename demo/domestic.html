@@ -1349,7 +1349,7 @@ async function loadData() {
     const [cleanRes, bookRes, allRes] = await Promise.all([
       db.from('domestics').select('*').eq('cleaner',currentCleaner.name).order('date',{ascending:true}),
       db.from('bookings').select('check_out_date,property_id,guest_name,nights').eq('is_active',true).gte('check_out_date',tod()).order('check_out_date',{ascending:true}).limit(60),
-      db.from('domestics').select('date,cleaner,status').gte('date',tod()).neq('status','cancelled'),
+      db.from('domestics').select('date,cleaner,status,property_id').gte('date',tod()).neq('status','cancelled'),
     ]);
     myCleans = cleanRes.data||[];
     allUpcomingCleans = allRes.data||[];
@@ -1360,7 +1360,7 @@ async function loadData() {
     const propIds = Object.keys(PROPS);
     myBookingCheckouts = (bookRes.data||[])
       .filter(b=>propIds.includes(b.property_id))
-      .map(b=>({date:b.check_out_date, prop:PROPS[b.property_id]?.short||'—', guest:(b.guest_name||'Guest').trim().split(/\s+/)[0]}));
+      .map(b=>({date:b.check_out_date, pid:b.property_id, prop:PROPS[b.property_id]?.short||'—', guest:(b.guest_name||'Guest').trim().split(/\s+/)[0]}));
   } catch(e){ console.warn('Load:',e); }
 }
 
@@ -1435,12 +1435,16 @@ function renderCheckoutsNeeded() {
   if(!el) return;
   const upcoming=myBookingCheckouts.filter(b=>b.date>=td).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,5);
   if(!upcoming.length){el.innerHTML='';return;}
-  const scheduledDates=new Set(allUpcomingCleans.map(c=>c.date));
+  // Match like Nina's view: same property, clean within ±2 days of checkout
+  const findCleanFor=(b)=>allUpcomingCleans.find(c=>{
+    if(propKeyFromId(c.property_id)!==propKeyFromId(b.pid)) return false;
+    return Math.abs(new Date(c.date+'T00:00:00')-new Date(b.date+'T00:00:00'))<=2*86400000;
+  });
   el.innerHTML='<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">🧹 Upcoming Checkouts</div>'
     +upcoming.map(b=>{
-      const hasClean=scheduledDates.has(b.date);
+      const cleanForDate=findCleanFor(b);
+      const hasClean=!!cleanForDate;
       const[y,m,d]=b.date.split('-');
-      const cleanForDate=allUpcomingCleans.find(c=>c.date===b.date);
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--card);border:1px solid '+(hasClean?'rgba(45,212,160,.3)':'rgba(193,127,60,.3)')+';border-radius:10px;margin-bottom:6px">'
         +'<div style="display:flex;align-items:center;gap:10px">'
         +'<div style="text-align:center;min-width:32px"><div style="font-family:Syne,sans-serif;font-size:1.1rem;font-weight:800">'+parseInt(d)+'</div><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase">'+MONTHS_S[parseInt(m)-1]+'</div></div>'
