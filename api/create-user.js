@@ -26,19 +26,7 @@ export default async function handler(req, res) {
     const callerRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
       headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${callerToken}` },
     });
-    if (!callerRes.ok) {
-      let keyInfo = 'not-a-jwt';
-      try {
-        const p = JSON.parse(Buffer.from(SERVICE_ROLE_KEY.split('.')[1], 'base64').toString());
-        keyInfo = p.role + ' / ' + p.ref;
-      } catch (e) {}
-      return res.status(401).json({
-        error: 'Invalid session',
-        supabaseStatus: callerRes.status,
-        urlUsed: SUPABASE_URL,
-        keyIs: keyInfo
-      });
-    }
+    if (!callerRes.ok) return res.status(401).json({ error: 'Invalid session' });
     const caller = await callerRes.json();
 
     // 2. Check the caller is actually an 'owner' — only owners can create new orgs/users
@@ -47,13 +35,8 @@ export default async function handler(req, res) {
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
     );
     const profileData = await profileRes.json();
-   if (!Array.isArray(profileData) || !profileData.length || profileData[0].role !== 'owner') {
-      return res.status(403).json({
-        error: 'Only an owner can create new users',
-        callerId: caller.id,
-        profileStatus: profileRes.status,
-        profileData: profileData
-      });
+    if (!Array.isArray(profileData) || !profileData.length || profileData[0].role !== 'owner') {
+      return res.status(403).json({ error: 'Only an owner can create new users' });
     }
 
     // 3. Validate input
