@@ -1357,7 +1357,7 @@ async function loadData() {
     const propIds = Object.keys(PROPS);
     myBookingCheckouts = (bookRes.data||[])
       .filter(b=>propIds.includes(b.property_id))
-      .map(b=>({date:b.check_out_date, prop:PROPS[b.property_id]?.short||'—', guest:b.guest_name||'Guest'}));
+      .map(b=>({date:b.check_out_date, prop:PROPS[b.property_id]?.short||'—', guest:(b.guest_name||'Guest').trim().split(/\s+/)[0]}));
   } catch(e){ console.warn('Load:',e); }
 }
 
