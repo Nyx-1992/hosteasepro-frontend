@@ -1,5 +1,5 @@
 // S&N Staff Portal — Service Worker
-const CACHE = 'sn-staff-v1';
+const CACHE = 'sn-staff-v2';
 const ASSETS = ['/domestic'];
 
 self.addEventListener('install', e => {
@@ -19,12 +19,18 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Only handle GET — the Cache API rejects PATCH/POST/DELETE,
+  // and writes should never be intercepted anyway.
+  if (e.request.method !== 'GET') return;
+
   // Network first, fall back to cache
   e.respondWith(
     fetch(e.request)
       .then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
         return res;
       })
       .catch(() => caches.match(e.request))
