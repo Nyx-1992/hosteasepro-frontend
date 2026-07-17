@@ -2411,7 +2411,7 @@ async function syncICalFeeds(silent = false) {
   const statusEl = document.getElementById('db-status');
   // syncing indicator hidden
 
-  let totalNew = 0, totalUpdated = 0, errors = 0;
+  let totalNew = 0, totalUpdated = 0, totalReleased = 0, errors = 0;
 
   for (const feed of ICAL_FEEDS) {
     try {
@@ -2511,6 +2511,33 @@ async function syncICalFeeds(silent = false) {
           else console.warn('Insert error:', error.message, evt.check_in_date, feed.platform, evt.status);
         }
       }
+
+      // ── Step 3: Stale-block sweep ─────────────────────────────────────────
+      // When owners free up previously blocked dates, the event simply
+      // disappears from the feed — nothing above ever touches the old row.
+      // Deactivate blocked rows from THIS feed that are no longer present.
+      // Deliberately narrow: only status 'blocked', only iCal-originated rows
+      // (source_uid set), only future check-outs, only this property+platform.
+      // Real guest bookings are NEVER auto-deactivated by this sweep.
+      try {
+        const feedUids = new Set(events.map(ev => ev.uid).filter(Boolean));
+        const todayStr = new Date().toISOString().slice(0,10);
+        const { data: staleBlocks } = await db.from('bookings')
+          .select('id, source_uid, check_in_date, check_out_date')
+          .eq('property_id', feed.property_id)
+          .eq('platform', feed.platform)
+          .eq('status', 'blocked')
+          .eq('is_active', true)
+          .not('source_uid', 'is', null)
+          .gte('check_out_date', todayStr);
+        for (const row of (staleBlocks || [])) {
+          if (!feedUids.has(row.source_uid)) {
+            await db.from('bookings').update({ is_active: false, cancelled_at: new Date().toISOString() }).eq('id', row.id);
+            totalReleased++;
+            console.log('[iCal] Released stale block:', feed.property_name, row.check_in_date, '→', row.check_out_date);
+          }
+        }
+      } catch(swErr) { console.warn('[iCal] Stale sweep error:', feed.platform, swErr); }
     } catch(e) {
       console.warn('Feed error:', feed.platform, feed.property_name, e);
       errors++;
@@ -2534,7 +2561,7 @@ async function syncICalFeeds(silent = false) {
   // sync status hidden — console only
   const total_feeds = ICAL_FEEDS.length;
   const succeeded = total_feeds - errors;
-  const msg = `iCal: ${totalNew} new · ${totalUpdated} updated · ${succeeded}/${total_feeds} feeds OK${errors?' ('+errors+' failed — check console)':''}`;
+  const msg = `iCal: ${totalNew} new · ${totalUpdated} updated${totalReleased?` · ${totalReleased} released`:''} · ${succeeded}/${total_feeds} feeds OK${errors?' ('+errors+' failed — check console)':''}`;
   if (!silent || totalNew > 0) toast(msg, errors > 0 ? 'info' : 'success');
   console.log('[iCal sync]', msg);
 
