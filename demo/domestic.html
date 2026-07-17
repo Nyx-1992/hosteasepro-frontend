@@ -504,7 +504,8 @@ h1,h2,h3{font-family:Syne,sans-serif}
   <div class="nina-modal">
     <div class="nina-modal-title">Assign Cleaning</div>
     <div id="nina-assign-context" class="nina-assign-context"></div>
-    <div class="nina-form-row"><label>Cleaner</label><select id="nina-assign-cleaner" onchange="checkAssignAvailability()"></select></div>
+    <div class="nina-form-row"><label>Cleaner</label><select id="nina-assign-cleaner" onchange="toggleOtherCleaner();checkAssignAvailability()"></select></div>
+    <div class="nina-form-row" id="nina-other-row" style="display:none"><label>Name</label><input type="text" id="nina-assign-other" placeholder="Who is cleaning? (one-off)"/></div>
     <div class="nina-form-row"><label>Date</label><input type="date" id="nina-assign-date" onchange="checkAssignAvailability()"/></div>
     <div class="nina-form-row"><label>Time</label><input type="time" id="nina-assign-time" value="10:00"/></div>
     <div class="nina-form-row">
@@ -553,7 +554,7 @@ const CLEANERS = [
 
 const NINA_CLEANERS_BY_PROP = {
   speranta: ['Blessing','Fatima','Patricia','Spiwe'],
-  tvhouse:  ['Tino','Keithy'],
+  tvhouse:  ['Fatima','Patricia'], // caretakers are exceptions via 'Other…', never regulars
 };
 
 const NINA_CHECKLISTS = {
@@ -891,7 +892,7 @@ async function loadNinaAvailability() {
     if(error) throw error;
     const lookup={};
     (data||[]).forEach(r=>{lookup[`${r.cleaner}-${r.date}`]=r.available;});
-    const allCleaners=['Blessing','Fatima','Patricia','Spiwe','Tino','Keithy'];
+    const allCleaners=['Blessing','Fatima','Patricia','Spiwe']; // caretakers (Tino/Keithy) excluded — not cleaning staff
     const shortDates=dates.map(d=>{
       const dt=new Date(d+'T00:00:00');
       return dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
@@ -920,13 +921,20 @@ function openAssignModal(propertyId, propertyKey, guestName, checkoutDate, booki
     `<strong>${propNameFromKey(propertyKey)}</strong> · ${guestName}<br>Checkout: <strong>${fmtDate(checkoutDate)}</strong>`;
   const sel=document.getElementById('nina-assign-cleaner');
   const cleanerList=NINA_CLEANERS_BY_PROP[propertyKey]||['Blessing','Fatima','Patricia','Spiwe'];
-  sel.innerHTML=cleanerList.map(c=>`<option value="${c}">${c}</option>`).join('');
+  sel.innerHTML=cleanerList.map(c=>`<option value="${c}">${c}</option>`).join('')+`<option value="__other__">Other…</option>`;
+  document.getElementById('nina-other-row').style.display='none';
+  document.getElementById('nina-assign-other').value='';
   document.getElementById('nina-assign-date').value=checkoutDate;
   document.getElementById('nina-assign-notes').value='';
   document.getElementById('nina-assign-status').style.display='none';
   document.getElementById('nina-assign-btn').disabled=false;
   checkAssignAvailability();
   document.getElementById('nina-assign-modal').style.display='flex';
+}
+
+function toggleOtherCleaner() {
+  const isOther=document.getElementById('nina-assign-cleaner').value==='__other__';
+  document.getElementById('nina-other-row').style.display=isOther?'':'none';
 }
 
 function closeAssignModal(e) {
@@ -938,6 +946,7 @@ async function checkAssignAvailability() {
   const cleaner=document.getElementById('nina-assign-cleaner').value;
   const date=document.getElementById('nina-assign-date').value;
   const noteEl=document.getElementById('nina-assign-availability');
+  if(cleaner==='__other__'){noteEl.innerHTML='One-off cleaner — no availability data';noteEl.className='nina-avail-note unknown';return;}
   if(!cleaner||!date){noteEl.innerHTML='';noteEl.className='nina-avail-note';return;}
   try {
     const {data}=await db.from('cleaner_availability').select('available').eq('cleaner',cleaner).eq('date',date).maybeSingle();
@@ -950,7 +959,11 @@ async function checkAssignAvailability() {
 async function saveAssignment() {
   const btn=document.getElementById('nina-assign-btn');
   const statusEl=document.getElementById('nina-assign-status');
-  const cleaner=document.getElementById('nina-assign-cleaner').value;
+  let cleaner=document.getElementById('nina-assign-cleaner').value;
+  if(cleaner==='__other__'){
+    cleaner=document.getElementById('nina-assign-other').value.trim();
+    if(!cleaner){ statusEl.style.display=''; statusEl.className='nina-status-msg error'; statusEl.textContent='Enter a name for the one-off cleaner.'; btn.disabled=false; return; }
+  }
   const date=document.getElementById('nina-assign-date').value;
   const time=document.getElementById('nina-assign-time').value||'10:00';
   const type=document.getElementById('nina-assign-type').value;
