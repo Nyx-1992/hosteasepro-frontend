@@ -12,6 +12,7 @@
 <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
 <title>S&N Staff Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="/demo/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
@@ -527,8 +528,9 @@ h1,h2,h3{font-family:Syne,sans-serif}
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
-const SUPABASE_URL = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRreXpiemxzaHJ4ZHdldHlrbWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMzkyMTUsImV4cCI6MjA3ODYxNTIxNX0.d4K89mdZVzG4Rv4H44MYnhV4VlW3V1vSgbYZcjcPMQw';
+const SUPABASE_URL = (window.HEP_CONFIG||{}).supabaseUrl;
+const SUPABASE_KEY = (window.HEP_CONFIG||{}).supabaseAnonKey;
+if(!SUPABASE_URL||!SUPABASE_KEY){ throw new Error('HEP: /demo/config.js missing or invalid — environment not configured'); }
 const ORG_ID = '5966bc67-5c2f-45ae-8519-9b7eaeee09f4';
 
 const PROPS = {
