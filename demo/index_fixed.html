@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>HostEase Pro v2.4</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="/demo/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -1406,8 +1407,9 @@ const CLIENT_BRAND = {
 };
 
 // ── Database (Supabase) ──
-const SUPABASE_URL = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRreXpiemxzaHJ4ZHdldHlrbWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMzkyMTUsImV4cCI6MjA3ODYxNTIxNX0.d4K89mdZVzG4Rv4H44MYnhV4VlW3V1vSgbYZcjcPMQw';
+const SUPABASE_URL = (window.HEP_CONFIG||{}).supabaseUrl;
+const SUPABASE_KEY = (window.HEP_CONFIG||{}).supabaseAnonKey;
+if(!SUPABASE_URL||!SUPABASE_KEY){ throw new Error('HEP: /demo/config.js missing or invalid — environment not configured'); }
 
 // ── Properties (hardcoded values below are the fallback if the DB fetch fails) ──
 let UUID_MAP = {
