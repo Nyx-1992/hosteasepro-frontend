@@ -5,13 +5,18 @@
 
 export const config = { runtime: 'edge' };
 
-const SUPABASE_URL = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRreXpiemxzaHJ4ZHdldHlrbWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMzkyMTUsImV4cCI6MjA3ODYxNTIxNX0.d4K89mdZVzG4Rv4H44MYnhV4VlW3V1vSgbYZcjcPMQw';
+// Environment-driven: Vercel env vars SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
+// (Production = prod project, Preview/staging = hep-staging). Same file on every branch.
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PROPERTY_ID = '83b2a84a-5451-4be5-a84f-2efc0d2602d5';
 const PROPERTY_NAME = 'TV House';
 const FEED_ID = 'tvhouse';
 
 export default async function handler(req) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    return new Response('Server not configured — missing SUPABASE_URL or service role key', { status: 500 });
+  }
   return generateFeed(PROPERTY_ID, PROPERTY_NAME, FEED_ID);
 }
 
