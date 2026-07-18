@@ -175,14 +175,14 @@ CREATE POLICY user_profiles_update ON public.user_profiles FOR UPDATE USING (
 
 -- =====================================================================
 -- property_users — staging had ONLY the wide-open policy; ported from
--- production's actual current policy text. NOTE: property_users_modify's
--- EXISTS subquery below joins against public.user_profiles, which is the
--- SAME wrong/legacy table from the "ACTIVE INCIDENT" note — this was
--- already prod's live policy before we touched anything, a pre-existing
--- bug, not something introduced here. Left as a literal port for now
--- since public.profiles' real column shape isn't confirmed yet; revisit
--- once pg_get_functiondef confirms it (should probably become a profiles
--- join keyed on profiles.id = auth.uid(), matching profiles_select_own).
+-- production's actual current policy text, EXCEPT property_users_modify's
+-- EXISTS subquery, which referenced public.user_profiles (the same wrong/
+-- legacy table from the "ACTIVE INCIDENT" note — pre-existing on
+-- production before any of this, not introduced here). Now that
+-- public.profiles' columns are confirmed (id = auth.uid() directly, no
+-- separate user_id), corrected to join against profiles instead. The join
+-- is redundant with is_org_admin()'s own internal profiles check, but kept
+-- for a minimal diff from prod's original intent.
 -- =====================================================================
 DROP POLICY IF EXISTS authenticated_all_property_users ON public.property_users;
 
@@ -197,13 +197,13 @@ DROP POLICY IF EXISTS property_users_modify ON public.property_users;
 CREATE POLICY property_users_modify ON public.property_users FOR ALL USING (
 	auth.role() = 'authenticated' AND EXISTS (
 		SELECT 1 FROM public.properties p
-		JOIN public.user_profiles u ON u.org_id = p.org_id AND u.user_id = auth.uid()
+		JOIN public.profiles u ON u.org_id = p.org_id AND u.id = auth.uid()
 		WHERE p.id = property_users.property_id AND is_org_admin(p.org_id)
 	)
 ) WITH CHECK (
 	auth.role() = 'authenticated' AND EXISTS (
 		SELECT 1 FROM public.properties p
-		JOIN public.user_profiles u ON u.org_id = p.org_id AND u.user_id = auth.uid()
+		JOIN public.profiles u ON u.org_id = p.org_id AND u.id = auth.uid()
 		WHERE p.id = property_users.property_id AND is_org_admin(p.org_id)
 	)
 );

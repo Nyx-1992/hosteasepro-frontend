@@ -57,20 +57,16 @@ wide-open fallback denies real users — on production that's at least
 databases as soon as possible; it's the first thing that should happen,
 before `100_rls_parity.sql` or anything else.
 
-**Still unverified**: `current_org_id()` (`030_rls_helpers.sql`) also
-queries `user_profiles` and was never touched by `070`/`080` — meaning
-either it was always broken this way (independent, likely older incident),
-or it too was separately corrected via the SQL editor at some point and
-`030`'s file is just stale/undocumented, matching the `is_org_admin`
-pattern exactly. Nearly every SELECT policy depends on it
-(`bookings_select`, `properties_select`, `contacts_select`,
-`tasks_select`, etc.), several of which (`bookings`, `properties`,
-`contacts` on production) have no wide-open fallback — so if it's also
-broken, real users currently see zero rows there, not just blocked writes.
-Confirm via `SELECT pg_get_functiondef('public.current_org_id()'::regprocedure);`
-before treating RLS as fully understood. `085` does not touch this
-function — a further corrective migration will be needed if it turns out
-to be broken too.
+**`current_org_id()` verified fine** (via `pg_get_functiondef`,
+2026-07-18) — it already correctly queries `public.profiles`
+(`select org_id from profiles where id = auth.uid() limit 1`), same
+`STABLE SECURITY DEFINER SET search_path` shape, `LANGUAGE sql`. It was
+never touched by `070`/`080` and was never broken; `030_rls_helpers.sql`'s
+checked-in body (querying `user_profiles`) is simply stale/undocumented,
+same as `is_org_admin`/`is_org_member` were before `085`. No further
+corrective migration needed for it. `085`'s functions were rewritten to
+match this confirmed `LANGUAGE sql` style instead of the more defensive
+`plpgsql` pattern `070`/`080` mistakenly carried over.
 
 Also flagged, not yet fixed: `property_users_modify`'s policy (ported
 as-is in `100_rls_parity.sql`) joins against `user_profiles` in its EXISTS

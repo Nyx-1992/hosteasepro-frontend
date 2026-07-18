@@ -13,41 +13,38 @@
 --
 -- Run this BEFORE 100_rls_parity.sql on any database.
 
+-- Style matches the confirmed-live current_org_id() (030_rls_helpers.sql
+-- claimed a plpgsql/user_profiles version, but its real body — verified via
+-- pg_get_functiondef, 2026-07-18 — is this simpler `language sql` form
+-- against profiles, with no defensive existence check. Matching that
+-- established pattern here instead of the more defensive style 070/080
+-- carried over by mistake.
+
 CREATE OR REPLACE FUNCTION public.is_org_admin(org uuid)
 RETURNS boolean
-LANGUAGE plpgsql
+LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE v_exists boolean; BEGIN
-	IF NOT EXISTS (
-		SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='profiles'
-	) THEN RETURN FALSE; END IF;
 	SELECT EXISTS (
 		SELECT 1 FROM public.profiles p
 		WHERE p.id = auth.uid() AND p.org_id = org AND p.role IN ('owner','admin')
-	) INTO v_exists;
-	RETURN COALESCE(v_exists, FALSE);
-END; $$;
+	);
+$$;
 
 CREATE OR REPLACE FUNCTION public.is_org_member(org uuid)
 RETURNS boolean
-LANGUAGE plpgsql
+LANGUAGE sql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE v_exists boolean; BEGIN
-	IF NOT EXISTS (
-		SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='profiles'
-	) THEN RETURN FALSE; END IF;
 	SELECT EXISTS (
 		SELECT 1 FROM public.profiles p
 		WHERE p.id = auth.uid() AND p.org_id = org AND p.role IN ('owner','admin','host')
-	) INTO v_exists;
-	RETURN COALESCE(v_exists, FALSE);
-END; $$;
+	);
+$$;
 
 -- Verification: as a real logged-in owner/admin, run
 --   SELECT is_org_admin(org_id) FROM public.profiles WHERE id = auth.uid();
