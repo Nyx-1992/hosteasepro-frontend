@@ -2528,7 +2528,7 @@ async function syncICalFeeds(silent = false) {
         // A block beyond the feed's last event isn't "removed" — it's out of range.
         const maxFeedDate = events.reduce((m,ev)=>(ev.check_out_date>m?ev.check_out_date:m),'');
         const { data: staleBlocks } = await db.from('bookings')
-          .select('id, source_uid, check_in_date, check_out_date')
+          .select('id, source_uid, check_in_date, check_out_date, guest_name')
           .eq('property_id', feed.property_id)
           .eq('platform', feed.platform)
           .eq('status', 'blocked')
@@ -2538,6 +2538,13 @@ async function syncICalFeeds(silent = false) {
         for (const row of (staleBlocks || [])) {
           if (feedUids.has(row.source_uid)) continue;
           if (maxFeedDate && row.check_out_date > maxFeedDate) continue; // beyond feed horizon
+          // Guest-name guard: some importers store real reservations as status
+          // 'blocked'. Only auto-release rows that LOOK like blocks — a named
+          // guest is never auto-released (cancellation workflow handles those).
+          if (!/🔒|blocked|closed|not available/i.test(row.guest_name||'')) {
+            console.warn('[iCal] Skipped release — named guest, needs manual review:', feed.property_name, row.guest_name, row.check_in_date, '→', row.check_out_date);
+            continue;
+          }
           // .select() forces PostgREST to return the updated row — an RLS-blocked
           // update comes back empty instead of silently "succeeding".
           const { data: rel, error: relErr } = await db.from('bookings')
