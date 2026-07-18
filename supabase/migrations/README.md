@@ -30,7 +30,30 @@ order.
 | 070_is_org_admin_fix.sql | both | Security-hardens `is_org_admin` (adds `SECURITY DEFINER` + locked `search_path`) |
 | 080_is_org_member.sql | both | New `is_org_member` helper (owner/admin/host); widens day-to-day write policies to include hosts |
 | 090_staging_ical_feeds_seed.sql | **staging only** | Seeds `ical_feeds` on staging so iCal sync can be smoke-tested there |
+| 095_staging_ical_feeds_index_fix.sql | **staging only** | Adds `ical_feeds_unique_platform_property`, which staging was missing (production had it) — required before 090 can run |
 | 100_rls_parity.sql | staging only (ports production's granular policies) | Replaces staging's wide-open `authenticated_all_*` policies |
+
+## Known live-vs-documented policy mismatch — verify before writing 100_rls_parity.sql
+
+`public.user_profiles` is empty on **both** production and staging (checked
+2026-07-18). Since `is_org_admin`/`is_org_member` both key off a matching
+`user_profiles` row, every admin-gated write policy in `040_policies.sql`
+should currently deny everyone on both databases if those are really the
+live policies. The app functions day-to-day regardless, which means the
+*actual* enforcing policies on both databases are probably not the granular
+`is_org_admin`-gated set this folder documents — likely something wider set
+up later without a matching migration file (again, drift). Before writing
+`100_rls_parity.sql`, get the real current policy set from both databases:
+
+```sql
+SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
+FROM pg_policies
+WHERE schemaname = 'public'
+ORDER BY tablename, policyname;
+```
+
+Run on both prod and staging and diff the results — don't assume
+`040_policies.sql` reflects reality.
 
 ## Known schema drift — read before touching cleaning/domestic tables
 
