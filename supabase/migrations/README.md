@@ -31,29 +31,72 @@ order.
 | 080_is_org_member.sql | both | New `is_org_member` helper (owner/admin/host); widens day-to-day write policies to include hosts |
 | 090_staging_ical_feeds_seed.sql | **staging only** | Seeds `ical_feeds` on staging so iCal sync can be smoke-tested there |
 | 095_staging_ical_feeds_index_fix.sql | **staging only** | Adds `ical_feeds_unique_platform_property`, which staging was missing (production had it) — required before 090 can run |
-| 100_rls_parity.sql | staging only (ports production's granular policies) | Replaces staging's wide-open `authenticated_all_*` policies |
+| 100_rls_parity.sql | **staging only** | Replaces staging's wide-open `authenticated_all_*` policies with production-equivalent granular ones, for the tables where a real gap existed |
 
-## Known live-vs-documented policy mismatch — verify before writing 100_rls_parity.sql
+## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member currently broken on BOTH databases
 
-`public.user_profiles` is empty on **both** production and staging (checked
-2026-07-18). Since `is_org_admin`/`is_org_member` both key off a matching
-`user_profiles` row, every admin-gated write policy in `040_policies.sql`
-should currently deny everyone on both databases if those are really the
-live policies. The app functions day-to-day regardless, which means the
-*actual* enforcing policies on both databases are probably not the granular
-`is_org_admin`-gated set this folder documents — likely something wider set
-up later without a matching migration file (again, drift). Before writing
-`100_rls_parity.sql`, get the real current policy set from both databases:
+`070_is_org_admin_fix.sql` and `080_is_org_member.sql`, once run against
+both databases, overwrote the live `is_org_admin`/`is_org_member`
+functions with versions that query `public.user_profiles`. **That was
+wrong.** The real, previously-working versions of these functions (created
+directly via the SQL editor, never captured in this folder) query
+`public.profiles`, which holds real owner/admin/host rows on both
+databases. `user_profiles` is unused by the app — same suspected-legacy
+pattern as `domestic_services` vs `domestics` below.
 
-```sql
-SELECT schemaname, tablename, policyname, permissive, roles, cmd, qual, with_check
-FROM pg_policies
-WHERE schemaname = 'public'
-ORDER BY tablename, policyname;
-```
+Net effect right now: `is_org_admin()`/`is_org_member()` return `false` for
+everyone on both databases, because they're querying the wrong (empty)
+table. Any policy gated by one of these with no wide-open fallback is
+currently denying real users — on production that's at least
+`properties_modify`, `bookings_update`, and `contacts_modify`.
 
-Run on both prod and staging and diff the results — don't assume
-`040_policies.sql` reflects reality.
+**A corrective migration restoring the `profiles`-based definitions is
+pending** — being written now, verified against the actual live function
+bodies (`pg_get_functiondef`) rather than assumed. Do not treat `070`/`080`
+as correct until that lands. `100_rls_parity.sql`'s policy text itself
+doesn't need to change (it only calls the functions by name), but it must
+not be run until the functions are fixed on both databases first.
+
+## Findings from the 2026-07-18 pg_policies audit
+
+Before writing `100_rls_parity.sql`, we pulled the actual live policy set
+from both databases (`SELECT * FROM pg_policies WHERE schemaname='public'`)
+rather than trusting this folder's files to reflect reality. They didn't,
+fully:
+
+- **`public.user_profiles` is empty on both databases and is app-unused —
+  see the incident note above.** The real role table is `public.profiles`.
+- **Production itself is inconsistent, not a single clean granular set.**
+  Some tables (`bookings`, `properties`, `contacts`, `domestic_services`,
+  `user_profiles`, `property_users`) are genuinely locked down. Others
+  (`tasks`, `booking_checklists`, `invoices`, `property_inspections`) have
+  a narrow-looking policy with a redundant wide-open one layered on top,
+  which wins — so those are just as open as staging was, on production too.
+  `100_rls_parity.sql` tightens staging to the narrow policy only for
+  these; production is **not** fixed by this file (worth a separate pass).
+- **`financial_transactions` and `ical_feeds` gate access via custom JWT
+  claims** (`auth.jwt() ->> 'org_id'`, `current_setting
+  ('request.jwt.claim.org_id')`) rather than this repo's
+  `current_org_id()`/`is_org_admin()` helpers — set by something outside
+  this repo, likely a Supabase Auth Hook. Whether staging's Auth mints the
+  same claims is unverified, so `100_rls_parity.sql` uses the helper-
+  function equivalent for these two tables on staging instead of copying
+  the JWT-claim policies verbatim.
+- **`invoices` and `property_inspections`'s "narrow" prod policies hardcode
+  one literal `org_id` UUID** (production's own org). That UUID doesn't
+  exist in staging's database, so `100_rls_parity.sql` uses
+  `current_org_id()` there instead of copying the literal.
+- **Several tables have real data and real policies but no migration file
+  defines them at all**: `invoices`, `property_inspections`,
+  `property_users`, `financial_transactions`, `ical_feeds`,
+  `monthly_earnings`, `domestic_services_detailed`, `booking_audit`,
+  `import_runs`, `inventory_reports`, `kb_articles`,
+  `cleaner_availability`, `roadmap_state`, `org_settings`, `profiles`,
+  `finance_transactions` (a separate, apparently-unrelated table from
+  `financial_transactions` — not yet investigated). None of these have a
+  `CREATE TABLE` anywhere in `001`–`060`. TODO: backfill their schema into
+  a migration file at some point so the table definitions aren't only
+  discoverable by querying the live database.
 
 ## Known schema drift — read before touching cleaning/domestic tables
 
