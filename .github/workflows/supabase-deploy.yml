@@ -12,13 +12,20 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_PROJECT_REF: dkyzbzlshrxdwetykmdo
+      SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+      # Required repo/environment variable:
+      # - SUPABASE_PROJECT_REF (set per branch/environment in repo settings —
+      #   must never be hardcoded here, since this file is identical on every branch)
       # Required secrets:
       # - SUPABASE_ACCESS_TOKEN (account access token)
       # - SUPABASE_SERVICE_ROLE_KEY (service role key for function secrets)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify project ref is configured
+        run: |
+          [ -n "$SUPABASE_PROJECT_REF" ] || { echo "SUPABASE_PROJECT_REF repo/environment variable is not set — refusing to deploy"; exit 1; }
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -64,7 +71,7 @@ jobs:
           supabase link --project-ref $SUPABASE_PROJECT_REF
           echo "Setting function secrets for import_ical"
           supabase functions secrets set import_ical \
-            SUPABASE_URL=https://dkyzbzlshrxdwetykmdo.supabase.co \
+            SUPABASE_URL=https://${SUPABASE_PROJECT_REF}.supabase.co \
             SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_ROLE_KEY} || { echo "Function secret set failed"; exit 1; }
 
       - name: Apply migrations

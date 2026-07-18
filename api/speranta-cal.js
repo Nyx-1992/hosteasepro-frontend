@@ -5,13 +5,18 @@
 
 export const config = { runtime: 'edge' };
 
-const SUPABASE_URL = 'https://dkyzbzlshrxdwetykmdo.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRreXpiemxzaHJ4ZHdldHlrbWRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwMzkyMTUsImV4cCI6MjA3ODYxNTIxNX0.d4K89mdZVzG4Rv4H44MYnhV4VlW3V1vSgbYZcjcPMQw';
+// Environment-driven: Vercel env vars SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
+// (Production = prod project, Preview/staging = hep-staging). Same file on every branch.
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const PROPERTY_ID = 'e9737638-d83a-4947-940a-8746789e4d9f';
 const PROPERTY_NAME = 'Speranta Flat';
 const FEED_ID = 'speranta';
 
 export default async function handler(req) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    return new Response('Server not configured — missing SUPABASE_URL or service role key', { status: 500 });
+  }
   return generateFeed(PROPERTY_ID, PROPERTY_NAME, FEED_ID);
 }
 
@@ -19,7 +24,7 @@ async function generateFeed(propertyId, propertyName, feedId) {
   try {
     // Fetch all active bookings for this property
     const url = `${SUPABASE_URL}/rest/v1/bookings?property_id=eq.${propertyId}&is_active=eq.true&status=in.(confirmed,pending,checked-in,checked-out,owner,blocked)&select=id,guest_name,check_in_date,check_out_date,status,platform,notes&order=check_in_date.asc`;
-    
+
     const res = await fetch(url, {
       headers: {
         'apikey': SUPABASE_KEY,
