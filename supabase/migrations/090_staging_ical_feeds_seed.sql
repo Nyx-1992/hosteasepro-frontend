@@ -17,9 +17,9 @@
 WITH org AS (
 	SELECT id FROM public.organizations ORDER BY created_at LIMIT 1
 ), speranta AS (
-	SELECT id FROM public.properties p JOIN org ON p.org_id = org.id WHERE p.name = 'Speranta Flat' LIMIT 1
+	SELECT p.id FROM public.properties p JOIN org ON p.org_id = org.id WHERE p.name = 'Speranta Flat' LIMIT 1
 ), tvhouse AS (
-	SELECT id FROM public.properties p JOIN org ON p.org_id = org.id WHERE p.name = 'TV House' LIMIT 1
+	SELECT p.id FROM public.properties p JOIN org ON p.org_id = org.id WHERE p.name = 'TV House' LIMIT 1
 )
 INSERT INTO public.ical_feeds (org_id, property_id, platform, feed_url)
 SELECT org.id, speranta.id, v.platform, v.url FROM org, speranta,
