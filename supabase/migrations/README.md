@@ -27,13 +27,14 @@ order.
 | File | Applies to | Purpose |
 |---|---|---|
 | 001–060 | both | Original schema, functions, RLS, views |
-| 070_is_org_admin_fix.sql | both | Security-hardens `is_org_admin` (adds `SECURITY DEFINER` + locked `search_path`) |
-| 080_is_org_member.sql | both | New `is_org_member` helper (owner/admin/host); widens day-to-day write policies to include hosts |
+| 070_is_org_admin_fix.sql | both | Security-hardens `is_org_admin` (adds `SECURITY DEFINER` + locked `search_path`) — superseded by `085`, see incident note |
+| 080_is_org_member.sql | both | New `is_org_member` helper (owner/admin/host); widens day-to-day write policies to include hosts — superseded by `085`, see incident note |
+| 085_is_org_functions_profiles_fix.sql | both | **Corrective.** Fixes `is_org_admin`/`is_org_member` to query `public.profiles` (the real role table) instead of the unused `public.user_profiles`. Run before `100`. |
 | 090_staging_ical_feeds_seed.sql | **staging only** | Seeds `ical_feeds` on staging so iCal sync can be smoke-tested there |
 | 095_staging_ical_feeds_index_fix.sql | **staging only** | Adds `ical_feeds_unique_platform_property`, which staging was missing (production had it) — required before 090 can run |
-| 100_rls_parity.sql | **staging only** | Replaces staging's wide-open `authenticated_all_*` policies with production-equivalent granular ones, for the tables where a real gap existed |
+| 100_rls_parity.sql | both | Defines one clean policy target state and applies it to both databases — closes real gaps on staging, fixes the same redundant/legacy-mechanism bugs on production. Run after `085`. |
 
-## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member currently broken on BOTH databases
+## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
 `070_is_org_admin_fix.sql` and `080_is_org_member.sql`, once run against
 both databases, overwrote the live `is_org_admin`/`is_org_member`
@@ -41,21 +42,41 @@ functions with versions that query `public.user_profiles`. **That was
 wrong.** The real, previously-working versions of these functions (created
 directly via the SQL editor, never captured in this folder) query
 `public.profiles`, which holds real owner/admin/host rows on both
-databases. `user_profiles` is unused by the app — same suspected-legacy
-pattern as `domestic_services` vs `domestics` below.
+databases (confirmed via `information_schema.columns`: `id uuid` — equal
+to `auth.uid()` directly, no separate `user_id` column — `org_id uuid`,
+`name text`, `role text`, `initials text`). `user_profiles` is unused by
+the app — same suspected-legacy pattern as `domestic_services` vs
+`domestics` below.
 
-Net effect right now: `is_org_admin()`/`is_org_member()` return `false` for
-everyone on both databases, because they're querying the wrong (empty)
-table. Any policy gated by one of these with no wide-open fallback is
-currently denying real users — on production that's at least
+Net effect while broken: `is_org_admin()`/`is_org_member()` return `false`
+for everyone on both databases. Any policy gated by one of these with no
+wide-open fallback denies real users — on production that's at least
 `properties_modify`, `bookings_update`, and `contacts_modify`.
 
-**A corrective migration restoring the `profiles`-based definitions is
-pending** — being written now, verified against the actual live function
-bodies (`pg_get_functiondef`) rather than assumed. Do not treat `070`/`080`
-as correct until that lands. `100_rls_parity.sql`'s policy text itself
-doesn't need to change (it only calls the functions by name), but it must
-not be run until the functions are fixed on both databases first.
+**Fixed by `085_is_org_functions_profiles_fix.sql`** — run it on both
+databases as soon as possible; it's the first thing that should happen,
+before `100_rls_parity.sql` or anything else.
+
+**Still unverified**: `current_org_id()` (`030_rls_helpers.sql`) also
+queries `user_profiles` and was never touched by `070`/`080` — meaning
+either it was always broken this way (independent, likely older incident),
+or it too was separately corrected via the SQL editor at some point and
+`030`'s file is just stale/undocumented, matching the `is_org_admin`
+pattern exactly. Nearly every SELECT policy depends on it
+(`bookings_select`, `properties_select`, `contacts_select`,
+`tasks_select`, etc.), several of which (`bookings`, `properties`,
+`contacts` on production) have no wide-open fallback — so if it's also
+broken, real users currently see zero rows there, not just blocked writes.
+Confirm via `SELECT pg_get_functiondef('public.current_org_id()'::regprocedure);`
+before treating RLS as fully understood. `085` does not touch this
+function — a further corrective migration will be needed if it turns out
+to be broken too.
+
+Also flagged, not yet fixed: `property_users_modify`'s policy (ported
+as-is in `100_rls_parity.sql`) joins against `user_profiles` in its EXISTS
+subquery — the same wrong table, likely broken the same way, pre-existing
+on production before any of this. Revisit once `profiles`' role there is
+fully confirmed.
 
 ## Findings from the 2026-07-18 pg_policies audit
 

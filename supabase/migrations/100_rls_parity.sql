@@ -2,12 +2,12 @@
 -- Runs on BOTH databases — production and staging. Idempotent throughout
 -- (DROP POLICY IF EXISTS + CREATE), safe to re-run.
 --
--- >>> PREREQUISITE: the pending is_org_admin/is_org_member corrective
--- >>> migration (see "ACTIVE INCIDENT" in README.md) must be applied on a
--- >>> database FIRST. This file's policies call those functions by name;
--- >>> until they're fixed to query public.profiles instead of the unused
--- >>> public.user_profiles, every is_org_admin/is_org_member-gated policy
--- >>> below will deny everyone, on whichever database you run this on.
+-- >>> PREREQUISITE: run 085_is_org_functions_profiles_fix.sql on a
+-- >>> database FIRST (see "ACTIVE INCIDENT" in README.md). This file's
+-- >>> policies call is_org_admin()/is_org_member() by name; until 085
+-- >>> fixes them to query public.profiles instead of the unused
+-- >>> public.user_profiles, every policy gated by them below will deny
+-- >>> everyone, on whichever database you run this on.
 --
 -- >>> RUN ORDER: staging first. Complete the smoke-test checklist below on
 -- >>> staging. Only once that passes, run this same file on production.
