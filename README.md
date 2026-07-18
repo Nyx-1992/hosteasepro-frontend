@@ -476,15 +476,16 @@ This project deploys database migrations and the `import_ical` Edge Function aut
 ### 1. Prerequisites
 | Item | Where to find |
 |------|---------------|
-| Supabase Project Ref | In project URL (already: `dkyzbzlshrxdwetykmdo`) |
+| Supabase Project Ref | In project URL, e.g. `<your-project-ref>` |
 | Supabase Access Token | Supabase dashboard → Avatar → Account → Access Tokens |
-| GitHub Repo Admin Rights | Needed to add secrets |
+| GitHub Repo Admin Rights | Needed to add secrets/variables |
 
 ### 2. GitHub Secret Setup
 1. Create access token in Supabase (Account → Access Tokens → New Token).
 2. In GitHub repo: Settings → Secrets and variables → Actions → New repository secret.
 3. Name: `SUPABASE_ACCESS_TOKEN` | Value: paste token.
 4. Save.
+5. In the same Settings → Secrets and variables → Actions, add a repository (or environment) **variable** named `SUPABASE_PROJECT_REF` set to your project's ref. This is not a secret — it's just used to target the right project per branch/environment.
 
 You do **not** need the service role key for the workflow. Keep it private for server-only use.
 
@@ -535,7 +536,7 @@ Commit the change; next run creates the cron schedule.
 After deployment: Supabase dashboard → Functions → `import_ical` → Invoke.
 Or HTTP request:
 ```
-GET https://dkyzbzlshrxdwetykmdo.functions.supabase.co/import_ical
+GET https://<your-project-ref>.functions.supabase.co/import_ical
 ```
 
 ### 8. Verification Queries
