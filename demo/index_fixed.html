@@ -2573,9 +2573,14 @@ async function syncICalFeeds(silent = false) {
           // Urgent Actions until Nina acknowledges it. Same ±2-day
           // property-match convention used throughout both files.
           try {
+            // domestics.property_id stores the short key ('speranta'/'tvhouse'),
+            // not the UUID feed.property_id is — same convention nb() uses to
+            // normalize bookings.property_id via UUID_MAP. Without this
+            // translation the query below matches nothing, ever.
+            const domesticsPid = UUID_MAP[feed.property_id] || feed.property_id;
             const { data: linkedCleans } = await db.from('domestics')
               .select('id, date, cleaner')
-              .eq('property_id', feed.property_id)
+              .eq('property_id', domesticsPid)
               .eq('status', 'scheduled');
             const match = (linkedCleans || []).find(d =>
               Math.abs(new Date(d.date) - new Date(row.check_out_date)) <= 2 * 86400000
