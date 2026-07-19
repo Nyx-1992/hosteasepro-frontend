@@ -3865,9 +3865,10 @@ function renderLaneView() {
 
   // Filter bookings per filter setting
   function filterForLane(bks) {
-    if (bookingFilter==='upcoming') return bks.filter(b=>b.check_in>today&&b.status!=='cancelled');
-    if (bookingFilter==='pending')  return bks.filter(b=>b.status==='pending');
-    if (bookingFilter==='past')     return bks.filter(b=>b.check_out<today&&b.status!=='cancelled');
+    if (bookingFilter==='upcoming')   return bks.filter(b=>b.check_in>today&&b.status!=='cancelled');
+    if (bookingFilter==='pending')    return bks.filter(b=>b.status==='pending');
+    if (bookingFilter==='past')       return bks.filter(b=>b.check_out<today&&b.status!=='cancelled');
+    if (bookingFilter==='cancelled')  return bks.filter(b=>b.status==='cancelled');
     return bks.filter(b=>b.status!=='cancelled'); // all
   }
 
@@ -3881,7 +3882,7 @@ function renderLaneView() {
     const allProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false && !isOwnerStay(b) && b.status!=='blocked');
     const current = allProp.find(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&!isCaretaker(b));
     const pending = allProp.filter(b=>b.status==='pending');
-    const shown   = filterForLane(allProp).sort((a,b)=>a.check_in.localeCompare(b.check_in));
+    const shown   = filterForLane(allProp).sort((a,b)=> bookingFilter==='upcoming' ? a.check_in.localeCompare(b.check_in) : b.check_in.localeCompare(a.check_in));
     const upcoming= allProp.filter(b=>b.check_in>today&&b.status!=='cancelled');
 
     // Occupied status — warm neutral
@@ -4261,7 +4262,7 @@ function renderBookings() {
   }
 
   // ── Filter buttons ──
-  const filters = ['upcoming','pending','past','all'];
+  const filters = ['upcoming','pending','past','cancelled','all'];
   const pendingCount = bookings.filter(b=>b.status==='pending'&&b.is_active).length;
   document.getElementById('booking-filters').innerHTML = filters.map(f => {
     const label = f.charAt(0).toUpperCase()+f.slice(1);

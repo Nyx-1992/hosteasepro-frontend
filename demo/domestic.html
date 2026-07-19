@@ -272,6 +272,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
   </div>
   <div class="app-content">
     <div class="screen active" id="screen-home">
+      <div id="home-alerts"></div>
       <div class="section-label" style="margin-bottom:12px">Next up</div>
       <div id="home-cleans"></div>
       <div class="section-label" style="margin-top:20px;margin-bottom:10px">This month</div>
@@ -1408,7 +1409,22 @@ function showScreen(name) {
 // ── Home ──────────────────────────────────────────────────────────────────────
 function renderHome() {
   const td=tod();
-  const upcoming=myCleans.filter(c=>c.date>=td&&c.status!=='completed').slice(0,3);
+  // Cancelled cleans Nina hasn't yet acknowledged informing you about — shown
+  // regardless of date, so a cancellation on a past-dated clean doesn't just
+  // silently vanish before you see it.
+  const needsAttention=myCleans.filter(c=>c.status==='cancelled'&&!c.cancellation_acknowledged_at);
+  const alertsEl=document.getElementById('home-alerts');
+  if(alertsEl){
+    alertsEl.innerHTML=needsAttention.map(c=>{
+      const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
+      return `<div class="card" style="border-left:3px solid var(--red);background:rgba(255,107,107,.08);margin-bottom:10px">
+        <div style="font-weight:700;color:var(--red);font-size:.86rem;margin-bottom:3px">🚫 Cleaning cancelled</div>
+        <div style="font-size:.82rem">📍 ${prop.name} · was scheduled ${fmtDate(c.date)}</div>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:3px">The booking was cancelled — this clean is no longer needed.</div>
+      </div>`;
+    }).join('');
+  }
+  const upcoming=myCleans.filter(c=>c.date>=td&&c.status!=='completed'&&c.status!=='cancelled').slice(0,3);
   const thisMonth=myCleans.filter(c=>c.date&&c.date.startsWith(td.slice(0,7)));
   const earned=thisMonth.filter(c=>c.status==='completed').reduce((s,c)=>s+(c.amount_paid||getRate(currentCleaner,c.property_id)),0);
   const nextEl=document.getElementById('home-cleans');
@@ -1417,20 +1433,17 @@ function renderHome() {
   } else {
     nextEl.innerHTML=upcoming.map(c=>{
       const isToday=c.date===td;
-      const isCancelled=c.status==='cancelled';
       const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
       const[y,m,d]=(c.date||'-- -').split('-');
-      return `<div class="clean-card ${isToday&&!isCancelled?'today-card':''}" ${isCancelled?'':`onclick="openInventory('${c.id}')"`} style="${isCancelled?'opacity:.7':''}">
+      return `<div class="clean-card ${isToday?'today-card':''}" onclick="openInventory('${c.id}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
           <div><div style="font-family:Syne,sans-serif;font-size:2rem;font-weight:800;line-height:1">${parseInt(d)||'?'}</div>
           <div style="font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">${m?MONTHS_S[parseInt(m)-1]:''} ${y||''}</div></div>
-          <span class="status-pill ${isCancelled?'pill-cancelled':isToday?'pill-today':'pill-scheduled'}">${isCancelled?'Cancelled':isToday?'Today':'Upcoming'}</span>
+          <span class="status-pill ${isToday?'pill-today':'pill-scheduled'}">${isToday?'Today':'Upcoming'}</span>
         </div>
         <div style="font-weight:600;font-size:.9rem;margin-bottom:3px">📍 ${prop.name}</div>
         <div style="font-size:.78rem;color:var(--muted)">${c.time||'10:00'}${c.notes?' · '+c.notes:''}</div>
-        ${isCancelled
-          ? '<div style="margin-top:10px;font-size:.74rem;color:var(--red);font-weight:600">Cleaning cancelled — booking was cancelled</div>'
-          : '<div style="margin-top:10px;font-size:.74rem;color:var(--accent);font-weight:600">Tap to submit inventory →</div>'}
+        <div style="margin-top:10px;font-size:.74rem;color:var(--accent);font-weight:600">Tap to submit inventory →</div>
       </div>`;
     }).join('');
   }
