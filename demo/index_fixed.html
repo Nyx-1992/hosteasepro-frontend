@@ -2413,7 +2413,7 @@ async function syncICalFeeds(silent = false) {
   const statusEl = document.getElementById('db-status');
   // syncing indicator hidden
 
-  let totalNew = 0, totalUpdated = 0, totalReleased = 0, errors = 0;
+  let totalNew = 0, totalUpdated = 0, totalReleased = 0, totalCancelled = 0, errors = 0;
 
   for (const feed of ICAL_FEEDS) {
     try {
@@ -2515,12 +2515,13 @@ async function syncICalFeeds(silent = false) {
       }
 
       // ── Step 3: Stale-block sweep ─────────────────────────────────────────
-      // When owners free up previously blocked dates, the event simply
-      // disappears from the feed — nothing above ever touches the old row.
-      // Deactivate blocked rows from THIS feed that are no longer present.
-      // Deliberately narrow: only status 'blocked', only iCal-originated rows
-      // (source_uid set), only future check-outs, only this property+platform.
-      // Real guest bookings are NEVER auto-deactivated by this sweep.
+      // When owners free up previously blocked dates, or a guest cancels
+      // upstream, the event simply disappears from the feed — nothing above
+      // ever touches the old row. Sweep rows from THIS feed that are no
+      // longer present. Scoped to non-terminal statuses only ('blocked',
+      // 'confirmed', 'pending') — checked-in/checked-out/already-cancelled
+      // rows are untouched. Only iCal-originated rows (source_uid set),
+      // only future check-outs, only this property+platform.
       try {
         const feedUids = new Set(events.map(ev => ev.uid).filter(Boolean));
         const todayStr = new Date().toISOString().slice(0,10);
@@ -2531,31 +2532,62 @@ async function syncICalFeeds(silent = false) {
           .select('id, source_uid, check_in_date, check_out_date, guest_name')
           .eq('property_id', feed.property_id)
           .eq('platform', feed.platform)
-          .eq('status', 'blocked')
+          .in('status', ['blocked', 'confirmed', 'pending'])
           .eq('is_active', true)
           .not('source_uid', 'is', null)
           .gte('check_out_date', todayStr);
         for (const row of (staleBlocks || [])) {
           if (feedUids.has(row.source_uid)) continue;
           if (maxFeedDate && row.check_out_date > maxFeedDate) continue; // beyond feed horizon
-          // Guest-name guard: some importers store real reservations as status
-          // 'blocked'. Only auto-release rows that LOOK like blocks — a named
-          // guest is never auto-released (cancellation workflow handles those).
-          if (!/🔒|blocked|closed|not available/i.test(row.guest_name||'')) {
-            console.warn('[iCal] Skipped release — named guest, needs manual review:', feed.property_name, row.guest_name, row.check_in_date, '→', row.check_out_date);
+          // Guest-name guard splits the two outcomes: a placeholder block
+          // (🔒/blocked/closed/not available) is silently released same as
+          // always. A real named guest is a genuine cancellation — never
+          // silently dropped; see the cancellation workflow branch below.
+          const isPlaceholder = /🔒|blocked|closed|not available/i.test(row.guest_name || '');
+          if (isPlaceholder) {
+            // .select() forces PostgREST to return the updated row — an RLS-blocked
+            // update comes back empty instead of silently "succeeding".
+            const { data: rel, error: relErr } = await db.from('bookings')
+              .update({ is_active: false, cancelled_at: new Date().toISOString() })
+              .eq('id', row.id).select('id');
+            if (relErr || !rel || !rel.length) {
+              console.warn('[iCal] Release FAILED (RLS?):', feed.property_name, row.check_in_date, '→', row.check_out_date, relErr?.message||'0 rows updated');
+            } else {
+              totalReleased++;
+              console.log('[iCal] Released stale block:', feed.property_name, row.check_in_date, '→', row.check_out_date);
+            }
             continue;
           }
-          // .select() forces PostgREST to return the updated row — an RLS-blocked
-          // update comes back empty instead of silently "succeeding".
-          const { data: rel, error: relErr } = await db.from('bookings')
-            .update({ is_active: false, cancelled_at: new Date().toISOString() })
+          // ── Cancellation workflow: named guest, booking gone from feed ──────
+          const { data: canc, error: cancErr } = await db.from('bookings')
+            .update({ status: 'cancelled', is_active: false, cancelled_at: new Date().toISOString() })
             .eq('id', row.id).select('id');
-          if (relErr || !rel || !rel.length) {
-            console.warn('[iCal] Release FAILED (RLS?):', feed.property_name, row.check_in_date, '→', row.check_out_date, relErr?.message||'0 rows updated');
-          } else {
-            totalReleased++;
-            console.log('[iCal] Released stale block:', feed.property_name, row.check_in_date, '→', row.check_out_date);
+          if (cancErr || !canc || !canc.length) {
+            console.warn('[iCal] Cancellation FAILED (RLS?):', feed.property_name, row.guest_name, row.check_in_date, '→', row.check_out_date, cancErr?.message||'0 rows updated');
+            continue;
           }
+          totalCancelled++;
+          console.log('[iCal] Booking cancelled upstream:', feed.property_name, row.guest_name, row.check_in_date, '→', row.check_out_date);
+          // If a clean was already scheduled for this checkout, flag it
+          // cancelled too — kept on record (never deleted), surfaced in
+          // Urgent Actions until Nina acknowledges it. Same ±2-day
+          // property-match convention used throughout both files.
+          try {
+            const { data: linkedCleans } = await db.from('domestics')
+              .select('id, date, cleaner')
+              .eq('property_id', feed.property_id)
+              .eq('status', 'scheduled');
+            const match = (linkedCleans || []).find(d =>
+              Math.abs(new Date(d.date) - new Date(row.check_out_date)) <= 2 * 86400000
+            );
+            if (match) {
+              const { error: cleanErr } = await db.from('domestics')
+                .update({ status: 'cancelled' })
+                .eq('id', match.id);
+              if (cleanErr) console.warn('[iCal] Could not flag linked clean cancelled:', match.id, cleanErr.message);
+              else console.log('[iCal] Linked clean flagged cancelled:', match.cleaner, match.date);
+            }
+          } catch (linkErr) { console.warn('[iCal] Linked-clean lookup error:', linkErr); }
         }
       } catch(swErr) { console.warn('[iCal] Stale sweep error:', feed.platform, swErr); }
     } catch(e) {
@@ -2577,11 +2609,18 @@ async function syncICalFeeds(silent = false) {
       return true;
     });
   }
+  // Reload domestics too — the cancellation workflow above may have just
+  // flagged a linked clean 'cancelled'; keep the in-memory copy in sync
+  // so Urgent Actions picks it up without a full page reload.
+  if (totalCancelled > 0) {
+    const { data: dData } = await db.from('domestics').select('*').order('date', { ascending: false });
+    if (dData && dData.length) domestics = dData.map(nd);
+  }
 
   // sync status hidden — console only
   const total_feeds = ICAL_FEEDS.length;
   const succeeded = total_feeds - errors;
-  const msg = `iCal: ${totalNew} new · ${totalUpdated} updated${totalReleased?` · ${totalReleased} released`:''} · ${succeeded}/${total_feeds} feeds OK${errors?' ('+errors+' failed — check console)':''}`;
+  const msg = `iCal: ${totalNew} new · ${totalUpdated} updated${totalReleased?` · ${totalReleased} released`:''}${totalCancelled?` · ${totalCancelled} cancelled`:''} · ${succeeded}/${total_feeds} feeds OK${errors?' ('+errors+' failed — check console)':''}`;
   if (!silent || totalNew > 0) toast(msg, errors > 0 ? 'info' : 'success');
   console.log('[iCal sync]', msg);
 
@@ -3540,7 +3579,7 @@ function renderDashboard() {
     out += next3.map((b,i) => {
       const daysUntil = Math.ceil((new Date(b.check_in)-now)/86400000);
       const col = PLAT_COLORS[b.platform]||'var(--accent)';
-      const cleanOk = domestics.some(d=>d.property_id===pid&&Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10)))<=2*86400000);
+      const cleanOk = domestics.some(d=>d.property_id===pid&&d.status!=='cancelled'&&Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10)))<=2*86400000);
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;${i<next3.length-1?'border-bottom:1px solid var(--border)':''}">
         <div style="min-width:0;flex:1">
           <div style="font-weight:600;font-size:.85rem;color:var(--ink);display:flex;align-items:center;gap:5px">
@@ -3567,7 +3606,7 @@ function renderDashboard() {
     const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
     const propBookings = bookings.filter(b=>b.property_id===pid&&b.status!=='cancelled'&&!isCaretaker(b));
-    const propCleans   = domestics.filter(d=>d.property_id===pid);
+    const propCleans   = domestics.filter(d=>d.property_id===pid&&d.status!=='cancelled');
 
     let grid = `<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px;text-align:center">${MONTHS_SHORT[month]} ${year}</div>`;
     grid += '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;font-size:.65rem;text-align:center;width:100%">';
@@ -3683,7 +3722,7 @@ function renderDashboard() {
     const co = b.check_out?.slice(0,10)||'';
     const daysUntil = Math.round((new Date(co)-now)/86400000);
     if (daysUntil>=0 && daysUntil<=3) {
-      const cleanOk = domestics.some(d=>d.property_id===b.property_id&&Math.abs(new Date(d.date)-new Date(co))<=2*86400000);
+      const cleanOk = domestics.some(d=>d.property_id===b.property_id&&d.status!=='cancelled'&&Math.abs(new Date(d.date)-new Date(co))<=2*86400000);
       if (!cleanOk) {
         urgentItems.push({
           icon:'🧹', label:'Schedule cleaning', color:'#06b6d4', textColor:'#0e7490',
@@ -3693,6 +3732,20 @@ function renderDashboard() {
         });
       }
     }
+  });
+
+  // 5. Booking cancelled after a clean was already scheduled — Nina and the
+  // cleaner both need to know. Stays here until dismissed (110 migration's
+  // cancellation_acknowledged_at); the clean itself stays status='cancelled'
+  // permanently for reporting, this is just the "needs attention" flag.
+  domestics.filter(d => d.status === 'cancelled' && !d.cancellation_acknowledged_at).forEach(d => {
+    urgentItems.push({
+      icon:'🚫', label:'Booking cancelled — inform '+d.cleaner, color:'#dc2626', textColor:'#991b1b',
+      detail: propName(d.property_id)+' · '+d.cleaner+' scheduled '+fmtDate(d.date),
+      action: `switchTab('domestic')`,
+      dismissAction: `acknowledgeCancelledClean('${d.id}')`,
+      priority: 1,
+    });
   });
 
   urgentItems.sort((a,b)=>a.priority-b.priority);
@@ -3709,8 +3762,29 @@ function renderDashboard() {
         <span style="font-size:.9rem">${item.icon}</span>
         <span style="font-weight:700;font-size:.8rem;color:#fff">${item.label}</span>
       </div>
-      <div style="font-size:.72rem;color:rgba(255,255,255,.55);padding-left:20px">${item.detail}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-left:20px">
+        <div style="font-size:.72rem;color:rgba(255,255,255,.55)">${item.detail}</div>
+        ${item.dismissAction ? `<button onclick="event.stopPropagation();${item.dismissAction}"
+          style="flex-shrink:0;background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:.68rem;font-weight:600;cursor:pointer">
+          ✓ Informed
+        </button>` : ''}
+      </div>
     </div>`).join('');
+}
+
+// Nina has told the cleaner their scheduled clean was cancelled — clears
+// the Urgent Actions item. The clean itself stays status='cancelled'
+// permanently (reporting/history); only this ack timestamp changes.
+async function acknowledgeCancelledClean(id) {
+  if (!db) return;
+  const { error } = await db.from('domestics')
+    .update({ cancellation_acknowledged_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) { toast('Could not dismiss: '+error.message, 'error'); return; }
+  const d = domestics.find(x => String(x.id) === String(id));
+  if (d) d.cancellation_acknowledged_at = new Date().toISOString();
+  renderDashboard();
+  toast('Marked as informed ✓', 'success');
 }
 
 function statCard(label, value, sub, color='var(--accent)') {
@@ -3799,7 +3873,7 @@ function renderLaneView() {
 
   const hasClean = b => domestics.some(d => {
     const coDate = b.check_out_date || b.check_out?.slice(0,10);
-    return d.property_id===b.property_id &&
+    return d.property_id===b.property_id && d.status!=='cancelled' &&
       Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000;
   });
 
@@ -3975,7 +4049,7 @@ function openBookingDetail(bookingId) {
   if (!b) return;
   const coDate = b.check_out_date||b.check_out?.slice(0,10);
   const linkedClean = domestics.find(d=>
-    d.property_id===b.property_id &&
+    d.property_id===b.property_id && d.status!=='cancelled' &&
     Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000
   );
   const today = todaySAST();
@@ -4361,7 +4435,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const isLastCell = isRealEnd || isWeekEnd;
         // Cleaning check
         const bHasClean = domestics.some(d =>
-          d.property_id===b.property_id &&
+          d.property_id===b.property_id && d.status!=='cancelled' &&
           Math.abs(new Date(d.date)-new Date(bCheckOut)) <= 2*86400000
         );
         // Bleed: extend bar 1px into the border of the NEXT cell to cover the gap line
@@ -4493,7 +4567,7 @@ function renderKPIPanel() {
     const coDate = b.check_out_date || b.check_out?.slice(0,10);
     const hasClean = domestics.some(d => {
       const dd = d.date;
-      return d.property_id===b.property_id && dd >= coDate &&
+      return d.property_id===b.property_id && d.status!=='cancelled' && dd >= coDate &&
         Math.abs(new Date(dd)-new Date(coDate)) <= 2*86400000;
     });
     hasClean ? linked++ : unlinked++;
@@ -4556,7 +4630,7 @@ function renderCoverageAlert() {
   const uncovered = upcomingCheckouts.filter(b => {
     const coDate = b.check_out_date || b.check_out?.slice(0,10);
     return !domestics.some(d =>
-      d.property_id===b.property_id &&
+      d.property_id===b.property_id && d.status!=='cancelled' &&
       d.date >= coDate &&
       Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000
     );
@@ -4802,7 +4876,7 @@ function renderDomesticCalView() {
           + nextDays.map(d => {
             const rec = cleanerAvailability.find(r=>r.cleaner===name&&r.date===d);
             const isAvail = rec?.available === true;
-            const hasClean = domestics.some(dom=>dom.cleaner===name&&dom.date===d);
+            const hasClean = domestics.some(dom=>dom.cleaner===name&&dom.date===d&&dom.status!=='cancelled');
             const bg = hasClean ? 'rgba(45,212,160,.3)' : isAvail ? 'rgba(45,212,160,.1)' : 'rgba(255,107,107,.1)';
             const icon = hasClean ? '🧹' : isAvail ? '✓' : '–';
             const col = hasClean ? 'var(--green)' : isAvail ? 'var(--green)' : 'var(--muted)';
@@ -4953,7 +5027,7 @@ function showDay(ds) {
 
     // Find cleaning linked to this booking (within 2 days of checkout)
     const linkedClean = domestics.find(d=>
-      d.property_id===b.property_id &&
+      d.property_id===b.property_id && d.status!=='cancelled' &&
       Math.abs(new Date(d.date)-new Date(coDate)) <= 2*86400000
     );
 
@@ -5432,7 +5506,7 @@ function renderGuestManagement() {
       const daysUntil = Math.ceil((new Date(b.check_in)-new Date())/86400000);
       const col = PLAT_COLORS[b.platform]||'#c17f3c';
       const cleanOk = domestics.some(d =>
-        d.property_id===b.property_id &&
+        d.property_id===b.property_id && d.status!=='cancelled' &&
         Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10))) <= 2*86400000
       );
 

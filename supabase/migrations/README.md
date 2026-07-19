@@ -33,6 +33,7 @@ order.
 | 090_staging_ical_feeds_seed.sql | **staging only** | Seeds `ical_feeds` on staging so iCal sync can be smoke-tested there |
 | 095_staging_ical_feeds_index_fix.sql | **staging only** | Adds `ical_feeds_unique_platform_property`, which staging was missing (production had it) — required before 090 can run |
 | 100_rls_parity.sql | both | Defines one clean policy target state and applies it to both databases — closes real gaps on staging, fixes the same redundant/legacy-mechanism bugs on production. Run after `085`. |
+| 110_domestics_cancellation_ack.sql | both | Adds `domestics.cancellation_acknowledged_at` — supports Task 3's cancellation workflow (dashboard Urgent Actions dismiss tracking) |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
