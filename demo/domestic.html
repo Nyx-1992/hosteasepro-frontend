@@ -79,6 +79,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
 .pill-scheduled{background:rgba(91,142,240,.15);color:var(--blue)}
 .pill-completed{background:rgba(45,212,160,.15);color:var(--green)}
 .pill-today{background:rgba(193,127,60,.2);color:var(--accent);animation:pulse 2s infinite}
+.pill-cancelled{background:rgba(255,107,107,.15);color:var(--red)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 
 /* Inventory */
@@ -1416,21 +1417,24 @@ function renderHome() {
   } else {
     nextEl.innerHTML=upcoming.map(c=>{
       const isToday=c.date===td;
+      const isCancelled=c.status==='cancelled';
       const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
       const[y,m,d]=(c.date||'-- -').split('-');
-      return `<div class="clean-card ${isToday?'today-card':''}" onclick="openInventory('${c.id}')">
+      return `<div class="clean-card ${isToday&&!isCancelled?'today-card':''}" ${isCancelled?'':`onclick="openInventory('${c.id}')"`} style="${isCancelled?'opacity:.7':''}">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
           <div><div style="font-family:Syne,sans-serif;font-size:2rem;font-weight:800;line-height:1">${parseInt(d)||'?'}</div>
           <div style="font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">${m?MONTHS_S[parseInt(m)-1]:''} ${y||''}</div></div>
-          <span class="status-pill ${isToday?'pill-today':'pill-scheduled'}">${isToday?'Today':'Upcoming'}</span>
+          <span class="status-pill ${isCancelled?'pill-cancelled':isToday?'pill-today':'pill-scheduled'}">${isCancelled?'Cancelled':isToday?'Today':'Upcoming'}</span>
         </div>
         <div style="font-weight:600;font-size:.9rem;margin-bottom:3px">📍 ${prop.name}</div>
         <div style="font-size:.78rem;color:var(--muted)">${c.time||'10:00'}${c.notes?' · '+c.notes:''}</div>
-        <div style="margin-top:10px;font-size:.74rem;color:var(--accent);font-weight:600">Tap to submit inventory →</div>
+        ${isCancelled
+          ? '<div style="margin-top:10px;font-size:.74rem;color:var(--red);font-weight:600">Cleaning cancelled — booking was cancelled</div>'
+          : '<div style="margin-top:10px;font-size:.74rem;color:var(--accent);font-weight:600">Tap to submit inventory →</div>'}
       </div>`;
     }).join('');
   }
-  const scheduled=myCleans.filter(c=>c.date>=td&&c.status!=='completed').length;
+  const scheduled=myCleans.filter(c=>c.date>=td&&c.status!=='completed'&&c.status!=='cancelled').length;
   document.getElementById('home-stats').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="card" style="border-left:3px solid var(--green)">
@@ -1493,16 +1497,18 @@ function renderCleans() {
     const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
     const[y,m,d]=(c.date||'').split('-');
     const done=c.status==='completed';
+    const cancelled=c.status==='cancelled';
     const isToday=c.date===td;
-    return '<div class="clean-card '+(isToday?'today-card':'')+'">'
+    return '<div class="clean-card '+(isToday&&!cancelled?'today-card':'')+'" '+(cancelled?'style="opacity:.7"':'')+'>'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px">'
       +'<div style="display:flex;align-items:center;gap:12px">'
       +'<div style="text-align:center;min-width:36px"><div style="font-family:Syne,sans-serif;font-size:1.2rem;font-weight:800">'+(parseInt(d)||'?')+'</div><div style="font-size:.62rem;color:var(--muted);text-transform:uppercase">'+(m?MONTHS_S[parseInt(m)-1]:'')+'</div></div>'
       +'<div><div style="font-weight:600;font-size:.88rem">'+prop.name+'</div><div style="font-size:.76rem;color:var(--muted)">'+(c.time||'10:00')+' · R'+(c.amount_paid||getRate(currentCleaner,c.property_id))+'</div></div>'
       +'</div>'
-      +'<span class="status-pill '+(done?'pill-completed':isToday?'pill-today':'pill-scheduled')+'">'+(done?'Done':isToday?'Today':'Scheduled')+'</span>'
+      +'<span class="status-pill '+(cancelled?'pill-cancelled':done?'pill-completed':isToday?'pill-today':'pill-scheduled')+'">'+(cancelled?'Cancelled':done?'Done':isToday?'Today':'Scheduled')+'</span>'
       +'</div>'
-      +(!done?'<div onclick="openInventory(\''+c.id+'\')" style="font-size:.74rem;color:var(--accent);font-weight:600;cursor:pointer">Tap to submit inventory →</div>':'')
+      +(cancelled?'<div style="font-size:.74rem;color:var(--red);font-weight:600">Cleaning cancelled — booking was cancelled</div>'
+        :!done?'<div onclick="openInventory(\''+c.id+'\')" style="font-size:.74rem;color:var(--accent);font-weight:600;cursor:pointer">Tap to submit inventory →</div>':'')
       +'</div>';
   }).join('');
 }
