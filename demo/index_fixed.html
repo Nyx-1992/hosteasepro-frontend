@@ -2558,6 +2558,17 @@ async function syncICalFeeds(silent = false) {
             }
             continue;
           }
+          // Check-in guard: only auto-cancel bookings that haven't started
+          // yet. Once check-in has passed, disappearing from a forward-
+          // looking calendar feed is normal platform behavior (some feeds
+          // stop listing a stay once it's underway or complete) — not
+          // evidence of a real cancellation. Confirmed via a real incident:
+          // an active/completed stay got wrongly auto-cancelled by this
+          // sweep before this guard existed. Needs a human to review.
+          if (row.check_in_date <= todayStr) {
+            console.warn('[iCal] Skipped auto-cancel — check-in already passed, needs manual review:', feed.property_name, row.guest_name, row.check_in_date, '→', row.check_out_date);
+            continue;
+          }
           // ── Cancellation workflow: named guest, booking gone from feed ──────
           const { data: canc, error: cancErr } = await db.from('bookings')
             .update({ status: 'cancelled', is_active: false, cancelled_at: new Date().toISOString() })
