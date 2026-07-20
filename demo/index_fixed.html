@@ -1494,10 +1494,15 @@ const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 // ── STATE ─────────────────────────────────────────────────────
 let currentUser = null, currentProp = 'all', currentTab = 'dashboard';
 let CURRENT_ORG_ID = null;
+// The one org whose data predates real multi-tenancy — used ONLY for
+// deliberate, explicitly-labeled special cases (this fallback, and the
+// rate calculator's direct-commission exception), never as a general
+// default for "current org" logic.
+const SN_OWNER_ORG_ID = '5966bc67-5c2f-45ae-8519-9b7eaeee09f4';
 function getOrgId() {
   // Falls back to S&N's org while multi-tenancy is still in progress —
   // once org-creation flow (p1-2) exists, this fallback should be removed.
-  return CURRENT_ORG_ID || '5966bc67-5c2f-45ae-8519-9b7eaeee09f4';
+  return CURRENT_ORG_ID || SN_OWNER_ORG_ID;
 }
 restoreSession();
 let taskFilter = 'open', bookingFilter = 'upcoming';
@@ -1688,9 +1693,9 @@ function nt(t) {
 function nd(d) { return {...d, checklist:d.checklist||{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}}; }
 function propName(id) {
   if (!id) return '—';
-  if (id==='speranta' || id==='e9737638-d83a-4947-940a-8746789e4d9f') return 'Speranta';
-  if (id==='tvhouse'  || id==='83b2a84a-5451-4be5-a84f-2efc0d2602d5') return 'TV House';
   if (id==='all') return 'All Properties';
+  const key = UUID_MAP[id] || id;
+  if (PROPS[key]) return PROPS[key].short || PROPS[key].name;
   return id;
 }
 function fmtDate(d) { if(!d)return''; const[y,m,day]=d.split('-'); return day+'/'+m+'/'+y; }
@@ -1749,6 +1754,7 @@ async function doLogin() {
 async function _afterLogin(user) {
   CURRENT_ORG_ID = user.org_id || null;
   await loadProperties();
+  await loadIcalFeeds();
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
   document.getElementById('user-avatar').textContent = user.initials;
@@ -2236,7 +2242,14 @@ async function loadData() {
 // Fetches all iCal feeds via a CORS proxy and upserts into Supabase
 // Runs on login and can be triggered manually
 
-const ICAL_FEEDS = [
+// Loaded per-org from public.ical_feeds (populate via the Settings tab, or
+// the SQL editor) — never hardcoded, so a new host org's feeds work without
+// a code change. Kept as a fallback ONLY for the S&N owner org specifically
+// (SN_OWNER_ORG_ID, defined with getOrgId() above), in case the table is
+// ever unreachable — never falls back for any other org, where an empty
+// result correctly means "no feeds configured yet", not "silently sync
+// someone else's calendars".
+const FALLBACK_ICAL_FEEDS_SN = [
   // Speranta
   { property_id: 'e9737638-d83a-4947-940a-8746789e4d9f', property_name: 'Speranta Flat', platform: 'booking',
     url: 'https://ical.booking.com/v1/export?t=8123e217-45b4-403d-8fa0-9dcc65c26800' },
@@ -2252,6 +2265,30 @@ const ICAL_FEEDS = [
   { property_id: '83b2a84a-5451-4be5-a84f-2efc0d2602d5', property_name: 'TV House', platform: 'lekkeslaap',
     url: 'https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=QzZ2aFlFVHhxYnoxdGRVL3ZwelRGUT09' },
 ];
+let ICAL_FEEDS = [];
+
+async function loadIcalFeeds() {
+  ICAL_FEEDS = [];
+  if (db) {
+    try {
+      const { data, error } = await db.from('ical_feeds')
+        .select('property_id,platform,feed_url')
+        .eq('org_id', getOrgId())
+        .eq('is_active', true);
+      if (!error && data) {
+        ICAL_FEEDS = data.map(f => ({
+          property_id: f.property_id,
+          property_name: (PROPS[UUID_MAP[f.property_id]] || {}).name || '',
+          platform: f.platform,
+          url: f.feed_url,
+        }));
+      }
+    } catch (e) { console.warn('loadIcalFeeds:', e); }
+  }
+  if (!ICAL_FEEDS.length && getOrgId() === SN_OWNER_ORG_ID) {
+    ICAL_FEEDS = FALLBACK_ICAL_FEEDS_SN;
+  }
+}
 
 const CORS_PROXIES = [
   url => `https://www.snapartments.co.za/api/ical-proxy?url=${encodeURIComponent(url)}`,
@@ -2428,6 +2465,10 @@ async function syncICalFeeds(silent = false) {
 
   const statusEl = document.getElementById('db-status');
   // syncing indicator hidden
+
+  // Refresh from public.ical_feeds each run — picks up feeds added/edited
+  // since login without needing a full page reload.
+  await loadIcalFeeds();
 
   let totalNew = 0, totalUpdated = 0, totalReleased = 0, totalCancelled = 0, errors = 0;
 
@@ -3038,8 +3079,8 @@ async function invLoadBookings() {
       .limit(60);
     if(!data) return;
     sel.innerHTML = '<option value="">— select to auto-fill —</option>' + data.map(b => {
-      const prop = b.property_id==='e9737638-d83a-4947-940a-8746789e4d9f' ? 'Speranta Flat — 35 Athens Road, Tableview'
-                 : b.property_id==='83b2a84a-5451-4be5-a84f-2efc0d2602d5' ? 'TV House' : b.property_id;
+      const propInfo = PROPS[UUID_MAP[b.property_id] || b.property_id];
+      const prop = propInfo ? (propInfo.name + (propInfo.address ? ' — '+propInfo.address : '')) : (b.property_id || '—');
       const nights = b.nights||1;
       const rev    = parseFloat(b.revenue)||0;
       const rate   = rev && nights ? Math.round(rev/nights) : 1000;
@@ -3443,7 +3484,7 @@ const ROADMAP = [
   {k:'p0-25',t:'"Edit clean" on a linked cleaning doesn\'t save a date change',n:'Not started. Reported live: moving Patricia\'s TV House clean earlier (linked to a booking) via the booking-detail modal\'s "Edit clean" didn\'t take. Two suspects found on inspection, not yet confirmed against the real failure: (1) editCleaning()\'s domestics.find(x=>x.id===id) is a strict-type comparison while saveDomestic() elsewhere in the same flow uses String(d.id)===String(editId) — an inconsistency that could silently no-op the lookup if id ever isn\'t already a matching type; (2) validateCleanDate() rejects a new date earlier than the LINKED booking\'s checkout, which could misfire if the clean\'s selected link in the edit form differs from the one intended. Needs reproducing directly (open the exact clean, watch what the id/linked-booking values actually are) before committing to a fix — worked around this instance with a direct SQL UPDATE rather than guessing at the UI',c:'Bug'},
   {k:'p0-26',t:'--warm CSS variable referenced ~10x, never defined',n:'DONE — found while visually verifying the Roadmap redesign. Every tag/badge and several hover states (status-tag, .tag, .btn-ghost:hover, invoice/finance category chips, Roadmap category badges, etc.) referenced var(--warm) across the whole app, but it was never defined in :root — silently transparent everywhere it was used, app-wide, since before this session. Fixed with one addition to :root rather than touched at each call site',c:'Bug'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
-  {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'org_id done (getOrgId() reads from logged-in profile) — property/PROPS/UUID_MAP still hardcoded, needs its own session (properties table lacks cleaning_fee column)',c:'Architecture'},
+  {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
   {k:'p1-3',t:'Self-serve staff invitations (coordinator / cleaner)',n:'Invite link + Supabase Auth self-registration',c:'Architecture'},
   {k:'p1-4',t:'Per-org commission rates from org_settings',n:'Airbnb 17.8 / Booking 15 / LS 22.1 currently hardcoded',c:'Architecture'},
@@ -3848,7 +3889,7 @@ function renderDashboard() {
     .filter(r => !r.all_ok && !r.reviewed)
     .forEach(r => {
       const flagCount = (r.flagged_items||[]).length;
-      const propN = r.property_id==='e9737638-d83a-4947-940a-8746789e4d9f'?'Speranta':'TV House';
+      const propN = propName(r.property_id);
       const label = flagCount>0
         ? `${flagCount} item${flagCount>1?'s':''} flagged — ${propN}`
         : `Cleaner note — ${propN}`;
@@ -4445,11 +4486,7 @@ async function saveBooking() {
   if (!guest||!cin||!cout) { toast('Please fill required fields','error'); return; }
   const nights = Math.round((new Date(cout)-new Date(cin))/86400000);
   const pid = document.getElementById('b-prop').value;
-  const PROP_UUIDS = {
-    'speranta': 'e9737638-d83a-4947-940a-8746789e4d9f',
-    'tvhouse':  '83b2a84a-5451-4be5-a84f-2efc0d2602d5',
-  };
-  const propUuid = PROP_UUIDS[pid] || pid;
+  const propUuid = (PROPS[pid] || {}).uuid || pid;
   const row = {
     org_id:       getOrgId(),
     property_id:  propUuid,
@@ -5060,7 +5097,7 @@ function renderDomesticCalView() {
       invEl.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:16px">No inventory reports yet</div>';
     } else {
       invEl.innerHTML = inventoryReports.slice(0,20).map(r => {
-        const propN = r.property_id==='e9737638-d83a-4947-940a-8746789e4d9f'?'Speranta':'TV House';
+        const propN = propName(r.property_id);
         const flags = r.flagged_items||[];
         const hasNote = r.notes;
         const borderCol = (!r.all_ok && !r.reviewed) ? '#f59e0b33' : 'var(--border)';
@@ -5901,11 +5938,7 @@ async function toggleNinaTask(bookingId, taskKey) {
   if (db && dbCol) {
     // Find the booking to get property_id and org_id
     const b = bookings.find(x => String(x.id) === String(bookingId));
-    const propUuids = {
-      'speranta': 'e9737638-d83a-4947-940a-8746789e4d9f',
-      'tvhouse':  '83b2a84a-5451-4be5-a84f-2efc0d2602d5',
-    };
-    const propUuid = propUuids[b?.property_id] || b?.property_id;
+    const propUuid = (PROPS[b?.property_id] || {}).uuid || b?.property_id;
 
     const update = { [dbCol]: val ? new Date().toISOString() : null };
     // Try update first, then insert if not exists
@@ -5955,8 +5988,7 @@ async function saveTask() {
   const title=document.getElementById('t-title').value.trim();
   if(!title){toast('Task title is required','error');return;}
   const pid=document.getElementById('t-prop').value;
-  const PROP_UUIDS2={'speranta':'e9737638-d83a-4947-940a-8746789e4d9f','tvhouse':'83b2a84a-5451-4be5-a84f-2efc0d2602d5'};
-  const propUuidModal = pid !== 'all' ? (PROP_UUIDS2[pid] || null) : null;
+  const propUuidModal = pid !== 'all' ? ((PROPS[pid] || {}).uuid || null) : null;
   const _pri = document.getElementById('t-priority').value;
   const _typ = window._taskSubTab==='project' ? 'project' : 'task';
   const row={
@@ -7054,14 +7086,10 @@ async function saveTaskDrawer() {
   document.getElementById('drawer-title-display').textContent = newTitle;
 
   if (db) {
-    // Map property shortname to UUID for DB
-    const PROP_UUIDS = {
-      'speranta': 'e9737638-d83a-4947-940a-8746789e4d9f',
-      'tvhouse':  '83b2a84a-5451-4be5-a84f-2efc0d2602d5',
-    };
-    // Only send known UUID values — empty/unknown defaults to null
-    const propUuid = (newProp && newProp !== 'all' && PROP_UUIDS[newProp])
-      ? PROP_UUIDS[newProp] : null;
+    // Map property shortname to UUID for DB — only send known values,
+    // empty/unknown defaults to null
+    const propUuid = (newProp && newProp !== 'all' && (PROPS[newProp] || {}).uuid)
+      ? PROPS[newProp].uuid : null;
     const row = {
       title:         newTitle,
       description:   newNotes,
@@ -7111,7 +7139,7 @@ async function createTaskFromFlag(reportId) {
   const r = inventoryReports.find(x=>x.id===reportId);
   if(!r) return;
   const flags = r.flagged_items||[];
-  const propN = r.property_id==='e9737638-d83a-4947-940a-8746789e4d9f'?'Speranta':'TV House';
+  const propN = propName(r.property_id);
   const propUuid = r.property_id;
   const title = flags.length>0
     ? `Check & repair: ${flags.map(f=>f.item).join(', ')} — ${propN}`
