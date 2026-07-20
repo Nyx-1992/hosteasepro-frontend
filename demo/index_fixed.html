@@ -1632,7 +1632,31 @@ function nb(b) {
     property_id: pid,
   };
 }
-  
+
+// Two rows can represent the same stay: a real reservation synced from one
+// platform's feed, and a 'blocked' placeholder mirrored by another
+// platform's calendar for the same dates (e.g. Airbnb auto-blocks whatever
+// Booking.com has already booked). The placeholder must never win — always
+// prefer the real booking. Shared by loadData() and syncICalFeeds()'s
+// post-sync reload; they used to have their own separate, drifted copies of
+// this, and the sync-reload one was missing the blocked-vs-real step
+// entirely, which let a same-date block silently shadow a real booking.
+function dedupeBookings(raw) {
+  const seen = {};
+  let deduped = raw.filter(b => {
+    if (b.status === 'cancelled') return true; // keep all cancelled
+    if (b.status === 'blocked')   return true; // keep blocked separately for now
+    const key = b.property_id + '|' + b.check_in + '|' + b.check_out + '|' + b.platform;
+    if (seen[key]) return false; // exact duplicate — skip
+    seen[key] = true;
+    return true;
+  });
+  const realKeys = new Set(deduped.filter(b => !['blocked','owner','cancelled'].includes(b.status))
+    .map(b => b.property_id+'|'+b.check_in+'|'+b.check_out));
+  deduped = deduped.filter(b => b.status!=='blocked' || !realKeys.has(b.property_id+'|'+b.check_in+'|'+b.check_out));
+  return deduped;
+}
+
 function nt(t) {
   // Map DB status → app status
   const statusMap = {'pending':'open','in_progress':'open','completed':'done','cancelled':'cancelled'};
@@ -2168,21 +2192,7 @@ async function loadData() {
     ]);
     let connected = false;
     if (bRes.data && bRes.data.length > 0) {
-        let raw = bRes.data.map(nb);
-        // Deduplicate: if same property + overlapping dates, keep the one with better data
-        const seen = {};
-        raw = raw.filter(b => {
-          if (b.status === 'cancelled') return true; // keep all cancelled
-          if (b.status === 'blocked')   return true; // keep blocked separately
-          const key = b.property_id + '|' + b.check_in + '|' + b.check_out + '|' + b.platform;
-          if (seen[key]) return false; // exact duplicate - skip
-          seen[key] = true;
-          return true;
-        });
-        // Remove blocked if a real booking exists for same dates+property
-        const realKeys = new Set(raw.filter(b=>!['blocked','owner','cancelled'].includes(b.status))
-          .map(b=>b.property_id+'|'+b.check_in+'|'+b.check_out));
-        raw = raw.filter(b => b.status!=='blocked' || !realKeys.has(b.property_id+'|'+b.check_in+'|'+b.check_out));
+        const raw = dedupeBookings(bRes.data.map(nb));
         // Filter out soft-deleted bookings
         bookings = raw.filter(b => b.is_active !== false);
         connected = true;
@@ -2626,14 +2636,7 @@ async function syncICalFeeds(silent = false) {
   const { data } = await db.from('bookings').select('*')
     .order('check_in_date', { ascending: false }).limit(500);
   if (data && data.length) {
-    const seen = {};
-    bookings = data.map(nb).filter(b => {
-      if (b.status === 'cancelled') return true;
-      const key = b.property_id+'|'+b.check_in+'|'+b.check_out;
-      if (seen[key]) return false;
-      seen[key] = true;
-      return true;
-    });
+    bookings = dedupeBookings(data.map(nb)).filter(b => b.is_active !== false);
   }
   // Reload domestics too — the cancellation workflow above may have just
   // flagged a linked clean 'cancelled'; keep the in-memory copy in sync
