@@ -1,6 +1,14 @@
 name: ICS Import
 
-# Manual-only trigger retained; scheduled cron removed to freeze logic.
+# Runs on a schedule so bookings stay current without anyone needing the
+# dashboard open to click Sync. scripts/ics-import.js is a server-side port
+# of demo/index_fixed.html's client-side syncICalFeeds()/parseICalText() —
+# brought up to parity with it as of 2026-07-20 (Booking.com "Reserved"
+# carve-out, blocked-event overlap-matching, the stale-block/cancellation
+# sweep with its check-in guard, linked-clean cancellation). It's a
+# hand-maintained copy, not a shared module (this repo has no bundler for
+# the client-side app), so it CAN drift again — when changing sync or
+# classification logic in one file, check the other.
 on:
   workflow_dispatch: {}
   schedule:
