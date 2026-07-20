@@ -35,6 +35,8 @@ order.
 | 100_rls_parity.sql | both | Defines one clean policy target state and applies it to both databases — closes real gaps on staging, fixes the same redundant/legacy-mechanism bugs on production. Run after `085`. |
 | 110_domestics_cancellation_ack.sql | both | Adds `domestics.cancellation_acknowledged_at` — supports Task 3's cancellation workflow (dashboard Urgent Actions dismiss tracking) |
 | 120_roadmap_state_seed.sql | both | Marks this session's completed Roadmap tab items (p0-13 through p0-20) as done |
+| 130_platform_fee_config.sql | both | New `platform_fee_config` table (per-org, per-platform host commission % + guest fee %) backing Task 5's rate calculator; seeded with ZA defaults, including HEP's own 5% direct-booking commission (0% for the S&N owner org) |
+| 140_roadmap_state_task5.sql | both | Marks Roadmap tab item p0-22 (rate calculator) as done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
