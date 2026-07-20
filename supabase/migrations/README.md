@@ -51,6 +51,8 @@ order.
 | 250_roadmap_state_p0_27_p0_28.sql | both | Marks Roadmap items p0-27 ("Today's Check-outs" section on the Bookings tab) and p0-28 (staging stale-cancellation data fix) done |
 | 260_booking_checklists_mid_stay.sql | both | Adds `booking_checklists.mid_stay_msg_at` — the one new column the Guest Timeline (B1) needed; the other 3 stages (pre-arrival/check-in day/post-stay) reuse existing columns |
 | 270_roadmap_state_p0_29_p0_30.sql | both | Marks Roadmap item p0-30 (Guest Timeline / B1) done. p0-29 (fmtDate bug, 2 remaining spots) is intentionally left "not started" |
+| 280_property_manuals.sql | both | New `property_manuals` table (org_id, property_id, section, content jsonb) backing the Property Manual / Knowledge tab rebuild (B3) — one row per (property, section) for `inventory`/`inspection`/`faq`. Seeded with real data transcribed from the hardcoded `INVENTORY` (demo/domestic.html) and `INSP_CHECKLIST` (demo/index_fixed.html) structures it replaces; `faq` starts empty per property (no real FAQ content existed anywhere to seed from) |
+| 290_roadmap_state_p0_31.sql | both | Marks Roadmap item p0-31 (Property Manual / Knowledge tab rebuild, B3) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 

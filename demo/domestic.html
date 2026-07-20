@@ -606,7 +606,12 @@ const NINA_CHECKLISTS = {
   },
 };
 
-const INVENTORY = {
+// Fallback only — used if the property_manuals fetch fails or a property
+// has no inventory section saved yet. The live, editable version is
+// loaded into INVENTORY_DATA on login (see loadData()) from the same
+// table the Knowledge tab's Property Manual (B3) edits, in
+// demo/index_fixed.html.
+const FALLBACK_INVENTORY = {
   'e9737638-d83a-4947-940a-8746789e4d9f': [
     {room:'Kitchen', icon:'🍳', items:['Plates (×4)','Bowls (×4)','Mugs (×4)','Glasses (×4)','Cutlery set (×4)','Pots & pans','Kettle','Toaster','Microwave','Chopping board','Dish cloths (×2)','Washing liquid present','Washing machine tablet (×1)','Coffee plunger present','Mixer/blender present']},
     {room:'Bathroom', icon:'🚿', items:['Bath towels (×2)','Hand towels (×2)','Wiper/squeegee present','Hair dryer present']},
@@ -640,6 +645,7 @@ let availableDays = new Set();
 let availYear = new Date().getFullYear();
 let availMonth = new Date().getMonth();
 let currentInventoryClean = null;
+let INVENTORY_DATA = {}; // property_id -> rooms array, loaded from property_manuals (B3)
 let inventoryState = {};
 let pinInput = '';
 let selectedCleaner = null;
@@ -1394,13 +1400,16 @@ async function loadNinaRepCleans() {
 async function loadData() {
   if(!db||!currentCleaner) return;
   try {
-    const [cleanRes, bookRes, allRes] = await Promise.all([
+    const [cleanRes, bookRes, allRes, manualRes] = await Promise.all([
       db.from('domestics').select('*').eq('cleaner',currentCleaner.name).order('date',{ascending:true}),
       db.from('bookings').select('check_out_date,property_id,guest_name,nights').eq('is_active',true).gte('check_out_date',tod()).order('check_out_date',{ascending:true}).limit(60),
       db.from('domestics').select('date,cleaner,status,property_id').gte('date',tod()).neq('status','cancelled'),
+      db.from('property_manuals').select('property_id,content').eq('org_id',ORG_ID).eq('section','inventory'),
     ]);
     myCleans = cleanRes.data||[];
     allUpcomingCleans = allRes.data||[];
+    INVENTORY_DATA = {};
+    (manualRes.data||[]).forEach(row => { INVENTORY_DATA[row.property_id] = (row.content||{}).rooms || []; });
     const avRes = await db.from('cleaner_availability')
       .select('date,available').eq('cleaner',currentCleaner.name)
       .gte('date',new Date().toISOString().slice(0,7)+'-01');
@@ -1608,7 +1617,8 @@ function openInventory(cleanId) {
   document.getElementById('inv-title').textContent=prop.name;
   document.getElementById('inv-sub').textContent=fmtFull(clean.date)+' · '+(clean.time||'10:00');
   document.getElementById('inv-note').value='';
-  const rooms=INVENTORY[clean.property_id]||INVENTORY['e9737638-d83a-4947-940a-8746789e4d9f'];
+  const rooms=INVENTORY_DATA[clean.property_id]?.length ? INVENTORY_DATA[clean.property_id]
+    : (FALLBACK_INVENTORY[clean.property_id]||FALLBACK_INVENTORY['e9737638-d83a-4947-940a-8746789e4d9f']);
   document.getElementById('inventory-form').innerHTML=rooms.map(room=>`
     <div class="room-section">
       <div class="room-header"><span class="room-icon">${room.icon}</span><span class="room-name">${room.room}</span></div>

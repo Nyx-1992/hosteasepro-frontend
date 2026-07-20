@@ -667,7 +667,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
             <div class="form-grid">
               <div class="form-field">
                 <label>Property *</label>
-                <select id="insp-prop">
+                <select id="insp-prop" onchange="renderInspectionChecklist()">
                   <option value="speranta">Speranța Flat</option>
                   <option value="tvhouse">TV House</option>
                 </select>
@@ -772,8 +772,17 @@ function _buildMobileNavStub(){/* replaced by main script */}
       <!-- KNOWLEDGE BASE -->
       <div class="tab-pane" id="tab-knowledge">
         <div class="section-head">
-          <div><h2 style="font-size:1.25rem;margin-bottom:3px">Knowledge Base</h2><div class="text-muted">Guides for the team</div></div>
-          <button class="btn btn-primary btn-sm" onclick="openModal('kb-modal')">+ Add Article</button>
+          <div><h2 style="font-size:1.25rem;margin-bottom:3px">Property Manual</h2><div class="text-muted">Inventory, inspection checklist & guest FAQ — per property, feeds the cleaner &amp; inspection flows directly</div></div>
+        </div>
+        <div style="display:flex;gap:4px;background:var(--surface-2);border-radius:10px;padding:3px;margin-bottom:12px;width:fit-content" id="km-prop-tabs"></div>
+        <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap" id="km-section-tabs"></div>
+        <div id="km-content"></div>
+
+        <div class="divider" style="margin:32px 0"></div>
+
+        <div class="section-head">
+          <div><h2 style="font-size:1.1rem;margin-bottom:3px">General Notes</h2><div class="text-muted">Org-wide notes that aren't tied to one property</div></div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('kb-modal')">+ Add Note</button>
         </div>
         <div class="mb-6"><input style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:#fff" placeholder="🔍 Search…" oninput="renderKB(this.value)"/></div>
         <div id="kb-content"></div>
@@ -2002,6 +2011,7 @@ async function _afterLogin(user) {
   CURRENT_ORG_ID = user.org_id || null;
   await loadProperties();
   await loadIcalFeeds();
+  await loadPropertyManuals();
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app-screen').style.display='block';
   document.getElementById('user-avatar').textContent = user.initials;
@@ -2111,6 +2121,11 @@ function switchProperty(val) {
 }
 
 // ── INSPECTION DATA ───────────────────────────────────────────
+// Fallback only, used when a property has no inspection section saved in
+// property_manuals yet (shouldn't happen post-seed, but keeps the form
+// from rendering empty if it ever does). The live, per-property, editable
+// version lives in the Knowledge tab's Property Manual (B3) — see
+// getInspChecklist().
 const INSP_CHECKLIST = [
   {key:'entrance',    label:'Entrance & front door'},
   {key:'living',      label:'Living room'},
@@ -2125,6 +2140,11 @@ const INSP_CHECKLIST = [
   {key:'maintenance', label:'No maintenance issues'},
   {key:'cleanliness', label:'General cleanliness'},
 ];
+function getInspChecklist(propShortKey) {
+  const uuid = (PROPS[propShortKey] || {}).uuid || propShortKey;
+  const saved = propertyManuals[uuid] && propertyManuals[uuid].inspection && propertyManuals[uuid].inspection.checklist;
+  return (saved && saved.length) ? saved : INSP_CHECKLIST;
+}
 
 const INSP_CONDITION_LABELS = {
   excellent: {text:'Excellent', color:'#16a34a', bg:'#dcfce7'},
@@ -2140,7 +2160,8 @@ let _inspPhotoData = []; // base64 photos for current form
 function renderInspectionChecklist() {
   const el = document.getElementById('insp-checklist-grid');
   if (!el) return;
-  el.innerHTML = INSP_CHECKLIST.map(item => `
+  const prop = document.getElementById('insp-prop')?.value || 'speranta';
+  el.innerHTML = getInspChecklist(prop).map(item => `
     <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface-2);border-radius:8px;cursor:pointer;font-size:.82rem;border:1px solid var(--border)">
       <input type="checkbox" id="insp-chk-${item.key}" style="width:16px;height:16px;accent-color:var(--ocean);flex-shrink:0"/>
       ${item.label}
@@ -2172,8 +2193,9 @@ function saveInspection() {
   const prop = document.getElementById('insp-prop').value;
   if (!date || !prop) { toast('Please set property and date','error'); return; }
 
+  const propChecklist = getInspChecklist(prop);
   const checklist = {};
-  INSP_CHECKLIST.forEach(item => {
+  propChecklist.forEach(item => {
     checklist[item.key] = document.getElementById('insp-chk-'+item.key)?.checked || false;
   });
   const passCount = Object.values(checklist).filter(Boolean).length;
@@ -2186,7 +2208,7 @@ function saveInspection() {
     condition:  document.getElementById('insp-condition').value || 'good',
     checklist,
     passCount,
-    totalCount: INSP_CHECKLIST.length,
+    totalCount: propChecklist.length,
     notes:      document.getElementById('insp-notes').value || '',
     photos:     _inspPhotoData.filter(Boolean),
     created_at: new Date().toISOString(),
@@ -2223,7 +2245,7 @@ function clearInspectionForm() {
   document.getElementById('insp-notes').value = '';
   document.getElementById('insp-condition').value = 'good';
   document.getElementById('insp-inspector').value = 'Nina';
-  INSP_CHECKLIST.forEach(item => {
+  getInspChecklist(document.getElementById('insp-prop')?.value || 'speranta').forEach(item => {
     const el = document.getElementById('insp-chk-'+item.key);
     if (el) el.checked = false;
   });
@@ -2413,7 +2435,7 @@ function renderTab(id) {
   else if (id==='domestic')  switchTab('calendar'); // redirect — domestic merged into calendar
   else if (id==='tasks')     renderTasks();
   else if (id==='messages')  renderMessages();
-  else if (id==='knowledge') renderKB();
+  else if (id==='knowledge') { renderKnowledgeManual(); renderKB(); }
   else if (id==='team')      renderTeam();
   else if (id==='finance')   renderFinance();
   else if (id==='reports')   { renderReports(); renderReportInspections(); renderReportInventory(); }
@@ -3797,7 +3819,8 @@ const ROADMAP = [
   {k:'p0-27',t:'"Today\'s Check-outs" section on the Bookings tab',n:'DONE — reported after a checkout-day guest was missing from staging (traced to stale data, not a code bug — see p0-28). Compact card row at the top of the Bookings tab (icon-only task toggles, two-per-row) showing only today\'s checkout-day guests, reusing the same checklist fields/DB columns as the Guest Management tab (checked_out, followup_msg, cleaning booked) via the existing toggleNinaTask()/booking_checklists plumbing so ticking stays in sync. A card drops out once every task is done or check-out is no longer today. Also fixed a real bug found while building this: the property lane\'s "current guest" lookup used check_out>today instead of >=today, so a guest checking out today silently vanished from the whole Bookings tab (not shown as current, not shown as upcoming) the moment their checkout date arrived — same off-by-one existed in the dashboard "Currently staying" card, Guest Management\'s isNow/isPast split, and the WhatsApp launcher card; all four fixed to treat checkout day as still-current',c:'HEP'},
   {k:'p0-28',t:'Staging-only stale cancelled booking (Hassad Aly, id 573)',n:'DONE — data correction, not a code issue. Same false-positive auto-cancellation incident already restored on production earlier this session; staging has its own independent booking history and was never restored, which is why staging showed 0 checkouts for a date production correctly showed one. Fixed via supabase/migrations/240_staging_restore_hassad_aly_booking.sql (staging only)',c:'Bug'},
   {k:'p0-29',t:'fmtDate() called with a full timestamp instead of a plain date in 2 spots',n:'Not started. fmtDate() assumes a plain YYYY-MM-DD string and naively splits on "-"; found via visual verification while building the Guest Timeline (p0-30) that it was being called with the full check_in/check_out timestamp instead, producing garbled dates like "15 15:00:00+02/07/2026". Fixed in the new Guest Timeline card (uses check_in_date/check_out_date instead), but the same pre-existing pattern is still live in the booking-detail modal (~line 4789) and the cleaner-assignment display (~line 5681) — not fixed there, flagging rather than expanding this session\'s scope',c:'Bug'},
-  {k:'p0-30',t:'Guest Timeline — Messages tab rebuilt around per-booking touchpoints (B1)',n:'DONE — replaced the old generic WhatsApp template-link list (pick blind from 6 canned messages) with a per-booking stage timeline: pre-arrival -> check-in day -> mid-stay (10+ night stays only) -> post-stay, each stage showing done/due-now/upcoming and a ready-to-send WhatsApp message for whichever is due right now. Post-stay message bakes in the RETURN10 rebooking promo + direct-booking link, ready for when the direct-booking page is live. Mark-as-sent reuses booking_checklists (guest_contacted_at/checked_in_at/follow_up_sent_at already existed; mid_stay_msg_at is the one new column, migration 260) via the existing toggleNinaTask() plumbing, so it stays in sync with the Guest Management tab. Lightweight "returning guest" badge derived by matching phone/name across existing bookings — no new guests table, kept it lightweight as scoped. WhatsApp delivery isolated into one deliverWhatsAppMessage() function so a future WhatsApp Business API swap doesn\'t touch the message-building code. Refined after first staging review: only mid-stay (not post-stay — the RETURN10/direct-booking push isn\'t something to actively chase yet, and every historical booking looked "overdue" the moment this shipped, flooding Urgent Actions) surfaces as an Urgent Action; mid-stay threshold raised from 4 to 10 nights; every WhatsApp send/open now targets one shared named tab instead of "_blank" so WhatsApp Web only needs logging into once per session instead of once per guest',c:'HEP'}]},
+  {k:'p0-30',t:'Guest Timeline — Messages tab rebuilt around per-booking touchpoints (B1)',n:'DONE — replaced the old generic WhatsApp template-link list (pick blind from 6 canned messages) with a per-booking stage timeline: pre-arrival -> check-in day -> mid-stay (10+ night stays only) -> post-stay, each stage showing done/due-now/upcoming and a ready-to-send WhatsApp message for whichever is due right now. Post-stay message bakes in the RETURN10 rebooking promo + direct-booking link, ready for when the direct-booking page is live. Mark-as-sent reuses booking_checklists (guest_contacted_at/checked_in_at/follow_up_sent_at already existed; mid_stay_msg_at is the one new column, migration 260) via the existing toggleNinaTask() plumbing, so it stays in sync with the Guest Management tab. Lightweight "returning guest" badge derived by matching phone/name across existing bookings — no new guests table, kept it lightweight as scoped. WhatsApp delivery isolated into one deliverWhatsAppMessage() function so a future WhatsApp Business API swap doesn\'t touch the message-building code. Refined after first staging review: only mid-stay (not post-stay — the RETURN10/direct-booking push isn\'t something to actively chase yet, and every historical booking looked "overdue" the moment this shipped, flooding Urgent Actions) surfaces as an Urgent Action; mid-stay threshold raised from 4 to 10 nights; every WhatsApp send/open now targets one shared named tab instead of "_blank" so WhatsApp Web only needs logging into once per session instead of once per guest',c:'HEP'},
+  {k:'p0-31',t:'Property Manual — Knowledge tab rebuilt as operational source of truth (B3)',n:'DONE — new property_manuals table (migration 280), one row per (property, section). Replaces two pieces of data that were hardcoded and duplicated with no in-app way to edit them: INVENTORY (demo/domestic.html\'s cleaner checklist during a clean) and INSP_CHECKLIST (was a single GLOBAL list for every property\'s inspection form in demo/index_fixed.html, now genuinely per-property). Seed data transcribed as-is from those hardcoded structures via a script that read the real objects, not hand-typed, so no transcription risk. New Guest FAQ section (previously didn\'t exist) is editable per property and surfaces as a copy-to-clipboard quick reference on the Guest Timeline (B1) so Nina can drop a real answer into whatever message she\'s sending. The old flat "Knowledge Base" (kbArticles/SAMPLE_KB) is kept as-is, relabeled "General Notes" below the new per-property sections — on inspection its content was real business data (door codes, procedures, emergency contacts, finance notes), not placeholder junk, so nothing there needed killing; the actual dead content was the hardcoded/duplicated checklist data now replaced. Known gap, not touched: demo/domestic.html\'s separate NINA_CHECKLISTS (a differently-structured, more detailed inspection checklist used only inside the cleaner portal\'s own Nina-view) is a third, still-hardcoded parallel structure not unified with this — out of scope for this pass, flagging rather than silently leaving it undiscovered',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -6591,6 +6614,15 @@ function getGuestStayCount(b) {
   }).length;
 }
 
+// FAQ entries for a booking's property, edited via the Knowledge tab's
+// Property Manual (B3) — surfaced here so Nina can copy a real answer
+// straight into whatever message she's about to send.
+function guestFaqEntries(propertyId) {
+  // b.property_id on a booking is already the UUID property_manuals is keyed by.
+  const manual = propertyManuals[propertyId];
+  return (manual && manual.faq && manual.faq.entries || []).filter(f => f.q || f.a);
+}
+
 function sendGuestTouchpoint(bookingId, stageKey) {
   const b = bookings.find(x => String(x.id) === String(bookingId));
   if (!b) return;
@@ -6662,6 +6694,19 @@ function renderGuestTimeline() {
         <div style="font-size:.7rem;color:#78350f;white-space:pre-wrap;max-height:36px;overflow:hidden">${dueStage.message.slice(0,110)}…</div>
       </div>` : ''}
 
+      ${guestFaqEntries(b.property_id).length ? `
+      <details style="margin-bottom:8px">
+        <summary style="font-size:.68rem;font-weight:700;color:var(--muted);cursor:pointer;list-style:none">📚 FAQ for ${propName(b.property_id)} (${guestFaqEntries(b.property_id).length}) — click to copy an answer</summary>
+        <div style="display:flex;flex-direction:column;gap:4px;margin-top:6px">
+          ${guestFaqEntries(b.property_id).map(f => `
+            <div onclick="navigator.clipboard.writeText(${JSON.stringify((f.q||'')+': '+(f.a||''))}).then(()=>toast('Copied — paste it into your message','success'))"
+              style="background:var(--surface-2);border-radius:6px;padding:6px 8px;cursor:pointer;font-size:.7rem" title="Click to copy">
+              <div style="font-weight:700;color:var(--ink)">${f.q||'(no question set)'}</div>
+              <div style="color:var(--muted);margin-top:1px">${(f.a||'').slice(0,80)}${(f.a||'').length>80?'…':''}</div>
+            </div>`).join('')}
+        </div>
+      </details>` : ''}
+
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${dueStage ? `<button onclick="sendGuestTouchpoint('${bid}','${dueStage.key}')"
           style="display:inline-flex;align-items:center;gap:4px;background:#25D366;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;border:none;cursor:pointer">
@@ -6707,6 +6752,219 @@ function sendMessage() {
   const now=new Date();
   messages.push({id:'m'+Date.now(),from:currentUser.name,role:currentUser.role,text,time:now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')});
   input.value=''; renderMessages();
+}
+
+// ── PROPERTY MANUAL (B3) ────────────────────────────────────────
+// propertyManuals[property_id][section] = content — the shared source of
+// truth for the cleaner's inventory checklist (demo/domestic.html),
+// the owner-side inspection checklist (below), and the guest FAQ surfaced
+// in the Guest Timeline (B1). Editing here is the only way to change any
+// of those three; nothing is hardcoded per-property in JS any more.
+let propertyManuals = {};
+async function loadPropertyManuals() {
+  propertyManuals = {};
+  if (!db) return;
+  try {
+    const { data, error } = await db.from('property_manuals').select('*').eq('org_id', getOrgId());
+    if (!error && data) {
+      data.forEach(row => {
+        if (!propertyManuals[row.property_id]) propertyManuals[row.property_id] = {};
+        propertyManuals[row.property_id][row.section] = row.content;
+      });
+    }
+  } catch (e) { console.warn('loadPropertyManuals:', e); }
+}
+
+async function savePropertyManualSection(propertyId, section, content) {
+  if (!propertyManuals[propertyId]) propertyManuals[propertyId] = {};
+  propertyManuals[propertyId][section] = content;
+  if (!db) return;
+  try {
+    const { error } = await db.from('property_manuals').upsert({
+      org_id: getOrgId(), property_id: propertyId, section, content,
+    }, { onConflict: 'property_id,section' });
+    if (error) throw error;
+  } catch (e) { console.warn('savePropertyManualSection:', e); toast('Could not save — check your connection', 'error'); }
+}
+
+let kmProp = null;
+let kmSection = 'inventory';
+const KM_SECTIONS = [
+  {key:'inventory',  label:'🧹 Inventory'},
+  {key:'inspection', label:'🔍 Inspection checklist'},
+  {key:'faq',         label:'💬 Guest FAQ'},
+];
+
+function renderKnowledgeManual() {
+  const propKeys = Object.keys(PROPS);
+  if (!propKeys.length) return;
+  if (!kmProp || !PROPS[kmProp]) kmProp = propKeys[0];
+
+  document.getElementById('km-prop-tabs').innerHTML = propKeys.map(key => `
+    <button onclick="setKmProp('${key}')"
+      style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:${kmProp===key?'var(--ocean)':'transparent'};color:${kmProp===key?'#fff':'var(--muted)'};transition:all .2s">
+      ${PROPS[key].name || PROPS[key].short}
+    </button>`).join('');
+
+  document.getElementById('km-section-tabs').innerHTML = KM_SECTIONS.map(s => `
+    <button onclick="setKmSection('${s.key}')"
+      style="padding:6px 14px;border-radius:20px;border:1.5px solid ${kmSection===s.key?'var(--ocean)':'var(--border)'};background:${kmSection===s.key?'var(--ocean-light)':'transparent'};color:${kmSection===s.key?'var(--ocean)':'var(--muted)'};font-size:.8rem;font-weight:600;cursor:pointer;font-family:inherit">
+      ${s.label}
+    </button>`).join('');
+
+  renderKmSectionContent();
+}
+function setKmProp(key) { kmProp = key; renderKnowledgeManual(); }
+function setKmSection(section) { kmSection = section; renderKnowledgeManual(); }
+
+function renderKmSectionContent() {
+  if (kmSection === 'inventory') renderKmInventory();
+  else if (kmSection === 'inspection') renderKmInspection();
+  else if (kmSection === 'faq') renderKmFaq();
+}
+
+function kmPropUuid() { return (PROPS[kmProp] || {}).uuid || kmProp; }
+function kmContent(section, fallback) {
+  const uuid = kmPropUuid();
+  return (propertyManuals[uuid] && propertyManuals[uuid][section]) || fallback;
+}
+
+// ── Inventory section ──
+function renderKmInventory() {
+  const el = document.getElementById('km-content');
+  const content = kmContent('inventory', {rooms:[]});
+  const rooms = content.rooms || [];
+
+  el.innerHTML = `<div style="display:grid;gap:12px">
+    ${rooms.map((room, ri) => `
+      <div class="card" style="padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <input value="${room.icon||''}" onchange="kmUpdateRoom(${ri},'icon',this.value)" style="width:36px;text-align:center;border:1px solid var(--border);border-radius:6px;padding:4px;font-size:1rem"/>
+          <input value="${room.room||''}" onchange="kmUpdateRoom(${ri},'room',this.value)" style="flex:1;font-weight:700;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:.88rem"/>
+          <button onclick="kmDeleteRoom(${ri})" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:5px 9px;font-size:.72rem;cursor:pointer">✕ Room</button>
+        </div>
+        <div style="display:grid;gap:5px">
+          ${(room.items||[]).map((item, ii) => `
+            <div style="display:flex;gap:6px;align-items:center">
+              <input value="${item}" onchange="kmUpdateItem(${ri},${ii},this.value)" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-family:inherit;font-size:.8rem"/>
+              <button onclick="kmDeleteItem(${ri},${ii})" style="background:transparent;color:var(--muted);border:none;cursor:pointer;font-size:.85rem;padding:2px 6px">✕</button>
+            </div>`).join('')}
+          <button onclick="kmAddItem(${ri})" style="text-align:left;background:transparent;border:1.5px dashed var(--border);border-radius:6px;padding:5px 9px;font-size:.78rem;color:var(--muted);cursor:pointer">+ Add item</button>
+        </div>
+      </div>`).join('')}
+    <button onclick="kmAddRoom()" style="background:transparent;border:1.5px dashed var(--border);border-radius:10px;padding:10px;font-size:.82rem;color:var(--muted);cursor:pointer">+ Add room</button>
+  </div>`;
+}
+function kmSaveInventory(content) { savePropertyManualSection(kmPropUuid(), 'inventory', content); renderKmInventory(); }
+function kmAddRoom() {
+  const content = kmContent('inventory', {rooms:[]});
+  content.rooms = [...(content.rooms||[]), {room:'New room', icon:'📦', items:[]}];
+  kmSaveInventory(content);
+}
+function kmDeleteRoom(ri) {
+  if (!confirm('Remove this room from the checklist?')) return;
+  const content = kmContent('inventory', {rooms:[]});
+  content.rooms = content.rooms.filter((_,i)=>i!==ri);
+  kmSaveInventory(content);
+}
+function kmUpdateRoom(ri, field, val) {
+  const content = kmContent('inventory', {rooms:[]});
+  content.rooms[ri][field] = val;
+  kmSaveInventory(content);
+}
+function kmAddItem(ri) {
+  const content = kmContent('inventory', {rooms:[]});
+  content.rooms[ri].items = [...(content.rooms[ri].items||[]), 'New item'];
+  kmSaveInventory(content);
+}
+function kmDeleteItem(ri, ii) {
+  const content = kmContent('inventory', {rooms:[]});
+  content.rooms[ri].items = content.rooms[ri].items.filter((_,i)=>i!==ii);
+  kmSaveInventory(content);
+}
+function kmUpdateItem(ri, ii, val) {
+  const content = kmContent('inventory', {rooms:[]});
+  content.rooms[ri].items[ii] = val;
+  kmSaveInventory(content);
+}
+
+// ── Inspection checklist section ──
+function renderKmInspection() {
+  const el = document.getElementById('km-content');
+  const content = kmContent('inspection', {checklist:[]});
+  const items = content.checklist || [];
+
+  el.innerHTML = `<div class="card" style="padding:14px">
+    <div class="text-muted" style="font-size:.78rem;margin-bottom:10px">Shown on the Inspections tab when this property is selected.</div>
+    <div style="display:grid;gap:5px">
+      ${items.map((item, ii) => `
+        <div style="display:flex;gap:6px;align-items:center">
+          <input value="${item.label||''}" onchange="kmUpdateInspItem(${ii},this.value)" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:.84rem"/>
+          <button onclick="kmDeleteInspItem(${ii})" style="background:transparent;color:var(--muted);border:none;cursor:pointer;font-size:.85rem;padding:2px 6px">✕</button>
+        </div>`).join('')}
+      <button onclick="kmAddInspItem()" style="text-align:left;background:transparent;border:1.5px dashed var(--border);border-radius:6px;padding:6px 10px;font-size:.8rem;color:var(--muted);cursor:pointer">+ Add checklist item</button>
+    </div>
+  </div>`;
+}
+function kmSaveInspection(content) { savePropertyManualSection(kmPropUuid(), 'inspection', content); renderKmInspection(); }
+function kmSlugKey(label) { return (label||'item').toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,30) + '_' + Math.random().toString(36).slice(2,6); }
+function kmAddInspItem() {
+  const content = kmContent('inspection', {checklist:[]});
+  content.checklist = [...(content.checklist||[]), {key: kmSlugKey('new'), label:'New checklist item'}];
+  kmSaveInspection(content);
+}
+function kmDeleteInspItem(ii) {
+  const content = kmContent('inspection', {checklist:[]});
+  content.checklist = content.checklist.filter((_,i)=>i!==ii);
+  kmSaveInspection(content);
+}
+function kmUpdateInspItem(ii, val) {
+  const content = kmContent('inspection', {checklist:[]});
+  content.checklist[ii].label = val;
+  kmSaveInspection(content);
+}
+
+// ── Guest FAQ section — entries are surfaced (with a Copy button) in the
+// Guest Timeline (B1) so Nina can drop a real answer straight into
+// whatever WhatsApp message she's about to send. ──
+function renderKmFaq() {
+  const el = document.getElementById('km-content');
+  const content = kmContent('faq', {entries:[]});
+  const entries = content.entries || [];
+
+  if (!entries.length) {
+    el.innerHTML = emptyState('💬', 'No FAQ entries yet for '+((PROPS[kmProp]||{}).name||'this property'),
+      `<button class="btn btn-sm btn-primary" onclick="kmAddFaq()">+ Add FAQ entry</button>`);
+    return;
+  }
+
+  el.innerHTML = `<div style="display:grid;gap:8px">
+    ${entries.map((e, ei) => `
+      <div class="card" style="padding:12px 14px">
+        <div style="display:flex;gap:6px;align-items:flex-start;margin-bottom:6px">
+          <input value="${e.q||''}" placeholder="Question" onchange="kmUpdateFaq(${ei},'q',this.value)" style="flex:1;font-weight:700;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:.84rem"/>
+          <button onclick="kmDeleteFaq(${ei})" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:5px 9px;font-size:.72rem;cursor:pointer">✕</button>
+        </div>
+        <textarea placeholder="Answer" onchange="kmUpdateFaq(${ei},'a',this.value)" rows="2" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:.82rem;resize:vertical;box-sizing:border-box">${e.a||''}</textarea>
+      </div>`).join('')}
+    <button onclick="kmAddFaq()" style="text-align:left;background:transparent;border:1.5px dashed var(--border);border-radius:8px;padding:8px 10px;font-size:.8rem;color:var(--muted);cursor:pointer">+ Add FAQ entry</button>
+  </div>`;
+}
+function kmSaveFaq(content) { savePropertyManualSection(kmPropUuid(), 'faq', content); renderKmFaq(); }
+function kmAddFaq() {
+  const content = kmContent('faq', {entries:[]});
+  content.entries = [...(content.entries||[]), {q:'', a:''}];
+  kmSaveFaq(content);
+}
+function kmDeleteFaq(ei) {
+  const content = kmContent('faq', {entries:[]});
+  content.entries = content.entries.filter((_,i)=>i!==ei);
+  kmSaveFaq(content);
+}
+function kmUpdateFaq(ei, field, val) {
+  const content = kmContent('faq', {entries:[]});
+  content.entries[ei][field] = val;
+  kmSaveFaq(content);
 }
 
 // ── KNOWLEDGE BASE ────────────────────────────────────────────
