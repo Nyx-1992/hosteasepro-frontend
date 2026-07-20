@@ -27,10 +27,11 @@ order.
 | File | Applies to | Purpose |
 |---|---|---|
 | 001–060 | both | Original schema, functions, RLS, views |
+| 050_ical_feeds.sql | both | **Corrected 2026-07-20** — originally declared the URL column as `url`; the live table has always used `feed_url` (confirmed via information_schema before p1-1 made the app read from this table dynamically). Fixed in place since the file never matched reality as originally written |
 | 070_is_org_admin_fix.sql | both | Security-hardens `is_org_admin` (adds `SECURITY DEFINER` + locked `search_path`) — superseded by `085`, see incident note |
 | 080_is_org_member.sql | both | New `is_org_member` helper (owner/admin/host); widens day-to-day write policies to include hosts — superseded by `085`, see incident note |
 | 085_is_org_functions_profiles_fix.sql | both | **Corrective.** Fixes `is_org_admin`/`is_org_member` to query `public.profiles` (the real role table) instead of the unused `public.user_profiles`. Run before `100`. |
-| 090_staging_ical_feeds_seed.sql | **staging only** | Seeds `ical_feeds` on staging so iCal sync can be smoke-tested there |
+| 090_staging_ical_feeds_seed.sql | **staging only** | Seeds `ical_feeds` on staging so iCal sync can be smoke-tested there. Since p1-1, this table is the live source of truth for both the client (`loadIcalFeeds()`) and the background cron (`scripts/ics-import.js`) — no longer just a testing seed |
 | 095_staging_ical_feeds_index_fix.sql | **staging only** | Adds `ical_feeds_unique_platform_property`, which staging was missing (production had it) — required before 090 can run |
 | 100_rls_parity.sql | both | Defines one clean policy target state and applies it to both databases — closes real gaps on staging, fixes the same redundant/legacy-mechanism bugs on production. Run after `085`. |
 | 110_domestics_cancellation_ack.sql | both | Adds `domestics.cancellation_acknowledged_at` — supports Task 3's cancellation workflow (dashboard Urgent Actions dismiss tracking) |
@@ -45,6 +46,7 @@ order.
 | 200_roadmap_state_p0_24.sql | both | Marks Roadmap item p0-24 (Convert to booking / owner block UI) done |
 | 210_roadmap_state_p0_21.sql | both | Marks Roadmap item p0-21 (overdue-clean grace window full design) done |
 | 220_roadmap_state_p0_26.sql | both | Marks Roadmap item p0-26 (--warm CSS variable fix) done |
+| 230_roadmap_state_p1_1.sql | both | Marks Roadmap item p1-1 (remove hardcoded property/org UUIDs) done — no schema change, `ical_feeds`/`properties.cleaning_fee` already existed and were already correct |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 

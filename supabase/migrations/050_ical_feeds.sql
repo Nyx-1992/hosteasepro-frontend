@@ -1,12 +1,20 @@
 -- 050_ical_feeds.sql
 -- Core table for external platform iCal feed configuration.
+--
+-- CORRECTED 2026-07-20: this file originally declared the URL column as
+-- `url`. The live table on both databases has always used `feed_url` (it
+-- wasn't created by running this file as-is) — confirmed via
+-- information_schema.columns before demo/index_fixed.html and
+-- scripts/ics-import.js were changed to read from this table dynamically
+-- (p1-1). Fixed here so a fresh environment bootstrap matches reality
+-- instead of reproducing the drift.
 
 CREATE TABLE public.ical_feeds (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   property_id uuid NOT NULL REFERENCES public.properties(id) ON DELETE CASCADE,
   platform text NOT NULL,
-  url text NOT NULL,
+  feed_url text NOT NULL,
   is_active boolean NOT NULL DEFAULT true,
   last_import_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),

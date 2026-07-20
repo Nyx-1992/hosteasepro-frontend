@@ -9,31 +9,27 @@
 // both files. This port was brought up to parity as of 2026-07-20 (Booking.com
 // "Reserved" carve-out, blocked-event overlap-matching, the stale-block/
 // cancellation sweep with its check-in guard, linked-clean cancellation).
+//
+// Feed config loads from public.ical_feeds (loadFeeds() below) across every
+// org with active feeds — not hardcoded to one org — so a new host org's
+// background sync works as soon as their feeds are added to that table, no
+// code change needed. See the PROPERTY_SHORT_KEY note just below for the
+// one remaining piece that's still S&N-specific.
 
 const https = require('https');
 const url_module = require('url');
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const ORG_ID = '5966bc67-5c2f-45ae-8519-9b7eaeee09f4'; // S&N — this script is single-org, same as the FEEDS list below
 
-const FEEDS = [
-  { property_id: 'e9737638-d83a-4947-940a-8746789e4d9f', property_name: 'Speranta Flat', platform: 'booking',
-    url: 'https://ical.booking.com/v1/export?t=8123e217-45b4-403d-8fa0-9dcc65c26800' },
-  { property_id: 'e9737638-d83a-4947-940a-8746789e4d9f', property_name: 'Speranta Flat', platform: 'airbnb',
-    url: 'https://www.airbnb.com/calendar/ical/1237076374831130516.ics?s=01582d0497e99114aa6013156146cea4' },
-  { property_id: 'e9737638-d83a-4947-940a-8746789e4d9f', property_name: 'Speranta Flat', platform: 'lekkeslaap',
-    url: 'https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=bXEzOHNicTJQT3Nkd1dHb1ZSaXhRUT09' },
-  { property_id: '83b2a84a-5451-4be5-a84f-2efc0d2602d5', property_name: 'TV House', platform: 'booking',
-    url: 'https://ical.booking.com/v1/export?t=ea29c451-4d0b-4fa4-b7a8-e879a33a8940' },
-  { property_id: '83b2a84a-5451-4be5-a84f-2efc0d2602d5', property_name: 'TV House', platform: 'airbnb',
-    url: 'https://www.airbnb.com/calendar/ical/1402174824640448492.ics?s=373c5a71c137230a72f928e88728dcf3' },
-  { property_id: '83b2a84a-5451-4be5-a84f-2efc0d2602d5', property_name: 'TV House', platform: 'lekkeslaap',
-    url: 'https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=QzZ2aFlFVHhxYnoxdGRVL3ZwelRGUT09' },
-];
-
-// domestics.property_id stores the short key ('speranta'/'tvhouse'), not the
-// UUID FEEDS uses — same translation the client's UUID_MAP/nb() do.
+// domestics.property_id stores a short key ('speranta'/'tvhouse' for the S&N
+// org, derived at runtime client-side by nb()/loadProperties() from each
+// property's name) rather than its UUID. This script has no equivalent
+// per-org short-key derivation yet, so the linked-clean-cancellation step
+// below only works for orgs it recognizes here — a real gap for future
+// orgs, not a guess at how they'll be set up. Extend this (or better, move
+// domestics.property_id to UUIDs so no translation is needed at all) when
+// a second org actually needs the linked-clean feature.
 const PROPERTY_SHORT_KEY = {
   'e9737638-d83a-4947-940a-8746789e4d9f': 'speranta',
   '83b2a84a-5451-4be5-a84f-2efc0d2602d5': 'tvhouse',
@@ -225,7 +221,7 @@ function parseICal(text, feed) {
       number_of_guests: guestCount,
       status:           status,
       is_active:        true,
-      org_id:           feed.org_id || ORG_ID,
+      org_id:           feed.org_id,
       total_amount:     0,
       payment_status:   isCancelledByStatus ? 'cancelled' : 'pending',
       currency:         'ZAR',
@@ -249,14 +245,45 @@ function isPlaceholderName(name) {
   return false;
 }
 
+// ── Feed config — loaded from public.ical_feeds, every active org, not
+// hardcoded to one org ────────────────────────────────────────────────────
+async function loadFeeds() {
+  const feedsRes = await supabaseRequest('GET',
+    'ical_feeds?is_active=eq.true&select=org_id,property_id,platform,feed_url', null);
+  const rows = feedsRes.data || [];
+  if (!rows.length) return [];
+
+  const propIds = Array.from(new Set(rows.map(function(r) { return r.property_id; })));
+  const propsRes = await supabaseRequest('GET',
+    'properties?id=in.(' + propIds.join(',') + ')&select=id,name', null);
+  const propNames = {};
+  (propsRes.data || []).forEach(function(p) { propNames[p.id] = p.name; });
+
+  return rows.map(function(r) {
+    return {
+      org_id: r.org_id,
+      property_id: r.property_id,
+      property_name: propNames[r.property_id] || '',
+      platform: r.platform,
+      url: r.feed_url,
+    };
+  });
+}
+
 // ── Main sync ─────────────────────────────────────────────────────────────────
 async function run() {
   var totalNew = 0, totalUpdated = 0, totalCancelled = 0, totalReleased = 0, errors = 0;
 
+  var FEEDS = await loadFeeds();
+  if (!FEEDS.length) {
+    console.log('No active ical_feeds rows found — nothing to sync.');
+    return;
+  }
+
   for (var fi = 0; fi < FEEDS.length; fi++) {
     var feed = FEEDS[fi];
     try {
-      console.log('Fetching ' + feed.platform + ' / ' + feed.property_name + '...');
+      console.log('Fetching ' + feed.platform + ' / ' + feed.property_name + ' (org ' + feed.org_id + ')...');
       var text = await fetchUrl(feed.url, 0, feed.url);
 
       if (text.indexOf('BEGIN:VCALENDAR') < 0) {
