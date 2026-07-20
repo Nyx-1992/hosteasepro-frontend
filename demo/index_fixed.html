@@ -3435,7 +3435,7 @@ const ROADMAP = [
   {k:'p0-18',t:'Staff portal: overdue and cancelled cleans now visible to cleaners',n:'DONE — a scheduled clean whose date passed without being marked done, or a cancelled clean Nina hasn\'t yet acknowledged, used to silently vanish from the cleaner\'s own login. Found via a real case (Fatima\'s 18 July clean). Now shown distinctly ("Overdue"/"Cleaning cancelled") regardless of date',c:'HEP'},
   {k:'p0-19',t:'Staging database mirror from production',n:'DONE — full public-schema copy via postgres_fdw so staging testing uses realistic data instead of near-empty sample data; test-owner/test-admin/test-host logins re-pointed to the mirrored profiles',c:'DevOps'},
   {k:'p0-20',t:'Fixed "Occupied Now" hardcoded property count',n:'DONE — was hardcoded to "of 2 properties" regardless of how many properties actually exist for the org; now reads Object.keys(PROPS).length, the same source the property cards render from',c:'HEP'},
-  {k:'p0-21',t:'Overdue-clean grace window — full design (7-day window, dedicated cards, Nina escalation)',n:'The underlying visibility bug is fixed (p0-18) — an overdue clean no longer disappears. Still open: shrink the window to 7 days specifically, a dedicated top-of-Home "Overdue — submit inventory" card, a separate Home "Inventory due" stat card, and a Nina-facing "Never completed" flag once a clean passes the window unaddressed',c:'HEP'},
+  {k:'p0-21',t:'Overdue-clean grace window — full design (7-day window, dedicated cards, Nina escalation)',n:'DONE — window shrunk from 30 to 7 trailing days; overdue scheduled cleans get their own dedicated "⏰ Overdue — submit inventory" section at the top of the cleaner\'s Home screen (was previously just mixed into "Next up" with a pill) with days-late shown per card; a red "Inventory due" stat card added alongside Earned/Upcoming; and once a clean passes the 7-day window still undone, it escalates as a "Never completed" Urgent Action on Nina\'s dashboard, since the cleaner-side view stops showing it past that point',c:'HEP'},
   {k:'p0-22',t:'Rate calculator — per-platform listing price parity',n:'Not started. Per-platform fee config (host commission % + guest fee %) in org_settings, editable in UI with ZA defaults; target-guest-price mode showing the rate to list at per platform; inverse mode (desired net → required guest price); ZAR rounded to whole rand',c:'HEP'},
   {k:'p0-23',t:'Statement upload — reconcile real per-booking earnings',n:'Not started. The Reports tab computes revenue from bookings.revenue/total_amount, which is the synced/estimated booking amount, not what the platform actually paid out after its fees. Right now reconciling a real statement (e.g. an Airbnb/LekkeSlaap payout PDF) against the dashboard means a one-off manual DB correction. Build a proper flow instead: upload a platform statement (PDF/CSV) for a property, parse gross/fees/net per booking or per period, save it against the matching booking(s) so Reports reflects real payouts, and surface the parsed platform_fee_config rates as a sanity check against what the calculator assumes',c:'HEP'},
   {k:'p0-24',t:'Known limitation — some Booking.com listings send zero guest-identifying iCal data',n:'Not a bug, confirmed by fetching TV House\'s raw booking.com feed directly: every event is "CLOSED - Not available" with no other field at all (no description, no reference, no name) — a real paid stay and a manual owner closure are byte-for-byte indistinguishable in this feed. LekkeSlaap embeds Reference/Customer/Email/Cell in SUMMARY and we parse it (parseICalSummaryFields); Airbnb and Speranta\'s own booking.com feed both surface at least a "Reserved" placeholder we correctly treat as real. TV House\'s booking.com connection just doesn\'t send more — likely a channel-manager/listing-config difference on Booking.com\'s side, not something our parser can fix. DONE — day-detail modal\'s blocked entries now have both a "Convert to booking" guest-name save (flips to a confirmed booking) and a "confirmed owner block" checkbox (bookings.is_owner_block) so ambiguous blocks get explicitly resolved one way or the other instead of sitting as a permanent guess, no SQL needed. The real fix would still be Booking.com\'s Connectivity/Partner API instead of iCal, a much bigger integration — out of scope for now',c:'HEP'},
@@ -3814,6 +3814,21 @@ function renderDashboard() {
       detail: propName(d.property_id)+' · '+d.cleaner+' scheduled '+fmtDate(d.date),
       action: `switchTab('domestic')`,
       dismissAction: `acknowledgeCancelledClean('${d.id}')`,
+      priority: 1,
+    });
+  });
+
+  // 6. Scheduled clean past its 7-day grace window, still not marked done —
+  // the cleaner's own view (demo/domestic.html) stops surfacing it once it
+  // falls out of that window, so it needs to escalate here or it's silently
+  // never followed up on. Same 7-day floor as the cleaner-side window.
+  const cleanGraceFloor = new Date(); cleanGraceFloor.setDate(cleanGraceFloor.getDate()-7);
+  const cleanGraceFloorStr = cleanGraceFloor.toISOString().slice(0,10);
+  domestics.filter(d => d.status === 'scheduled' && d.date < cleanGraceFloorStr).forEach(d => {
+    urgentItems.push({
+      icon:'🚨', label:'Never completed — '+d.cleaner, color:'#dc2626', textColor:'#991b1b',
+      detail: propName(d.property_id)+' · was due '+fmtDate(d.date),
+      action: `switchTab('domestic')`,
       priority: 1,
     });
   });

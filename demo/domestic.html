@@ -274,6 +274,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
   <div class="app-content">
     <div class="screen active" id="screen-home">
       <div id="home-alerts"></div>
+      <div id="home-overdue"></div>
       <div class="section-label" style="margin-bottom:12px">Next up</div>
       <div id="home-cleans"></div>
       <div class="section-label" style="margin-top:20px;margin-bottom:10px">This month</div>
@@ -1425,13 +1426,41 @@ function renderHome() {
       </div>`;
     }).join('');
   }
-  // "Upcoming" includes overdue scheduled cleans too (date passed but never
-  // marked done) within a trailing window — otherwise a clean silently
-  // becomes unreachable the moment its date passes, same class of bug as
-  // cancelled cleans had. Sorted so the oldest overdue surfaces first.
-  const overdueFloor=new Date(td); overdueFloor.setDate(overdueFloor.getDate()-30);
+  // Overdue window: 7 days trailing. A scheduled clean whose date has passed
+  // without being marked done gets its own dedicated section below, rather
+  // than being mixed into "Next up" with just a pill — it needs a different
+  // action (submit inventory for a clean that already happened) and
+  // shouldn't be easy to miss among genuinely upcoming ones. Past the
+  // window, it stops showing here at all (still reachable via My Cleans →
+  // Upcoming) but escalates on Nina's side instead — see renderDashboard's
+  // Urgent Actions in index_fixed.html.
+  const overdueFloor=new Date(td); overdueFloor.setDate(overdueFloor.getDate()-7);
   const overdueFloorStr=overdueFloor.toISOString().slice(0,10);
-  const upcoming=myCleans.filter(c=>c.status==='scheduled'&&c.date>=overdueFloorStr)
+  const overdue=myCleans.filter(c=>c.status==='scheduled'&&c.date<td&&c.date>=overdueFloorStr)
+    .sort((a,b)=>a.date.localeCompare(b.date));
+  const overdueEl=document.getElementById('home-overdue');
+  if(overdueEl){
+    if(!overdue.length){
+      overdueEl.innerHTML='';
+    } else {
+      overdueEl.innerHTML='<div class="section-label" style="margin-bottom:10px;color:var(--red)">⏰ Overdue — submit inventory</div>'
+        +overdue.map(c=>{
+          const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
+          const daysLate=Math.round((new Date(td)-new Date(c.date))/86400000);
+          return `<div class="clean-card" style="border-left:3px solid var(--red);margin-bottom:8px" onclick="openInventory('${c.id}')">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="font-weight:600;font-size:.9rem">📍 ${prop.name}</div>
+              <span class="status-pill pill-overdue">${daysLate}d late</span>
+            </div>
+            <div style="font-size:.78rem;color:var(--muted)">Was due ${fmtDate(c.date)}${c.notes?' · '+c.notes:''}</div>
+            <div style="margin-top:8px;font-size:.74rem;color:var(--red);font-weight:600">Tap to submit inventory →</div>
+          </div>`;
+        }).join('')
+        +'<div class="section-label" style="margin-top:16px;margin-bottom:12px">Next up</div>';
+    }
+  }
+  // Genuinely upcoming only — overdue ones have their own section above now.
+  const upcoming=myCleans.filter(c=>c.status==='scheduled'&&c.date>=td)
     .sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
   const thisMonth=myCleans.filter(c=>c.date&&c.date.startsWith(td.slice(0,7)));
   const earned=thisMonth.filter(c=>c.status==='completed').reduce((s,c)=>s+(c.amount_paid||getRate(currentCleaner,c.property_id)),0);
@@ -1441,11 +1470,10 @@ function renderHome() {
   } else {
     nextEl.innerHTML=upcoming.map(c=>{
       const isToday=c.date===td;
-      const isOverdue=c.date<td;
       const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
       const[y,m,d]=(c.date||'-- -').split('-');
-      const pillClass=isOverdue?'pill-overdue':isToday?'pill-today':'pill-scheduled';
-      const pillText=isOverdue?'Overdue':isToday?'Today':'Upcoming';
+      const pillClass=isToday?'pill-today':'pill-scheduled';
+      const pillText=isToday?'Today':'Upcoming';
       return `<div class="clean-card ${isToday?'today-card':''}" onclick="openInventory('${c.id}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
           <div><div style="font-family:Syne,sans-serif;font-size:2rem;font-weight:800;line-height:1">${parseInt(d)||'?'}</div>
@@ -1458,7 +1486,7 @@ function renderHome() {
       </div>`;
     }).join('');
   }
-  const scheduled=myCleans.filter(c=>c.status==='scheduled'&&c.date>=overdueFloorStr).length;
+  const scheduled=myCleans.filter(c=>c.status==='scheduled'&&c.date>=td).length;
   document.getElementById('home-stats').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="card" style="border-left:3px solid var(--green)">
@@ -1468,6 +1496,10 @@ function renderHome() {
       <div class="card" style="border-left:3px solid var(--accent)">
         <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Upcoming cleans</div>
         <div style="font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;color:var(--accent)">${scheduled}</div>
+      </div>
+      <div class="card" style="border-left:3px solid var(--red);grid-column:1 / -1">
+        <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Inventory due</div>
+        <div style="font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;color:var(--red)">${overdue.length}</div>
       </div>
     </div>`;
 }
