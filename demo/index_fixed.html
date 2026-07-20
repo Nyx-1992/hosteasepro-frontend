@@ -6618,8 +6618,11 @@ function getGuestStayCount(b) {
 // Property Manual (B3) — surfaced here so Nina can copy a real answer
 // straight into whatever message she's about to send.
 function guestFaqEntries(propertyId) {
-  // b.property_id on a booking is already the UUID property_manuals is keyed by.
-  const manual = propertyManuals[propertyId];
+  // b.property_id on a normalized booking (post-nb()) is the short key
+  // ('speranta'/'tvhouse'), not the UUID property_manuals is keyed by —
+  // resolve it the same defensive way propName()/getInspChecklist() do.
+  const uuid = (PROPS[propertyId] || {}).uuid || propertyId;
+  const manual = propertyManuals[uuid];
   return (manual && manual.faq && manual.faq.entries || []).filter(f => f.q || f.a);
 }
 
