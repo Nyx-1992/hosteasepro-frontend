@@ -3704,7 +3704,7 @@ function renderDashboard() {
   });
 
   // 2. Check-in message not sent within 24h window
-  bookings.filter(b=>b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b)&&b.is_active!==false).forEach(b => {
+  bookings.filter(b=>b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b)&&b.is_active!==false).forEach(b => {
     const bid = String(b.id);
     const prog = ninaBTaskProgress[bid]||{};
     const hoursUntil = (new Date(b.check_in)-now)/3600000;
@@ -3757,7 +3757,7 @@ function renderDashboard() {
     });
 
   // 4. Upcoming checkouts with no cleaning in next 3 days
-  bookings.filter(b=>b.status!=='cancelled'&&!isCaretaker(b)&&!isOwnerStay(b)).forEach(b=>{
+  bookings.filter(b=>b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b)&&b.is_active!==false).forEach(b=>{
     const co = b.check_out?.slice(0,10)||'';
     const daysUntil = Math.round((new Date(co)-now)/86400000);
     if (daysUntil>=0 && daysUntil<=3) {
