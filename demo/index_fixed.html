@@ -864,7 +864,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
           </button>
           <button id="rsub-owner-btn" onclick="switchReportSub('owner')"
             style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
-            📄 Owner Statements
+            🧾 Management Invoice
           </button>
         </div>
 
@@ -985,7 +985,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div id="rsub-owner" style="display:none">
           <div class="card mb-6" style="background:#fef3c7;border:1px solid #f59e0b">
             <div style="font-size:.84rem;color:#92400e;line-height:1.6">
-              📄 For pass-through ownership properties — rental income belongs to the owners, not S&amp;N. This is separate from the Finance tab, which only reports S&amp;N's own income (Speranta).
+              🧾 For pass-through ownership properties — rental income belongs to the owners, not S&amp;N. This is separate from the Finance tab, which only reports S&amp;N's own income (Speranta).
             </div>
           </div>
           <div class="card mb-6">
@@ -3864,7 +3864,7 @@ const ROADMAP = [
   {k:'p0-29',t:'fmtDate() called with a full timestamp instead of a plain date in 2 spots',n:'Not started. fmtDate() assumes a plain YYYY-MM-DD string and naively splits on "-"; found via visual verification while building the Guest Timeline (p0-30) that it was being called with the full check_in/check_out timestamp instead, producing garbled dates like "15 15:00:00+02/07/2026". Fixed in the new Guest Timeline card (uses check_in_date/check_out_date instead), but the same pre-existing pattern is still live in the booking-detail modal (~line 4789) and the cleaner-assignment display (~line 5681) — not fixed there, flagging rather than expanding this session\'s scope',c:'Bug'},
   {k:'p0-30',t:'Guest Timeline — Messages tab rebuilt around per-booking touchpoints (B1)',n:'DONE — replaced the old generic WhatsApp template-link list (pick blind from 6 canned messages) with a per-booking stage timeline: pre-arrival -> check-in day -> mid-stay (10+ night stays only) -> post-stay, each stage showing done/due-now/upcoming and a ready-to-send WhatsApp message for whichever is due right now. Post-stay message bakes in the RETURN10 rebooking promo + direct-booking link, ready for when the direct-booking page is live. Mark-as-sent reuses booking_checklists (guest_contacted_at/checked_in_at/follow_up_sent_at already existed; mid_stay_msg_at is the one new column, migration 260) via the existing toggleNinaTask() plumbing, so it stays in sync with the Guest Management tab. Lightweight "returning guest" badge derived by matching phone/name across existing bookings — no new guests table, kept it lightweight as scoped. WhatsApp delivery isolated into one deliverWhatsAppMessage() function so a future WhatsApp Business API swap doesn\'t touch the message-building code. Refined after first staging review: only mid-stay (not post-stay — the RETURN10/direct-booking push isn\'t something to actively chase yet, and every historical booking looked "overdue" the moment this shipped, flooding Urgent Actions) surfaces as an Urgent Action; mid-stay threshold raised from 4 to 10 nights; every WhatsApp send/open now targets one shared named tab instead of "_blank" so WhatsApp Web only needs logging into once per session instead of once per guest',c:'HEP'},
   {k:'p0-31',t:'Property Manual — Knowledge tab rebuilt as operational source of truth (B3)',n:'DONE — new property_manuals table (migration 280), one row per (property, section). Replaces two pieces of data that were hardcoded and duplicated with no in-app way to edit them: INVENTORY (demo/domestic.html\'s cleaner checklist during a clean) and INSP_CHECKLIST (was a single GLOBAL list for every property\'s inspection form in demo/index_fixed.html, now genuinely per-property). Seed data transcribed as-is from those hardcoded structures via a script that read the real objects, not hand-typed, so no transcription risk. New Guest FAQ section (previously didn\'t exist) is editable per property and surfaces as a copy-to-clipboard quick reference on the Guest Timeline (B1) so Nina can drop a real answer into whatever message she\'s sending. The old flat "Knowledge Base" (kbArticles/SAMPLE_KB) is kept as-is, relabeled "General Notes" below the new per-property sections — on inspection its content was real business data (door codes, procedures, emergency contacts, finance notes), not placeholder junk, so nothing there needed killing; the actual dead content was the hardcoded/duplicated checklist data now replaced. Known gap, not touched: demo/domestic.html\'s separate NINA_CHECKLISTS (a differently-structured, more detailed inspection checklist used only inside the cleaner portal\'s own Nina-view) is a third, still-hardcoded parallel structure not unified with this — out of scope for this pass, flagging rather than silently leaving it undiscovered',c:'HEP'},
-  {k:'p0-32',t:'Owner statements — printable monthly statement for pass-through properties (B2)',n:'DONE — new "📄 Owner Statements" sub-tab under Reports. Property + month picker, auto-computed gross rental proceeds (from bookings) and cleaning costs (from domestics, whichever property_id format that row happens to use), editable extra cost lines (management fee defaults to R6,000, matching the existing TV House arrangement), live net-due-to-owners total, and a branded printable PDF using the same html2canvas+jsPDF pipeline the invoice generator already uses — no new PDF machinery built, reused what existed. No schema change: everything is computed live from bookings/domestics, nothing new to store. Confirmed while building this that the Finance tab\'s own S&N income reporting already hardcodes property_id===\'speranta\' only, so TV House was already correctly excluded from S&N\'s own revenue — this feature is purely the owner-facing document that was missing, not a fix to existing reporting. TV House is the live case (auto-selected by default) but any property can be picked',c:'HEP'}]},
+  {k:'p0-32',t:'Management Invoice — printable monthly statement for pass-through properties (B2)',n:'DONE — new "🧾 Management Invoice" sub-tab under Reports. Property + month picker, auto-computed gross rental proceeds (from bookings) and cleaning costs (from domestics, whichever property_id format that row happens to use), editable extra cost lines (management fee defaults to R6,000, matching the existing TV House arrangement), live net-due-to-owner total, and a branded printable PDF using the same html2canvas+jsPDF pipeline the invoice generator already uses. No schema change: everything is computed live from bookings/domestics, nothing new to store. Confirmed while building this that the Finance tab\'s own S&N income reporting already hardcodes property_id===\'speranta\' only, so TV House was already correctly excluded from S&N\'s own revenue — this feature is purely the owner-facing document that was missing, not a fix to existing reporting. TV House is the live case (auto-selected by default) but any property can be picked. Refined after review: renamed "Owner Statement" -> "Management Invoice" throughout (tab label, document title, PDF filename), and the PDF preview now reuses the guest invoice\'s exact visual template (gold/navy branding, ISSUED BY/PREPARED FOR panel, line-items table, director signatures, footer) instead of a bespoke layout, so it reads as the same document family',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -7438,33 +7438,77 @@ function renderOwnerStatementPreview() {
   netEl.style.color = net>=0 ? 'var(--green)' : 'var(--red)';
 
   const propLabel = (PROPS[ownerStmtProp]||{}).name || ownerStmtProp;
-  const owners = document.getElementById('ownstmt-owners')?.value || '';
+  const owners = document.getElementById('ownstmt-owners')?.value || 'Property Owner';
   const [y,m] = ownerStmtMonth.split('-').map(Number);
   const monthLabel = new Date(y, m-1, 1).toLocaleDateString('en-ZA', {month:'long', year:'numeric'});
-  const bk = INV_COMPANY.bank;
+  const today = todaySAST();
+  const invNum = 'MGMT-'+propLabel.replace(/\s+/g,'').toUpperCase()+'-'+ownerStmtMonth;
 
-  document.getElementById('ownstmt-preview').innerHTML = `
-    <div style="background:#fff;border-radius:8px;padding:28px;font-family:'DM Sans',sans-serif;color:#1A2340">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1A2340">
-        <div>
-          <div style="font-size:15px;font-weight:700">${INV_COMPANY.name}</div>
-          <div style="font-size:11px;color:#666;margin-top:3px">${INV_COMPANY.addr}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:16px;font-weight:700">Owner Statement</div>
-          <div style="font-size:11px;color:#666;margin-top:3px">${propLabel} · ${monthLabel}</div>
-        </div>
-      </div>
-      ${owners ? `<div style="font-size:12px;color:#666;margin-bottom:16px">Prepared for: <strong>${owners}</strong></div>` : ''}
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
-        <tr style="border-bottom:1px solid #ddd"><td style="padding:8px 0;font-weight:700">Gross rental proceeds</td><td style="padding:8px 0;text-align:right;font-weight:700">${fmt(gross)}</td></tr>
-        ${ownerStmtCosts.map(c => `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">− ${c.desc||'(unnamed cost)'}</td><td style="padding:6px 0;text-align:right;color:#666">${fmt(c.amount||0)}</td></tr>`).join('')}
-        <tr><td style="padding:12px 0 0;font-weight:700;font-size:14px">Net due to owner${/[&,]/.test(owners)?'s':''}</td><td style="padding:12px 0 0;text-align:right;font-weight:700;font-size:14px;color:${net>=0?'#16a34a':'#dc2626'}">${fmt(net)}</td></tr>
-      </table>
-      <div style="font-size:10px;color:#999;line-height:1.6;margin-top:20px;padding-top:16px;border-top:1px solid #eee">
-        This statement covers rental proceeds for a pass-through ownership property — funds belong to the property owner(s), not ${INV_COMPANY.name}. Payment to: ${bk.name} · ${bk.bank} · ${bk.acc}.
-      </div>
-    </div>`;
+  // Same visual template as the guest invoice (invRender()) — gold/navy
+  // branding, ISSUED BY / BILLED TO panel, line-items table, signatures,
+  // footer — so this reads as one consistent document family, not a
+  // bolted-on report. Line items here are gross (positive) followed by
+  // each deduction (shown with a minus sign) instead of a flat sum.
+  document.getElementById('ownstmt-preview').innerHTML =
+    '<div style="background:#F5EFE6;padding:22px 28px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #B8962E">'+
+      '<div>'+
+        '<div style="color:#1A2340;font-size:16px;font-weight:700;letter-spacing:.08em">SN APARTMENTS®</div>'+
+        '<div style="font-size:13px;color:#8b5e2a;font-style:italic;margin-top:3px">Beyond the booking</div>'+
+        '<div style="font-size:10px;color:#a68a5b;letter-spacing:.06em;margin-top:2px">CURATED STAYS · PERSONAL SERVICE</div>'+
+      '</div>'+
+      '<div style="text-align:right">'+
+        '<div style="color:#8b5e2a;font-size:19px;font-weight:700;letter-spacing:.05em">MANAGEMENT INVOICE</div>'+
+        '<div style="color:#555;font-size:11px;margin-top:4px;line-height:1.7">No: '+invNum+'<br>Date: '+fmtDate(today)+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:flex;justify-content:space-between;padding:10px 28px;font-size:11.5px;background:#FAF7F2;border-bottom:1px solid #E8E4DE">'+
+      '<div><span style="font-weight:700;color:#8b5e2a;margin-right:6px">PERIOD:</span>'+monthLabel+'</div>'+
+      '<div><span style="font-weight:700;color:#8b5e2a;margin-right:6px">PROPERTY:</span>'+propLabel+'</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #E8E4DE">'+
+      '<div style="padding:18px 28px;border-right:1px solid #E8E4DE">'+
+        '<div style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em;margin-bottom:8px">ISSUED BY</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#1A2340">'+INV_COMPANY.name+'</div>'+
+        '<div style="font-size:11px;color:#444;margin-top:3px;line-height:1.5">'+INV_COMPANY.addr+'</div>'+
+        '<div style="font-size:10px;color:#999;margin-top:6px;line-height:1.6">Reg: '+INV_COMPANY.reg+' · Tax: '+INV_COMPANY.tax+'<br>'+INV_COMPANY.email+'</div>'+
+      '</div>'+
+      '<div style="padding:18px 28px">'+
+        '<div style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em;margin-bottom:8px">PREPARED FOR</div>'+
+        '<div style="font-size:13px;font-weight:700;color:#1A2340">'+owners+'</div>'+
+        '<div style="font-size:11px;color:#444;margin-top:3px;line-height:1.5">'+propLabel+' — Owner</div>'+
+      '</div>'+
+    '</div>'+
+    '<div>'+
+      '<div style="display:flex;justify-content:space-between;padding:10px 28px;border-bottom:2px solid #1A2340">'+
+        '<span style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em">DESCRIPTION</span>'+
+        '<span style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em">AMOUNT</span>'+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;padding:9px 28px;border-bottom:1px solid #f0f0f0"><span style="font-size:12px;color:#222;font-weight:700">Gross rental proceeds</span><span style="font-size:12px;color:#222;font-weight:700">'+fmt(gross)+'</span></div>'+
+      ownerStmtCosts.map(function(c){
+        return '<div style="display:flex;justify-content:space-between;padding:9px 28px;border-bottom:1px solid #f0f0f0"><span style="font-size:12px;color:#666">− '+(c.desc||'(unnamed cost)')+'</span><span style="font-size:12px;color:#666">'+fmt(c.amount||0)+'</span></div>';
+      }).join('')+
+      '<div style="display:flex;justify-content:flex-end;padding:14px 28px">'+
+        '<div style="background:#1A2340;color:#F5EFE6;padding:8px 18px;border-radius:4px;display:flex;gap:20px;align-items:center">'+
+          '<span style="font-size:11px;font-weight:700;letter-spacing:.04em">NET DUE TO OWNER</span>'+
+          '<span style="font-size:14px;font-weight:700;color:#B8962E">'+fmt(net)+'</span>'+
+        '</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="padding:16px 28px;border-top:1px solid #E8E4DE;border-bottom:1px solid #E8E4DE">'+
+      '<div style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em;margin-bottom:8px">NOTES</div>'+
+      '<div style="font-size:11px;color:#333;display:flex;gap:6px;margin-bottom:5px"><span style="color:#8b5e2a;font-weight:700">•</span><span>This is a pass-through statement — rental proceeds belong to the property owner(s), not '+INV_COMPANY.name+'.</span></div>'+
+    '</div>'+
+    '<div style="padding:20px 28px">'+
+      '<div style="font-size:11px;color:#444;margin-bottom:12px">Kind regards,</div>'+
+      '<div style="display:flex;gap:40px">'+
+        '<div style="flex:1"><div style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#1A2340;margin-bottom:5px">Nicole Babczyk</div><div style="height:1px;background:#D4C9BC;margin-bottom:5px"></div><div style="font-size:10px;color:#8b5e2a;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
+        '<div style="flex:1"><div style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#1A2340;margin-bottom:5px">Silja Faltin</div><div style="height:1px;background:#D4C9BC;margin-bottom:5px"></div><div style="font-size:10px;color:#8b5e2a;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="background:#1A2340;padding:14px 20px;text-align:center;border-radius:0 0 6px 6px">'+
+      '<div style="font-family:Georgia,serif;font-style:italic;font-size:14px;color:#B8962E">Beyond the booking</div>'+
+      '<div style="font-size:9.5px;color:rgba(184,150,46,.7);letter-spacing:.06em;margin-top:4px">S&N APT MANAGEMENT · SN_Apt_Management@outlook.com · CURATED STAYS · PERSONAL SERVICE</div>'+
+    '</div>';
 }
 
 async function generateOwnerStatementPDF() {
@@ -7476,7 +7520,7 @@ async function generateOwnerStatementPDF() {
   try {
     const original = document.getElementById('ownstmt-preview');
     const propShort = (PROPS[ownerStmtProp]||{}).short || ownerStmtProp;
-    const filename = 'Owner-Statement-'+propShort.replace(/\s+/g,'')+'-'+ownerStmtMonth+'.pdf';
+    const filename = 'Management-Invoice-'+propShort.replace(/\s+/g,'')+'-'+ownerStmtMonth+'.pdf';
 
     const printWidth = 700;
     clone = original.cloneNode(true);
@@ -7511,7 +7555,7 @@ async function generateOwnerStatementPDF() {
     pdf.addImage(imgData, 'JPEG', offsetX, margin, imgWidth, imgHeight);
     pdf.save(filename);
 
-    toast('Statement downloaded ✓','success');
+    toast('Management invoice downloaded ✓','success');
   } catch(err) {
     console.warn('Owner statement PDF generation failed:', err);
     toast('PDF generation failed — check console','error');
