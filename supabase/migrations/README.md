@@ -50,6 +50,8 @@ order.
 | 280_property_manuals.sql | both | New `property_manuals` table (org_id, property_id, section, content jsonb) backing the Property Manual / Knowledge tab rebuild (B3) — one row per (property, section) for `inventory`/`inspection`/`faq`. Seeded with real data transcribed from the hardcoded `INVENTORY` (demo/domestic.html) and `INSP_CHECKLIST` (demo/index_fixed.html) structures it replaces; `faq` starts empty per property (no real FAQ content existed anywhere to seed from) |
 | 290_roadmap_state_p0_31.sql | both | Marks Roadmap item p0-31 (Property Manual / Knowledge tab rebuild, B3) done |
 | 300_roadmap_state_p0_32.sql | both | Marks Roadmap item p0-32 (Owner statements, B2) done — no schema change was needed for B2 itself |
+| 310_kb_property_and_cleanup.sql | both | Adds `kb_articles.property_id` (default `'all'`) so General Notes tiles can be tagged to one property and filtered by the existing property switcher; deletes existing `kb_articles` rows with `category = 'Finance'` — that content (management fees, salaries, cleaner pay) doesn't belong on the operational Knowledge Base page |
+| 320_roadmap_state_p0_33.sql | both | Marks Roadmap item p0-33 (post-review fixes batch: cleaner assignment, KB structure, same-day checkin bug, Management Invoice framing) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
