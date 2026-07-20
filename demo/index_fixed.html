@@ -1341,9 +1341,22 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <input type="date" id="d-date"/>
         </div>
         <div class="form-field span-full"><label>Cleaner</label>
-          <select id="d-cleaner">
+          <select id="d-cleaner" onchange="onCleanerSelectChange()">
             <option>Blessing</option><option>Fatima</option><option>Patricia</option><option>Spiwe</option>
+            <option value="__other__">Other (outside cleaner)</option>
           </select>
+        </div>
+        <div class="form-field span-full" id="d-cleaner-other-wrap" style="display:none">
+          <label>Outside cleaner's name *</label>
+          <input id="d-cleaner-other" placeholder="e.g. agency name or cleaner's name"/>
+          <div style="margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:10px 12px;font-size:.78rem;color:#9a3412">
+            <div style="font-weight:700;margin-bottom:6px">🧭 Not one of our regular cleaners</div>
+            <div style="margin-bottom:8px">Share our standard cleaning checklist and this property's inventory with them before the clean.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="btn btn-sm btn-ghost" onclick="copyCleaningPlan()">📋 Copy cleaning checklist</button>
+              <button type="button" class="btn btn-sm btn-ghost" onclick="openInventoryForOutsideCleaner()">📦 Open property inventory</button>
+            </div>
+          </div>
         </div>
         <div class="form-field span-full">
           <label>Link to booking</label>
@@ -1823,6 +1836,49 @@ function getCleanerRate(cleaner, propId) {
   const c = CLEANERS.find(x=>x.name===cleaner);
   if (!c) return 350;
   return typeof c.rate === 'object' ? (c.rate[propId] || 350) : c.rate;
+}
+
+// ── Outside / one-off cleaners (Schedule Cleaning modal "Other") ───────
+function onCleanerSelectChange() {
+  const wrap = document.getElementById('d-cleaner-other-wrap');
+  if (wrap) wrap.style.display = document.getElementById('d-cleaner').value === '__other__' ? '' : 'none';
+}
+// Pre-fills the cleaner field for edit; falls back to "Other" + the free-text
+// name when the saved cleaner isn't one of our four regulars.
+function setCleanerFieldValue(name) {
+  const known = CLEANERS.map(c=>c.name);
+  const sel = document.getElementById('d-cleaner');
+  if (name && !known.includes(name)) {
+    sel.value = '__other__';
+    document.getElementById('d-cleaner-other').value = name;
+  } else {
+    sel.value = name || '';
+    document.getElementById('d-cleaner-other').value = '';
+  }
+  onCleanerSelectChange();
+}
+
+const STANDARD_CLEANING_PLAN = [
+  { area:'Kitchen',      items:['Wash & put away all dishes','Wipe counters, stovetop & inside microwave','Clean fridge — remove any food left behind','Empty bins & replace liners','Mop floor'] },
+  { area:'Bathrooms',    items:['Clean & disinfect toilet, shower/bath & basin','Polish mirrors & fixtures','Replace towels & toiletries','Mop floor','Empty bins'] },
+  { area:'Bedrooms',     items:['Strip & remake all beds with fresh linen','Fluff pillows, straighten duvets','Dust surfaces','Vacuum/mop floor','Check for guest items left behind'] },
+  { area:'Living areas', items:['Dust & wipe all surfaces','Vacuum/mop floors','Straighten cushions & throws','Check remotes & electronics working','Empty bins'] },
+  { area:'Laundry',      items:['Start any linen/towel laundry','Restock washing liquid/tablets if low','Hang or fold dry linen'] },
+];
+function cleaningPlanText() {
+  return '*S&N Apt Management — Standard Cleaning Checklist*\n\n' +
+    STANDARD_CLEANING_PLAN.map(s => `*${s.area}*\n` + s.items.map(i=>'• '+i).join('\n')).join('\n\n');
+}
+async function copyCleaningPlan() {
+  try { await navigator.clipboard.writeText(cleaningPlanText()); toast('Cleaning checklist copied ✓','success'); }
+  catch(e) { toast('Could not copy — check clipboard permissions','error'); }
+}
+function openInventoryForOutsideCleaner() {
+  const pid = document.getElementById('d-prop').value || 'speranta';
+  closeModal('domestic-modal');
+  switchTab('knowledge');
+  setKmProp(pid);
+  setKmSection('inventory');
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
@@ -5643,7 +5699,7 @@ async function editCleaning(id) {
   const d = domestics.find(x=>x.id===id);
   if (!d) return;
   closeModal('day-modal');
-  document.getElementById('d-cleaner').value = d.cleaner || '';
+  setCleanerFieldValue(d.cleaner || '');
   document.getElementById('d-prop').value    = d.property_id || 'speranta';
   document.getElementById('d-date').value    = d.date || '';
   document.getElementById('d-time').value    = d.time || '10:00';
@@ -5821,7 +5877,11 @@ async function saveDomestic() {
   const date = document.getElementById('d-date').value;
   if (!date) { toast('Please set a date','error'); return; }
   if (!validateCleanDate()) return;
-  const cleaner = document.getElementById('d-cleaner').value;
+  let cleaner = document.getElementById('d-cleaner').value;
+  if (cleaner === '__other__') {
+    cleaner = (document.getElementById('d-cleaner-other').value || '').trim();
+    if (!cleaner) { toast("Please enter the outside cleaner's name", 'error'); return; }
+  }
   const pid     = document.getElementById('d-prop').value;
   const linkedId= document.getElementById('d-linked-booking').value ||
                   document.getElementById('d-booking-link').value || null;
@@ -7510,6 +7570,7 @@ function openModal(id){
       document.getElementById('d-booking-link').value = '';
       document.getElementById('d-linked-booking').value = '';
       document.getElementById('d-notes').value = '';
+      setCleanerFieldValue('');
       if (!document.getElementById('d-date').value) {
         document.getElementById('d-date').value = new Date().toISOString().slice(0,10);
       }
