@@ -469,11 +469,13 @@ For technical support or feature requests, contact the development team.
 ---
 
 **Built with ❤️ for Nyx Training Property Management**
-\n+## 🌐 Online Deployment (No Local CLI)
+\n+## 🌐 Database Migrations
 
-This project deploys database migrations and the `import_ical` Edge Function automatically using **GitHub Actions**. You do **not** need to install the Supabase CLI on your work laptop.
+Migrations are applied **manually**, by design — see `supabase/migrations/README.md` for the full convention (numbering, run-on-both-databases rule, idempotency). Every schema/data change ships as a numbered file there and gets pasted into the Supabase SQL Editor by hand, on both the production and staging projects, after review. There is no auto-apply-on-push pipeline; a `.github/workflows/supabase-deploy.yml` exists as an optional manual-dispatch convenience (`supabase migration up` via the CLI) if you ever want to run pending migrations that way instead, but it never fires automatically.
 
-### 1. Prerequisites
+There is no Edge Function in this project — an earlier `import_ical` one existed and has been removed; it duplicated the client-side sync with none of its fixes. iCal sync itself runs two ways: client-side in `demo/index_fixed.html` (`syncICalFeeds()`, the 🔄 Sync button) for on-demand refreshes, and server-side via `scripts/ics-import.js` on a schedule (`.github/workflows/ics-import.yml`, every ~6h) so bookings stay current without anyone having the dashboard open. The two are hand-maintained copies of the same logic, not a shared module — when fixing sync/classification behavior in one, check the other.
+
+### 1. Prerequisites (only if using the manual-dispatch CLI workflow)
 | Item | Where to find |
 |------|---------------|
 | Supabase Project Ref | In project URL, e.g. `<your-project-ref>` |
@@ -487,18 +489,14 @@ This project deploys database migrations and the `import_ical` Edge Function aut
 4. Save.
 5. In the same Settings → Secrets and variables → Actions, add a repository (or environment) **variable** named `SUPABASE_PROJECT_REF` set to your project's ref. This is not a secret — it's just used to target the right project per branch/environment.
 
-You do **not** need the service role key for the workflow. Keep it private for server-only use.
-
 ### 3. Workflow File
-The workflow lives at: `.github/workflows/supabase-deploy.yml`
-It runs on pushes to `main` affecting migrations or the Edge Function.
+The workflow lives at: `.github/workflows/supabase-deploy.yml`. It's `workflow_dispatch`-only (GitHub → Actions → Supabase Deploy → Run workflow) — it never triggers automatically.
 
-### 4. What Happens On Push
+### 4. What Happens When Manually Run
 1. Checkout repository.
 2. Install Supabase CLI in runner.
 3. Link to project using `SUPABASE_ACCESS_TOKEN` + project ref.
-4. Apply migrations in `supabase/migrations/` (001 → 040).
-5. Deploy edge function `import_ical`.
+4. Apply pending migrations in `supabase/migrations/`.
 
 ### 5. Seeding Data (Manual)
 Seeds are **not** auto‑run for safety (contain private feed URLs). Run manually in Supabase SQL Editor:
@@ -520,26 +518,10 @@ WHERE NOT EXISTS (SELECT 1 FROM public.properties WHERE name='TV House') LIMIT 1
 -- Open file: supabase/seeds/010_seed_ical_feeds.sql and execute.
 ```
 
-### 6. Scheduling Automatic Imports
-To enable hourly calendar sync, edit the workflow file and change:
-```yaml
-      - name: (Optional) Schedule hourly import
-   if: ${{ false }}
-```
-to
-```yaml
-   if: always()
-```
-Commit the change; next run creates the cron schedule.
+### 6. Scheduled iCal Sync
+Runs automatically via `.github/workflows/ics-import.yml` (`scripts/ics-import.js`, every ~6h) — see the note above. Requires repo secrets `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`; without them it skips itself rather than failing. Trigger it manually via GitHub → Actions → ICS Import → Run workflow.
 
-### 7. Manual Invocation (Testing)
-After deployment: Supabase dashboard → Functions → `import_ical` → Invoke.
-Or HTTP request:
-```
-GET https://<your-project-ref>.functions.supabase.co/import_ical
-```
-
-### 8. Verification Queries
+### 7. Verification Queries
 Run in SQL Editor:
 ```sql
 SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('organizations','properties','bookings','ical_feeds');
@@ -547,24 +529,21 @@ SELECT COUNT(*) FROM public.organizations;
 SELECT platform, feed_url FROM public.ical_feeds;
 ```
 
-### 9. Adding Future Migrations
-1. Create new file in `supabase/migrations/` with next number (e.g., `050_new_feature.sql`).
-2. Commit & push to `main`.
-3. Action runs automatically.
+### 8. Adding Future Migrations
+1. Create new file in `supabase/migrations/` — see `supabase/migrations/README.md` for the numbering convention.
+2. Review it, then paste it into the Supabase SQL Editor yourself for each target project (staging first, then production once verified) — this is a deliberate manual step, not automated.
 
-### 10. Rollback Strategy (Simple)
+### 9. Rollback Strategy (Simple)
 If a migration breaks something:
 1. Create a new migration file to reverse/unwind (avoid editing old files).
-2. Push; workflow applies forward-only fix.
+2. Run it manually, same as any other migration.
 
-### 11. Security Notes
+### 10. Security Notes
 - Keep repo **private** while ICS feed URLs remain in seed file.
 - Never commit real secrets: use GitHub secrets for tokens/keys.
 - Consider moving iCal URLs to a protected table accessible only by admin policies (already done) and removing them from the repo later.
 
-### 12. Next Improvements
+### 11. Next Improvements
 - Add automated seed job once feeds moved to env variables.
 - Introduce `current_user_roles()` helper to simplify policy conditions.
 - Add pgTAP tests for triggers/functions.
-
-Online deployment is now hands‑off: push code → CI updates Supabase automatically.
