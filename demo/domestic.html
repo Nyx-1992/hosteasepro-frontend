@@ -688,6 +688,16 @@ function propKeyFromId(id) {
   if(id==='83b2a84a-5451-4be5-a84f-2efc0d2602d5'||id==='tvhouse') return 'tvhouse';
   return id;
 }
+// Inverse of propKeyFromId — domestics.property_id has been seen stored as
+// both the UUID and the short key depending on code path/vintage (see
+// propKeyFromId above), so anything indexing UUID-keyed data (like
+// INVENTORY_DATA, loaded from property_manuals) needs this same
+// either-format tolerance.
+function propUuidFromKey(id) {
+  if(id==='speranta'||id==='e9737638-d83a-4947-940a-8746789e4d9f') return 'e9737638-d83a-4947-940a-8746789e4d9f';
+  if(id==='tvhouse'||id==='83b2a84a-5451-4be5-a84f-2efc0d2602d5') return '83b2a84a-5451-4be5-a84f-2efc0d2602d5';
+  return id;
+}
 function propNameFromKey(k) { return k==='speranta'?'Speranta Flat':'TV House'; }
 function propRateFromKey(k) { return k==='tvhouse'?450:350; }
 
@@ -1613,12 +1623,13 @@ function openInventory(cleanId) {
   const clean=myCleans.find(c=>String(c.id)===String(cleanId));
   if(!clean) return;
   currentInventoryClean=clean; inventoryState={};
-  const prop=PROPS[clean.property_id]||{name:'Property'};
+  const prop=PROPS[propUuidFromKey(clean.property_id)]||{name:'Property'};
   document.getElementById('inv-title').textContent=prop.name;
   document.getElementById('inv-sub').textContent=fmtFull(clean.date)+' · '+(clean.time||'10:00');
   document.getElementById('inv-note').value='';
-  const rooms=INVENTORY_DATA[clean.property_id]?.length ? INVENTORY_DATA[clean.property_id]
-    : (FALLBACK_INVENTORY[clean.property_id]||FALLBACK_INVENTORY['e9737638-d83a-4947-940a-8746789e4d9f']);
+  const propUuid=propUuidFromKey(clean.property_id);
+  const rooms=INVENTORY_DATA[propUuid]?.length ? INVENTORY_DATA[propUuid]
+    : (FALLBACK_INVENTORY[propUuid]||FALLBACK_INVENTORY['e9737638-d83a-4947-940a-8746789e4d9f']);
   document.getElementById('inventory-form').innerHTML=rooms.map(room=>`
     <div class="room-section">
       <div class="room-header"><span class="room-icon">${room.icon}</span><span class="room-name">${room.room}</span></div>
