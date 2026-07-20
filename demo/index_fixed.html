@@ -1895,6 +1895,12 @@ function propName(id) {
   return id;
 }
 function fmtDate(d) { if(!d)return''; const[y,m,day]=d.split('-'); return day+'/'+m+'/'+y; }
+// Shared empty-state markup: emoji + one guidance line + optional next-action
+// button, reusing the existing .empty-state/.empty-icon CSS everywhere a list
+// or grid can legitimately have nothing to show.
+function emptyState(icon, text, actionHtml) {
+  return `<div class="empty-state"><div class="empty-icon">${icon}</div>${text}${actionHtml?`<div style="margin-top:14px">${actionHtml}</div>`:''}</div>`;
+}
 function isOwnerStay(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return b.status==='owner'||n.includes('owner')||n.includes('mirka')||n.includes('nicole & silja')||n.includes('antonin'); }
 function isCaretaker(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return n.includes('caretaker')||n.includes('tino'); }
 function getCleanerRate(cleaner, propId) {
@@ -2290,7 +2296,7 @@ function renderReportInventory(filter) {
   if (filter === 'flagged')    reports = reports.filter(r => !r.all_ok);
   if (filter === 'unreviewed') reports = reports.filter(r => !r.reviewed);
   if (!reports.length) {
-    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:24px;font-size:.85rem">No inventory reports yet</div>';
+    el.innerHTML = emptyState('🔍', filter==='all' ? 'No inventory reports yet — they\'ll appear here once a cleaner submits one' : 'No reports match this filter');
     return;
   }
   el.innerHTML = reports.slice(0,30).map(r => {
@@ -3503,7 +3509,7 @@ async function loadInvHistory() {
     const {data,error} = await q;
     if(error) throw error;
     if(!data || !data.length){
-      el.innerHTML = '<div class="text-muted text-sm">No documents yet. Generate one above and it will be saved here.</div>';
+      el.innerHTML = emptyState('🧾', 'No documents yet — generate one above and it\'ll be saved here');
       return;
     }
     el.innerHTML = '<div class="table-wrap"><table>'+
@@ -4349,11 +4355,11 @@ function renderLaneView() {
 
       <!-- ── Booking cards ── -->
       <div style="padding:10px 20px;flex:1;overflow-y:auto;max-height:480px">
-        ${shown.filter(b=>b!==current).length===0&&!current ? `
-          <div style="text-align:center;padding:30px 0;color:var(--muted)">
-            <div style="font-size:2rem;margin-bottom:8px">📭</div>
-            <div style="font-size:.84rem">No bookings for this filter</div>
-          </div>` : ''}
+        ${shown.filter(b=>b!==current).length===0&&!current ? emptyState('📭',
+          `No ${bookingFilter==='all'?'':bookingFilter+' '}bookings for ${prop.name} yet`,
+          `<button class="btn btn-sm btn-primary" onclick="openModal('booking-modal')" style="margin-right:6px">+ Add Booking</button>
+           <button class="btn btn-sm btn-ghost" onclick="syncICalFeeds(false)">🔄 Sync calendars</button>`
+        ) : ''}
 
         ${shown.filter(b=>b.id!==current?.id).map(b => {
           const isPending  = b.status==='pending';
@@ -6373,7 +6379,8 @@ Would love to hear your feedback! ⭐`
         </a>
       </div>
     </div>`;
-  }).join('') : '<div style="color:var(--muted);font-size:.84rem;padding:16px 0">No active guests in the next 14 days.</div>';
+  }).join('') : emptyState('💬', 'No guests to message right now — nothing arriving or departing in the next 14 days',
+    `<button class="btn btn-sm btn-ghost" onclick="switchTab('bookings')">View bookings →</button>`);
 
   // ── Templates ──
   const templatesEl = document.getElementById('wa-templates');
@@ -6473,6 +6480,10 @@ And remember, you can book directly next time at www.snapartments.co.za for our 
 function renderTeamChat() {
   const el = document.getElementById('chat-messages');
   if (!el) return;
+  if (!messages.length) {
+    el.innerHTML = emptyState('💭', 'No messages yet — say hello to the team below');
+    return;
+  }
   el.innerHTML = messages.map(m=>{
     const isMe=m.from===currentUser.name;
     const initials=m.from.split(' ').map(n=>n[0]).join('').slice(0,2);
@@ -7089,7 +7100,12 @@ function renderTeam() {
   });
 
   if (!contacts.length) {
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">No contacts found</div>';
+    el.innerHTML = emptyState('📇',
+      q || _contactFilter!=='all' ? 'No contacts match this search or filter' : 'No contacts yet',
+      q || _contactFilter!=='all'
+        ? `<button class="btn btn-sm btn-ghost" onclick="const s=document.getElementById('contact-search');if(s)s.value='';setContactFilter('all')">Clear filter</button>`
+        : `<button class="btn btn-sm btn-primary" onclick="openAddContact()">+ Add Contact</button>`
+    );
     return;
   }
 

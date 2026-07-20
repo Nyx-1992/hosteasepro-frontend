@@ -1345,7 +1345,7 @@ async function loadNinaRepCleans() {
     if (ninaReportPropFilter !== 'all') {
       rows = rows.filter(r => propKeyFromId(r.property_id) === ninaReportPropFilter);
     }
-    if (!rows.length) { el.innerHTML = '<div class="nina-loading">No cleans found.</div>'; return; }
+    if (!rows.length) { el.innerHTML = '<div class="nina-loading">🧹 No cleans match this filter yet.</div>'; return; }
     const typeLabel = {turnover:'Turnover', deep_clean:'Deep clean', inspection_prep:'Insp. prep'};
     el.innerHTML = rows.map(d => {
       const pk = propKeyFromId(d.property_id);
@@ -1544,11 +1544,11 @@ function renderCleans() {
   const td=tod();
   renderCheckoutsNeeded();
   const el=document.getElementById('cleans-list');
-  if(!myCleans.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px;color:var(--muted)">No cleans found</div>';return;}
+  if(!myCleans.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px"><div style="font-size:2rem;margin-bottom:8px">🧹</div><div style="color:var(--muted);font-size:.88rem">No cleans assigned to you yet</div></div>';return;}
   const filtered=cleansFilter==='upcoming'
     ?[...myCleans].filter(c=>c.status==='scheduled').sort((a,b)=>a.date.localeCompare(b.date))
     :[...myCleans].filter(c=>c.status==='completed').sort((a,b)=>b.date.localeCompare(a.date));
-  if(!filtered.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px;color:var(--muted)">No '+cleansFilter+' cleans</div>';return;}
+  if(!filtered.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px"><div style="font-size:2rem;margin-bottom:8px">'+(cleansFilter==='upcoming'?'✨':'📋')+'</div><div style="color:var(--muted);font-size:.88rem">No '+cleansFilter+' cleans</div></div>';return;}
   el.innerHTML=filtered.map(c=>{
     const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
     const[y,m,d]=(c.date||'').split('-');
