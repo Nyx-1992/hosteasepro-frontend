@@ -33,7 +33,13 @@
   /* Tokens */
   --card:var(--surface);
   --card-bg:var(--surface);
-  --r:10px;--r-lg:16px;
+  /* Radius scale — sm for pills/chips/small controls, default for cards,
+     lg for modals/large panels, full for pill/circle shapes */
+  --r-sm:8px;--r:10px;--r-lg:16px;--r-full:999px;
+  /* Spacing scale — multiples of 4px, matches the values already used
+     ad hoc across the app (8/12/16/20/24 turn up constantly in inline
+     styles); use these for new work instead of picking a new number */
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;
   --sh:0 1px 4px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.06);
   --shl:0 8px 40px rgba(26,26,46,.14);
   /* Form */
@@ -41,6 +47,16 @@
   --input-border:#d4d2cc;
   --input-focus:#0E4D6B;
 }
+/* ── Semantic color legend (applies app-wide, both files) ──────────────
+   amber (--amber/--amber-light)  = needs action  (pending, due, flagged)
+   green (--green/--green-light)  = done / good    (confirmed, completed)
+   red   (--red/--red-light)      = problem        (cancelled, overdue, error)
+   blue  (--blue/--blue-light)    = informational   (checked-in, scheduled)
+   Existing status pills/badges (.badge-*, .status-pill, .pill-*) already
+   follow this outside of a couple of item-type accent colors used only
+   inside the dashboard's Urgent Actions list, where every item is already
+   "needs action" by definition and the extra colors distinguish item type
+   rather than severity. ────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:"DM Sans",sans-serif;background:var(--sand);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
 h2,h3{font-family:"DM Serif Display",serif}
