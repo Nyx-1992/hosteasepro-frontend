@@ -53,6 +53,7 @@ order.
 | 270_roadmap_state_p0_29_p0_30.sql | both | Marks Roadmap item p0-30 (Guest Timeline / B1) done. p0-29 (fmtDate bug, 2 remaining spots) is intentionally left "not started" |
 | 280_property_manuals.sql | both | New `property_manuals` table (org_id, property_id, section, content jsonb) backing the Property Manual / Knowledge tab rebuild (B3) — one row per (property, section) for `inventory`/`inspection`/`faq`. Seeded with real data transcribed from the hardcoded `INVENTORY` (demo/domestic.html) and `INSP_CHECKLIST` (demo/index_fixed.html) structures it replaces; `faq` starts empty per property (no real FAQ content existed anywhere to seed from) |
 | 290_roadmap_state_p0_31.sql | both | Marks Roadmap item p0-31 (Property Manual / Knowledge tab rebuild, B3) done |
+| 300_roadmap_state_p0_32.sql | both | Marks Roadmap item p0-32 (Owner statements, B2) done — no schema change was needed for B2 itself |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
