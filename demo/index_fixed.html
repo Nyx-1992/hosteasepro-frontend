@@ -93,12 +93,14 @@ h2,h3{font-family:"DM Serif Display",serif}
 .topbar-right{display:flex;gap:10px;align-items:center}
 .status-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:var(--warm);color:var(--ink)}
 .content{padding:28px;flex:1}
-.tab-pane{display:none}.tab-pane.active{display:block}
+.tab-pane{display:none}.tab-pane.active{display:block;animation:tabIn .2s ease}
+@keyframes tabIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 /* CARDS */
-.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);padding:20px;border:1px solid var(--border)}
+.card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);padding:20px;border:1px solid var(--border);transition:box-shadow .2s ease}
 .card-title{font-family:"DM Serif Display",serif;font-size:1.05rem;margin-bottom:14px;color:var(--ink)}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
-.stat-card{background:var(--card);border-radius:var(--r);padding:18px 22px;box-shadow:var(--sh);border-top:3px solid var(--accent)}
+.stat-card{background:var(--card);border-radius:var(--r);padding:18px 22px;box-shadow:var(--sh);border-top:3px solid var(--accent);transition:transform .2s ease,box-shadow .2s ease}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,.1)}
 .stat-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;font-weight:700}
 .stat-value{font-family:"DM Serif Display",serif;font-size:1.9rem;color:var(--ink)}
 .stat-sub{font-size:.76rem;color:var(--muted);margin-top:3px}
@@ -113,7 +115,8 @@ tbody td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:.86re
 tbody tr:hover{background:#fafaf8}
 tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:700}
 /* BADGES */
-.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;transition:transform .15s ease}
+.status-pill,.status-tag{transition:background .2s ease,color .2s ease}
 .badge-confirmed{background:#d1fae5;color:#065f46}
 .badge-pending{background:#fef3c7;color:#92400e}
 .badge-checked-in,.badge-checkedin{background:#dbeafe;color:#1e40af}
@@ -252,7 +255,12 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 }
 .toast{background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:.84rem;box-shadow:var(--shl);animation:toastIn .25s ease;max-width:300px}
 .toast.success{background:var(--green)}.toast.error{background:var(--red)}
+/* Celebratory variant — a bigger, bouncier moment for genuine milestones
+   (e.g. Nina clearing every Urgent Action), not every routine save. */
+.toast.celebrate{background:var(--green);font-weight:700;font-size:.92rem;animation:toastCelebrate .5s cubic-bezier(.34,1.56,.64,1)}
 @keyframes toastIn{from{transform:translateX(100%);opacity:0}to{transform:none;opacity:1}}
+@keyframes toastCelebrate{0%{transform:translateX(100%) scale(.85);opacity:0}60%{transform:translateX(-4px) scale(1.05);opacity:1}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.toast,.toast.celebrate{animation:none}}
 .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
 .text-muted{color:var(--muted);font-size:.84rem}
 .empty-state{text-align:center;padding:44px 20px;color:var(--muted)}
@@ -320,6 +328,18 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 
   /* ── Kanban: single column on mobile ── */
   #kanban-board{grid-template-columns:1fr!important}
+}
+
+/* Respect reduced-motion system-wide — catches every animation/transition
+   (including inline style="animation:…") in one place, rather than
+   special-casing each one. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Mobile sidebar drawer */
@@ -1547,6 +1567,10 @@ function getOrgId() {
 }
 restoreSession();
 let taskFilter = 'open', bookingFilter = 'upcoming';
+// Tracks the Urgent Actions count across renders so the "all clear"
+// celebration only fires on the actual transition to zero, not on every
+// re-render of an already-empty dashboard.
+let _lastUrgentCount = 0;
 let inventoryReports = [];
 let cleanerAvailability = []; // [{cleaner, date, available}]
 let taskAssigneeFilter = 'all'; // 'all' | 'Nicole' | 'Silja' | 'Nina Williams'
@@ -4163,9 +4187,15 @@ function renderDashboard() {
   urgentItems.sort((a,b)=>a.priority-b.priority);
 
   if (!urgentItems.length) {
+    // Celebrate the actual transition to zero (there WAS something last
+    // render), not every re-render while already clear — that would just
+    // be noise every time the dashboard refreshes.
+    if (_lastUrgentCount > 0) toast('🎉 Nice work — everything\'s handled!', 'celebrate');
+    _lastUrgentCount = 0;
     urgentEl.innerHTML = '<div style="grid-column:1/-1;color:rgba(255,255,255,.75);font-size:.9rem;text-align:center;padding:22px 0;display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:1.3rem">✅</span> All clear — nothing needs you right now</div>';
     return;
   }
+  _lastUrgentCount = urgentItems.length;
 
   urgentEl.innerHTML = urgentItems.map(item => `
     <div onclick="${item.action}" style="background:rgba(255,255,255,.07);border-radius:10px;padding:10px 12px;cursor:pointer;border-left:3px solid ${item.color};transition:background .15s"

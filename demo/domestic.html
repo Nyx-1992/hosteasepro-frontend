@@ -22,6 +22,14 @@
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 h1,h2,h3{font-family:Syne,sans-serif}
 
 /* Auth */
@@ -65,7 +73,8 @@ h1,h2,h3{font-family:Syne,sans-serif}
 
 /* Screens */
 .screen{display:none;padding-bottom:90px}
-.screen.active{display:block}
+.screen.active{display:block;animation:screenIn .2s ease}
+@keyframes screenIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .section-label{font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px}
 .section-title{font-family:Syne,sans-serif;font-size:1.2rem;font-weight:800;margin-bottom:4px}
 .section-sub{font-size:.82rem;color:var(--muted);margin-bottom:16px}
@@ -75,7 +84,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
 .clean-card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:18px;margin-bottom:12px;cursor:pointer;transition:all .2s;position:relative}
 .clean-card:active{transform:scale(.98)}
 .clean-card.today-card{border-color:rgba(193,127,60,.4);background:rgba(193,127,60,.05)}
-.status-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.status-pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;transition:background .2s ease,color .2s ease}
 .pill-scheduled{background:rgba(91,142,240,.15);color:var(--blue)}
 .pill-completed{background:rgba(45,212,160,.15);color:var(--green)}
 .pill-today{background:rgba(193,127,60,.2);color:var(--accent);animation:pulse 2s infinite}
@@ -129,7 +138,12 @@ h1,h2,h3{font-family:Syne,sans-serif}
 .toast{background:var(--card2);border:1px solid var(--border);color:var(--text);padding:12px 18px;border-radius:12px;font-size:.84rem;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.4);animation:toastIn .25s ease;margin-bottom:8px}
 .toast.ok{border-color:rgba(45,212,160,.4);color:var(--green)}
 .toast.err{border-color:rgba(255,107,107,.4);color:var(--red)}
+/* Celebratory variant — a job well done deserves a slightly bigger moment
+   than a routine save confirmation. */
+.toast.celebrate{border-color:rgba(45,212,160,.5);color:var(--green);font-weight:700;font-size:.92rem;animation:toastCelebrate .5s cubic-bezier(.34,1.56,.64,1)}
 @keyframes toastIn{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+@keyframes toastCelebrate{0%{transform:translateY(20px) scale(.85);opacity:0}60%{transform:translateY(-4px) scale(1.05);opacity:1}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.toast,.toast.celebrate{animation:none}}
 
 /* ── Nina Coordinator View ─────────────────────────────────────────── */
 #nina-view{display:none;min-height:100vh;background:var(--bg);font-family:'DM Sans',sans-serif;}
@@ -1642,8 +1656,8 @@ async function submitInventory() {
     await db.from('domestics').update({status:'completed'}).eq('id',currentInventoryClean.id);
     const c=myCleans.find(x=>String(x.id)===String(currentInventoryClean.id));
     if(c) c.status='completed';
-    const msg=flagged.length>0?`✓ Submitted — ${flagged.length} item${flagged.length>1?'s':''} flagged`:generalNote?'✓ Submitted with note':'✓ All good! Inventory submitted';
-    toast(msg,'ok');
+    const msg=flagged.length>0?`✓ Submitted — ${flagged.length} item${flagged.length>1?'s':''} flagged`:generalNote?'✓ Submitted with note':'🎉 Nice one — all done!';
+    toast(msg, flagged.length>0 ? 'ok' : 'celebrate');
     setTimeout(()=>showScreen('home'),1200);
   } catch(e){console.error(e);toast('Save error: '+e.message,'err');}
 }
