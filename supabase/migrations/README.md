@@ -44,6 +44,7 @@ order.
 | 220_roadmap_state_p0_26.sql | both | Marks Roadmap item p0-26 (--warm CSS variable fix) done |
 | 230_roadmap_state_p1_1.sql | both | Marks Roadmap item p1-1 (remove hardcoded property/org UUIDs) done — no schema change, `ical_feeds`/`properties.cleaning_fee` already existed and were already correct |
 | 240_staging_restore_hassad_aly_booking.sql | **staging only** | **Data correction.** Restores booking id 573 (Hassad Aly, TV House), which was sitting `status='cancelled'` on staging from the same false-positive auto-cancellation incident already restored on production earlier this session — staging's copy was never fixed, since it has an independent booking history |
+| 250_roadmap_state_p0_27_p0_28.sql | both | Marks Roadmap items p0-27 ("Today's Check-outs" section on the Bookings tab) and p0-28 (staging stale-cancellation data fix) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 

@@ -403,6 +403,9 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <!-- ── Pending alert ── -->
         <div id="pending-alert-section"></div>
 
+        <!-- ── Today's check-outs ── -->
+        <div id="todays-checkouts-section"></div>
+
         <!-- ── Top bar ── -->
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px">
           <div class="filter-row" id="booking-filters" style="margin:0"></div>
@@ -3482,7 +3485,9 @@ const ROADMAP = [
   {k:'p0-23',t:'Statement upload — reconcile real per-booking earnings',n:'Not started. The Reports tab computes revenue from bookings.revenue/total_amount, which is the synced/estimated booking amount, not what the platform actually paid out after its fees. Right now reconciling a real statement (e.g. an Airbnb/LekkeSlaap payout PDF) against the dashboard means a one-off manual DB correction. Build a proper flow instead: upload a platform statement (PDF/CSV) for a property, parse gross/fees/net per booking or per period, save it against the matching booking(s) so Reports reflects real payouts, and surface the parsed platform_fee_config rates as a sanity check against what the calculator assumes',c:'HEP'},
   {k:'p0-24',t:'Known limitation — some Booking.com listings send zero guest-identifying iCal data',n:'Not a bug, confirmed by fetching TV House\'s raw booking.com feed directly: every event is "CLOSED - Not available" with no other field at all (no description, no reference, no name) — a real paid stay and a manual owner closure are byte-for-byte indistinguishable in this feed. LekkeSlaap embeds Reference/Customer/Email/Cell in SUMMARY and we parse it (parseICalSummaryFields); Airbnb and Speranta\'s own booking.com feed both surface at least a "Reserved" placeholder we correctly treat as real. TV House\'s booking.com connection just doesn\'t send more — likely a channel-manager/listing-config difference on Booking.com\'s side, not something our parser can fix. DONE — day-detail modal\'s blocked entries now have both a "Convert to booking" guest-name save (flips to a confirmed booking) and a "confirmed owner block" checkbox (bookings.is_owner_block) so ambiguous blocks get explicitly resolved one way or the other instead of sitting as a permanent guess, no SQL needed. The real fix would still be Booking.com\'s Connectivity/Partner API instead of iCal, a much bigger integration — out of scope for now',c:'HEP'},
   {k:'p0-25',t:'"Edit clean" on a linked cleaning doesn\'t save a date change',n:'Not started. Reported live: moving Patricia\'s TV House clean earlier (linked to a booking) via the booking-detail modal\'s "Edit clean" didn\'t take. Two suspects found on inspection, not yet confirmed against the real failure: (1) editCleaning()\'s domestics.find(x=>x.id===id) is a strict-type comparison while saveDomestic() elsewhere in the same flow uses String(d.id)===String(editId) — an inconsistency that could silently no-op the lookup if id ever isn\'t already a matching type; (2) validateCleanDate() rejects a new date earlier than the LINKED booking\'s checkout, which could misfire if the clean\'s selected link in the edit form differs from the one intended. Needs reproducing directly (open the exact clean, watch what the id/linked-booking values actually are) before committing to a fix — worked around this instance with a direct SQL UPDATE rather than guessing at the UI',c:'Bug'},
-  {k:'p0-26',t:'--warm CSS variable referenced ~10x, never defined',n:'DONE — found while visually verifying the Roadmap redesign. Every tag/badge and several hover states (status-tag, .tag, .btn-ghost:hover, invoice/finance category chips, Roadmap category badges, etc.) referenced var(--warm) across the whole app, but it was never defined in :root — silently transparent everywhere it was used, app-wide, since before this session. Fixed with one addition to :root rather than touched at each call site',c:'Bug'}]},
+  {k:'p0-26',t:'--warm CSS variable referenced ~10x, never defined',n:'DONE — found while visually verifying the Roadmap redesign. Every tag/badge and several hover states (status-tag, .tag, .btn-ghost:hover, invoice/finance category chips, Roadmap category badges, etc.) referenced var(--warm) across the whole app, but it was never defined in :root — silently transparent everywhere it was used, app-wide, since before this session. Fixed with one addition to :root rather than touched at each call site',c:'Bug'},
+  {k:'p0-27',t:'"Today\'s Check-outs" section on the Bookings tab',n:'DONE — reported after a checkout-day guest was missing from staging (traced to stale data, not a code bug — see p0-28). New card grid at the top of the Bookings tab showing only today\'s checkout-day guests, reusing the same checklist fields/DB columns as the Guest Management tab (checked_out, followup_msg, cleaning booked) via the existing toggleNinaTask()/booking_checklists plumbing so ticking a box here or there stays in sync. A card drops out once every task on it is done, or once check-out is no longer today — so the list self-clears with no separate dismiss action needed',c:'HEP'},
+  {k:'p0-28',t:'Staging-only stale cancelled booking (Hassad Aly, id 573)',n:'DONE — data correction, not a code issue. Same false-positive auto-cancellation incident already restored on production earlier this session; staging has its own independent booking history and was never restored, which is why staging showed 0 checkouts for a date production correctly showed one. Fixed via supabase/migrations/240_staging_restore_hassad_aly_booking.sql (staging only)',c:'Bug'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -3498,7 +3503,8 @@ const ROADMAP = [
   {k:'p2-5',t:'External dev review — RLS + auth only',n:'Data isolation before first paid customer',c:'Security'},
   {k:'p2-6',t:'Go / no-go: partner uses HEP unprompted?',n:'If not, pause Phase 3 spend and iterate',c:'GTM'},
   {k:'p2-7',t:'Multi-room / guesthouse support (nice to have)',n:'11-room guesthouse test case — needs room-level bookings & calendars, not just property-level. Scope only after confirming his actual booking model (whole-property vs per-room)',c:'Architecture'},
-  {k:'p2-8',t:'Fix service worker Cache errors (PATCH/POST unsupported)',n:'Console noise from domestic.html PWA caching API responses it shouldn\'t — queued for when we\'re next in that file',c:'HEP'}]},
+  {k:'p2-8',t:'Fix service worker Cache errors (PATCH/POST unsupported)',n:'Console noise from domestic.html PWA caching API responses it shouldn\'t — queued for when we\'re next in that file',c:'HEP'},
+  {k:'p2-9',t:'Booking site: cross-platform price comparison + real ratings/reviews',n:'Idea, not yet scoped — feasibility mixed. Goal: show guests the price difference across Airbnb/Booking.com/LekkeSlaap plus real star ratings (rotating, labeled by platform) and real guest feedback directly on our own booking page, to prove it\'s not a fake/marketing number. Price comparison has no official API path — Airbnb/Booking.com don\'t offer one to third-party sites, so the only route is scraping, which is fragile and against most of these platforms\' ToS; not something to build as a silent background job. Ratings/reviews are more feasible via a licensed review-aggregator widget (e.g. Trustindex/EmbedSocial/Elfsight) rather than scraping ourselves. Our existing iCal feeds only carry availability, not price or reviews, so this is a new integration surface either way',c:'Website'}]},
  {id:'p3',lbl:'Phase 3 — Go-to-market',meta:'Weeks 28–48',col:'#7F77DD',tasks:[
   {k:'p3-1',t:'HEP marketing landing page + waitlist',n:'Value clear to a stranger in 10 seconds',c:'GTM'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
@@ -4474,10 +4480,80 @@ function renderBookings() {
     return `<button class="btn btn-sm ${f===bookingFilter?'btn-primary':'btn-ghost'}" onclick="setBookingFilter('${f}')">${label}${badge}</button>`;
   }).join('');
 
+  // ── Today's check-outs ──
+  renderTodaysCheckouts();
+
   // ── Lane view ──
   renderLaneView();
 }
 function setBookingFilter(f) { bookingFilter=f; renderBookings(); }
+
+// Departure-day checklist, reusing the same ninaBTaskProgress fields/DB
+// columns as the Guest Management tab (toggleNinaTask, booking_checklists)
+// so ticking a task here or there stays in sync. A card drops out once
+// every task on it is done, or once check-out is no longer today — so
+// this list clears itself without needing separate "dismiss" logic.
+function renderTodaysCheckouts() {
+  const el = document.getElementById('todays-checkouts-section');
+  if (!el) return;
+  const today = todaySAST();
+
+  const list = bookings.filter(b => {
+    if (['cancelled','blocked','owner'].includes(b.status) || isCaretaker(b) || b.is_active===false) return false;
+    if (currentProp!=='all' && b.property_id!==currentProp) return false;
+    const coDate = b.check_out_date || b.check_out?.slice(0,10);
+    return coDate === today;
+  }).map(b => {
+    const bid = String(b.id);
+    if (!ninaBTaskProgress[bid]) ninaBTaskProgress[bid] = {};
+    const prog = ninaBTaskProgress[bid];
+    const cleanOk = domestics.some(d =>
+      d.property_id===b.property_id && d.status!=='cancelled' &&
+      Math.abs(new Date(d.date)-new Date(today)) <= 2*86400000
+    );
+    const tasks = [
+      {key:'checked_out',   icon:'🛫', label:'Checkout completed'},
+      {key:'followup_msg',  icon:'📩', label:'Follow-up msg sent'},
+      {key:'book_domestic', icon:'🧹', label:'Cleaning booked', done: cleanOk},
+    ];
+    const doneCount = tasks.filter(t => t.done !== undefined ? t.done : !!prog[t.key]).length;
+    return { b, bid, tasks, doneCount, total: tasks.length };
+  }).filter(x => x.doneCount < x.total);
+
+  if (!list.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = `<div style="background:#f0f9ff;border:1.5px solid #7dd3fc;border-radius:14px;padding:16px 20px;margin-bottom:18px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-size:1.2rem">🛫</span>
+      <span style="font-weight:700;font-size:.9rem;color:#0369a1">${list.length} check-out${list.length>1?'s':''} today</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px">
+      ${list.map(x => {
+        const { b, bid, tasks, doneCount, total } = x;
+        return `<div style="background:#fff;border-radius:10px;padding:11px 13px;cursor:pointer" onclick="openBookingDetail('${bid}')">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px">
+            <span style="font-weight:700;font-size:.83rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.display_name}</span>
+            <span style="font-size:.68rem;color:#0369a1;font-weight:600;flex-shrink:0">${doneCount}/${total}</span>
+          </div>
+          <div style="font-size:.7rem;color:var(--muted);margin-bottom:8px">${propName(b.property_id)}</div>
+          ${tasks.map(t => {
+            const done = t.done !== undefined ? t.done : !!ninaBTaskProgress[bid]?.[t.key];
+            const isClean = t.key==='book_domestic';
+            return `<div style="display:flex;align-items:center;gap:7px;padding:3px 0"
+              onclick="event.stopPropagation();${isClean
+                ? (done ? '' : `bookCleaningForGuest('${b.property_id}','${b.check_out?.slice(0,10)}','${bid}')`)
+                : `toggleNinaTask('${bid}','${t.key}')`}">
+              <div style="width:16px;height:16px;border-radius:5px;border:2px solid ${done?'#16a34a':'var(--border)'};background:${done?'#d1fae5':'transparent'};display:flex;align-items:center;justify-content:center;font-size:.55rem;flex-shrink:0">
+                ${done?'✓':''}
+              </div>
+              <span style="font-size:.72rem;${done?'color:var(--muted);text-decoration:line-through':'color:var(--ink)'}">${t.icon} ${t.label}</span>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
 
 async function saveBooking() {
   const guest = document.getElementById('b-guest').value.trim();
@@ -5962,6 +6038,7 @@ async function toggleNinaTask(bookingId, taskKey) {
   if (currentTab === 'bookings') renderLaneView();
   if (document.getElementById('guest-booking-grid')) renderGuestManagement();
   if (document.getElementById('booking-lane-view')?.style.display !== 'none') renderLaneView();
+  if (document.getElementById('todays-checkouts-section')) renderTodaysCheckouts();
 }
 function setTaskFilter(f) { taskFilter=f; renderTasks(); }
 function copyUrl(elId, btn) {
