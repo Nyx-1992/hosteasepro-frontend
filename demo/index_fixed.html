@@ -2378,26 +2378,34 @@ function fmtRelativeTime(iso) {
 
 // Small header indicator showing sync health across all active iCal feeds —
 // makes the iCal-based sync's reliability visible instead of a black box.
-// Cron runs every 6h, so: fresh <=12h (one missed cycle tolerated), delayed
-// <=48h (a few missed cycles — the LekkeSlaap proxy is known-flaky), else
-// failing (sustained, not a one-off blip).
+// Cron runs every 6h, so a feed counts "healthy" if it last succeeded
+// within 12h (one missed cycle tolerated).
+//
+// Colour is based on the SHARE of unhealthy feeds, not the single worst
+// one — the LekkeSlaap proxy is known-flaky, and pinning the whole badge
+// to red just because one feed is having a bad day (while every other
+// feed is fine) is more alarming than useful. One unhealthy feed out of
+// several is amber ("keep an eye on it"); two or more, or your only feed
+// being down, is red ("this needs attention").
 function renderSyncHealth() {
   const el = document.getElementById('sync-health');
   if (!el) return;
-  if (!ICAL_FEEDS.length || !ICAL_FEEDS.some(f => f.id)) { el.style.display = 'none'; return; }
+  const trackable = ICAL_FEEDS.filter(f => f.id);
+  if (!trackable.length) { el.style.display = 'none'; return; }
 
   const now = Date.now();
-  const rows = ICAL_FEEDS.filter(f => f.id).map(f => {
+  const rows = trackable.map(f => {
     const t = f.last_import_at ? new Date(f.last_import_at).getTime() : null;
-    const hoursAgo = t ? (now - t) / 3600000 : Infinity;
+    const hoursAgo = t ? (now - t) / 3600000 : Infinity; // never-yet-succeeded counts as unhealthy
     return { platform: f.platform, property_name: f.property_name, hoursAgo, iso: f.last_import_at };
   });
-  const worst = Math.max(...rows.map(r => r.hoursAgo));
+  const total = rows.length;
+  const unhealthy = rows.filter(r => r.hoursAgo > 12).length;
 
   let icon, bg, color, label;
-  if (worst <= 12)      { icon = '🟢'; bg = 'var(--green-light)'; color = '#065f46'; label = 'Synced'; }
-  else if (worst <= 48) { icon = '🟡'; bg = 'var(--amber-light)'; color = '#92400e'; label = 'Sync delayed'; }
-  else                  { icon = '🔴'; bg = 'var(--red-light)';   color = '#991b1b'; label = 'Sync failing'; }
+  if (unhealthy === 0) { icon = '🟢'; bg = 'var(--green-light)'; color = '#065f46'; label = 'Synced'; }
+  else if (unhealthy === 1 && total > 1) { icon = '🟡'; bg = 'var(--amber-light)'; color = '#92400e'; label = `${total-unhealthy}/${total} feeds synced`; }
+  else { icon = '🔴'; bg = 'var(--red-light)'; color = '#991b1b'; label = total > 1 ? `${total-unhealthy}/${total} feeds synced` : 'Sync failing'; }
 
   el.style.display = 'inline-flex';
   el.style.background = bg;
