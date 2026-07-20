@@ -6621,16 +6621,77 @@ function deliverWhatsAppMessage(phone, text) {
 
 function guestFirstName(b) { return (b.guest_name || b.display_name || '').split(' ')[0] || 'there'; }
 
+// Property-specific pre-arrival messages — real self-check-in instructions
+// per property, so dispatches to the matching template. Falls back to a
+// generic placeholder-based message for any future property.
 function buildPreArrivalMsg(b) {
+  const key = UUID_MAP[b.property_id] || b.property_id;
+  if (key === 'tvhouse')  return buildPreArrivalMsgTvhouse(b);
+  if (key === 'speranta') return buildPreArrivalMsgSperanta(b);
+  return buildPreArrivalMsgGeneric(b);
+}
+function buildPreArrivalMsgTvhouse(b) {
+  return `Welcome to your Tableview Holiday Accommodation!
+
+Good day and welcome, ${guestFirstName(b)}!
+
+I'm Nina, the Property Manager for your upcoming stay at Tableview Holiday Accommodation. 🏡 To make your self check-in as smooth as possible, I want to provide you with all the necessary information.
+
+Here are the details you'll need:
+
+*Address:* 110 Athens Road, 7441 Tableview, Cape Town
+
+*WiFi Password:* WelcomeToOurHome
+
+*Self Check-in:* Upon your arrival, simply call or WhatsApp me at (+27 83 702 2421), and I'll remotely open the gate for you. Please note that the gate does not close automatically. Your keys will be at the back of the house in a lockbox. For your convenience, I'll also share a walk-through video when placing the keys.
+*Lockbox code:* 7021
+
+*Remote Key & Alarm:*
+- The house is armed upon your arrival. Facing the front door, you'll notice a blue light on the top right corner. Before entering, press the blue button to disable the alarm. You can activate the alarm the same way when leaving the property.
+- Our doors are security doors from Europe. When closing the door, simply lift up the handle to activate the security closing.
+- The brown button is used to open and close the gate. Always ensure the gate is closed when leaving the property.
+- For additional security, we ask our guests to leave the outside light of the front door on.
+
+*Services:*
+- The irrigation system for the garden turns on twice a day, in the mornings and evenings.
+- Bin day is on Thursday mornings. Pickup is quite early, so please put the bins out Wednesday night or Thursday morning.
+- Other service providers, such as the pool cleaner and gardener, have their own remotes and access to their respective areas. No action is required from your side.
+
+We've also recently added an Ecoflow battery to keep power available during load shedding — you'll find it next to the WiFi router, connected to the WiFi, TV and a lamp. The other lamp has a rechargeable battery inserted.
+
+If you have any further questions or need additional assistance, feel free to reach out to me. We're committed to making your stay at Tableview Holiday Accommodation comfortable and enjoyable.
+
+Warm regards,
+Nina`;
+}
+function buildPreArrivalMsgSperanta(b) {
+  return `Hello ${guestFirstName(b)} 👋
+
+Welcome to our beautiful Blouberg Apartment! We're thrilled to have you stay with us and hope you enjoy your time here.
+
+Here are a few details to help you settle in:
+
+*Address:* You'll find the apartment in the Speranta Complex — 35 Athens Road Unit 5, Floor 1, Speranta Complex, Cape Town, Western Cape 7439, South Africa. Don't worry about parking — we have an allocated spot just for you, and there's a lift for your convenience!
+
+*Check-in/Out:* Check-in is from 3:00 PM, and check-out is by 10:00 AM. If you'd like to extend your stay, please let us know at least a day in advance so we can check availability.
+
+To ensure a smooth check-in, could you please send us your ETA so we can make sure to be available for you?
+
+We use a Smart Lock for the apartment — your code is *[CODE]*.
+Simply tap the middle of the lock to wake it, enter your code, then press *#*.
+
+Don't hesitate to message us if you need anything. Enjoy your stay! 🌊`;
+}
+function buildPreArrivalMsgGeneric(b) {
   const prop = PROPS[UUID_MAP[b.property_id] || b.property_id] || {};
   return `Hi ${guestFirstName(b)} 👋
 
 Welcome to ${propName(b.property_id)}! Here are your check-in details:
 
-🏠 Address: ${prop.address || propName(b.property_id)}
-🕒 Check-in: from 15:00
-🔑 Access code: [CODE]
-📶 WiFi: [NETWORK] / [PASSWORD]
+🏠 *Address:* ${prop.address || propName(b.property_id)}
+🕒 *Check-in:* from 15:00
+🔑 *Access code:* [CODE]
+📶 *WiFi:* [NETWORK] / [PASSWORD]
 
 Don't hesitate to message us if you need anything. Enjoy your stay! 🌊`;
 }
