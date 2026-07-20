@@ -35,6 +35,7 @@ order.
 | 100_rls_parity.sql | both | Defines one clean policy target state and applies it to both databases — closes real gaps on staging, fixes the same redundant/legacy-mechanism bugs on production. Run after `085`. |
 | 110_domestics_cancellation_ack.sql | both | Adds `domestics.cancellation_acknowledged_at` — supports Task 3's cancellation workflow (dashboard Urgent Actions dismiss tracking) |
 | 120_roadmap_state_seed.sql | both | Marks this session's completed Roadmap tab items (p0-13 through p0-20) as done |
+| 160_cleanup_ical_horizon_junk.sql | both, **including production** | **Incident cleanup.** Booking.com's TV House feed emits a rolling far-future "horizon" marker as a fake several-month blocked event with a new UID daily — every sync inserted a fresh junk row forever (73 found on staging). Root cause fixed in `parseICalText` (skips events over 120 nights); this deletes what already accumulated |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
