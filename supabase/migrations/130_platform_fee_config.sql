@@ -33,8 +33,8 @@ CREATE POLICY platform_fee_config_select ON public.platform_fee_config
 
 DROP POLICY IF EXISTS platform_fee_config_modify ON public.platform_fee_config;
 CREATE POLICY platform_fee_config_modify ON public.platform_fee_config
-  FOR ALL USING (org_id = current_org_id() AND is_org_admin())
-  WITH CHECK (org_id = current_org_id() AND is_org_admin());
+  FOR ALL USING (org_id = current_org_id() AND is_org_admin(org_id))
+  WITH CHECK (org_id = current_org_id() AND is_org_admin(org_id));
 
 CREATE OR REPLACE FUNCTION public.touch_platform_fee_config_updated_at()
 RETURNS trigger AS $$ BEGIN NEW.updated_at = now(); RETURN NEW; END; $$ LANGUAGE plpgsql;
