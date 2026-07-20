@@ -3620,7 +3620,7 @@ const ROADMAP = [
   {k:'p0-22',t:'Rate calculator — per-platform listing price parity',n:'DONE — Settings tab card, per-org platform_fee_config table (host commission % + guest fee %, editable, ZA-default seeded, clearly labeled "verify against your contracts"); target-guest-price mode and inverse desired-net mode, both ZAR rounded to whole rand with net/guest-price vs best channel shown so the direct page\'s advantage is visible at a glance. HEP\'s own 5% direct-booking commission (0% for the S&N owner org) is just another editable row here, not hardcoded',c:'HEP'},
   {k:'p0-23',t:'Statement upload — reconcile real per-booking earnings',n:'Not started. The Reports tab computes revenue from bookings.revenue/total_amount, which is the synced/estimated booking amount, not what the platform actually paid out after its fees. Right now reconciling a real statement (e.g. an Airbnb/LekkeSlaap payout PDF) against the dashboard means a one-off manual DB correction. Build a proper flow instead: upload a platform statement (PDF/CSV) for a property, parse gross/fees/net per booking or per period, save it against the matching booking(s) so Reports reflects real payouts, and surface the parsed platform_fee_config rates as a sanity check against what the calculator assumes',c:'HEP'},
   {k:'p0-24',t:'Known limitation — some Booking.com listings send zero guest-identifying iCal data',n:'Not a bug, confirmed by fetching TV House\'s raw booking.com feed directly: every event is "CLOSED - Not available" with no other field at all (no description, no reference, no name) — a real paid stay and a manual owner closure are byte-for-byte indistinguishable in this feed. LekkeSlaap embeds Reference/Customer/Email/Cell in SUMMARY and we parse it (parseICalSummaryFields); Airbnb and Speranta\'s own booking.com feed both surface at least a "Reserved" placeholder we correctly treat as real. TV House\'s booking.com connection just doesn\'t send more — likely a channel-manager/listing-config difference on Booking.com\'s side, not something our parser can fix. DONE — day-detail modal\'s blocked entries now have both a "Convert to booking" guest-name save (flips to a confirmed booking) and a "confirmed owner block" checkbox (bookings.is_owner_block) so ambiguous blocks get explicitly resolved one way or the other instead of sitting as a permanent guess, no SQL needed. The real fix would still be Booking.com\'s Connectivity/Partner API instead of iCal, a much bigger integration — out of scope for now',c:'HEP'},
-  {k:'p0-25',t:'Bug — "Edit clean" on a linked cleaning doesn\'t save a date change',n:'Not started. Reported live: moving Patricia\'s TV House clean earlier (linked to a booking) via the booking-detail modal\'s "Edit clean" didn\'t take. Two suspects found on inspection, not yet confirmed against the real failure: (1) editCleaning()\'s domestics.find(x=>x.id===id) is a strict-type comparison while saveDomestic() elsewhere in the same flow uses String(d.id)===String(editId) — an inconsistency that could silently no-op the lookup if id ever isn\'t already a matching type; (2) validateCleanDate() rejects a new date earlier than the LINKED booking\'s checkout, which could misfire if the clean\'s selected link in the edit form differs from the one intended. Needs reproducing directly (open the exact clean, watch what the id/linked-booking values actually are) before committing to a fix — worked around this instance with a direct SQL UPDATE rather than guessing at the UI',c:'HEP'}]},
+  {k:'p0-25',t:'"Edit clean" on a linked cleaning doesn\'t save a date change',n:'Not started. Reported live: moving Patricia\'s TV House clean earlier (linked to a booking) via the booking-detail modal\'s "Edit clean" didn\'t take. Two suspects found on inspection, not yet confirmed against the real failure: (1) editCleaning()\'s domestics.find(x=>x.id===id) is a strict-type comparison while saveDomestic() elsewhere in the same flow uses String(d.id)===String(editId) — an inconsistency that could silently no-op the lookup if id ever isn\'t already a matching type; (2) validateCleanDate() rejects a new date earlier than the LINKED booking\'s checkout, which could misfire if the clean\'s selected link in the edit form differs from the one intended. Needs reproducing directly (open the exact clean, watch what the id/linked-booking values actually are) before committing to a fix — worked around this instance with a direct SQL UPDATE rather than guessing at the UI',c:'Bug'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'org_id done (getOrgId() reads from logged-in profile) — property/PROPS/UUID_MAP still hardcoded, needs its own session (properties table lacks cleaning_fee column)',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -3644,7 +3644,53 @@ const ROADMAP = [
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
   {k:'p3-5',t:'White-label booking pages per customer org',n:'org_settings drives logo, colours, domain',c:'Architecture'}]}
 ];
-let rmState = {}, rmOpen = {now:true,p0:false,p1:false,p2:false,p3:false};
+let rmState = {}, rmOpen = {now:true,p0:false,p1:false,p2:false,p3:false,bugs:false};
+
+// Timeline story — one per phase, growing in size/vibrancy to visualise the
+// product's own growth (a simple two-property dashboard becoming a real
+// multi-tenant platform), not just a progress list.
+const PHASE_STORY = {
+  p0: { icon:'🌱', size:40, tagline:'A simple two-property dashboard becomes a real, secured product' },
+  p1: { icon:'🏗️', size:48, tagline:'One org\'s tool becomes a platform any host can run on' },
+  p2: { icon:'🤝', size:56, tagline:'Real feedback from a real second customer' },
+  p3: { icon:'🚀', size:64, tagline:'HEP becomes a business' },
+};
+
+function rmTimelineHtml(){
+  const nodes = ROADMAP.map(p => {
+    const planTasks = p.tasks.filter(t => t.c !== 'Bug');
+    const pd = planTasks.filter(t => rmState[t.k]).length;
+    const total = planTasks.length;
+    const isDone = total>0 && pd===total;
+    return {p, pd, total, isDone};
+  });
+  // Current = first not-fully-done phase, or the last one if everything is done.
+  let currentIdx = nodes.findIndex(n => !n.isDone);
+  if (currentIdx === -1) currentIdx = nodes.length-1;
+
+  let html = '<div style="display:flex;align-items:flex-start;overflow-x:auto;padding:10px 6px 20px;margin-bottom:6px;-webkit-overflow-scrolling:touch">';
+  nodes.forEach((n, i) => {
+    const story = PHASE_STORY[n.p.id] || {icon:'●',size:44,tagline:''};
+    const isCurrent = i===currentIdx;
+    const isFuture = i>currentIdx;
+    if (i>0) {
+      const prevDone = nodes[i-1].isDone;
+      html += '<div style="flex:0 0 32px;height:3px;margin-top:'+(story.size/2)+'px;border-radius:2px;'+
+        (prevDone ? 'background:'+n.p.col : 'background:repeating-linear-gradient(90deg,var(--border) 0 6px,transparent 6px 10px)')+'"></div>';
+    }
+    html += '<div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;width:126px;text-align:center">'+
+      '<div style="width:'+story.size+'px;height:'+story.size+'px;border-radius:50%;background:'+n.p.col+
+        ';display:flex;align-items:center;justify-content:center;font-size:'+Math.round(story.size*0.45)+'px;flex-shrink:0;'+
+        (isCurrent ? 'box-shadow:0 0 0 5px '+n.p.col+'33,0 3px 10px rgba(0,0,0,.15)' : 'box-shadow:0 2px 8px rgba(0,0,0,.1)')+
+        (isFuture ? ';opacity:.45' : '')+'">'+story.icon+'</div>'+
+      '<div style="font-size:.76rem;font-weight:700;margin-top:9px;color:var(--ink)">'+n.p.lbl.replace(/^Phase \d+ — /,'')+'</div>'+
+      '<div style="font-size:.65rem;color:var(--muted);margin-top:3px;line-height:1.35">'+story.tagline+'</div>'+
+      '<div style="font-size:.64rem;font-weight:700;color:'+n.p.col+';margin-top:5px">'+n.pd+'/'+n.total+(isCurrent?' · now':'')+'</div>'+
+    '</div>';
+  });
+  html += '</div>';
+  return html;
+}
 
 async function rmLoad(){
   try{ const ls = JSON.parse(localStorage.getItem('hep_roadmap')||'{}'); Object.assign(rmState, ls); }catch(e){}
@@ -3663,42 +3709,68 @@ async function rmToggle(k){
 
 function rmTogglePhase(id){ rmOpen[id] = !rmOpen[id]; rmRender(); }
 
+function rmTaskRowHtml(t){
+  const d = !!rmState[t.k];
+  return '<div onclick="rmToggle(\''+t.k+'\')" style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-top:1px solid var(--border);cursor:pointer">'+
+    '<div style="width:17px;height:17px;border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;'+
+      (d ? 'background:var(--accent);border:1.5px solid var(--accent)' : 'border:1.5px solid var(--muted)')+'">'+
+      (d ? '<span style="color:#fff;font-size:11px;line-height:1">✓</span>' : '')+'</div>'+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:.84rem;color:var(--ink);'+(d?'text-decoration:line-through;opacity:.55':'')+'">'+t.t+
+        ' <span style="font-size:.62rem;padding:1px 7px;border-radius:10px;background:var(--warm);color:var(--ink);vertical-align:middle">'+t.c+'</span></div>'+
+      (t.n ? '<div style="font-size:.72rem;color:var(--muted);margin-top:2px;'+(d?'opacity:.55':'')+'">'+t.n+'</div>' : '')+
+    '</div></div>';
+}
+
 function rmRender(){
   const root = document.getElementById('roadmap-root');
   if(!root) return;
+
+  // Bugs are found live, not planned — kept out of phase progress/counts so
+  // "the plan" stays a plan. Pulled from wherever they live in ROADMAP into
+  // their own section instead.
+  const allBugs = [];
+  ROADMAP.forEach(p => p.tasks.forEach(t => { if (t.c === 'Bug') allBugs.push(t); }));
+  const bugsOpen = allBugs.filter(t => !rmState[t.k]).length;
+
   let done = 0, total = 0;
-  ROADMAP.forEach(p => p.tasks.forEach(t => { total++; if(rmState[t.k]) done++; }));
+  ROADMAP.forEach(p => p.tasks.forEach(t => { if (t.c === 'Bug') return; total++; if(rmState[t.k]) done++; }));
   const pct = total ? Math.round(done/total*100) : 0;
 
   root.innerHTML =
-    '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">'+
       '<div style="font-size:1.05rem;font-weight:700;color:var(--ink)">Building HEP — from tool to product</div>'+
-      '<div style="font-size:.85rem;color:var(--muted)">'+done+' of '+total+' done · '+pct+'%</div>'+
+      '<div style="font-size:.85rem;color:var(--muted)">'+done+' of '+total+' planned · '+pct+'%'+
+        (bugsOpen?' · <span style="color:#dc2626;font-weight:700">'+bugsOpen+' open bug'+(bugsOpen!==1?'s':'')+'</span>':'')+
+      '</div>'+
     '</div>'+
+    rmTimelineHtml()+
     '<div style="height:6px;background:var(--border);border-radius:3px;margin-bottom:18px;overflow:hidden">'+
       '<div style="height:100%;width:'+pct+'%;background:var(--accent);border-radius:3px;transition:width .4s"></div>'+
     '</div>'+
+    (allBugs.length ? (() => {
+      const bugsIsOpen = rmOpen.bugs;
+      const bugRows = bugsIsOpen ? allBugs.map(rmTaskRowHtml).join('') : '';
+      return '<div style="border:1.5px solid #fecaca;border-radius:12px;margin-bottom:14px;overflow:hidden;background:#fff5f5">'+
+        '<div onclick="rmTogglePhase(\'bugs\')" style="display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;user-select:none">'+
+          '<div style="font-size:1rem">🐛</div>'+
+          '<div style="flex:1;font-size:.9rem;font-weight:700;color:#991b1b">Known Issues</div>'+
+          '<div style="font-size:.75rem;color:var(--muted)">found live, not part of the plan</div>'+
+          '<div style="font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:12px;background:#fee2e2;color:#991b1b">'+bugsOpen+' open</div>'+
+          '<div style="color:var(--muted);font-size:.8rem;transform:rotate('+(bugsIsOpen?'180':'0')+'deg);transition:transform .2s">▼</div>'+
+        '</div>'+bugRows+'</div>';
+    })() : '')+
     ROADMAP.map(p => {
-      const pd = p.tasks.filter(t => rmState[t.k]).length;
+      const planTasks = p.tasks.filter(t => t.c !== 'Bug');
+      const pd = planTasks.filter(t => rmState[t.k]).length;
       const isOpen = rmOpen[p.id];
-      const rows = isOpen ? p.tasks.map(t => {
-        const d = !!rmState[t.k];
-        return '<div onclick="rmToggle(\''+t.k+'\')" style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-top:1px solid var(--border);cursor:pointer">'+
-          '<div style="width:17px;height:17px;border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;'+
-            (d ? 'background:var(--accent);border:1.5px solid var(--accent)' : 'border:1.5px solid var(--muted)')+'">'+
-            (d ? '<span style="color:#fff;font-size:11px;line-height:1">✓</span>' : '')+'</div>'+
-          '<div style="flex:1;min-width:0">'+
-            '<div style="font-size:.84rem;color:var(--ink);'+(d?'text-decoration:line-through;opacity:.55':'')+'">'+t.t+
-              ' <span style="font-size:.62rem;padding:1px 7px;border-radius:10px;background:var(--warm);color:var(--ink);vertical-align:middle">'+t.c+'</span></div>'+
-            (t.n ? '<div style="font-size:.72rem;color:var(--muted);margin-top:2px;'+(d?'opacity:.55':'')+'">'+t.n+'</div>' : '')+
-          '</div></div>';
-      }).join('') : '';
+      const rows = isOpen ? planTasks.map(rmTaskRowHtml).join('') : '';
       return '<div style="border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;background:#fff">'+
         '<div onclick="rmTogglePhase(\''+p.id+'\')" style="display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;user-select:none">'+
           '<div style="width:10px;height:10px;border-radius:50%;background:'+p.col+';flex-shrink:0"></div>'+
           '<div style="flex:1;font-size:.9rem;font-weight:700;color:var(--ink)">'+p.lbl+'</div>'+
           '<div style="font-size:.75rem;color:var(--muted)">'+p.meta+'</div>'+
-          '<div style="font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--warm);color:var(--ink)">'+pd+'/'+p.tasks.length+'</div>'+
+          '<div style="font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--warm);color:var(--ink)">'+pd+'/'+planTasks.length+'</div>'+
           '<div style="color:var(--muted);font-size:.8rem;transform:rotate('+(isOpen?'180':'0')+'deg);transition:transform .2s">▼</div>'+
         '</div>'+rows+'</div>';
     }).join('');
