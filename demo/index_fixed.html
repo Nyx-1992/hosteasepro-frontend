@@ -862,6 +862,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
             style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
             🏠 Property
           </button>
+          <button id="rsub-owner-btn" onclick="switchReportSub('owner')"
+            style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
+            📄 Owner Statements
+          </button>
         </div>
 
         <!-- REVENUE SUB-TAB -->
@@ -976,7 +980,46 @@ function _buildMobileNavStub(){/* replaced by main script */}
      <div id="report-inv-list"></div>
         </div>
         </div><!-- end rsub-property -->
-          
+
+        <!-- OWNER STATEMENTS SUB-TAB -->
+        <div id="rsub-owner" style="display:none">
+          <div class="card mb-6" style="background:#fef3c7;border:1px solid #f59e0b">
+            <div style="font-size:.84rem;color:#92400e;line-height:1.6">
+              📄 For pass-through ownership properties — rental income belongs to the owners, not S&amp;N. This is separate from the Finance tab, which only reports S&amp;N's own income (Speranta).
+            </div>
+          </div>
+          <div class="card mb-6">
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Property</label>
+                <select id="ownstmt-prop" onchange="onOwnerStmtChange()"></select>
+              </div>
+              <div class="form-field">
+                <label>Month</label>
+                <input type="month" id="ownstmt-month" onchange="onOwnerStmtChange()"/>
+              </div>
+              <div class="form-field">
+                <label>Owner name(s)</label>
+                <input id="ownstmt-owners" placeholder="e.g. Mirka & Antonin" onchange="renderOwnerStatementPreview()"/>
+              </div>
+            </div>
+            <div style="margin:16px 0 10px;font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Deductible costs</div>
+            <div id="ownstmt-costs"></div>
+            <button onclick="ownStmtAddCost()" style="margin-top:6px;text-align:left;background:transparent;border:1.5px dashed var(--border);border-radius:8px;padding:8px 10px;font-size:.8rem;color:var(--muted);cursor:pointer;width:100%">+ Add cost line</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+              <div style="font-size:.85rem;color:var(--muted)">Net due to owner(s)</div>
+              <div id="ownstmt-net" style="font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--ink)"></div>
+            </div>
+          </div>
+          <div class="card mb-6">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div class="card-title" style="margin:0">Preview</div>
+              <button class="btn btn-primary btn-sm" onclick="generateOwnerStatementPDF()">⬇ Download PDF</button>
+            </div>
+            <div id="ownstmt-preview" style="background:#F5EFE6;border-radius:10px;padding:16px;border:1px solid var(--border)"></div>
+          </div>
+        </div><!-- end rsub-owner -->
+
 
 
       <!-- end tab-settings -->
@@ -3639,7 +3682,8 @@ const ROADMAP = [
   {k:'p0-28',t:'Staging-only stale cancelled booking (Hassad Aly, id 573)',n:'DONE — data correction, not a code issue. Same false-positive auto-cancellation incident already restored on production earlier this session; staging has its own independent booking history and was never restored, which is why staging showed 0 checkouts for a date production correctly showed one. Fixed via supabase/migrations/240_staging_restore_hassad_aly_booking.sql (staging only)',c:'Bug'},
   {k:'p0-29',t:'fmtDate() called with a full timestamp instead of a plain date in 2 spots',n:'Not started. fmtDate() assumes a plain YYYY-MM-DD string and naively splits on "-"; found via visual verification while building the Guest Timeline (p0-30) that it was being called with the full check_in/check_out timestamp instead, producing garbled dates like "15 15:00:00+02/07/2026". Fixed in the new Guest Timeline card (uses check_in_date/check_out_date instead), but the same pre-existing pattern is still live in the booking-detail modal (~line 4789) and the cleaner-assignment display (~line 5681) — not fixed there, flagging rather than expanding this session\'s scope',c:'Bug'},
   {k:'p0-30',t:'Guest Timeline — Messages tab rebuilt around per-booking touchpoints (B1)',n:'DONE — replaced the old generic WhatsApp template-link list (pick blind from 6 canned messages) with a per-booking stage timeline: pre-arrival -> check-in day -> mid-stay (10+ night stays only) -> post-stay, each stage showing done/due-now/upcoming and a ready-to-send WhatsApp message for whichever is due right now. Post-stay message bakes in the RETURN10 rebooking promo + direct-booking link, ready for when the direct-booking page is live. Mark-as-sent reuses booking_checklists (guest_contacted_at/checked_in_at/follow_up_sent_at already existed; mid_stay_msg_at is the one new column, migration 260) via the existing toggleNinaTask() plumbing, so it stays in sync with the Guest Management tab. Lightweight "returning guest" badge derived by matching phone/name across existing bookings — no new guests table, kept it lightweight as scoped. WhatsApp delivery isolated into one deliverWhatsAppMessage() function so a future WhatsApp Business API swap doesn\'t touch the message-building code. Refined after first staging review: only mid-stay (not post-stay — the RETURN10/direct-booking push isn\'t something to actively chase yet, and every historical booking looked "overdue" the moment this shipped, flooding Urgent Actions) surfaces as an Urgent Action; mid-stay threshold raised from 4 to 10 nights; every WhatsApp send/open now targets one shared named tab instead of "_blank" so WhatsApp Web only needs logging into once per session instead of once per guest',c:'HEP'},
-  {k:'p0-31',t:'Property Manual — Knowledge tab rebuilt as operational source of truth (B3)',n:'DONE — new property_manuals table (migration 280), one row per (property, section). Replaces two pieces of data that were hardcoded and duplicated with no in-app way to edit them: INVENTORY (demo/domestic.html\'s cleaner checklist during a clean) and INSP_CHECKLIST (was a single GLOBAL list for every property\'s inspection form in demo/index_fixed.html, now genuinely per-property). Seed data transcribed as-is from those hardcoded structures via a script that read the real objects, not hand-typed, so no transcription risk. New Guest FAQ section (previously didn\'t exist) is editable per property and surfaces as a copy-to-clipboard quick reference on the Guest Timeline (B1) so Nina can drop a real answer into whatever message she\'s sending. The old flat "Knowledge Base" (kbArticles/SAMPLE_KB) is kept as-is, relabeled "General Notes" below the new per-property sections — on inspection its content was real business data (door codes, procedures, emergency contacts, finance notes), not placeholder junk, so nothing there needed killing; the actual dead content was the hardcoded/duplicated checklist data now replaced. Known gap, not touched: demo/domestic.html\'s separate NINA_CHECKLISTS (a differently-structured, more detailed inspection checklist used only inside the cleaner portal\'s own Nina-view) is a third, still-hardcoded parallel structure not unified with this — out of scope for this pass, flagging rather than silently leaving it undiscovered',c:'HEP'}]},
+  {k:'p0-31',t:'Property Manual — Knowledge tab rebuilt as operational source of truth (B3)',n:'DONE — new property_manuals table (migration 280), one row per (property, section). Replaces two pieces of data that were hardcoded and duplicated with no in-app way to edit them: INVENTORY (demo/domestic.html\'s cleaner checklist during a clean) and INSP_CHECKLIST (was a single GLOBAL list for every property\'s inspection form in demo/index_fixed.html, now genuinely per-property). Seed data transcribed as-is from those hardcoded structures via a script that read the real objects, not hand-typed, so no transcription risk. New Guest FAQ section (previously didn\'t exist) is editable per property and surfaces as a copy-to-clipboard quick reference on the Guest Timeline (B1) so Nina can drop a real answer into whatever message she\'s sending. The old flat "Knowledge Base" (kbArticles/SAMPLE_KB) is kept as-is, relabeled "General Notes" below the new per-property sections — on inspection its content was real business data (door codes, procedures, emergency contacts, finance notes), not placeholder junk, so nothing there needed killing; the actual dead content was the hardcoded/duplicated checklist data now replaced. Known gap, not touched: demo/domestic.html\'s separate NINA_CHECKLISTS (a differently-structured, more detailed inspection checklist used only inside the cleaner portal\'s own Nina-view) is a third, still-hardcoded parallel structure not unified with this — out of scope for this pass, flagging rather than silently leaving it undiscovered',c:'HEP'},
+  {k:'p0-32',t:'Owner statements — printable monthly statement for pass-through properties (B2)',n:'DONE — new "📄 Owner Statements" sub-tab under Reports. Property + month picker, auto-computed gross rental proceeds (from bookings) and cleaning costs (from domestics, whichever property_id format that row happens to use), editable extra cost lines (management fee defaults to R6,000, matching the existing TV House arrangement), live net-due-to-owners total, and a branded printable PDF using the same html2canvas+jsPDF pipeline the invoice generator already uses — no new PDF machinery built, reused what existed. No schema change: everything is computed live from bookings/domestics, nothing new to store. Confirmed while building this that the Finance tab\'s own S&N income reporting already hardcodes property_id===\'speranta\' only, so TV House was already correctly excluded from S&N\'s own revenue — this feature is purely the owner-facing document that was missing, not a fix to existing reporting. TV House is the live case (auto-selected by default) but any property can be picked',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -7113,15 +7157,188 @@ const isPast = m < todayMo;
   function switchReportSub(sub) {
   document.getElementById('rsub-revenue').style.display = sub === 'revenue' ? '' : 'none';
   document.getElementById('rsub-property').style.display = sub === 'property' ? '' : 'none';
-  if (sub === 'property') { 
-    renderReportInspections(); 
+  document.getElementById('rsub-owner').style.display = sub === 'owner' ? '' : 'none';
+  if (sub === 'property') {
+    renderReportInspections();
     renderReportInventory();
     renderReports(window._reportMonths ?? 3);
   }
+  if (sub === 'owner') { renderOwnerStatementTab(); }
   const activeStyle = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px';
   const inactiveStyle = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px';
   document.getElementById('rsub-revenue-btn').style.cssText = sub === 'revenue' ? activeStyle : inactiveStyle;
-  document.getElementById('rsub-property-btn').style.cssText = sub === 'property' ? activeStyle : inactiveStyle;  
+  document.getElementById('rsub-property-btn').style.cssText = sub === 'property' ? activeStyle : inactiveStyle;
+  document.getElementById('rsub-owner-btn').style.cssText = sub === 'owner' ? activeStyle : inactiveStyle;
+}
+
+// ── OWNER STATEMENTS (B2) ────────────────────────────────────────
+// Monthly statement for pass-through ownership properties — rental
+// proceeds belong to the property owner(s), not S&N. The Finance tab's
+// own income reporting already excludes this (hardcoded to Speranta
+// only, confirmed while researching this feature); this is the
+// owner-facing document that was missing. TV House is the live case
+// today, but any property can be selected.
+let ownerStmtProp = null;
+let ownerStmtMonth = new Date().toISOString().slice(0,7);
+let ownerStmtCosts = [];
+
+function renderOwnerStatementTab() {
+  const propKeys = Object.keys(PROPS);
+  if (!propKeys.length) return;
+  if (!ownerStmtProp || !PROPS[ownerStmtProp]) {
+    ownerStmtProp = propKeys.find(k => (PROPS[k].name||'').toLowerCase().includes('tv')) || propKeys[0];
+  }
+  document.getElementById('ownstmt-prop').innerHTML = propKeys.map(k =>
+    `<option value="${k}" ${k===ownerStmtProp?'selected':''}>${PROPS[k].name}</option>`).join('');
+  document.getElementById('ownstmt-month').value = ownerStmtMonth;
+  onOwnerStmtChange();
+}
+
+function onOwnerStmtChange() {
+  ownerStmtProp = document.getElementById('ownstmt-prop').value || ownerStmtProp;
+  ownerStmtMonth = document.getElementById('ownstmt-month').value || ownerStmtMonth;
+  computeOwnerStatementCosts();
+  renderOwnerStatementPreview();
+}
+
+function ownStmtMonthRange() {
+  const [y,m] = ownerStmtMonth.split('-').map(Number);
+  return { start: ownerStmtMonth+'-01', end: new Date(y, m, 0).toISOString().slice(0,10) };
+}
+
+function ownStmtBookings() {
+  const {start,end} = ownStmtMonthRange();
+  return bookings.filter(b => {
+    if (['cancelled','blocked'].includes(b.status) || isOwnerStay(b) || isCaretaker(b)) return false;
+    if (b.property_id !== ownerStmtProp) return false; // normalized bookings (nb()) use the short key
+    return b.check_in >= start && b.check_in <= end;
+  });
+}
+function ownStmtGross() { return ownStmtBookings().reduce((s,b) => s + (b.revenue||0), 0); }
+
+function computeOwnerStatementCosts() {
+  const {start,end} = ownStmtMonthRange();
+  const monthCleans = domestics.filter(d => {
+    if (d.status === 'cancelled') return false;
+    // domestics.property_id has been seen stored as either the UUID or
+    // the short key depending on vintage — resolve defensively.
+    const key = UUID_MAP[d.property_id] || d.property_id;
+    return key === ownerStmtProp && d.date >= start && d.date <= end;
+  });
+  const cleaningTotal = monthCleans.reduce((s,d) => s + (d.amount_paid||0), 0);
+  ownerStmtCosts = [
+    { desc: 'Cleaning ('+monthCleans.length+' clean'+(monthCleans.length!==1?'s':'')+')', amount: cleaningTotal },
+    { desc: 'Management fee', amount: 6000 },
+  ];
+}
+
+function ownStmtAddCost() { ownerStmtCosts.push({desc:'', amount:0}); renderOwnerStatementPreview(); }
+function ownStmtDeleteCost(i) { ownerStmtCosts.splice(i,1); renderOwnerStatementPreview(); }
+function ownStmtUpdateCost(i, field, val) {
+  ownerStmtCosts[i][field] = field==='amount' ? (Number(val)||0) : val;
+  renderOwnerStatementPreview();
+}
+
+function renderOwnerStatementPreview() {
+  const gross = ownStmtGross();
+  const costsTotal = ownerStmtCosts.reduce((s,c)=>s+(Number(c.amount)||0),0);
+  const net = gross - costsTotal;
+  const fmt = n => 'R' + Math.round(n).toLocaleString('en-ZA');
+
+  document.getElementById('ownstmt-costs').innerHTML = ownerStmtCosts.map((c,i) => `
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:5px">
+      <input value="${c.desc||''}" onchange="ownStmtUpdateCost(${i},'desc',this.value)" placeholder="Description" style="flex:1;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:.82rem"/>
+      <input type="number" value="${c.amount||0}" onchange="ownStmtUpdateCost(${i},'amount',this.value)" style="width:110px;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:.82rem"/>
+      <button onclick="ownStmtDeleteCost(${i})" style="background:transparent;color:var(--muted);border:none;cursor:pointer;font-size:.85rem">✕</button>
+    </div>`).join('');
+
+  const netEl = document.getElementById('ownstmt-net');
+  netEl.textContent = fmt(net);
+  netEl.style.color = net>=0 ? 'var(--green)' : 'var(--red)';
+
+  const propLabel = (PROPS[ownerStmtProp]||{}).name || ownerStmtProp;
+  const owners = document.getElementById('ownstmt-owners')?.value || '';
+  const [y,m] = ownerStmtMonth.split('-').map(Number);
+  const monthLabel = new Date(y, m-1, 1).toLocaleDateString('en-ZA', {month:'long', year:'numeric'});
+  const bk = INV_COMPANY.bank;
+
+  document.getElementById('ownstmt-preview').innerHTML = `
+    <div style="background:#fff;border-radius:8px;padding:28px;font-family:'DM Sans',sans-serif;color:#1A2340">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1A2340">
+        <div>
+          <div style="font-size:15px;font-weight:700">${INV_COMPANY.name}</div>
+          <div style="font-size:11px;color:#666;margin-top:3px">${INV_COMPANY.addr}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:16px;font-weight:700">Owner Statement</div>
+          <div style="font-size:11px;color:#666;margin-top:3px">${propLabel} · ${monthLabel}</div>
+        </div>
+      </div>
+      ${owners ? `<div style="font-size:12px;color:#666;margin-bottom:16px">Prepared for: <strong>${owners}</strong></div>` : ''}
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px">
+        <tr style="border-bottom:1px solid #ddd"><td style="padding:8px 0;font-weight:700">Gross rental proceeds</td><td style="padding:8px 0;text-align:right;font-weight:700">${fmt(gross)}</td></tr>
+        ${ownerStmtCosts.map(c => `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">− ${c.desc||'(unnamed cost)'}</td><td style="padding:6px 0;text-align:right;color:#666">${fmt(c.amount||0)}</td></tr>`).join('')}
+        <tr><td style="padding:12px 0 0;font-weight:700;font-size:14px">Net due to owner${/[&,]/.test(owners)?'s':''}</td><td style="padding:12px 0 0;text-align:right;font-weight:700;font-size:14px;color:${net>=0?'#16a34a':'#dc2626'}">${fmt(net)}</td></tr>
+      </table>
+      <div style="font-size:10px;color:#999;line-height:1.6;margin-top:20px;padding-top:16px;border-top:1px solid #eee">
+        This statement covers rental proceeds for a pass-through ownership property — funds belong to the property owner(s), not ${INV_COMPANY.name}. Payment to: ${bk.name} · ${bk.bank} · ${bk.acc}.
+      </div>
+    </div>`;
+}
+
+async function generateOwnerStatementPDF() {
+  const btn = event.currentTarget;
+  const origText = btn.textContent;
+  btn.textContent = 'Generating…';
+  btn.disabled = true;
+  let clone = null;
+  try {
+    const original = document.getElementById('ownstmt-preview');
+    const propShort = (PROPS[ownerStmtProp]||{}).short || ownerStmtProp;
+    const filename = 'Owner-Statement-'+propShort.replace(/\s+/g,'')+'-'+ownerStmtMonth+'.pdf';
+
+    const printWidth = 700;
+    clone = original.cloneNode(true);
+    clone.style.width = printWidth+'px';
+    clone.style.position = 'fixed';
+    clone.style.top = '0';
+    clone.style.left = '-99999px';
+    document.body.appendChild(clone);
+
+    const canvas = await html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: '#F5EFE6', width: printWidth });
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+    const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!jsPDFCtor) throw new Error('jsPDF library not loaded');
+    const pdf = new jsPDFCtor({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+    const pageWidth  = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin     = 8;
+    const maxWidth   = pageWidth - margin*2;
+    const maxHeight  = pageHeight - margin*2;
+    const ratio      = canvas.height / canvas.width;
+
+    let imgWidth  = maxWidth;
+    let imgHeight = imgWidth * ratio;
+    if (imgHeight > maxHeight) {
+      imgHeight = maxHeight;
+      imgWidth  = imgHeight / ratio;
+    }
+    const offsetX = margin + (maxWidth - imgWidth) / 2;
+
+    pdf.addImage(imgData, 'JPEG', offsetX, margin, imgWidth, imgHeight);
+    pdf.save(filename);
+
+    toast('Statement downloaded ✓','success');
+  } catch(err) {
+    console.warn('Owner statement PDF generation failed:', err);
+    toast('PDF generation failed — check console','error');
+  } finally {
+    if (clone) document.body.removeChild(clone);
+    btn.textContent = origText;
+    btn.disabled = false;
+  }
 }
 
 let _showForecast = true;
