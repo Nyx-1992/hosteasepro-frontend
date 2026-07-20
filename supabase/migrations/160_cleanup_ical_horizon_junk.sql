@@ -18,8 +18,27 @@
 --
 -- Scoped generally (not just TV House/booking.com) since the same fix in
 -- the parser applies to every feed — if another platform/property ever hit
--- the same pattern, this clears it too. No genuine stay or deliberate
--- manual block in this app is anywhere near 120 nights.
+-- the same pattern, this clears it too.
+--
+-- NOTE: this app's owners deliberately keep TV House blocked for long
+-- stretches and only open it when they want to arrange their own travel —
+-- so "long block" alone isn't proof of junk. What separates these 73 rows
+-- from a real deliberate block: is_active=false (already superseded by a
+-- later sync — a current, meaningful block would still be active), and a
+-- source_uid that's either null or unique-per-row with no stable identity
+-- across syncs, consistent with Booking.com re-issuing a fresh "nothing
+-- bookable beyond this horizon" marker each time rather than one persistent
+-- host-set block. Confirmed via pg_constraint that 4 other tables FK into
+-- bookings (booking_checklists, domestic_services, tasks,
+-- financial_transactions, finance_transactions) — checked all of them
+-- against this exact WHERE clause first: 0 rows in any of the latter four,
+-- and booking_checklists' 72 matching rows are all-null stub rows (no
+-- guest_contacted_at/checked_in_at/etc — auto-created placeholders, not
+-- real workflow data), safe to delete alongside the bookings themselves.
+DELETE FROM public.booking_checklists bc
+USING public.bookings b
+WHERE bc.booking_id = b.id
+  AND b.status = 'blocked' AND (b.check_out_date - b.check_in_date) > 120;
 
 DELETE FROM public.bookings
 WHERE status = 'blocked' AND (check_out_date - check_in_date) > 120;
