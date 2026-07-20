@@ -65,7 +65,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
 
 /* Bottom Nav */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:10px 0 max(10px,env(safe-area-inset-bottom));z-index:100}
-.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 12px;opacity:.45;transition:opacity .2s}
+.nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:8px 14px;min-height:48px;opacity:.6;transition:opacity .2s}
 .nav-item.active{opacity:1}
 .nav-icon{font-size:1.3rem}
 .nav-label{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:Syne,sans-serif}
@@ -97,10 +97,10 @@ h1,h2,h3{font-family:Syne,sans-serif}
 .room-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--card2);border-radius:12px;margin-bottom:8px}
 .room-icon{font-size:1.1rem}
 .room-name{font-family:Syne,sans-serif;font-weight:700;font-size:.88rem}
-.item-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .15s}
+.item-row{display:flex;align-items:center;justify-content:space-between;padding:14px;min-height:48px;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:5px;cursor:pointer;transition:all .15s}
 .item-row.flagged{background:rgba(255,107,107,.08);border-color:rgba(255,107,107,.35)}
 .item-name{font-size:.85rem}
-.item-toggle{width:30px;height:30px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.8rem;transition:all .2s;flex-shrink:0;color:var(--green)}
+.item-toggle{width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;font-size:.85rem;transition:all .2s;flex-shrink:0;color:var(--green)}
 .item-row.flagged .item-toggle{background:var(--red);border-color:var(--red);color:#fff}
 .flag-note{padding:4px 14px 10px;display:none}
 .flag-note.show{display:block}
@@ -1632,8 +1632,11 @@ function setNote(room,item,val) {
   inventoryState[key].note=val;
 }
 
+let _submittingInventory=false;
 async function submitInventory() {
   if(!currentInventoryClean) return;
+  if(_submittingInventory) return; // guard against double-tap on a slow connection
+  const btn=document.querySelector('.submit-btn.green');
   const flagged=Object.entries(inventoryState).filter(([k,v])=>v.flagged).map(([k,v])=>({room:k.split('::')[0],item:k.split('::')[1],note:v.note||''}));
   const generalNote=document.getElementById('inv-note').value.trim();
   const report={
@@ -1649,7 +1652,10 @@ async function submitInventory() {
     reviewed:false,
     task_created:false,
   };
-  if(!db){toast('Offline — cannot save','err');return;}
+  if(!db){toast('📶 No connection — try again once you\'re back online','err');return;}
+  if(typeof navigator!=='undefined' && navigator.onLine===false){toast('📶 No connection — try again once you\'re back online','err');return;}
+  _submittingInventory=true;
+  if(btn){btn.disabled=true;btn.dataset.origText=btn.textContent;btn.textContent='Saving…';}
   try {
     const{error:rErr}=await db.from('inventory_reports').insert([report]);
     if(rErr) throw rErr;
@@ -1659,7 +1665,16 @@ async function submitInventory() {
     const msg=flagged.length>0?`✓ Submitted — ${flagged.length} item${flagged.length>1?'s':''} flagged`:generalNote?'✓ Submitted with note':'🎉 Nice one — all done!';
     toast(msg, flagged.length>0 ? 'ok' : 'celebrate');
     setTimeout(()=>showScreen('home'),1200);
-  } catch(e){console.error(e);toast('Save error: '+e.message,'err');}
+  } catch(e){
+    console.error(e);
+    const msg = (typeof navigator!=='undefined' && navigator.onLine===false)
+      ? '📶 No connection — we\'ll keep this on screen, try Submit again once you\'re back online'
+      : 'Couldn\'t save — check your connection and try again';
+    toast(msg,'err');
+  } finally {
+    _submittingInventory=false;
+    if(btn){btn.disabled=false;btn.textContent=btn.dataset.origText||'✓ Submit Inventory Report';}
+  }
 }
 
 // ── Availability ──────────────────────────────────────────────────────────────
