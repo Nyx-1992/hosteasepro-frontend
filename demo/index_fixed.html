@@ -1295,7 +1295,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🧮 Per-Platform Rate Calculator</div>
           <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Work out what to list on each platform so every channel lands on the price or payout you want. Commission rates below are editable starting points — <strong>verify against your own contracts.</strong></div>
 
-          <div id="rate-calc-fees" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:18px"></div>
+          <div id="rate-calc-fees" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:18px"></div>
 
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding-top:14px;border-top:1px solid var(--border)">
             <div style="display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden">
@@ -1773,9 +1773,9 @@ let rateCalcMode = 'guest';
 function defaultFeeConfig() {
   const isOwnerOrg = getOrgId() === '5966bc67-5c2f-45ae-8519-9b7eaeee09f4';
   return {
-    booking:    { host_commission_pct: 15, guest_fee_pct: 0 },
-    airbnb:     { host_commission_pct: 3,  guest_fee_pct: 14 },
-    lekkeslaap: { host_commission_pct: 10, guest_fee_pct: 0 },
+    booking:    { host_commission_pct: 15,   guest_fee_pct: 0 },
+    airbnb:     { host_commission_pct: 17.8, guest_fee_pct: 0 },
+    lekkeslaap: { host_commission_pct: 10,   guest_fee_pct: 0 },
     direct:     { host_commission_pct: isOwnerOrg ? 0 : 5, guest_fee_pct: 0 },
   };
 }
@@ -1802,16 +1802,16 @@ function renderFeeInputs() {
   if (!el) return;
   el.innerHTML = PLATFORM_ORDER.map(p => {
     const f = feeConfig[p] || { host_commission_pct: 0, guest_fee_pct: 0 };
-    return `<div style="background:var(--surface-2);border-radius:10px;padding:12px">
-      <div style="font-weight:700;font-size:.85rem;margin-bottom:8px">${PLATFORM_LABELS[p]}</div>
-      <div style="display:flex;gap:8px">
-        <div class="form-field" style="margin:0;flex:1">
-          <label style="font-size:.66rem">Host commission %</label>
-          <input type="number" min="0" step="0.1" value="${f.host_commission_pct}" onchange="updateFeeConfig('${p}','host_commission_pct',this.value)">
+    return `<div style="background:var(--surface-2);border-radius:10px;padding:10px">
+      <div style="font-weight:700;font-size:.82rem;margin-bottom:6px">${PLATFORM_LABELS[p]}</div>
+      <div style="display:flex;gap:6px">
+        <div class="form-field" style="margin:0;flex:1;gap:2px">
+          <label style="font-size:.62rem">Host commission %</label>
+          <input type="number" min="0" step="0.1" value="${f.host_commission_pct}" style="padding:5px 7px;font-size:.78rem;width:100%" onchange="updateFeeConfig('${p}','host_commission_pct',this.value)">
         </div>
-        <div class="form-field" style="margin:0;flex:1">
-          <label style="font-size:.66rem">Guest fee %</label>
-          <input type="number" min="0" step="0.1" value="${f.guest_fee_pct}" onchange="updateFeeConfig('${p}','guest_fee_pct',this.value)">
+        <div class="form-field" style="margin:0;flex:1;gap:2px">
+          <label style="font-size:.62rem">Guest fee %</label>
+          <input type="number" min="0" step="0.1" value="${f.guest_fee_pct}" style="padding:5px 7px;font-size:.78rem;width:100%" onchange="updateFeeConfig('${p}','guest_fee_pct',this.value)">
         </div>
       </div>
     </div>`;
@@ -1833,7 +1833,6 @@ async function updateFeeConfig(platform, field, val) {
       guest_fee_pct: feeConfig[platform].guest_fee_pct,
     }, { onConflict: 'org_id,platform' });
     if (error) throw error;
-    toast('Fee saved ✓', 'success');
   } catch (e) { console.warn('updateFeeConfig:', e); toast('Could not save fee', 'error'); }
 }
 
