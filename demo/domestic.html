@@ -149,6 +149,9 @@ h1,h2,h3{font-family:Syne,sans-serif}
 .nina-section-sub{font-size:.72rem;color:var(--muted);margin-top:2px;}
 .nina-filter-row select{font-size:.78rem;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--card2);color:var(--text);}
 .nina-loading{font-size:.82rem;color:var(--muted);padding:12px 0;}
+.skeleton-row{height:14px;background:linear-gradient(90deg,var(--card2) 25%,var(--border) 37%,var(--card2) 63%);background-size:400% 100%;animation:skeleton-shimmer 1.4s ease infinite;border-radius:6px;margin:8px 0;}
+@keyframes skeleton-shimmer{0%{background-position:100% 50%}100%{background-position:0 50%}}
+@media (prefers-reduced-motion: reduce){.skeleton-row{animation:none;opacity:.6}}
 .nina-checkout-card{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px;background:var(--card2);}
 .nina-checkout-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px;}
 .nina-checkout-guest{font-weight:700;font-size:.9rem;}
@@ -362,7 +365,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
       <div class="nina-section-header">
         <div><div class="nina-section-title">Upcoming Checkouts</div><div class="nina-section-sub">Next 30 days · assign a cleaner</div></div>
       </div>
-      <div id="nina-checkouts-list"><div class="nina-loading">Loading…</div></div>
+      <div id="nina-checkouts-list"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
     <div class="nina-section">
       <div class="nina-section-header">
@@ -375,13 +378,13 @@ h1,h2,h3{font-family:Syne,sans-serif}
           </select>
         </div>
       </div>
-      <div id="nina-schedule-list"><div class="nina-loading">Loading…</div></div>
+      <div id="nina-schedule-list"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
     <div class="nina-section">
       <div class="nina-section-header">
         <div><div class="nina-section-title">Cleaner Availability</div><div class="nina-section-sub">Next 14 days</div></div>
       </div>
-      <div id="nina-availability-grid"><div class="nina-loading">Loading…</div></div>
+      <div id="nina-availability-grid"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
   </div>
 
@@ -391,7 +394,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
       <div class="nina-section-header">
         <div class="nina-section-title">Last Inspection</div>
       </div>
-      <div id="nina-last-inspections"><div class="nina-loading">Loading…</div></div>
+      <div id="nina-last-inspections"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
       <div style="margin-top:10px;text-align:right;">
         <a href="https://hosteasepro-frontend.vercel.app" target="_blank" class="nina-link">View all reports in HEP →</a>
       </div>
@@ -480,7 +483,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
       <div class="nina-section-header">
         <div><div class="nina-section-title">Inspection History</div><div class="nina-section-sub">All submitted inspection reports</div></div>
       </div>
-      <div id="nina-rep-inspections"><div class="nina-loading">Loading…</div></div>
+      <div id="nina-rep-inspections"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
 
     <!-- Inventory reports -->
@@ -488,7 +491,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
       <div class="nina-section-header">
         <div><div class="nina-section-title">Inventory Reports</div><div class="nina-section-sub">Submitted by cleaners after each job</div></div>
       </div>
-      <div id="nina-rep-inventory"><div class="nina-loading">Loading…</div></div>
+      <div id="nina-rep-inventory"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
 
     <!-- Cleaner activity -->
@@ -496,7 +499,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
       <div class="nina-section-header">
         <div><div class="nina-section-title">Cleaner Activity</div><div class="nina-section-sub">All cleans · completed & scheduled</div></div>
       </div>
-      <div id="nina-rep-cleans"><div class="nina-loading">Loading…</div></div>
+      <div id="nina-rep-cleans"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
 
   </div><!-- /nina-tab-reports -->
@@ -628,6 +631,7 @@ try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){}
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function tod() { return new Date().toISOString().slice(0,10); }
 function fmtDate(d) { if(!d)return''; const[y,m,day]=d.split('-'); return `${parseInt(day)} ${MONTHS_S[parseInt(m)-1]}`; }
+function skeletonRows(n=3) { return `<div style="padding:6px 0">${Array.from({length:n}).map(()=>'<div class="skeleton-row"></div>').join('')}</div>`; }
 function fmtFull(d) { if(!d)return''; const[y,m,day]=d.split('-'); return `${parseInt(day)} ${MONTHS[parseInt(m)-1]} ${y}`; }
 function getRate(cl, propId) {
   if(cl.rate && cl.rate[propId]) return cl.rate[propId];
@@ -847,7 +851,7 @@ async function loadNinaCheckouts() {
 async function loadNinaSchedule() {
   const el=document.getElementById('nina-schedule-list');
   const filter=document.getElementById('nina-sched-filter').value;
-  el.innerHTML='<div class="nina-loading">Loading…</div>';
+  el.innerHTML=skeletonRows(3);
   try {
     const today=tod();
     let q=db.from('domestics').select('id,cleaner,property_id,date,type,status,amount_paid,notes').order('date',{ascending:false}).limit(40);
@@ -1249,7 +1253,7 @@ async function loadNinaReports() {
 async function loadNinaRepInspections() {
   const el = document.getElementById('nina-rep-inspections');
   if (!el) return;
-  el.innerHTML = '<div class="nina-loading">Loading…</div>';
+  el.innerHTML = skeletonRows(3);
   try {
     let q = db.from('property_inspections')
       .select('id,property_id,inspection_date,overall_condition,inspector_name,issues,notes,breakages,photo_urls')
@@ -1294,7 +1298,7 @@ async function loadNinaRepInspections() {
 async function loadNinaRepInventory() {
   const el = document.getElementById('nina-rep-inventory');
   if (!el) return;
-  el.innerHTML = '<div class="nina-loading">Loading…</div>';
+  el.innerHTML = skeletonRows(3);
   try {
     let q = db.from('inventory_reports')
       .select('id,property_id,cleaner,clean_date,all_ok,flagged_items,notes,submitted_at')
@@ -1333,7 +1337,7 @@ async function loadNinaRepInventory() {
 async function loadNinaRepCleans() {
   const el = document.getElementById('nina-rep-cleans');
   if (!el) return;
-  el.innerHTML = '<div class="nina-loading">Loading…</div>';
+  el.innerHTML = skeletonRows(3);
   try {
     let q = db.from('domestics')
       .select('id,cleaner,property_id,date,type,status,amount_paid,notes')
