@@ -2490,16 +2490,6 @@ function parseICalText(text, feed) {
     if (!checkIn || !checkOut || checkIn >= checkOut) continue;
 
     const nights   = Math.round((new Date(checkOut)-new Date(checkIn))/86400000);
-
-    // Some platform feeds (confirmed: Booking.com, TV House) emit a rolling
-    // "nothing bookable beyond this horizon" marker as a fake several-month
-    // event — not a real booking or an intentional block. It gets a fresh
-    // UID every day, so the sync can never match it to a prior row and
-    // instead inserts a brand new junk row daily, forever. No genuine stay
-    // or deliberate manual block in this app comes anywhere close to this
-    // long — skip it outright rather than importing it as a booking.
-    if (nights > 120) continue;
-
     const sumLower = summary.toLowerCase();
     const sumTrim  = summary.trim();
 
@@ -2647,11 +2637,44 @@ async function syncICalFeeds(silent = false) {
             .limit(1);
           if (byDates && byDates.length > 0) existing = byDates;
         }
+        // ── Step 2b: blocked-event overlap fallback ───────────────────────────
+        // Some platforms (confirmed: Booking.com, TV House) re-issue a long-
+        // running closure with a brand new UID every time the feed
+        // regenerates — same closure, different UID, so Steps 1/2 never
+        // match it and it would otherwise insert a fresh duplicate row every
+        // sync. Scoped to 'blocked' only — real guest bookings already have
+        // solid identity (UID, a platform reference, exact dates) and don't
+        // need loose date matching. No duration cutoff: a host closed
+        // year-round is exactly as valid as one closed a week.
+        let matchedByOverlap = false;
+        if ((!existing || !existing.length) && evt.status === 'blocked') {
+          const { data: byOverlap } = await db.from('bookings')
+            .select('id, status, total_amount, guest_name, is_active, source_uid')
+            .eq('property_id', feed.property_id)
+            .eq('platform', feed.platform)
+            .eq('status', 'blocked')
+            .eq('is_active', true)
+            .lte('check_in_date', evt.check_out_date)
+            .gte('check_out_date', evt.check_in_date)
+            .limit(1);
+          if (byOverlap && byOverlap.length > 0) { existing = byOverlap; matchedByOverlap = true; }
+        }
 
         if (existing && existing.length > 0) {
           const ex = existing[0];
           // ── UPDATE: preserve manually-edited data; always apply cancellation ──
           const updates = { is_active: true };
+          // Matched via the overlap fallback, not an exact UID/date match —
+          // this row represents the same closure re-issued with a new UID,
+          // so move it to the feed's current dates/UID instead of leaving it
+          // stale (a real host-set closure's boundaries can shift too).
+          if (matchedByOverlap) {
+            updates.check_in_date  = evt.check_in_date;
+            updates.check_out_date = evt.check_out_date;
+            updates.check_in       = evt.check_in;
+            updates.check_out      = evt.check_out;
+            updates.source_uid     = evt.uid;
+          }
           // Always store raw iCal fields
           if (evt.raw_summary)     updates.raw_summary     = evt.raw_summary;
           if (evt.raw_description) updates.raw_description = evt.raw_description;
