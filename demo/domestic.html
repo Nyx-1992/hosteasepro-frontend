@@ -18,8 +18,19 @@
 :root{
   --bg:#0f1117;--card:#1a1d27;--card2:#222535;--border:rgba(255,255,255,.08);
   --text:#f0f0f0;--muted:rgba(255,255,255,.45);--accent:#c17f3c;
-  --green:#2dd4a0;--red:#ff6b6b;--blue:#5b8ef0;--r:16px;
+  --green:#2dd4a0;--red:#ff6b6b;--blue:#5b8ef0;
+  --amber:var(--accent); /* explicit semantic alias — accent IS the app's "needs action" color here */
+  /* Radius scale — matches index_fixed.html's naming (sm/default/lg/full) */
+  --r-sm:10px;--r:16px;--r-lg:20px;--r-full:999px;
+  /* Spacing scale — multiples of 4px, matches values already used ad hoc */
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;
 }
+/* ── Semantic color legend (applies app-wide, both files) ──────────────
+   amber (--amber)  = needs action  (today's/overdue job, flagged item)
+   green (--green)  = done / good   (completed clean, all-clear inventory)
+   red   (--red)    = problem       (cancelled, overdue, save error)
+   blue  (--blue)   = informational (scheduled, upcoming)
+   ────────────────────────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden}
 @media (prefers-reduced-motion: reduce) {
@@ -89,7 +100,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
 .pill-completed{background:rgba(45,212,160,.15);color:var(--green)}
 .pill-today{background:rgba(193,127,60,.2);color:var(--accent);animation:pulse 2s infinite}
 .pill-cancelled{background:rgba(255,107,107,.15);color:var(--red)}
-.pill-overdue{background:rgba(193,127,60,.2);color:var(--accent)}
+.pill-overdue{background:rgba(255,107,107,.15);color:var(--red)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
 
 /* Inventory */
