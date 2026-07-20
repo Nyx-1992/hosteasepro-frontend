@@ -1288,6 +1288,11 @@ function _buildMobileNavStub(){/* replaced by main script */}
               <option value="Europe/London">United Kingdom (GMT/BST)</option>
             </select>
           </div>
+          <div class="form-field" style="max-width:320px;margin-top:14px">
+            <label>Guest Message Language</label>
+            <select id="settings-language" onchange="saveUserSetting('language', this.value)"></select>
+            <div style="font-size:.74rem;color:var(--muted);margin-top:4px">Applies to Guest Timeline WhatsApp templates (pre-arrival, check-in day, mid-stay, post-stay)</div>
+          </div>
         </div>
 
         <!-- Per-platform rate calculator -->
@@ -1756,6 +1761,11 @@ function saveUserSetting(key, val) {
 function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
+  const langSel = document.getElementById('settings-language');
+  if (langSel) {
+    langSel.innerHTML = MESSAGE_LANGUAGES.map(l => `<option value="${l.key}">${l.label}</option>`).join('');
+    langSel.value = userSettings.language || 'en';
+  }
   if (feeConfigLoaded) { renderFeeInputs(); renderRateCalcResults(); }
   else loadFeeConfig();
 }
@@ -6627,17 +6637,32 @@ function deliverWhatsAppMessage(phone, text) {
 
 function guestFirstName(b) { return (b.guest_name || b.display_name || '').split(' ')[0] || 'there'; }
 
+// ── Guest message language ──────────────────────────────────────
+// Settings > Display Preferences has a "Guest message language" picker
+// (English/Afrikaans for now). Each touchpoint template is a small
+// {en, af, ...} lookup table dispatched by msgLang() — adding a third
+// language later is just adding a new key to each table and to
+// MESSAGE_LANGUAGES, no dispatch logic to touch.
+const MESSAGE_LANGUAGES = [
+  { key:'en', label:'English' },
+  { key:'af', label:'Afrikaans' },
+];
+function msgLang() { return userSettings.language || 'en'; }
+function pickMsg(table) { return (table[msgLang()] || table.en); }
+
 // Property-specific pre-arrival messages — real self-check-in instructions
 // per property, so dispatches to the matching template. Falls back to a
 // generic placeholder-based message for any future property.
 function buildPreArrivalMsg(b) {
   const key = UUID_MAP[b.property_id] || b.property_id;
-  if (key === 'tvhouse')  return buildPreArrivalMsgTvhouse(b);
-  if (key === 'speranta') return buildPreArrivalMsgSperanta(b);
-  return buildPreArrivalMsgGeneric(b);
+  if (key === 'tvhouse')  return pickMsg(PRE_ARRIVAL_TVHOUSE)(b);
+  if (key === 'speranta') return pickMsg(PRE_ARRIVAL_SPERANTA)(b);
+  return pickMsg(PRE_ARRIVAL_GENERIC)(b);
 }
-function buildPreArrivalMsgTvhouse(b) {
-  return `Welcome to your Tableview Holiday Accommodation!
+
+const PRE_ARRIVAL_TVHOUSE = {
+  en: function(b) {
+    return `Welcome to your Tableview Holiday Accommodation!
 
 Good day and welcome, ${guestFirstName(b)}!
 
@@ -6669,9 +6694,46 @@ If you have any further questions or need additional assistance, feel free to re
 
 Warm regards,
 Nina`;
-}
-function buildPreArrivalMsgSperanta(b) {
-  return `Hello ${guestFirstName(b)} 👋
+  },
+  af: function(b) {
+    return `Welkom by jou Tableview-vakansieakkommodasie!
+
+Goeiedag en welkom, ${guestFirstName(b)}!
+
+Ek is Nina, die Eiendomsbestuurder vir jou aankomende verblyf by Tableview Holiday Accommodation. 🏡 Om jou selfinklok so glad moontlik te maak, wil ek jou van al die nodige inligting voorsien.
+
+Hier is die besonderhede wat jy nodig het:
+
+*Adres:* Athenaweg 110, 7441 Tableview, Kaapstad
+
+*WiFi-wagwoord:* WelcomeToOurHome
+
+*Selfinklok:* Skakel of WhatsApp my by aankoms eenvoudig by (+27 83 702 2421), en ek sal die hek van ver af vir jou oopmaak. Let asseblief daarop dat die hek nie outomaties toemaak nie. Jou sleutels sal agter die huis in 'n sleutelkassie wees. Vir jou gerief sal ek ook 'n deurloop-video stuur wanneer ek die sleutels neersit.
+*Sleutelkassiekode:* 7021
+
+*Afstandbeheer & Alarm:*
+- Die huis is by jou aankoms geaktiveer. Wanneer jy voor die voordeur staan, sal jy 'n blou lig in die boonste regterhoek sien. Druk die blou knoppie voordat jy ingaan om die alarm af te skakel. Jy kan die alarm op dieselfde manier aktiveer wanneer jy die eiendom verlaat.
+- Ons deure is Europese sekuriteitsdeure. Om die deur toe te maak, lig eenvoudig die handvatsel op om die sekuriteitsluiting te aktiveer.
+- Die bruin knoppie word gebruik om die hek oop en toe te maak. Maak altyd seker die hek is toe wanneer jy die eiendom verlaat.
+- Vir addisionele sekuriteit vra ons dat gaste die buitelig by die voordeur aan laat.
+
+*Dienste:*
+- Die besproeiingstelsel vir die tuin skakel twee keer per dag aan, soggens en saans.
+- Vullisverwyderingsdag is Donderdagoggende. Die ophaal is redelik vroeg, so ons vra vriendelik dat jy die vullisdromme Woensdagaand of Donderdagoggend uitsit.
+- Ander diensverskaffers, soos die swembadskoonmaker en tuinier, het hul eie afstandbeheerders en toegang tot hul onderskeie areas. Geen aksie word van jou kant vereis nie.
+
+Ons het ook onlangs 'n Ecoflow-battery aangekoop om elektrisiteit tydens beurtkrag te verseker. Dit is langs die WiFi-router, en ons het die WiFi, sowel as die TV en 'n lamp, daaraan gekoppel. Die ander lamp het ook 'n herlaaibare battery ingesit.
+
+As jy enige verdere vrae het of bykomende hulp nodig het, kontak my gerus. Ons stel dit ten doel om jou verblyf by Tableview Holiday Accommodation gemaklik en genotvol te maak.
+
+Vriendelike groete,
+Nina`;
+  },
+};
+
+const PRE_ARRIVAL_SPERANTA = {
+  en: function(b) {
+    return `Hello ${guestFirstName(b)} 👋
 
 Welcome to our beautiful Blouberg Apartment! We're thrilled to have you stay with us and hope you enjoy your time here.
 
@@ -6687,10 +6749,31 @@ We use a Smart Lock for the apartment — your code is *[CODE]*.
 Simply tap the middle of the lock to wake it, enter your code, then press *#*.
 
 Don't hesitate to message us if you need anything. Enjoy your stay! 🌊`;
-}
-function buildPreArrivalMsgGeneric(b) {
-  const prop = PROPS[UUID_MAP[b.property_id] || b.property_id] || {};
-  return `Hi ${guestFirstName(b)} 👋
+  },
+  af: function(b) {
+    return `Hallo ${guestFirstName(b)} 👋
+
+Welkom by ons pragtige Blouberg-woonstel! Ons is opgewonde dat jy by ons gaan bly en hoop jy geniet jou tyd hier.
+
+Hier is 'n paar besonderhede om jou te help tuisvoel:
+
+*Adres:* Jy sal die woonstel in die Speranta-kompleks vind — Athenaweg 35 Eenheid 5, Vloer 1, Speranta-kompleks, Kaapstad, Wes-Kaap 7439, Suid-Afrika. Moenie oor parkering bekommerd wees nie — ons het 'n toegewese plek net vir jou, en daar is 'n hysbak vir jou gerief!
+
+*Intrek/Uittrek:* Intrektyd is vanaf 15:00, en uittrektyd is voor 10:00. Indien jy jou verblyf wil verleng, laat weet ons asseblief minstens 'n dag vooraf sodat ons beskikbaarheid kan bevestig.
+
+Om 'n vlot inklok te verseker, kan jy asseblief jou beraamde aankomstyd vir ons stuur sodat ons kan verseker dat ons beskikbaar is om jou in te laat?
+
+Ons gebruik 'n Slotslot vir die woonstel — jou kode is *[CODE]*.
+Tik eenvoudig in die middel van die slot om dit te aktiveer, voer jou kode in, gevolg deur *#*.
+
+Moenie huiwer om ons te kontak as jy iets nodig het nie. Geniet jou verblyf! 🌊`;
+  },
+};
+
+const PRE_ARRIVAL_GENERIC = {
+  en: function(b) {
+    const prop = PROPS[UUID_MAP[b.property_id] || b.property_id] || {};
+    return `Hi ${guestFirstName(b)} 👋
 
 Welcome to ${propName(b.property_id)}! Here are your check-in details:
 
@@ -6700,23 +6783,57 @@ Welcome to ${propName(b.property_id)}! Here are your check-in details:
 📶 *WiFi:* [NETWORK] / [PASSWORD]
 
 Don't hesitate to message us if you need anything. Enjoy your stay! 🌊`;
-}
-function buildCheckinDayMsg(b) {
-  return `Hi ${guestFirstName(b)} 👋
+  },
+  af: function(b) {
+    const prop = PROPS[UUID_MAP[b.property_id] || b.property_id] || {};
+    return `Hallo ${guestFirstName(b)} 👋
+
+Welkom by ${propName(b.property_id)}! Hier is jou inklok-besonderhede:
+
+🏠 *Adres:* ${prop.address || propName(b.property_id)}
+🕒 *Intrektyd:* vanaf 15:00
+🔑 *Toegangskode:* [CODE]
+📶 *WiFi:* [NETWORK] / [PASSWORD]
+
+Moenie huiwer om ons te kontak as jy iets nodig het nie. Geniet jou verblyf! 🌊`;
+  },
+};
+
+const CHECKIN_DAY_MSG = {
+  en: function(b) {
+    return `Hi ${guestFirstName(b)} 👋
 
 Hope you've settled in at ${propName(b.property_id)}! Just checking you found everything OK.
 
 We're on WhatsApp here for anything you need during your stay 🌊`;
-}
-function buildMidStayMsg(b) {
-  return `Hi ${guestFirstName(b)} 😊
+  },
+  af: function(b) {
+    return `Hallo ${guestFirstName(b)} 👋
+
+Hoop jy het lekker ingeskik by ${propName(b.property_id)}! Ons wil net seker maak jy het alles reggekry.
+
+Ons is hier op WhatsApp vir enigiets wat jy tydens jou verblyf nodig het 🌊`;
+  },
+};
+const MID_STAY_MSG = {
+  en: function(b) {
+    return `Hi ${guestFirstName(b)} 😊
 
 Just checking in — how's everything going at ${propName(b.property_id)}?
 
 Let us know if you need anything at all!`;
-}
-function buildPostStayMsg(b) {
-  return `Hi ${guestFirstName(b)} 😊
+  },
+  af: function(b) {
+    return `Hallo ${guestFirstName(b)} 😊
+
+Net 'n kort besoekie — hoe gaan dit by ${propName(b.property_id)}?
+
+Laat weet ons as jy enigiets nodig het!`;
+  },
+};
+const POST_STAY_MSG = {
+  en: function(b) {
+    return `Hi ${guestFirstName(b)} 😊
 
 We hope you enjoyed your stay at ${propName(b.property_id)}! We'd love your feedback — it really helps us.
 
@@ -6724,7 +6841,21 @@ We hope you enjoyed your stay at ${propName(b.property_id)}! We'd love your feed
 
 Hope to host you again soon! 🌊
 S&N Apt Management`;
-}
+  },
+  af: function(b) {
+    return `Hallo ${guestFirstName(b)} 😊
+
+Ons hoop jy het jou verblyf by ${propName(b.property_id)} geniet! Ons stel jou terugvoer opreg op prys — dit help ons regtig baie.
+
+🎁 En volgende keer, bespreek direk en bespaar: gebruik kode *RETURN10* vir 10% afslag by https://www.snapartments.co.za — geen platformfooie nie, beste tarief gewaarborg.
+
+Hoop om jou binnekort weer te gasheer! 🌊
+S&N Apt Management`;
+  },
+};
+function buildCheckinDayMsg(b) { return pickMsg(CHECKIN_DAY_MSG)(b); }
+function buildMidStayMsg(b)    { return pickMsg(MID_STAY_MSG)(b); }
+function buildPostStayMsg(b)   { return pickMsg(POST_STAY_MSG)(b); }
 
 // mid-stay only makes sense for a long-enough stay to have a "middle"
 const GUEST_STAGE_DEFS = [
