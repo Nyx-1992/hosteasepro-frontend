@@ -777,11 +777,12 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div style="display:flex;gap:4px;background:var(--surface-2);border-radius:10px;padding:3px;margin-bottom:12px;width:fit-content" id="km-prop-tabs"></div>
         <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap" id="km-section-tabs"></div>
         <div id="km-content"></div>
+      </div>
 
-        <div class="divider" style="margin:32px 0"></div>
-
+      <!-- KNOWLEDGE BASE (General Notes) — split out from Property Manual so it's its own destination, not a scroll-down afterthought -->
+      <div class="tab-pane" id="tab-kb">
         <div class="section-head">
-          <div><h2 style="font-size:1.1rem;margin-bottom:3px">General Notes</h2><div class="text-muted">Org-wide notes that aren't tied to one property</div></div>
+          <div><h2 style="font-size:1.25rem;margin-bottom:3px">Knowledge Base</h2><div class="text-muted">Reference notes — tag one property or leave as Both; filtered by the property switcher above</div></div>
           <button class="btn btn-primary btn-sm" onclick="openModal('kb-modal')">+ Add Note</button>
         </div>
         <div class="mb-6"><input style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:#fff" placeholder="🔍 Search…" oninput="renderKB(this.value)"/></div>
@@ -1413,17 +1414,18 @@ function _buildMobileNavStub(){/* replaced by main script */}
 
 <div class="modal-overlay" id="kb-modal">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title">New Article</div><button class="modal-close" onclick="closeModal('kb-modal')">×</button></div>
+    <div class="modal-header"><div class="modal-title" id="kb-modal-title">New Article</div><button class="modal-close" onclick="closeModal('kb-modal');window._editKbId=null;">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-field"><label>Category</label><select id="kb-cat"><option>Procedures</option><option>Access</option><option>WiFi</option><option>Maintenance</option><option>Guest Info</option><option>Emergency</option></select></div>
-        <div class="form-field"><label>Tags (comma separated)</label><input id="kb-tags" placeholder="access, keys"/></div>
+        <div class="form-field"><label>Property</label><select id="kb-prop"><option value="all">Both Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select></div>
+        <div class="form-field span-full"><label>Tags (comma separated)</label><input id="kb-tags" placeholder="access, keys"/></div>
         <div class="form-field span-full"><label>Title *</label><input id="kb-title" placeholder="Article title"/></div>
         <div class="form-field span-full"><label>Content *</label><textarea id="kb-content-input" rows="5" style="resize:vertical" placeholder="Write content here…"></textarea></div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-ghost btn-sm" onclick="closeModal('kb-modal')">Cancel</button>
-        <button class="btn btn-primary btn-sm" onclick="saveKB()">Publish</button>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('kb-modal');window._editKbId=null;">Cancel</button>
+        <button class="btn btn-primary btn-sm" onclick="saveKB()" id="kb-save-btn">Publish</button>
       </div>
     </div>
   </div>
@@ -1700,10 +1702,11 @@ const SAMPLE_KB = [
   {id:'k5',category:'Maintenance',title:'Emergency Contacts',content:'Plumber: Johan Botha - 082 555 1234\nElectrician: Cape Power - 021 555 9876\nLocksmith: Key King - 083 444 2222\nBusiness WhatsApp: +27 79 977 9455',tags:['emergency','contacts']},
   {id:'k6',category:'Guest Info',title:'Area Guide',content:'Beach: 5 min walk\nCheckers Tableview: 3km\nTable Mountain: 30 min drive\nMyCiti bus: 200m away\nKitesurfing & whale watching (Jul-Nov)',tags:['area','guest']},
   {id:'k7',category:'Procedures',title:'Nina Booking Checklist',content:'For every booking Nina must:\n1. Send check-in message 24h before arrival with access codes & house rules\n2. Book domestic/cleaning session after checkout date\n3. Process checkout - inspect property, log any issues as tasks\n4. Send follow-up message to guest inviting them to rebook directly via our website (coming soon)',tags:['nina','checklist','procedure']},
-  {id:'k8',category:'Finance',title:'TV House - Owner Management',content:'Owners: Mirka & Antonin\nManagement fee: R6,000/month (billed monthly to owners)\nPool company managed by S&N - included in monthly bill\nAll property needs coordinated by Nicole & Silja\nMonthly report sent to owners with bookings & income overview',tags:['tvhouse','owners','finance']},
-  {id:'k9',category:'Finance',title:'Nina Williams - Management Fee',content:'Nina Williams - Host Expert\nMonthly management fee: R4,000/month\nNina submits monthly invoice including any out-of-pocket expenses\nPayment via business account\nInvoices to be uploaded to platform for record keeping',tags:['nina','finance','salary']},
-  {id:'k10',category:'Finance',title:'Cleaner Payment Methods',content:'Blessing: R350/clean - paid via ewallet through Spiwe\nFatima: R350/clean - paid via ewallet directly\nPatricia: R350 (Speranta) / R450 (TV House) - paid via EFT\nSpiwe: R350/clean - paid via ewallet\nEaster/holiday rate: R450 for all cleaners\nPatricia combined TV+granny: R600',tags:['cleaners','finance','payment']},
 ];
+// Finance-category notes (owner management fees, staff pay, cleaner rates)
+// used to live here too — pulled per owner feedback, that content belongs
+// in Reports/Management Invoice and Team, not the operational Knowledge
+// tab. See 310_kb_property_and_cleanup.sql for the matching DB cleanup.
 
 // ── HELPERS ───────────────────────────────────────────────────
 // SAST date helper (UTC+2) — prevents date being one day behind late at night
@@ -1878,7 +1881,7 @@ function openInventoryForOutsideCleaner() {
   closeModal('domestic-modal');
   switchTab('knowledge');
   setKmProp(pid);
-  setKmSection('inventory');
+  setKmSection('checklist');
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
@@ -1967,7 +1970,8 @@ const NAV = [
   {id:'calendar', label:'Calendar',     icon:'📅',roles:['owner','admin','host']},
   {id:'tasks',    label:'Task Management',        icon:'✅',roles:['owner','admin','host']},
   {id:'messages', label:'Messages',     icon:'💬',roles:['owner','admin','host']},
-  {id:'knowledge',label:'Knowledge Base',icon:'📚',roles:['owner','admin','host']},
+  {id:'knowledge',label:'Property Manual',icon:'📖',roles:['owner','admin','host']},
+  {id:'kb',       label:'Knowledge Base',icon:'📚',roles:['owner','admin','host']},
   {id:'team',     label:'Team',         icon:'👥',roles:['owner','admin']},
   {id:'invoices', label:'Invoices',     icon:'🧾',roles:['owner','admin']},
   {id:'roadmap',  label:'Roadmap',      icon:'🗺️',roles:['owner']},
@@ -2353,7 +2357,8 @@ function renderTab(id) {
   else if (id==='domestic')  switchTab('calendar'); // redirect — domestic merged into calendar
   else if (id==='tasks')     renderTasks();
   else if (id==='messages')  renderMessages();
-  else if (id==='knowledge') { renderKnowledgeManual(); renderKB(); }
+  else if (id==='knowledge') { renderKnowledgeManual(); }
+  else if (id==='kb')        { renderKB(); }
   else if (id==='team')      renderTeam();
   else if (id==='finance')   renderFinance();
   else if (id==='reports')   { renderReports(); renderReportInspections(); renderReportInventory(); }
@@ -6779,11 +6784,10 @@ async function savePropertyManualSection(propertyId, section, content) {
 }
 
 let kmProp = null;
-let kmSection = 'inventory';
+let kmSection = 'checklist';
 const KM_SECTIONS = [
-  {key:'inventory',  label:'🧹 Inventory'},
-  {key:'inspection', label:'🔍 Inspection checklist'},
-  {key:'faq',         label:'💬 Guest FAQ'},
+  {key:'checklist', label:'🧹 Inventory & Checklist'},
+  {key:'faq',        label:'💬 Guest FAQ'},
 ];
 
 function renderKnowledgeManual() {
@@ -6809,8 +6813,7 @@ function setKmProp(key) { kmProp = key; renderKnowledgeManual(); }
 function setKmSection(section) { kmSection = section; renderKnowledgeManual(); }
 
 function renderKmSectionContent() {
-  if (kmSection === 'inventory') renderKmInventory();
-  else if (kmSection === 'inspection') renderKmInspection();
+  if (kmSection === 'checklist') renderKmChecklist();
   else if (kmSection === 'faq') renderKmFaq();
 }
 
@@ -6820,13 +6823,20 @@ function kmContent(section, fallback) {
   return (propertyManuals[uuid] && propertyManuals[uuid][section]) || fallback;
 }
 
-// ── Inventory section ──
-function renderKmInventory() {
+// ── Inventory & Checklist (consolidated: room inventory + inspection
+// checklist together on one screen, since they're always used side by
+// side when prepping or checking a property) ──
+function renderKmChecklist() {
   const el = document.getElementById('km-content');
+  el.innerHTML = kmInventoryHtml() + kmInspectionHtml();
+}
+function kmInventoryHtml() {
   const content = kmContent('inventory', {rooms:[]});
   const rooms = content.rooms || [];
 
-  el.innerHTML = `<div style="display:grid;gap:12px">
+  return `<div style="margin-bottom:24px">
+    <div style="font-weight:700;font-size:.92rem;margin-bottom:10px">🧹 Room Inventory</div>
+    <div style="display:grid;gap:12px">
     ${rooms.map((room, ri) => `
       <div class="card" style="padding:14px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
@@ -6844,9 +6854,10 @@ function renderKmInventory() {
         </div>
       </div>`).join('')}
     <button onclick="kmAddRoom()" style="background:transparent;border:1.5px dashed var(--border);border-radius:10px;padding:10px;font-size:.82rem;color:var(--muted);cursor:pointer">+ Add room</button>
+    </div>
   </div>`;
 }
-function kmSaveInventory(content) { savePropertyManualSection(kmPropUuid(), 'inventory', content); renderKmInventory(); }
+function kmSaveInventory(content) { savePropertyManualSection(kmPropUuid(), 'inventory', content); renderKmChecklist(); }
 function kmAddRoom() {
   const content = kmContent('inventory', {rooms:[]});
   content.rooms = [...(content.rooms||[]), {room:'New room', icon:'📦', items:[]}];
@@ -6879,13 +6890,14 @@ function kmUpdateItem(ri, ii, val) {
   kmSaveInventory(content);
 }
 
-// ── Inspection checklist section ──
-function renderKmInspection() {
-  const el = document.getElementById('km-content');
+// ── Inspection checklist ──
+function kmInspectionHtml() {
   const content = kmContent('inspection', {checklist:[]});
   const items = content.checklist || [];
 
-  el.innerHTML = `<div class="card" style="padding:14px">
+  return `<div>
+    <div style="font-weight:700;font-size:.92rem;margin-bottom:10px">🔍 Inspection Checklist</div>
+    <div class="card" style="padding:14px">
     <div class="text-muted" style="font-size:.78rem;margin-bottom:10px">Shown on the Inspections tab when this property is selected.</div>
     <div style="display:grid;gap:5px">
       ${items.map((item, ii) => `
@@ -6895,9 +6907,10 @@ function renderKmInspection() {
         </div>`).join('')}
       <button onclick="kmAddInspItem()" style="text-align:left;background:transparent;border:1.5px dashed var(--border);border-radius:6px;padding:6px 10px;font-size:.8rem;color:var(--muted);cursor:pointer">+ Add checklist item</button>
     </div>
+    </div>
   </div>`;
 }
-function kmSaveInspection(content) { savePropertyManualSection(kmPropUuid(), 'inspection', content); renderKmInspection(); }
+function kmSaveInspection(content) { savePropertyManualSection(kmPropUuid(), 'inspection', content); renderKmChecklist(); }
 function kmSlugKey(label) { return (label||'item').toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,30) + '_' + Math.random().toString(36).slice(2,6); }
 function kmAddInspItem() {
   const content = kmContent('inspection', {checklist:[]});
@@ -6959,15 +6972,25 @@ function kmUpdateFaq(ei, field, val) {
 }
 
 // ── KNOWLEDGE BASE ────────────────────────────────────────────
+// Finance-category notes were dropped from here per owner feedback — that
+// content belongs in Reports/Team, not this operational reference page —
+// so it's filtered out defensively even if a stray row still exists in DB.
 function renderKB(search='') {
   const q=(search||'').toLowerCase();
-  const filtered=kbArticles.filter(a=>!q||a.title.toLowerCase().includes(q)||a.content.toLowerCase().includes(q)||a.category.toLowerCase().includes(q));
+  const filtered=kbArticles.filter(a =>
+    a.category !== 'Finance' &&
+    (currentProp==='all' || (a.property_id||'all')===currentProp || (a.property_id||'all')==='all') &&
+    (!q||a.title.toLowerCase().includes(q)||a.content.toLowerCase().includes(q)||a.category.toLowerCase().includes(q))
+  );
   const cats=[...new Set(filtered.map(a=>a.category))];
   document.getElementById('kb-content').innerHTML=cats.map(cat=>{
     const arts=filtered.filter(a=>a.category===cat);
     return`<div class="mb-6">
       <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:10px">${cat}</div>
-      <div class="kb-grid">${arts.map(a=>`<div class="kb-card" onclick="showKB('${a.id}')"><div class="kb-cat">${a.category}</div><div class="kb-title">${a.title}</div><div class="kb-preview">${a.content.slice(0,90)}…</div><div style="margin-top:8px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>`).join('')}</div>
+      <div class="kb-grid">${arts.map(a=>`<div class="kb-card" style="position:relative" onclick="showKB('${a.id}')">
+        <button onclick="event.stopPropagation();editKB('${a.id}')" title="Edit" style="position:absolute;top:8px;right:8px;background:var(--surface-2);border:none;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:.78rem">✏️</button>
+        <div class="kb-cat">${a.category}${a.property_id&&a.property_id!=='all'?' · '+PROPS[a.property_id]?.short:''}</div>
+        <div class="kb-title">${a.title}</div><div class="kb-preview">${a.content.slice(0,90)}…</div><div style="margin-top:8px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>`).join('')}</div>
     </div>`;
   }).join('')||'<div class="empty-state"><div class="empty-icon">📚</div>No articles found</div>';
 }
@@ -6977,11 +7000,30 @@ function showKB(id) {
   document.getElementById('day-modal-body').innerHTML=`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:10px">${a.category}</div><div style="line-height:1.7;white-space:pre-line;font-size:.9rem">${a.content}</div><div style="margin-top:14px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
   openModal('day-modal');
 }
+function editKB(id) {
+  const a=kbArticles.find(x=>x.id==id); if(!a)return;
+  window._editKbId = id;
+  document.getElementById('kb-cat').value = a.category || 'Procedures';
+  document.getElementById('kb-prop').value = a.property_id || 'all';
+  document.getElementById('kb-tags').value = (a.tags||[]).join(', ');
+  document.getElementById('kb-title').value = a.title || '';
+  document.getElementById('kb-content-input').value = a.content || '';
+  document.getElementById('kb-modal-title').textContent = 'Edit Article';
+  document.getElementById('kb-save-btn').textContent = 'Save';
+  document.getElementById('kb-modal').classList.add('open');
+}
 async function saveKB() {
   const title=document.getElementById('kb-title').value.trim(); const content=document.getElementById('kb-content-input').value.trim();
   if(!title||!content){toast('Title and content required','error');return;}
   const tags=document.getElementById('kb-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  const row={category:document.getElementById('kb-cat').value,title,content,tags,org_id:getOrgId()};
+  const row={category:document.getElementById('kb-cat').value,property_id:document.getElementById('kb-prop').value,title,content,tags,org_id:getOrgId()};
+  const editId = window._editKbId;
+  if (editId) {
+    if(db){const{data,error}=await db.from('kb_articles').update(row).eq('id',editId).select().single();if(error){toast('Save error: '+error.message,'error');return;}const idx=kbArticles.findIndex(x=>x.id==editId);if(idx>-1)kbArticles[idx]=data;}
+    else{const idx=kbArticles.findIndex(x=>x.id==editId);if(idx>-1)kbArticles[idx]={...kbArticles[idx],...row};}
+    window._editKbId = null;
+    toast('Article updated ✓','success'); closeModal('kb-modal'); renderKB(); return;
+  }
   if(db){const{data,error}=await db.from('kb_articles').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}kbArticles.unshift(data);}
   else{kbArticles.unshift({...row,id:'k'+Date.now()});}
   toast('Article published ✓','success');closeModal('kb-modal');renderKB();
@@ -7624,6 +7666,17 @@ function openModal(id){
     // Reset assignees
     _modalAssignees = [];
     renderModalAssignees();
+  }
+
+  // ── KB (Knowledge/General Notes) modal reset ──────────────────────────────
+  if (id==='kb-modal' && !window._editKbId) {
+    document.getElementById('kb-modal-title').textContent = 'New Article';
+    document.getElementById('kb-save-btn').textContent = 'Publish';
+    document.getElementById('kb-cat').value = 'Procedures';
+    document.getElementById('kb-prop').value = 'all';
+    document.getElementById('kb-tags').value = '';
+    document.getElementById('kb-title').value = '';
+    document.getElementById('kb-content-input').value = '';
   }
 
   // ── Domestic modal reset ──────────────────────────────────────────────────
