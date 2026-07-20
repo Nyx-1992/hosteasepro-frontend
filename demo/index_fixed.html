@@ -739,7 +739,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
               <div style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:4px">💬 WhatsApp Business</div>
               <div style="font-size:.8rem;color:rgba(255,255,255,.8)">+27 79 977 9455 · S&N Apt Management</div>
             </div>
-            <a href="https://web.whatsapp.com" target="_blank" rel="noopener noreferrer"
+            <a href="https://web.whatsapp.com" target="wa_chat_tab" rel="noopener noreferrer"
               style="background:#fff;color:#128C7E;font-weight:700;font-size:.85rem;padding:10px 20px;border-radius:10px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:opacity .2s;white-space:nowrap"
               onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
               Open WhatsApp Web ↗
@@ -3616,7 +3616,7 @@ const ROADMAP = [
   {k:'p0-27',t:'"Today\'s Check-outs" section on the Bookings tab',n:'DONE — reported after a checkout-day guest was missing from staging (traced to stale data, not a code bug — see p0-28). Compact card row at the top of the Bookings tab (icon-only task toggles, two-per-row) showing only today\'s checkout-day guests, reusing the same checklist fields/DB columns as the Guest Management tab (checked_out, followup_msg, cleaning booked) via the existing toggleNinaTask()/booking_checklists plumbing so ticking stays in sync. A card drops out once every task is done or check-out is no longer today. Also fixed a real bug found while building this: the property lane\'s "current guest" lookup used check_out>today instead of >=today, so a guest checking out today silently vanished from the whole Bookings tab (not shown as current, not shown as upcoming) the moment their checkout date arrived — same off-by-one existed in the dashboard "Currently staying" card, Guest Management\'s isNow/isPast split, and the WhatsApp launcher card; all four fixed to treat checkout day as still-current',c:'HEP'},
   {k:'p0-28',t:'Staging-only stale cancelled booking (Hassad Aly, id 573)',n:'DONE — data correction, not a code issue. Same false-positive auto-cancellation incident already restored on production earlier this session; staging has its own independent booking history and was never restored, which is why staging showed 0 checkouts for a date production correctly showed one. Fixed via supabase/migrations/240_staging_restore_hassad_aly_booking.sql (staging only)',c:'Bug'},
   {k:'p0-29',t:'fmtDate() called with a full timestamp instead of a plain date in 2 spots',n:'Not started. fmtDate() assumes a plain YYYY-MM-DD string and naively splits on "-"; found via visual verification while building the Guest Timeline (p0-30) that it was being called with the full check_in/check_out timestamp instead, producing garbled dates like "15 15:00:00+02/07/2026". Fixed in the new Guest Timeline card (uses check_in_date/check_out_date instead), but the same pre-existing pattern is still live in the booking-detail modal (~line 4789) and the cleaner-assignment display (~line 5681) — not fixed there, flagging rather than expanding this session\'s scope',c:'Bug'},
-  {k:'p0-30',t:'Guest Timeline — Messages tab rebuilt around per-booking touchpoints (B1)',n:'DONE — replaced the old generic WhatsApp template-link list (pick blind from 6 canned messages) with a per-booking stage timeline: pre-arrival -> check-in day -> mid-stay (4+ night stays only) -> post-stay, each stage showing done/due-now/upcoming and a ready-to-send WhatsApp message for whichever is due right now. Post-stay message bakes in the RETURN10 rebooking promo + direct-booking link. Mark-as-sent reuses booking_checklists (guest_contacted_at/checked_in_at/follow_up_sent_at already existed; mid_stay_msg_at is the one new column, migration 260) via the existing toggleNinaTask() plumbing, so it stays in sync with the Guest Management tab. Overdue touchpoints (mid-stay/post-stay, 1+ day overdue) now surface on the dashboard\'s Urgent Actions. Lightweight "returning guest" badge derived by matching phone/name across existing bookings — no new guests table, kept it lightweight as scoped. WhatsApp delivery isolated into one deliverWhatsAppMessage() function so a future WhatsApp Business API swap doesn\'t touch the message-building code',c:'HEP'}]},
+  {k:'p0-30',t:'Guest Timeline — Messages tab rebuilt around per-booking touchpoints (B1)',n:'DONE — replaced the old generic WhatsApp template-link list (pick blind from 6 canned messages) with a per-booking stage timeline: pre-arrival -> check-in day -> mid-stay (10+ night stays only) -> post-stay, each stage showing done/due-now/upcoming and a ready-to-send WhatsApp message for whichever is due right now. Post-stay message bakes in the RETURN10 rebooking promo + direct-booking link, ready for when the direct-booking page is live. Mark-as-sent reuses booking_checklists (guest_contacted_at/checked_in_at/follow_up_sent_at already existed; mid_stay_msg_at is the one new column, migration 260) via the existing toggleNinaTask() plumbing, so it stays in sync with the Guest Management tab. Lightweight "returning guest" badge derived by matching phone/name across existing bookings — no new guests table, kept it lightweight as scoped. WhatsApp delivery isolated into one deliverWhatsAppMessage() function so a future WhatsApp Business API swap doesn\'t touch the message-building code. Refined after first staging review: only mid-stay (not post-stay — the RETURN10/direct-booking push isn\'t something to actively chase yet, and every historical booking looked "overdue" the moment this shipped, flooding Urgent Actions) surfaces as an Urgent Action; mid-stay threshold raised from 4 to 10 nights; every WhatsApp send/open now targets one shared named tab instead of "_blank" so WhatsApp Web only needs logging into once per session instead of once per guest',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -3996,13 +3996,16 @@ function renderDashboard() {
     }
   });
 
-  // 2b. Guest Timeline touchpoints (mid-stay / post-stay) overdue by 1+ day —
-  // gives the pre-arrival rule above the same treatment for the two
-  // touchpoints B1 added, surfaced with a day's grace so it doesn't fire
-  // the instant a window opens, only once it's actually been missed.
+  // 2b. Guest Timeline mid-stay touchpoint overdue by 1+ day. Post-stay is
+  // deliberately NOT surfaced here — every past booking looks "overdue"
+  // the moment this feature ships (none of them ever had follow_up_sent_at
+  // set), which flooded Urgent Actions with months of historical
+  // check-outs; the RETURN10/direct-booking push it contains also isn't
+  // something to actively chase yet. Mid-stay is naturally self-bounding
+  // (only true while a guest is actually mid-stay), so no such issue there.
   bookings.filter(b=>b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b)&&b.is_active!==false).forEach(b => {
     getGuestTouchpoints(b).forEach(s => {
-      if (s.key==='checkin_msg' || s.key==='checked_in' || !s.dueNow || !s.dueSince) return; // pre-arrival covered above; check-in-day has no useful "overdue" signal
+      if (s.key!=='mid_stay_msg' || !s.dueNow || !s.dueSince) return;
       const daysOverdue = Math.round((now-new Date(s.dueSince))/86400000);
       if (daysOverdue>=1) {
         urgentItems.push({
@@ -6298,8 +6301,14 @@ const WA_NUMBER = '27636021847'; // Nicole — shared WhatsApp Business line for
 // *building* (below) is kept completely separate from message *delivery*
 // (here) so swapping wa.me deep-links for a real WhatsApp Business API
 // integration later only means changing this one function.
+//
+// Named target (not '_blank') so every send reuses the SAME browser tab —
+// with '_blank' each click opened a brand new tab, and since WhatsApp Web
+// isn't logged in there aren't yet, that meant scanning the QR code again
+// on every single message. One shared tab means logging in once per
+// session instead of once per guest.
 function deliverWhatsAppMessage(phone, text) {
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, 'wa_chat_tab', 'noopener');
 }
 
 function guestFirstName(b) { return (b.guest_name || b.display_name || '').split(' ')[0] || 'there'; }
@@ -6346,7 +6355,7 @@ S&N Apt Management`;
 const GUEST_STAGE_DEFS = [
   { key:'checkin_msg',   label:'Pre-arrival',  icon:'💬', build: buildPreArrivalMsg },
   { key:'checked_in',    label:'Check-in day', icon:'🛬', build: buildCheckinDayMsg },
-  { key:'mid_stay_msg',  label:'Mid-stay',     icon:'🌊', build: buildMidStayMsg, minNights: 4 },
+  { key:'mid_stay_msg',  label:'Mid-stay',     icon:'🌊', build: buildMidStayMsg, minNights: 10 },
   { key:'followup_msg',  label:'Post-stay',    icon:'🎁', build: buildPostStayMsg },
 ];
 
@@ -6477,7 +6486,7 @@ function renderGuestTimeline() {
           style="display:inline-flex;align-items:center;gap:4px;background:#25D366;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;border:none;cursor:pointer">
           💬 Send ${dueStage.label}
         </button>` : ''}
-        <a href="https://web.whatsapp.com" target="_blank" rel="noopener"
+        <a href="https://web.whatsapp.com" target="wa_chat_tab" rel="noopener"
           style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);color:var(--ink);font-size:.74rem;padding:5px 10px;border-radius:7px;text-decoration:none;border:1px solid var(--border)">
           Open chat ↗
         </a>
