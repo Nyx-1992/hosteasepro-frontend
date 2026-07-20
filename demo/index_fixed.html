@@ -257,6 +257,11 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .text-muted{color:var(--muted);font-size:.84rem}
 .empty-state{text-align:center;padding:44px 20px;color:var(--muted)}
 .empty-icon{font-size:2.8rem;margin-bottom:10px}
+/* Loading skeletons — shimmer bars shown while an async fetch is in flight,
+   instead of a bare "Loading…" string. */
+.skeleton-row{height:14px;background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface-3) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:skeleton-shimmer 1.4s ease infinite;border-radius:6px;margin:8px 0}
+@keyframes skeleton-shimmer{0%{background-position:100% 50%}100%{background-position:0 50%}}
+@media (prefers-reduced-motion: reduce){.skeleton-row{animation:none;opacity:.6}}
 .divider{height:1px;background:var(--border);margin:14px 0}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
 /* Mobile bottom nav — always defined */
@@ -1719,6 +1724,11 @@ function fmtDate(d) { if(!d)return''; const[y,m,day]=d.split('-'); return day+'/
 // or grid can legitimately have nothing to show.
 function emptyState(icon, text, actionHtml) {
   return `<div class="empty-state"><div class="empty-icon">${icon}</div>${text}${actionHtml?`<div style="margin-top:14px">${actionHtml}</div>`:''}</div>`;
+}
+// Shimmer placeholder rows shown while an async fetch (e.g. invoice history)
+// is in flight, instead of a bare "Loading…" string.
+function skeletonRows(n=3) {
+  return `<div style="padding:6px 0">${Array.from({length:n}).map(()=>'<div class="skeleton-row"></div>').join('')}</div>`;
 }
 function isOwnerStay(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return b.status==='owner'||n.includes('owner')||n.includes('mirka')||n.includes('nicole & silja')||n.includes('antonin'); }
 function isCaretaker(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return n.includes('caretaker')||n.includes('tino'); }
@@ -3285,7 +3295,7 @@ async function loadIncoming() {
   const body    = document.getElementById('inv-incoming-body');
   const statsEl = document.getElementById('inv-expense-stats');
   if(!body||!db) return;
-  body.innerHTML = '<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px">Loading…</td></tr>';
+  body.innerHTML = `<tr><td colspan="5" style="padding:10px 16px">${skeletonRows(3)}</td></tr>`;
   const propFilter   = (document.getElementById('inv-exp-prop')||{}).value||'all';
   const catFilter    = (document.getElementById('inv-exp-cat')||{}).value||'all';
   const periodMonths = parseInt((document.getElementById('inv-exp-period')||{}).value||'3');
@@ -3318,7 +3328,7 @@ async function loadInvHistory() {
   if(!el) return;
   const filterEl = document.getElementById('inv-hist-filter');
   const filter = filterEl ? filterEl.value : 'all';
-  el.innerHTML = '<div class="text-muted text-sm">Loading…</div>';
+  el.innerHTML = skeletonRows(4);
   try {
     let q = db.from('invoices')
       .select('id,doc_type,number,reference,guest_name,company,total,date_issued,status,created_at')
@@ -4569,7 +4579,9 @@ function renderTodaysCheckouts() {
   </div>`;
 }
 
+let _savingBooking = false;
 async function saveBooking() {
+  if (_savingBooking) return; // guard against double-tap creating duplicate bookings
   const guest = document.getElementById('b-guest').value.trim();
   const cin   = document.getElementById('b-checkin').value;
   const cout  = document.getElementById('b-checkout').value;
@@ -4593,12 +4605,17 @@ async function saveBooking() {
     guest_email: document.getElementById('b-email')?.value?.trim() || null,
     guest_phone: document.getElementById('b-phone')?.value?.trim() || null,
   };
-  if (db) {
-    const {data,error} = await db.from('bookings').insert([row]).select().single();
-    if (error) { toast('Save error: '+error.message,'error'); return; }
-    bookings.unshift(nb({...data,property_id:pid}));
-  } else { bookings.unshift(nb({...row,id:'b'+Date.now(),property_id:pid})); }
-  toast('Booking added ✓','success'); closeModal('booking-modal'); renderBookings(); renderDashboard();
+  _savingBooking = true;
+  try {
+    if (db) {
+      const {data,error} = await db.from('bookings').insert([row]).select().single();
+      if (error) { toast('Save error: '+error.message,'error'); return; }
+      bookings.unshift(nb({...data,property_id:pid}));
+    } else { bookings.unshift(nb({...row,id:'b'+Date.now(),property_id:pid})); }
+    toast('Booking added ✓','success'); closeModal('booking-modal'); renderBookings(); renderDashboard();
+  } finally {
+    _savingBooking = false;
+  }
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────
@@ -5602,7 +5619,9 @@ async function markDone(id) {
   if(db) await db.from('domestics').update({status:'completed',checklist:allDone}).eq('id',id);
   toast('Cleaning marked complete ✓','success'); renderDomestic(); renderDomCal(); renderDomEarnings();
 }
+let _savingDomestic = false;
 async function saveDomestic() {
+  if (_savingDomestic) return; // guard against double-tap creating duplicate cleanings
   const date = document.getElementById('d-date').value;
   if (!date) { toast('Please set a date','error'); return; }
   if (!validateCleanDate()) return;
@@ -5630,33 +5649,38 @@ async function saveDomestic() {
       row.linked_booking_id = existing.linked_booking_id;
     }
   }
-  if (editId && db) {
-    const {data,error} = await db.from('domestics').update(row).eq('id',editId).select().single();
-    if (error) { toast('Update error: '+error.message,'error'); return; }
-    const idx = domestics.findIndex(d=>d.id===editId);
-    if (idx>-1) domestics[idx] = nd(data);
-    toast('Cleaning updated ✓','success');
-  } else if (editId) {
-    const idx = domestics.findIndex(d=>d.id===editId);
-    if (idx>-1) domestics[idx] = nd({...row,id:editId});
-    toast('Cleaning updated ✓','success');
-  } else if (db) {
-    const{data,error}=await db.from('domestics').insert([row]).select().single();
-    if(error){toast('Save error: '+error.message,'error');return;}
-    domestics.unshift(nd(data));
-    toast('Cleaning scheduled ✓','success');
-  } else {
-    domestics.unshift(nd({...row,id:'d'+Date.now()}));
-    toast('Cleaning scheduled ✓','success');
+  _savingDomestic = true;
+  try {
+    if (editId && db) {
+      const {data,error} = await db.from('domestics').update(row).eq('id',editId).select().single();
+      if (error) { toast('Update error: '+error.message,'error'); return; }
+      const idx = domestics.findIndex(d=>d.id===editId);
+      if (idx>-1) domestics[idx] = nd(data);
+      toast('Cleaning updated ✓','success');
+    } else if (editId) {
+      const idx = domestics.findIndex(d=>d.id===editId);
+      if (idx>-1) domestics[idx] = nd({...row,id:editId});
+      toast('Cleaning updated ✓','success');
+    } else if (db) {
+      const{data,error}=await db.from('domestics').insert([row]).select().single();
+      if(error){toast('Save error: '+error.message,'error');return;}
+      domestics.unshift(nd(data));
+      toast('Cleaning scheduled ✓','success');
+    } else {
+      domestics.unshift(nd({...row,id:'d'+Date.now()}));
+      toast('Cleaning scheduled ✓','success');
+    }
+    window._editCleanId = null;
+    closeModal('domestic-modal');
+    renderCalendar();
+    renderBookings();
+    renderDashboard();
+    if (calMode==='domestic') renderDomesticCalView();
+    if (typeof renderDomestic==='function') renderDomestic();
+    if (typeof renderDomEarnings==='function') renderDomEarnings();
+  } finally {
+    _savingDomestic = false;
   }
-  window._editCleanId = null;
-  closeModal('domestic-modal');
-  renderCalendar();
-  renderBookings();
-  renderDashboard();
-  if (calMode==='domestic') renderDomesticCalView();
-  if (typeof renderDomestic==='function') renderDomestic();
-  if (typeof renderDomEarnings==='function') renderDomEarnings();
 }
 
 function populateBookingLinkDropdown(preselect) {
@@ -6001,8 +6025,12 @@ async function moveKanban(taskId, newCol) {
 
 async function deleteTask(taskId) {
   if (!confirm('Delete this task?')) return;
-  if (db) await db.from('tasks').delete().eq('id',taskId);
+  if (db) {
+    const { error } = await db.from('tasks').delete().eq('id',taskId);
+    if (error) { toast('Delete error: '+error.message,'error'); return; }
+  }
   tasks.splice(tasks.findIndex(x=>String(x.id)===String(taskId)),1);
+  toast('Task deleted','info');
   renderTasks();
 }
 
@@ -6075,7 +6103,9 @@ async function toggleTask(id) {
   if(db) await db.from('tasks').update({status:t.status}).eq('id',id);
   renderTasks();
 }
+let _savingTask = false;
 async function saveTask() {
+  if (_savingTask) return; // guard against double-tap creating duplicate tasks
   const title=document.getElementById('t-title').value.trim();
   if(!title){toast('Task title is required','error');return;}
   const pid=document.getElementById('t-prop').value;
@@ -6095,19 +6125,24 @@ async function saveTask() {
     org_id:      getOrgId(),
   }; window._kanbanCol=null;
   const assigned = document.getElementById('t-assign').value;
-  if(db){
-    const{data,error}=await db.from('tasks').insert([row]).select().single();
-    if(error){toast('Save error: '+error.message,'error');return;}
-    // Use DB-returned record, map back to app values
-    tasks.unshift(nt({...data, property_id:pid, assigned}));
-  } else {
-    tasks.unshift(nt({...row, id:'t'+Date.now(), property_id:pid, assigned}));
+  _savingTask = true;
+  try {
+    if(db){
+      const{data,error}=await db.from('tasks').insert([row]).select().single();
+      if(error){toast('Save error: '+error.message,'error');return;}
+      // Use DB-returned record, map back to app values
+      tasks.unshift(nt({...data, property_id:pid, assigned}));
+    } else {
+      tasks.unshift(nt({...row, id:'t'+Date.now(), property_id:pid, assigned}));
+    }
+    toast('Task created ✓','success');
+    closeModal('task-modal');
+    // Switch to project tab so user can see the new task on the board
+    if(window._taskSubTab !== 'project') setTaskSubTab('project');
+    renderTasks();
+  } finally {
+    _savingTask = false;
   }
-  toast('Task created ✓','success');
-  closeModal('task-modal');
-  // Switch to project tab so user can see the new task on the board
-  if(window._taskSubTab !== 'project') setTaskSubTab('project');
-  renderTasks();
 }
 
 // ── MESSAGES ─────────────────────────────────────────────────
