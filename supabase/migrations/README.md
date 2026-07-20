@@ -38,6 +38,7 @@ order.
 | 130_platform_fee_config.sql | both | New `platform_fee_config` table (per-org, per-platform host commission % + guest fee %) backing Task 5's rate calculator; seeded with ZA defaults, including HEP's own 5% direct-booking commission (0% for the S&N owner org) |
 | 140_roadmap_state_task5.sql | both | Marks Roadmap tab item p0-22 (rate calculator) as done |
 | 150_platform_fee_airbnb_correction.sql | both | **Corrective.** Fixes `130`'s Airbnb seed (3% host / 14% guest, the old split-fee model) to match a real earnings statement showing host-only pricing (17.8% host, 0% guest) — only touches rows still at the old default |
+| 160_cleanup_ical_horizon_junk.sql | both, **including production** | **Incident cleanup.** Booking.com's TV House feed emits a rolling far-future "horizon" marker as a fake several-month blocked event with a new UID daily — every sync inserted a fresh junk row forever (73 found on staging). Root cause fixed in `parseICalText` (skips events over 120 nights); this deletes what already accumulated |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 

@@ -2490,6 +2490,16 @@ function parseICalText(text, feed) {
     if (!checkIn || !checkOut || checkIn >= checkOut) continue;
 
     const nights   = Math.round((new Date(checkOut)-new Date(checkIn))/86400000);
+
+    // Some platform feeds (confirmed: Booking.com, TV House) emit a rolling
+    // "nothing bookable beyond this horizon" marker as a fake several-month
+    // event — not a real booking or an intentional block. It gets a fresh
+    // UID every day, so the sync can never match it to a prior row and
+    // instead inserts a brand new junk row daily, forever. No genuine stay
+    // or deliberate manual block in this app comes anywhere close to this
+    // long — skip it outright rather than importing it as a booking.
+    if (nights > 120) continue;
+
     const sumLower = summary.toLowerCase();
     const sumTrim  = summary.trim();
 
