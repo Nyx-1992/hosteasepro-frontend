@@ -722,7 +722,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:10px;padding:3px">
             <button id="msg-subtab-wa-btn" onclick="setMsgSubTab('wa')"
               style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s">
-              💬 WhatsApp
+              💬 Guest Timeline
             </button>
             <button id="msg-subtab-team-btn" onclick="setMsgSubTab('team')"
               style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
@@ -746,19 +746,13 @@ function _buildMobileNavStub(){/* replaced by main script */}
             </a>
           </div>
 
-          <!-- Guest contact cards -->
+          <!-- Guest Timeline: per-booking stage cards, replacing the old generic
+               template-link list — each guest gets their own due-now touchpoint
+               instead of picking blind from a list of canned messages. -->
           <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">
-            Quick contact — upcoming & recent guests
+            Guest Timeline — upcoming & recent guests
           </div>
           <div id="wa-guest-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
-
-          <!-- Template messages -->
-          <div style="margin-top:20px">
-            <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">
-              Message templates
-            </div>
-            <div id="wa-templates" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
-          </div>
         </div>
 
         <!-- Team chat sub-tab -->
@@ -2296,11 +2290,12 @@ async function loadData() {
     if (clRes.data) {
       clRes.data.forEach(cl => {
         ninaBTaskProgress[cl.booking_id] = {
-          checkin_msg:  !!cl.guest_contacted_at,
-          checked_in:   !!cl.checked_in_at,
-          checked_out:  !!cl.checked_out_at,
-          followup_msg: !!cl.follow_up_sent_at,
-          _note:        cl.notes || '',
+          checkin_msg:   !!cl.guest_contacted_at,
+          checked_in:    !!cl.checked_in_at,
+          checked_out:   !!cl.checked_out_at,
+          mid_stay_msg:  !!cl.mid_stay_msg_at,
+          followup_msg:  !!cl.follow_up_sent_at,
+          _note:         cl.notes || '',
         };
       });
     }
@@ -3619,7 +3614,9 @@ const ROADMAP = [
   {k:'p0-25',t:'"Edit clean" on a linked cleaning doesn\'t save a date change',n:'Not started. Reported live: moving Patricia\'s TV House clean earlier (linked to a booking) via the booking-detail modal\'s "Edit clean" didn\'t take. Two suspects found on inspection, not yet confirmed against the real failure: (1) editCleaning()\'s domestics.find(x=>x.id===id) is a strict-type comparison while saveDomestic() elsewhere in the same flow uses String(d.id)===String(editId) — an inconsistency that could silently no-op the lookup if id ever isn\'t already a matching type; (2) validateCleanDate() rejects a new date earlier than the LINKED booking\'s checkout, which could misfire if the clean\'s selected link in the edit form differs from the one intended. Needs reproducing directly (open the exact clean, watch what the id/linked-booking values actually are) before committing to a fix — worked around this instance with a direct SQL UPDATE rather than guessing at the UI',c:'Bug'},
   {k:'p0-26',t:'--warm CSS variable referenced ~10x, never defined',n:'DONE — found while visually verifying the Roadmap redesign. Every tag/badge and several hover states (status-tag, .tag, .btn-ghost:hover, invoice/finance category chips, Roadmap category badges, etc.) referenced var(--warm) across the whole app, but it was never defined in :root — silently transparent everywhere it was used, app-wide, since before this session. Fixed with one addition to :root rather than touched at each call site',c:'Bug'},
   {k:'p0-27',t:'"Today\'s Check-outs" section on the Bookings tab',n:'DONE — reported after a checkout-day guest was missing from staging (traced to stale data, not a code bug — see p0-28). Compact card row at the top of the Bookings tab (icon-only task toggles, two-per-row) showing only today\'s checkout-day guests, reusing the same checklist fields/DB columns as the Guest Management tab (checked_out, followup_msg, cleaning booked) via the existing toggleNinaTask()/booking_checklists plumbing so ticking stays in sync. A card drops out once every task is done or check-out is no longer today. Also fixed a real bug found while building this: the property lane\'s "current guest" lookup used check_out>today instead of >=today, so a guest checking out today silently vanished from the whole Bookings tab (not shown as current, not shown as upcoming) the moment their checkout date arrived — same off-by-one existed in the dashboard "Currently staying" card, Guest Management\'s isNow/isPast split, and the WhatsApp launcher card; all four fixed to treat checkout day as still-current',c:'HEP'},
-  {k:'p0-28',t:'Staging-only stale cancelled booking (Hassad Aly, id 573)',n:'DONE — data correction, not a code issue. Same false-positive auto-cancellation incident already restored on production earlier this session; staging has its own independent booking history and was never restored, which is why staging showed 0 checkouts for a date production correctly showed one. Fixed via supabase/migrations/240_staging_restore_hassad_aly_booking.sql (staging only)',c:'Bug'}]},
+  {k:'p0-28',t:'Staging-only stale cancelled booking (Hassad Aly, id 573)',n:'DONE — data correction, not a code issue. Same false-positive auto-cancellation incident already restored on production earlier this session; staging has its own independent booking history and was never restored, which is why staging showed 0 checkouts for a date production correctly showed one. Fixed via supabase/migrations/240_staging_restore_hassad_aly_booking.sql (staging only)',c:'Bug'},
+  {k:'p0-29',t:'fmtDate() called with a full timestamp instead of a plain date in 2 spots',n:'Not started. fmtDate() assumes a plain YYYY-MM-DD string and naively splits on "-"; found via visual verification while building the Guest Timeline (p0-30) that it was being called with the full check_in/check_out timestamp instead, producing garbled dates like "15 15:00:00+02/07/2026". Fixed in the new Guest Timeline card (uses check_in_date/check_out_date instead), but the same pre-existing pattern is still live in the booking-detail modal (~line 4789) and the cleaner-assignment display (~line 5681) — not fixed there, flagging rather than expanding this session\'s scope',c:'Bug'},
+  {k:'p0-30',t:'Guest Timeline — Messages tab rebuilt around per-booking touchpoints (B1)',n:'DONE — replaced the old generic WhatsApp template-link list (pick blind from 6 canned messages) with a per-booking stage timeline: pre-arrival -> check-in day -> mid-stay (4+ night stays only) -> post-stay, each stage showing done/due-now/upcoming and a ready-to-send WhatsApp message for whichever is due right now. Post-stay message bakes in the RETURN10 rebooking promo + direct-booking link. Mark-as-sent reuses booking_checklists (guest_contacted_at/checked_in_at/follow_up_sent_at already existed; mid_stay_msg_at is the one new column, migration 260) via the existing toggleNinaTask() plumbing, so it stays in sync with the Guest Management tab. Overdue touchpoints (mid-stay/post-stay, 1+ day overdue) now surface on the dashboard\'s Urgent Actions. Lightweight "returning guest" badge derived by matching phone/name across existing bookings — no new guests table, kept it lightweight as scoped. WhatsApp delivery isolated into one deliverWhatsAppMessage() function so a future WhatsApp Business API swap doesn\'t touch the message-building code',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -3997,6 +3994,25 @@ function renderDashboard() {
         priority: 2,
       });
     }
+  });
+
+  // 2b. Guest Timeline touchpoints (mid-stay / post-stay) overdue by 1+ day —
+  // gives the pre-arrival rule above the same treatment for the two
+  // touchpoints B1 added, surfaced with a day's grace so it doesn't fire
+  // the instant a window opens, only once it's actually been missed.
+  bookings.filter(b=>b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b)&&b.is_active!==false).forEach(b => {
+    getGuestTouchpoints(b).forEach(s => {
+      if (s.key==='checkin_msg' || s.key==='checked_in' || !s.dueNow || !s.dueSince) return; // pre-arrival covered above; check-in-day has no useful "overdue" signal
+      const daysOverdue = Math.round((now-new Date(s.dueSince))/86400000);
+      if (daysOverdue>=1) {
+        urgentItems.push({
+          icon: s.icon, label: `Send ${s.label.toLowerCase()} message`, color:'#0369a1', textColor:'#1e40af',
+          detail: b.display_name+' · '+propName(b.property_id)+' · '+daysOverdue+'d overdue',
+          action: `switchTab('messages');setMsgSubTab('wa')`,
+          priority: 3,
+        });
+      }
+    });
   });
 
   // 3. ALL high priority open tasks — exclude stale sample data and old due dates
@@ -6156,10 +6172,11 @@ async function toggleNinaTask(bookingId, taskKey) {
 
   // Map app key → DB column
   const COL_MAP = {
-    checkin_msg:  'guest_contacted_at',
-    checked_in:   'checked_in_at',
-    checked_out:  'checked_out_at',
-    followup_msg: 'follow_up_sent_at',
+    checkin_msg:   'guest_contacted_at',
+    checked_in:    'checked_in_at',
+    checked_out:   'checked_out_at',
+    mid_stay_msg:  'mid_stay_msg_at',
+    followup_msg:  'follow_up_sent_at',
   };
   const dbCol = COL_MAP[taskKey];
 
@@ -6266,15 +6283,136 @@ function setMsgSubTab(tab) {
   const tb = document.getElementById('msg-subtab-team-btn');
   if (wb) { wb.style.background = tab==='wa'   ? 'var(--ocean)' : 'transparent'; wb.style.color = tab==='wa'   ? '#fff' : 'var(--muted)'; }
   if (tb) { tb.style.background = tab==='team' ? 'var(--ocean)' : 'transparent'; tb.style.color = tab==='team' ? '#fff' : 'var(--muted)'; }
-  if (tab==='wa') renderWALauncher();
+  if (tab==='wa') renderGuestTimeline();
   if (tab==='team') renderTeamChat();
 }
 
-function renderWALauncher() {
-  const today = todaySAST();
-  const waNum = '27636021847'; // Nicole for testing
+// ── GUEST TIMELINE (B1) ─────────────────────────────────────────────
+// Per-booking touchpoint stages, each with a WhatsApp-ready template and
+// mark-as-sent tracking (reuses booking_checklists — see 260 migration for
+// the one new column, mid_stay_msg_at; the other three stages reuse
+// existing columns via toggleNinaTask's COL_MAP).
+const WA_NUMBER = '27636021847'; // Nicole — shared WhatsApp Business line for all guest messaging
 
-  // ── Guest cards ──
+// Single delivery point for every guest WhatsApp send in the app. Message
+// *building* (below) is kept completely separate from message *delivery*
+// (here) so swapping wa.me deep-links for a real WhatsApp Business API
+// integration later only means changing this one function.
+function deliverWhatsAppMessage(phone, text) {
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+}
+
+function guestFirstName(b) { return (b.guest_name || b.display_name || '').split(' ')[0] || 'there'; }
+
+function buildPreArrivalMsg(b) {
+  const prop = PROPS[UUID_MAP[b.property_id] || b.property_id] || {};
+  return `Hi ${guestFirstName(b)} 👋
+
+Welcome to ${propName(b.property_id)}! Here are your check-in details:
+
+🏠 Address: ${prop.address || propName(b.property_id)}
+🕒 Check-in: from 15:00
+🔑 Access code: [CODE]
+📶 WiFi: [NETWORK] / [PASSWORD]
+
+Don't hesitate to message us if you need anything. Enjoy your stay! 🌊`;
+}
+function buildCheckinDayMsg(b) {
+  return `Hi ${guestFirstName(b)} 👋
+
+Hope you've settled in at ${propName(b.property_id)}! Just checking you found everything OK.
+
+We're on WhatsApp here for anything you need during your stay 🌊`;
+}
+function buildMidStayMsg(b) {
+  return `Hi ${guestFirstName(b)} 😊
+
+Just checking in — how's everything going at ${propName(b.property_id)}?
+
+Let us know if you need anything at all!`;
+}
+function buildPostStayMsg(b) {
+  return `Hi ${guestFirstName(b)} 😊
+
+We hope you enjoyed your stay at ${propName(b.property_id)}! We'd love your feedback — it really helps us.
+
+🎁 And next time, book directly and save: use code *RETURN10* for 10% off at https://www.snapartments.co.za — no platform fees, best rate guaranteed.
+
+Hope to host you again soon! 🌊
+S&N Apt Management`;
+}
+
+// mid-stay only makes sense for a long-enough stay to have a "middle"
+const GUEST_STAGE_DEFS = [
+  { key:'checkin_msg',   label:'Pre-arrival',  icon:'💬', build: buildPreArrivalMsg },
+  { key:'checked_in',    label:'Check-in day', icon:'🛬', build: buildCheckinDayMsg },
+  { key:'mid_stay_msg',  label:'Mid-stay',     icon:'🌊', build: buildMidStayMsg, minNights: 4 },
+  { key:'followup_msg',  label:'Post-stay',    icon:'🎁', build: buildPostStayMsg },
+];
+
+// Returns the stage view-models for one booking: which are done, which is
+// due right now, and each stage's ready-to-send message text.
+function getGuestTouchpoints(b) {
+  const bid = String(b.id);
+  const prog = ninaBTaskProgress[bid] || {};
+  const today = todaySAST();
+  const ci = b.check_in_date || b.check_in?.slice(0,10);
+  const co = b.check_out_date || b.check_out?.slice(0,10);
+  const nights = b.nights || 0;
+  const hoursUntilCI = (new Date(b.check_in) - new Date()) / 3600000;
+
+  return GUEST_STAGE_DEFS.filter(def => !def.minNights || nights >= def.minNights).map(def => {
+    const done = !!prog[def.key];
+    let dueNow = false, windowLabel = '', dueSince = null;
+    if (def.key === 'checkin_msg') {
+      dueNow = !done && today < ci && hoursUntilCI <= 24 && hoursUntilCI > -6;
+      windowLabel = 'Send 24h before arrival';
+    } else if (def.key === 'checked_in') {
+      dueNow = !done && ci <= today && today < co;
+      windowLabel = 'Check-in day · ' + fmtDate(ci);
+      dueSince = ci;
+    } else if (def.key === 'mid_stay_msg') {
+      const midStr = new Date(new Date(ci).getTime() + (new Date(co) - new Date(ci)) / 2).toISOString().slice(0,10);
+      dueNow = !done && today >= midStr && today < co;
+      windowLabel = 'Midway through the stay';
+      dueSince = midStr;
+    } else if (def.key === 'followup_msg') {
+      dueNow = !done && today >= co;
+      windowLabel = 'Send after checkout';
+      dueSince = co;
+    }
+    return { key: def.key, label: def.label, icon: def.icon, done, dueNow, windowLabel, dueSince, message: def.build(b) };
+  });
+}
+
+// "Returning guest" signal for the lightweight guest record — derived
+// straight from existing bookings (matched by phone, falling back to
+// name) rather than a separate guests table, since all we need is a
+// count and this data already lives in memory.
+function getGuestStayCount(b) {
+  const phone = (b.guest_phone || '').replace(/\D/g, '');
+  const name = (b.guest_name || b.display_name || '').trim().toLowerCase();
+  if (!phone && !name) return 1;
+  return bookings.filter(x => {
+    if (x.status === 'cancelled') return false;
+    const xPhone = (x.guest_phone || '').replace(/\D/g, '');
+    if (phone && xPhone) return xPhone === phone;
+    return (x.guest_name || x.display_name || '').trim().toLowerCase() === name;
+  }).length;
+}
+
+function sendGuestTouchpoint(bookingId, stageKey) {
+  const b = bookings.find(x => String(x.id) === String(bookingId));
+  if (!b) return;
+  const stage = getGuestTouchpoints(b).find(s => s.key === stageKey);
+  if (!stage) return;
+  deliverWhatsAppMessage(WA_NUMBER, stage.message);
+  if (!stage.done) toggleNinaTask(String(bookingId), stageKey); // marks sent; no-op if already done
+}
+
+function renderGuestTimeline() {
+  const today = todaySAST();
+
   const window14 = bookings.filter(b => {
     if (b.status==='cancelled' || isCaretaker(b) || isOwnerStay(b)) return false;
     const dIn  = Math.round((new Date(b.check_in) -new Date())/86400000);
@@ -6285,157 +6423,64 @@ function renderWALauncher() {
   const cardsEl = document.getElementById('wa-guest-cards');
   if (!cardsEl) return;
 
-  cardsEl.innerHTML = window14.length ? window14.map(b => {
+  if (!window14.length) {
+    cardsEl.innerHTML = emptyState('💬', 'No guests to message right now — nothing arriving or departing in the next 14 days',
+      `<button class="btn btn-sm btn-ghost" onclick="switchTab('bookings')">View bookings →</button>`);
+    return;
+  }
+
+  cardsEl.innerHTML = window14.map(b => {
+    const bid = String(b.id);
     const isNow  = b.check_in<=today && b.check_out>=today;
     const isPast = b.check_out<today;
     const dIn    = Math.round((new Date(b.check_in)-new Date())/86400000);
     const col    = PLAT_COLORS[b.platform]||'#c17f3c';
-
-    // Pre-fill message templates
-    const checkinMsg = encodeURIComponent(
-      `Hi ${(b.guest_name||'').split(' ')[0]||'there'} 👋
-
-Welcome to ${propName(b.property_id)}! Here are your check-in details:
-
-🏠 Address: ${b.property_id==='speranta'?'35 Athens Road, Blouberg':'110 Athens Road, Tableview'}
-🕒 Check-in: from 15:00
-🔑 Access code: [CODE]
-📶 WiFi: [NETWORK] / [PASSWORD]
-
-Don't hesitate to message us if you need anything. Enjoy your stay! 🌊`
-    );
-    const followupMsg = encodeURIComponent(
-      `Hi ${(b.guest_name||'').split(' ')[0]||'there'} 😊
-
-We hope you enjoyed your stay at ${propName(b.property_id)}! We'd love to have you back.
-
-🔗 Book directly next time and save: https://www.snapartments.co.za
-🎁 Use code RETURN10 for a discount on your next booking.
-
-Would love to hear your feedback! ⭐`
-    );
+    const stages = getGuestTouchpoints(b);
+    const dueStage = stages.find(s => s.dueNow);
+    const stayCount = getGuestStayCount(b);
 
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;border-left:3px solid ${col}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px">
-        <div>
-          <div style="font-weight:700;font-size:.88rem;color:var(--ink)">${b.display_name||b.guest_name||'Guest'}</div>
+        <div style="min-width:0">
+          <div style="font-weight:700;font-size:.88rem;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span>${b.display_name||b.guest_name||'Guest'}</span>
+            ${stayCount>1?`<span style="background:var(--warm);color:var(--accent2);font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap">🔁 ${stayCount===2?'2nd':stayCount+'th'} stay</span>`:''}
+          </div>
           <div style="font-size:.73rem;color:var(--muted);margin-top:2px">
-            ${propName(b.property_id)} · ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)}
+            ${propName(b.property_id)} · ${fmtDate(b.check_in_date || b.check_in?.slice(0,10))} → ${fmtDate(b.check_out_date || b.check_out?.slice(0,10))}
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
           <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform}</span>
           ${isNow?'<span style="background:#dbeafe;color:#1d4ed8;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:6px">Staying</span>':isPast?'<span style="background:var(--surface-2);color:var(--muted);font-size:.62rem;padding:2px 6px;border-radius:6px">Checked out</span>':`<span style="background:#fef9c3;color:#92400e;font-size:.62rem;font-weight:600;padding:2px 6px;border-radius:6px">In ${dIn}d</span>`}
         </div>
       </div>
+
+      <!-- Stage timeline: pre-arrival -> check-in day -> [mid-stay] -> post-stay -->
+      <div style="display:flex;gap:4px;margin-bottom:10px">
+        ${stages.map(s => `
+          <div title="${s.label} — ${s.done?'sent':s.dueNow?'due now':s.windowLabel}" onclick="toggleNinaTask('${bid}','${s.key}')"
+            style="flex:1;text-align:center;padding:6px 4px;border-radius:8px;cursor:pointer;background:${s.done?'var(--green-light)':s.dueNow?'var(--amber-light)':'var(--surface-2)'};border:1.5px solid ${s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--border)'}">
+            <div style="font-size:.85rem">${s.done?'✓':s.icon}</div>
+            <div style="font-size:.58rem;font-weight:600;color:${s.done?'#065f46':s.dueNow?'#92400e':'var(--muted)'};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.label}</div>
+          </div>`).join('')}
+      </div>
+
+      ${dueStage ? `
+      <div style="background:var(--amber-light);border-radius:8px;padding:8px 10px;margin-bottom:8px">
+        <div style="font-size:.68rem;font-weight:700;color:#92400e;margin-bottom:4px">${dueStage.icon} ${dueStage.label} due now</div>
+        <div style="font-size:.7rem;color:#78350f;white-space:pre-wrap;max-height:36px;overflow:hidden">${dueStage.message.slice(0,110)}…</div>
+      </div>` : ''}
+
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <a href="https://wa.me/${waNum}?text=${checkinMsg}" target="_blank" rel="noopener"
-          style="display:inline-flex;align-items:center;gap:4px;background:#25D366;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;text-decoration:none">
-          💬 Check-in msg
-        </a>
-        <a href="https://wa.me/${waNum}?text=${followupMsg}" target="_blank" rel="noopener"
-          style="display:inline-flex;align-items:center;gap:4px;background:#128C7E;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;text-decoration:none">
-          📩 Follow-up
-        </a>
+        ${dueStage ? `<button onclick="sendGuestTouchpoint('${bid}','${dueStage.key}')"
+          style="display:inline-flex;align-items:center;gap:4px;background:#25D366;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;border:none;cursor:pointer">
+          💬 Send ${dueStage.label}
+        </button>` : ''}
         <a href="https://web.whatsapp.com" target="_blank" rel="noopener"
           style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);color:var(--ink);font-size:.74rem;padding:5px 10px;border-radius:7px;text-decoration:none;border:1px solid var(--border)">
           Open chat ↗
         </a>
-      </div>
-    </div>`;
-  }).join('') : emptyState('💬', 'No guests to message right now — nothing arriving or departing in the next 14 days',
-    `<button class="btn btn-sm btn-ghost" onclick="switchTab('bookings')">View bookings →</button>`);
-
-  // ── Templates ──
-  const templatesEl = document.getElementById('wa-templates');
-  if (!templatesEl) return;
-
-  const TEMPLATES = [
-    {
-      icon:'✅',
-      label:'Booking confirmed',
-      msg:`Hi [NAME] 👋
-
-Great news — your booking at [PROPERTY] is confirmed!
-
-📅 Check-in: [DATE] from 15:00
-📅 Check-out: [DATE] by 10:00
-
-We'll send your full check-in details 24h before arrival. Any questions, just reply here!
-
-S&N Apt Management 🐚`
-    },
-    {
-      icon:'🏦',
-      label:'Payment details',
-      msg:`Hi [NAME] 👋
-
-Here are our banking details for your booking:
-
-🏦 S&N Apt Management
-Nedbank Cheque Account
-Branch: 198765
-Account: 1292867345
-Reference: [REF]
-
-Amount due: R[AMOUNT]
-
-Please send proof of payment once done. Thank you!`
-    },
-    {
-      icon:'🔑',
-      label:'Check-in instructions',
-      msg:`Hi [NAME]! 🏠
-
-Here are your check-in details:
-
-Address: [ADDRESS]
-Check-in: from 15:00
-Access code: [CODE]
-WiFi: [NETWORK] / [PASSWORD]
-
-Parking: [PARKING INFO]
-
-Enjoy your stay! We're here if you need anything 🌊`
-    },
-    {
-      icon:'⭐',
-      label:'Review request',
-      msg:`Hi [NAME] 😊
-
-Hope you had a wonderful stay! We'd really appreciate a review — it helps us a lot.
-
-⭐ Airbnb: [LINK]
-⭐ Booking.com: [LINK]
-
-And remember, you can book directly next time at www.snapartments.co.za for our best rate! 🎁`
-    },
-    {
-      icon:'🎁',
-      label:'Return guest — 10% off',
-      msg:`Hi [NAME] 👋\n\nThank you for staying with us — it was a pleasure!\n\nWe’d love to welcome you back. Use code *RETURN10* for *10% off* your next direct booking:\n\n🔗 https://www.snapartments.co.za\n\nNo platform fees, best rate guaranteed 🌊\n\nS&N Apt Management`
-    },
-    {
-      icon:'🌟',
-      label:'Past guest re-engagement',
-      msg:`Hi [NAME]! 😊\n\nIt’s been a while since your stay at [PROPERTY] and we’d love to have you back!\n\nBook directly and use code *RETURN10* for 10% off:\n\n🔗 https://www.snapartments.co.za\n\nAny questions? Just reply here 🐌\nNicole & the S&N team`
-    },
-  ];
-
-  templatesEl.innerHTML = TEMPLATES.map(t => {
-    const encoded = encodeURIComponent(t.msg);
-    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px">
-      <div style="font-weight:700;font-size:.85rem;margin-bottom:6px">${t.icon} ${t.label}</div>
-      <div style="font-size:.76rem;color:var(--muted);line-height:1.5;margin-bottom:10px;white-space:pre-wrap;max-height:80px;overflow:hidden;text-overflow:ellipsis">${t.msg.slice(0,120)}…</div>
-      <div style="display:flex;gap:6px">
-        <a href="https://wa.me/${waNum}?text=${encoded}" target="_blank" rel="noopener"
-          style="display:inline-flex;align-items:center;gap:4px;background:#25D366;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;text-decoration:none">
-          Send via WhatsApp
-        </a>
-        <button onclick="navigator.clipboard.writeText(${JSON.stringify(t.msg)}).then(()=>toast('Copied!','success'))"
-          style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:.74rem;cursor:pointer;color:var(--ink)">
-          📋 Copy
-        </button>
       </div>
     </div>`;
   }).join('');
@@ -6464,7 +6509,7 @@ function renderTeamChat() {
 }
 
 function renderMessages() {
-  if (_msgSubTab==='wa') renderWALauncher();
+  if (_msgSubTab==='wa') renderGuestTimeline();
   else renderTeamChat();
 }
 function sendMessage() {
