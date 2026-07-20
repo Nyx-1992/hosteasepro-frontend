@@ -1608,6 +1608,12 @@ function renderSettingsPrefs() {
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
 }
 
+// Shared with saveGuestName()'s convert-to-booking path — keep in sync.
+const BLOCK_PLACEHOLDERS = ['', 'blocked', '🔒 blocked', 'not available', 'guest'];
+function isRealGuestName(name) {
+  return !!name && !BLOCK_PLACEHOLDERS.includes(name.trim().toLowerCase());
+}
+
 function nb(b) {
   let pid = b.property_id || '';
   if (UUID_MAP[pid]) pid = UUID_MAP[pid];
@@ -1616,9 +1622,8 @@ function nb(b) {
   const gn = b.guest_name || [b.guest_first_name, b.guest_last_name].filter(Boolean).join(' ') || null;
   // Safety net: a 'blocked' row that actually carries a real guest name is a
   // misclassified booking (iCal feed quirk), not a true placeholder block — treat it as confirmed.
-  const BLOCK_PLACEHOLDERS = ['', 'blocked', '🔒 blocked', 'not available', 'guest'];
   let status = b.status;
-  if (status === 'blocked' && gn && !BLOCK_PLACEHOLDERS.includes(gn.trim().toLowerCase())) {
+  if (status === 'blocked' && isRealGuestName(gn)) {
     status = 'confirmed';
   }
   return {
@@ -3431,7 +3436,9 @@ const ROADMAP = [
   {k:'p0-19',t:'Staging database mirror from production',n:'DONE — full public-schema copy via postgres_fdw so staging testing uses realistic data instead of near-empty sample data; test-owner/test-admin/test-host logins re-pointed to the mirrored profiles',c:'DevOps'},
   {k:'p0-20',t:'Fixed "Occupied Now" hardcoded property count',n:'DONE — was hardcoded to "of 2 properties" regardless of how many properties actually exist for the org; now reads Object.keys(PROPS).length, the same source the property cards render from',c:'HEP'},
   {k:'p0-21',t:'Overdue-clean grace window — full design (7-day window, dedicated cards, Nina escalation)',n:'The underlying visibility bug is fixed (p0-18) — an overdue clean no longer disappears. Still open: shrink the window to 7 days specifically, a dedicated top-of-Home "Overdue — submit inventory" card, a separate Home "Inventory due" stat card, and a Nina-facing "Never completed" flag once a clean passes the window unaddressed',c:'HEP'},
-  {k:'p0-22',t:'Rate calculator — per-platform listing price parity',n:'Not started. Per-platform fee config (host commission % + guest fee %) in org_settings, editable in UI with ZA defaults; target-guest-price mode showing the rate to list at per platform; inverse mode (desired net → required guest price); ZAR rounded to whole rand',c:'HEP'}]},
+  {k:'p0-22',t:'Rate calculator — per-platform listing price parity',n:'Not started. Per-platform fee config (host commission % + guest fee %) in org_settings, editable in UI with ZA defaults; target-guest-price mode showing the rate to list at per platform; inverse mode (desired net → required guest price); ZAR rounded to whole rand',c:'HEP'},
+  {k:'p0-23',t:'Statement upload — reconcile real per-booking earnings',n:'Not started. The Reports tab computes revenue from bookings.revenue/total_amount, which is the synced/estimated booking amount, not what the platform actually paid out after its fees. Right now reconciling a real statement (e.g. an Airbnb/LekkeSlaap payout PDF) against the dashboard means a one-off manual DB correction. Build a proper flow instead: upload a platform statement (PDF/CSV) for a property, parse gross/fees/net per booking or per period, save it against the matching booking(s) so Reports reflects real payouts, and surface the parsed platform_fee_config rates as a sanity check against what the calculator assumes',c:'HEP'},
+  {k:'p0-24',t:'Known limitation — some Booking.com listings send zero guest-identifying iCal data',n:'Not a bug, confirmed by fetching TV House\'s raw booking.com feed directly: every event is "CLOSED - Not available" with no other field at all (no description, no reference, no name) — a real paid stay and a manual owner closure are byte-for-byte indistinguishable in this feed. LekkeSlaap embeds Reference/Customer/Email/Cell in SUMMARY and we parse it (parseICalSummaryFields); Airbnb and Speranta\'s own booking.com feed both surface at least a "Reserved" placeholder we correctly treat as real. TV House\'s booking.com connection just doesn\'t send more — likely a channel-manager/listing-config difference on Booking.com\'s side, not something our parser can fix. DONE — day-detail modal\'s blocked entries now have both a "Convert to booking" guest-name save (flips to a confirmed booking) and a "confirmed owner block" checkbox (bookings.is_owner_block) so ambiguous blocks get explicitly resolved one way or the other instead of sitting as a permanent guess, no SQL needed. The real fix would still be Booking.com\'s Connectivity/Partner API instead of iCal, a much bigger integration — out of scope for now',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'org_id done (getOrgId() reads from logged-in profile) — property/PROPS/UUID_MAP still hardcoded, needs its own session (properties table lacks cleaning_fee column)',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -5111,16 +5118,22 @@ function showDay(ds) {
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <span class="badge badge-${b.platform}">${b.platform.toUpperCase()}</span>
           <span class="badge badge-${(b.status||'').replace(' ','-')}">${b.status}</span>
+          ${b.is_owner_block ? `<span class="badge" style="background:#ede9fe;color:#5b21b6">🏠 Owner block</span>` : ''}
         </div>
         ${cleanChip}
       </div>
       <div style="margin-bottom:8px">
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Guest Name</div>
+        ${b.status==='blocked' ? `<div style="font-size:.74rem;color:var(--accent);margin-bottom:5px">If this is actually a guest (some platforms send zero guest info for a block or a stay — you'd know from the platform's own dashboard/email), enter their name and Save to convert it to a confirmed booking.</div>` : ''}
         <div style="display:flex;gap:6px;align-items:center">
           <input id="gname-${b.id}" value="${b.guest_name||''}" placeholder="Click to add guest name…"
             style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.86rem;outline:none;background:#fff"/>
-          <button class="btn btn-primary btn-sm" onclick="saveGuestName('${b.id}')">Save</button>
+          <button class="btn btn-primary btn-sm" onclick="saveGuestName('${b.id}')">${b.status==='blocked' ? 'Convert' : 'Save'}</button>
         </div>
+        ${b.status==='blocked' ? `<label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:.8rem;cursor:pointer">
+          <input type="checkbox" id="ownerblock-${b.id}" ${b.is_owner_block?'checked':''} onchange="toggleOwnerBlock('${b.id}',this.checked)">
+          Confirmed — this is the owners blocking these dates, not a guest
+        </label>` : ''}
       </div>
       <div style="font-size:.84rem;color:var(--muted)">
         📍 ${propName(b.property_id)} · 📅 ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)} · ${nights} night${nights!==1?'s':''}
@@ -5248,9 +5261,36 @@ async function saveGuestName(bookingId) {
   const name = input.value.trim();
   const b = bookings.find(x=>String(x.id)===String(bookingId));
   if (!b) return;
+  // Convert to booking: a 'blocked' placeholder (e.g. some platforms' feeds
+  // give zero guest-identifying data — see Roadmap p0-24) given a real name
+  // is a real guest, not a block. Same reclassification nb() already
+  // applies on load; apply it immediately here too so the UI doesn't need a
+  // full reload to move it into Next Arrivals etc.
+  const wasBlocked = b.status === 'blocked';
+  const converting = wasBlocked && isRealGuestName(name);
+  const updates = { guest_name: name };
+  if (converting) updates.status = 'confirmed';
+  if (db) { const {error} = await db.from('bookings').update(updates).eq('id',bookingId); if(error){toast('Could not save: '+error.message,'error');return;} }
   b.guest_name = name; b.display_name = name || b.platform+' Guest';
-  if (db) { const {error} = await db.from('bookings').update({guest_name:name}).eq('id',bookingId); if(error){toast('Could not save: '+error.message,'error');return;} }
-  toast('Guest name saved ✓','success'); renderCalendar(); renderBookings(); renderDashboard(); if(typeof renderLaneView==='function') renderLaneView();
+  if (converting) b.status = 'confirmed';
+  toast(converting ? 'Converted to confirmed booking ✓' : 'Guest name saved ✓', 'success');
+  renderCalendar(); renderBookings(); renderDashboard(); if(typeof renderLaneView==='function') renderLaneView();
+}
+
+// Explicitly tags a 'blocked' entry as a confirmed owner closure — the
+// counterpart to saveGuestName()'s convert-to-booking path, for when it's
+// genuinely just the owners blocking dates (not a guest lost to a feed with
+// no guest-identifying data). Doesn't change status; purely an annotation
+// so it stops sitting there as a permanent ambiguous guess.
+async function toggleOwnerBlock(bookingId, checked) {
+  const b = bookings.find(x=>String(x.id)===String(bookingId));
+  if (!b) return;
+  if (db) {
+    const {error} = await db.from('bookings').update({is_owner_block: checked}).eq('id',bookingId);
+    if (error) { toast('Could not save: '+error.message,'error'); return; }
+  }
+  b.is_owner_block = checked;
+  toast(checked ? 'Marked as owner block ✓' : 'Unmarked','success');
 }
 
 // ── DOMESTIC CALENDAR ─────────────────────────────────────────
