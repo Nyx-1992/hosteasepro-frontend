@@ -39,6 +39,7 @@ order.
 | 140_roadmap_state_task5.sql | both | Marks Roadmap tab item p0-22 (rate calculator) as done |
 | 150_platform_fee_airbnb_correction.sql | both | **Corrective.** Fixes `130`'s Airbnb seed (3% host / 14% guest, the old split-fee model) to match a real earnings statement showing host-only pricing (17.8% host, 0% guest) — only touches rows still at the old default |
 | 160_cleanup_ical_horizon_junk.sql | both, **including production** | **Incident cleanup.** Booking.com's TV House feed emits a rolling far-future "horizon" marker as a fake several-month blocked event with a new UID daily — every sync inserted a fresh junk row forever (73 found on staging). Root cause fixed in `parseICalText` (skips events over 120 nights); this deletes what already accumulated |
+| 170_fix_orphaned_cancelled_status.sql | both | **Data correction.** One booking (prod id 574) had `is_active=false` + `cancelled_at` set but `status` never updated to `'cancelled'`, letting it slip past status-based filters (e.g. dashboard "Today's Check-ins"). Confirmed a one-off (count=1 on production), not an ongoing bug |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
