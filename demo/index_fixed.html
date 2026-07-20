@@ -3314,7 +3314,7 @@ function generateMgmtInvoice() {
   const month  = document.getElementById('mgmt-month').value;
   const amount = document.getElementById('mgmt-amount').value;
   const billed = document.getElementById('mgmt-billed').value;
-  if(!month){ alert('Please select a month.'); return; }
+  if(!month){ toast('Please pick a month first','error'); return; }
   const d = new Date(month+'-01T00:00:00');
   const monthName = d.toLocaleDateString('en-ZA',{month:'long',year:'numeric'});
   document.getElementById('inv-guest').value   = billed;
