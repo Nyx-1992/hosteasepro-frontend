@@ -6743,7 +6743,11 @@ function getGuestTouchpoints(b) {
     const done = !!prog[def.key];
     let dueNow = false, windowLabel = '', dueSince = null;
     if (def.key === 'checkin_msg') {
-      dueNow = !done && today < ci && hoursUntilCI <= 24 && hoursUntilCI > -6;
+      // 24h-before window for advance sends, but always due on the actual
+      // arrival day itself (same-day bookings still need the door code —
+      // hoursUntilCI can already be very negative by then if check_in has
+      // no real time component, so don't gate on it once today===ci).
+      dueNow = !done && (today === ci || (today < ci && hoursUntilCI <= 24 && hoursUntilCI > -6));
       windowLabel = 'Send 24h before arrival';
     } else if (def.key === 'checked_in') {
       dueNow = !done && ci <= today && today < co;
