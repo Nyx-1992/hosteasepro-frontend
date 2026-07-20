@@ -249,7 +249,7 @@ function isPlaceholderName(name) {
 // hardcoded to one org ────────────────────────────────────────────────────
 async function loadFeeds() {
   const feedsRes = await supabaseRequest('GET',
-    'ical_feeds?is_active=eq.true&select=org_id,property_id,platform,feed_url', null);
+    'ical_feeds?is_active=eq.true&select=id,org_id,property_id,platform,feed_url', null);
   const rows = feedsRes.data || [];
   if (!rows.length) return [];
 
@@ -261,6 +261,7 @@ async function loadFeeds() {
 
   return rows.map(function(r) {
     return {
+      id: r.id,
       org_id: r.org_id,
       property_id: r.property_id,
       property_name: propNames[r.property_id] || '',
@@ -294,6 +295,14 @@ async function run() {
 
       var events = parseICal(text, feed);
       console.log('  ' + events.length + ' events parsed');
+      // Record a successful fetch+parse for sync-health visibility on the
+      // dashboard (demo/index_fixed.html's renderSyncHealth()) — this is
+      // the background cron's contribution to that same last_import_at
+      // column the client-side sync also writes.
+      if (feed.id) {
+        supabaseRequest('PATCH', 'ical_feeds?id=eq.' + feed.id, { last_import_at: new Date().toISOString() })
+          .catch(function(e) { console.warn('  last_import_at update failed:', e.message); });
+      }
 
       for (var ei = 0; ei < events.length; ei++) {
         var evt = events[ei];
