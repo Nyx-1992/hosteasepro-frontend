@@ -40,6 +40,7 @@ order.
 | 190_bookings_owner_block_flag.sql | both | Adds `bookings.is_owner_block` — supports the day-detail modal's "Convert to booking" / "confirmed owner block" pair for ambiguous `'blocked'` entries (platforms that send zero guest-identifying data, e.g. p0-24) |
 | 200_roadmap_state_p0_24.sql | both | Marks Roadmap item p0-24 (Convert to booking / owner block UI) done |
 | 210_roadmap_state_p0_21.sql | both | Marks Roadmap item p0-21 (overdue-clean grace window full design) done |
+| 220_roadmap_state_p0_26.sql | both | Marks Roadmap item p0-26 (--warm CSS variable fix) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
