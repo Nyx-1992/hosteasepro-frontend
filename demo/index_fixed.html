@@ -1276,7 +1276,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
         </div>
 
         <!-- Display preferences -->
-        <div class="card">
+        <div class="card" style="margin-bottom:18px">
           <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🌍 Display Preferences</div>
           <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Controls what counts as "today" across the dashboard, calendar and reports.</div>
           <div class="form-field" style="max-width:320px">
@@ -1288,6 +1288,27 @@ function _buildMobileNavStub(){/* replaced by main script */}
               <option value="Europe/London">United Kingdom (GMT/BST)</option>
             </select>
           </div>
+        </div>
+
+        <!-- Per-platform rate calculator -->
+        <div class="card">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🧮 Per-Platform Rate Calculator</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Work out what to list on each platform so every channel lands on the price or payout you want. Commission rates below are editable starting points — <strong>verify against your own contracts.</strong></div>
+
+          <div id="rate-calc-fees" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:18px"></div>
+
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding-top:14px;border-top:1px solid var(--border)">
+            <div style="display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden">
+              <button type="button" id="rate-calc-mode-guest" class="btn btn-sm" style="border-radius:0" onclick="setRateCalcMode('guest')">Target guest price</button>
+              <button type="button" id="rate-calc-mode-net" class="btn btn-sm btn-ghost" style="border-radius:0;border-left:1.5px solid var(--border)" onclick="setRateCalcMode('net')">Desired net</button>
+            </div>
+            <div class="form-field" style="margin:0;max-width:200px">
+              <label id="rate-calc-input-label">Target guest price (ZAR)</label>
+              <input type="number" id="rate-calc-input" min="0" step="1" placeholder="e.g. 1200" oninput="renderRateCalcResults()">
+            </div>
+          </div>
+
+          <div id="rate-calc-results" style="overflow-x:auto"></div>
         </div>
       </div>
 
@@ -1735,6 +1756,167 @@ function saveUserSetting(key, val) {
 function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
+  if (feeConfigLoaded) { renderFeeInputs(); renderRateCalcResults(); }
+  else loadFeeConfig();
+}
+
+// ── Per-platform rate calculator (Task 5) ──
+// HEP's own commission (5% on direct-page bookings, 0% for the S&N owner
+// org) is just another row here, editable per org rather than hardcoded —
+// see supabase/migrations/130_platform_fee_config.sql.
+const PLATFORM_LABELS = { booking: 'Booking.com', airbnb: 'Airbnb', lekkeslaap: 'LekkeSlaap', direct: 'Direct (HEP page)' };
+const PLATFORM_ORDER = ['booking', 'airbnb', 'lekkeslaap', 'direct'];
+let feeConfig = {};
+let feeConfigLoaded = false;
+let rateCalcMode = 'guest';
+
+function defaultFeeConfig() {
+  const isOwnerOrg = getOrgId() === '5966bc67-5c2f-45ae-8519-9b7eaeee09f4';
+  return {
+    booking:    { host_commission_pct: 15, guest_fee_pct: 0 },
+    airbnb:     { host_commission_pct: 3,  guest_fee_pct: 14 },
+    lekkeslaap: { host_commission_pct: 10, guest_fee_pct: 0 },
+    direct:     { host_commission_pct: isOwnerOrg ? 0 : 5, guest_fee_pct: 0 },
+  };
+}
+
+async function loadFeeConfig() {
+  feeConfig = defaultFeeConfig();
+  if (db) {
+    try {
+      const { data, error } = await db.from('platform_fee_config').select('*').eq('org_id', getOrgId());
+      if (!error && data) {
+        data.forEach(row => {
+          feeConfig[row.platform] = { host_commission_pct: Number(row.host_commission_pct), guest_fee_pct: Number(row.guest_fee_pct) };
+        });
+      }
+    } catch (e) { console.warn('loadFeeConfig:', e); }
+  }
+  feeConfigLoaded = true;
+  renderFeeInputs();
+  renderRateCalcResults();
+}
+
+function renderFeeInputs() {
+  const el = document.getElementById('rate-calc-fees');
+  if (!el) return;
+  el.innerHTML = PLATFORM_ORDER.map(p => {
+    const f = feeConfig[p] || { host_commission_pct: 0, guest_fee_pct: 0 };
+    return `<div style="background:var(--surface-2);border-radius:10px;padding:12px">
+      <div style="font-weight:700;font-size:.85rem;margin-bottom:8px">${PLATFORM_LABELS[p]}</div>
+      <div style="display:flex;gap:8px">
+        <div class="form-field" style="margin:0;flex:1">
+          <label style="font-size:.66rem">Host commission %</label>
+          <input type="number" min="0" step="0.1" value="${f.host_commission_pct}" onchange="updateFeeConfig('${p}','host_commission_pct',this.value)">
+        </div>
+        <div class="form-field" style="margin:0;flex:1">
+          <label style="font-size:.66rem">Guest fee %</label>
+          <input type="number" min="0" step="0.1" value="${f.guest_fee_pct}" onchange="updateFeeConfig('${p}','guest_fee_pct',this.value)">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function updateFeeConfig(platform, field, val) {
+  const n = parseFloat(val);
+  if (isNaN(n) || n < 0) return;
+  feeConfig[platform] = feeConfig[platform] || { host_commission_pct: 0, guest_fee_pct: 0 };
+  feeConfig[platform][field] = n;
+  renderRateCalcResults();
+  if (!db) return;
+  try {
+    const { error } = await db.from('platform_fee_config').upsert({
+      org_id: getOrgId(),
+      platform,
+      host_commission_pct: feeConfig[platform].host_commission_pct,
+      guest_fee_pct: feeConfig[platform].guest_fee_pct,
+    }, { onConflict: 'org_id,platform' });
+    if (error) throw error;
+    toast('Fee saved ✓', 'success');
+  } catch (e) { console.warn('updateFeeConfig:', e); toast('Could not save fee', 'error'); }
+}
+
+function setRateCalcMode(mode) {
+  rateCalcMode = mode;
+  const guestBtn = document.getElementById('rate-calc-mode-guest');
+  const netBtn = document.getElementById('rate-calc-mode-net');
+  const label = document.getElementById('rate-calc-input-label');
+  const input = document.getElementById('rate-calc-input');
+  if (mode === 'guest') {
+    guestBtn.className = 'btn btn-sm';
+    netBtn.className = 'btn btn-sm btn-ghost';
+    label.textContent = 'Target guest price (ZAR)';
+  } else {
+    guestBtn.className = 'btn btn-sm btn-ghost';
+    netBtn.className = 'btn btn-sm';
+    label.textContent = 'Desired net payout (ZAR)';
+  }
+  input.value = '';
+  renderRateCalcResults();
+}
+
+function renderRateCalcResults() {
+  const el = document.getElementById('rate-calc-results');
+  if (!el) return;
+  const inputEl = document.getElementById('rate-calc-input');
+  const raw = parseFloat(inputEl ? inputEl.value : '');
+  if (!raw || raw <= 0) {
+    el.innerHTML = '<div class="text-muted" style="font-size:.82rem;padding:8px 0">Enter an amount above to see per-platform rates.</div>';
+    return;
+  }
+
+  const rows = PLATFORM_ORDER.map(p => {
+    const f = feeConfig[p] || { host_commission_pct: 0, guest_fee_pct: 0 };
+    let rate, guestPrice, net;
+    if (rateCalcMode === 'guest') {
+      // Only a whole-rand rate can actually be listed, so recompute the
+      // displayed guest price and net FROM the rounded rate, not the raw
+      // target — otherwise the numbers wouldn't add up for the host.
+      rate = Math.round(raw / (1 + f.guest_fee_pct / 100));
+      guestPrice = Math.round(rate * (1 + f.guest_fee_pct / 100));
+      net = Math.round(rate * (1 - f.host_commission_pct / 100));
+    } else {
+      rate = Math.round(raw / (1 - f.host_commission_pct / 100));
+      guestPrice = Math.round(rate * (1 + f.guest_fee_pct / 100));
+      net = raw;
+    }
+    return { p, rate, guestPrice, net };
+  });
+
+  let html = '<table style="width:100%;border-collapse:collapse;font-size:.84rem">';
+  if (rateCalcMode === 'guest') {
+    const bestNet = Math.max(...rows.map(r => r.net));
+    html += '<tr style="text-align:left;color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em"><th style="padding:6px 10px">Platform</th><th style="padding:6px 10px">Rate to list</th><th style="padding:6px 10px">Guest pays</th><th style="padding:6px 10px">Your net</th><th style="padding:6px 10px">vs best</th></tr>';
+    rows.forEach(r => {
+      const diff = r.net - bestNet;
+      const isBest = diff === 0;
+      const highlight = r.p === 'direct';
+      html += `<tr style="border-top:1px solid var(--border);${highlight ? 'background:rgba(45,106,79,.06)' : ''}">
+        <td style="padding:8px 10px;font-weight:${highlight ? 700 : 500}">${PLATFORM_LABELS[r.p]}${highlight ? ' ⭐' : ''}</td>
+        <td style="padding:8px 10px">R${r.rate.toLocaleString()}</td>
+        <td style="padding:8px 10px">R${r.guestPrice.toLocaleString()}</td>
+        <td style="padding:8px 10px;font-weight:700">R${r.net.toLocaleString()}</td>
+        <td style="padding:8px 10px;color:${isBest ? 'var(--green)' : 'var(--red)'}">${isBest ? 'Best' : '–R' + Math.abs(diff).toLocaleString()}</td>
+      </tr>`;
+    });
+  } else {
+    const bestGuestPrice = Math.min(...rows.map(r => r.guestPrice));
+    html += '<tr style="text-align:left;color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.05em"><th style="padding:6px 10px">Platform</th><th style="padding:6px 10px">Rate to list</th><th style="padding:6px 10px">Guest pays</th><th style="padding:6px 10px">vs cheapest</th></tr>';
+    rows.forEach(r => {
+      const diff = r.guestPrice - bestGuestPrice;
+      const isBest = diff === 0;
+      const highlight = r.p === 'direct';
+      html += `<tr style="border-top:1px solid var(--border);${highlight ? 'background:rgba(45,106,79,.06)' : ''}">
+        <td style="padding:8px 10px;font-weight:${highlight ? 700 : 500}">${PLATFORM_LABELS[r.p]}${highlight ? ' ⭐' : ''}</td>
+        <td style="padding:8px 10px">R${r.rate.toLocaleString()}</td>
+        <td style="padding:8px 10px;font-weight:700">R${r.guestPrice.toLocaleString()}</td>
+        <td style="padding:8px 10px;color:${isBest ? 'var(--green)' : 'var(--red)'}">${isBest ? 'Cheapest' : '+R' + diff.toLocaleString()}</td>
+      </tr>`;
+    });
+  }
+  html += '</table>';
+  el.innerHTML = html;
 }
 
 // Shared with saveGuestName()'s convert-to-booking path — keep in sync.
@@ -3734,7 +3916,7 @@ const ROADMAP = [
   {k:'p0-19',t:'Staging database mirror from production',n:'DONE — full public-schema copy via postgres_fdw so staging testing uses realistic data instead of near-empty sample data; test-owner/test-admin/test-host logins re-pointed to the mirrored profiles',c:'DevOps'},
   {k:'p0-20',t:'Fixed "Occupied Now" hardcoded property count',n:'DONE — was hardcoded to "of 2 properties" regardless of how many properties actually exist for the org; now reads Object.keys(PROPS).length, the same source the property cards render from',c:'HEP'},
   {k:'p0-21',t:'Overdue-clean grace window — full design (7-day window, dedicated cards, Nina escalation)',n:'DONE — window shrunk from 30 to 7 trailing days; overdue scheduled cleans get their own dedicated "⏰ Overdue — submit inventory" section at the top of the cleaner\'s Home screen (was previously just mixed into "Next up" with a pill) with days-late shown per card; a red "Inventory due" stat card added alongside Earned/Upcoming; and once a clean passes the 7-day window still undone, it escalates as a "Never completed" Urgent Action on Nina\'s dashboard, since the cleaner-side view stops showing it past that point',c:'HEP'},
-  {k:'p0-22',t:'Rate calculator — per-platform listing price parity',n:'Not started. Per-platform fee config (host commission % + guest fee %) in org_settings, editable in UI with ZA defaults; target-guest-price mode showing the rate to list at per platform; inverse mode (desired net → required guest price); ZAR rounded to whole rand',c:'HEP'},
+  {k:'p0-22',t:'Rate calculator — per-platform listing price parity',n:'DONE (Task 5) — per-org platform_fee_config table (host commission % + guest fee %, editable, ZA-default seeded, clearly labeled "verify against your contracts"); target-guest-price mode and inverse desired-net mode, both ZAR rounded to whole rand with net/guest-price vs best channel shown so the direct page\'s advantage is visible at a glance. HEP\'s own 5% direct-booking commission (0% for the S&N owner org) is just another editable row here, not hardcoded. Later moved from Settings to Reports > Finance, next to the other per-platform earnings tools (p0-33 round)',c:'HEP'},
   {k:'p0-23',t:'Statement upload — reconcile real per-booking earnings',n:'Not started. The Reports tab computes revenue from bookings.revenue/total_amount, which is the synced/estimated booking amount, not what the platform actually paid out after its fees. Right now reconciling a real statement (e.g. an Airbnb/LekkeSlaap payout PDF) against the dashboard means a one-off manual DB correction. Build a proper flow instead: upload a platform statement (PDF/CSV) for a property, parse gross/fees/net per booking or per period, save it against the matching booking(s) so Reports reflects real payouts, and surface the parsed platform_fee_config rates as a sanity check against what the calculator assumes',c:'HEP'},
   {k:'p0-24',t:'Known limitation — some Booking.com listings send zero guest-identifying iCal data',n:'Not a bug, confirmed by fetching TV House\'s raw booking.com feed directly: every event is "CLOSED - Not available" with no other field at all (no description, no reference, no name) — a real paid stay and a manual owner closure are byte-for-byte indistinguishable in this feed. LekkeSlaap embeds Reference/Customer/Email/Cell in SUMMARY and we parse it (parseICalSummaryFields); Airbnb and Speranta\'s own booking.com feed both surface at least a "Reserved" placeholder we correctly treat as real. TV House\'s booking.com connection just doesn\'t send more — likely a channel-manager/listing-config difference on Booking.com\'s side, not something our parser can fix. DONE — day-detail modal\'s blocked entries now have both a "Convert to booking" guest-name save (flips to a confirmed booking) and a "confirmed owner block" checkbox (bookings.is_owner_block) so ambiguous blocks get explicitly resolved one way or the other instead of sitting as a permanent guess, no SQL needed. The real fix would still be Booking.com\'s Connectivity/Partner API instead of iCal, a much bigger integration — out of scope for now',c:'HEP'},
   {k:'p0-25',t:'"Edit clean" on a linked cleaning doesn\'t save a date change',n:'Not started. Reported live: moving Patricia\'s TV House clean earlier (linked to a booking) via the booking-detail modal\'s "Edit clean" didn\'t take. Two suspects found on inspection, not yet confirmed against the real failure: (1) editCleaning()\'s domestics.find(x=>x.id===id) is a strict-type comparison while saveDomestic() elsewhere in the same flow uses String(d.id)===String(editId) — an inconsistency that could silently no-op the lookup if id ever isn\'t already a matching type; (2) validateCleanDate() rejects a new date earlier than the LINKED booking\'s checkout, which could misfire if the clean\'s selected link in the edit form differs from the one intended. Needs reproducing directly (open the exact clean, watch what the id/linked-booking values actually are) before committing to a fix — worked around this instance with a direct SQL UPDATE rather than guessing at the UI',c:'Bug'},
