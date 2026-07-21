@@ -1373,12 +1373,17 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <input id="d-cleaner-other" placeholder="e.g. agency name or cleaner's name"/>
           <label style="margin-top:8px">Outside cleaner's phone/WhatsApp number</label>
           <input id="d-cleaner-other-phone" type="tel" placeholder="e.g. 082 123 4567"/>
-          <div style="margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:10px 12px;font-size:.78rem;color:#9a3412">
+          <div id="d-cleaner-other-info" style="margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:10px 12px;font-size:.78rem;color:#9a3412">
             <div style="font-weight:700;margin-bottom:6px">🧭 Not one of our regular cleaners</div>
-            <div style="margin-bottom:8px">Add their number — we'll need it for payment anyway. Once you save, we'll send the inventory link and cleaning guide to this domestic on WhatsApp.</div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button type="button" class="btn btn-sm btn-ghost" onclick="copyCleaningPlan()">📋 Copy checklist text</button>
-              <button type="button" class="btn btn-sm btn-ghost" onclick="openInventoryForOutsideCleaner()">📦 Open property inventory</button>
+            <div style="margin-bottom:8px">Add their WhatsApp number, then save to send them the inventory link and cleaning guideline.</div>
+            <button type="button" class="btn btn-sm" style="background:#25D366;color:#fff" onclick="saveDomestic()">📤 Send inventory link &amp; cleaning guideline to domestic</button>
+          </div>
+          <div id="d-outside-sent-confirm" style="display:none;margin-top:8px;background:#ecfdf5;border:1px solid #6ee7b7;border-radius:9px;padding:10px 12px;font-size:.78rem;color:#065f46">
+            <div style="font-weight:700;margin-bottom:6px">✅ Cleaning scheduled — WhatsApp opened</div>
+            <div style="margin-bottom:8px">The link and guideline were sent to WhatsApp. Want to check it yourself first?</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <a id="d-outside-sent-link" href="#" target="_blank" rel="noopener" class="btn btn-sm btn-ghost">🔗 Open the link myself</a>
+              <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal('domestic-modal');window._editCleanId=null;">Done</button>
             </div>
           </div>
         </div>
@@ -2076,10 +2081,12 @@ function cleaningPlanText() {
   return '*S&N Apt Management — Standard Cleaning Checklist*\n\n' +
     STANDARD_CLEANING_PLAN.map(s => `*${s.area}*\n` + s.items.map(i=>'• '+i).join('\n')).join('\n\n');
 }
-async function copyCleaningPlan() {
-  try { await navigator.clipboard.writeText(cleaningPlanText()); toast('Cleaning checklist copied ✓','success'); }
-  catch(e) { toast('Could not copy — check clipboard permissions','error'); }
-}
+// Photo cleaning guides hosted as static PDFs (see vercel.json rewrites) —
+// only Speranta has one so far; properties without one fall back to the
+// plain-text STANDARD_CLEANING_PLAN in sendOutsideCleanerWhatsApp() below.
+const CLEANING_GUIDE_URLS = {
+  speranta: '/speranta-cleaning-guide.pdf',
+};
 // ZA-local ('082 123 4567') -> international ('27821234567') for wa.me/
 // web.whatsapp.com links. Best-effort — good enough for the numbers our
 // cleaners/agencies actually give us.
@@ -2104,17 +2111,27 @@ function sendOutsideCleanerWhatsApp(row) {
   const phone = normalizeZaPhone(row.cleaner_phone || '');
   if (!phone) return;
   const firstName = (row.cleaner || 'there').split(' ')[0];
-  const propLabel = (PROPS[UUID_MAP[row.property_id] || row.property_id] || {}).name || propName(row.property_id);
+  const propKey = UUID_MAP[row.property_id] || row.property_id;
+  const propLabel = (PROPS[propKey] || {}).name || propName(row.property_id);
   const link = outsideCleanerLink(row.id, row.access_token);
-  const text = `Hi ${firstName}, thank you for cleaning our ${propLabel} property.\n\nPlease fill out the inventory checklist here:\n${link}\n\n${cleaningPlanText()}`;
+  const guideUrl = CLEANING_GUIDE_URLS[propKey];
+  const guidePart = guideUrl
+    ? `Cleaning guideline (with photos):\n${location.origin}${guideUrl}`
+    : cleaningPlanText();
+  const text = `Hi ${firstName}, thank you for cleaning our ${propLabel} property.\n\nPlease fill out the inventory checklist here:\n${link}\n\n${guidePart}`;
   window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`, 'wa_chat_tab', 'noopener');
 }
-function openInventoryForOutsideCleaner() {
-  const pid = document.getElementById('d-prop').value || 'speranta';
-  closeModal('domestic-modal');
-  switchTab('knowledge');
-  setKmProp(pid);
-  setKmSection('checklist');
+// Keeps the Schedule Cleaning modal open after an outside-cleaner send so
+// the coordinator can immediately open the same link the cleaner got, to
+// check it works before relying on the cleaner to use it.
+function showOutsideCleanerSentConfirmation(row) {
+  const info = document.getElementById('d-cleaner-other-info');
+  const confirmBox = document.getElementById('d-outside-sent-confirm');
+  const link = document.getElementById('d-outside-sent-link');
+  if (!info || !confirmBox || !link) return;
+  link.href = outsideCleanerLink(row.id, row.access_token);
+  info.style.display = 'none';
+  confirmBox.style.display = '';
 }
 
 // ── AUTH ──────────────────────────────────────────────────────
@@ -3967,7 +3984,8 @@ const ROADMAP = [
   {k:'p0-36',t:'Guest Timeline: drop redundant Check-in day message, make every stage always previewable/resendable',n:'DONE — (1) Removed the "Check-in day" stage from GUEST_STAGE_DEFS entirely (and its buildCheckinDayMsg/CHECKIN_DAY_MSG templates) — pre-arrival already contains everything a guest needs for check-in, so a separate message was redundant, per owner feedback. Timeline now runs pre-arrival -> [mid-stay, 10+ nights] -> post-stay. (2) Fixed the real bug behind "clicked it by accident and now it\'s blocked": stage pills used to call toggleNinaTask() directly on click, silently flipping sent/not-sent state, and getGuestTouchpoints()\'s dueNow window for pre-arrival was a narrow 24h-before-arrival check — so an accidental click (or any booking past that window) left the stage marked not-sent with no due-now flag and therefore no Send button, stuck. Pills now call selectMsgStage() instead, which only changes which stage\'s message is being previewed/sent (bid -> key in _selectedMsgStage) and never mutates data; marking sent/not-sent is now an explicit separate "✓ Mark sent" / "↺ Mark not sent" button; and Send is always available for whichever stage is selected regardless of done/dueNow. Also widened checkin_msg\'s dueNow window to the whole stay (today < checkout) instead of just the 24h-before slice, so an unsent pre-arrival stays visibly flagged the whole time, not just briefly',c:'HEP'},
   {k:'p0-37',t:'Outside cleaner: phone number + direct WhatsApp send of the cleaning checklist',n:'DONE — the "Other (outside cleaner)" cleaner option now also asks for a phone/WhatsApp number (required, migration 370 adds domestics.cleaner_phone) — needed for paying them anyway, not just messaging. Edit pre-fills both name and phone the same way it already did for the name alone. Superseded by p0-38\'s shareable link — see that entry for the current WhatsApp send behavior',c:'HEP'},
   {k:'p0-38',t:'Outside cleaner: no-login shareable link to fill out the real inventory checklist',n:'DONE — new demo/outside-cleaner.html (routed via vercel.json as /outside-cleaner?d=<domestics.id>&t=<access_token>), a standalone page requiring no login. It shows the SAME per-property inventory checklist "the ladies" use in the staff portal (sourced live from property_manuals) and submits into the same inventory_reports table/Cleaner Inventory Reports view the coordinator already sees — not a separate parallel system. Security: migration 390 adds domestics.access_token (random, generated per row) plus two SECURITY DEFINER RPCs (get_outside_clean_info, submit_outside_inventory) that are the ONLY way the anon role can read a domestics row or write an inventory report — both check the (id, token) pair server-side before doing anything, direct table RLS for anon stays closed. Saving a new "Other" cleaning now automatically opens WhatsApp to the cleaner\'s number with "Hi [name], thank you for cleaning our [property] property." followed by the inventory link and the standard checklist for reference — replaces p0-37\'s plain-text-only send',c:'HEP'},
-  {k:'p0-39',t:'p0-38 fixes: SQL join type mismatch, unquoted domestic ID breaking Edit/Delete, phone made optional',n:'DONE — three real bugs found on first live run. (1) 390\'s migration errored ("operator does not exist: uuid = text") because domestics.property_id is stored as EITHER the real UUID or the short key (\'speranta\'/\'tvhouse\') depending on vintage — same drift already handled defensively elsewhere in the JS (openInventory(), computeOwnerStatementCosts()) but missed in the new SQL functions\' first pass. Both get_outside_clean_info and submit_outside_inventory now resolve the short key the same way. (2) The actual cause of "unable to edit the clean": three onclick call sites (booking-detail modal\'s linked-cleaning Edit/Delete, the calendar day-modal\'s cleaning chip, the domestic list\'s Edit/Delete) interpolated the domestic\'s id UNQUOTED — editCleaning(${d.id}) instead of editCleaning(\'${d.id}\') — which produces invalid JS the moment a UUID id (containing letters and hyphens) is substituted in, so the click silently did nothing. Two other call sites already quoted it correctly; all three broken ones now match. (3) Requiring a phone number to save ANY "Other" cleaning would ALSO have broken editing older entries saved before that field existed (e.g. a legacy "Nicole" entry with no phone on file) — phone is now encouraged (still needed for payment and to auto-send the inventory link) but no longer blocks saving/editing when absent. Also reworded the "Other" cleaner info box per feedback',c:'Bug'}]},
+  {k:'p0-39',t:'p0-38 fixes: SQL join type mismatch, unquoted domestic ID breaking Edit/Delete, phone made optional',n:'DONE — three real bugs found on first live run. (1) 390\'s migration errored ("operator does not exist: uuid = text") because domestics.property_id is stored as EITHER the real UUID or the short key (\'speranta\'/\'tvhouse\') depending on vintage — same drift already handled defensively elsewhere in the JS (openInventory(), computeOwnerStatementCosts()) but missed in the new SQL functions\' first pass. Both get_outside_clean_info and submit_outside_inventory now resolve the short key the same way. (2) The actual cause of "unable to edit the clean": three onclick call sites (booking-detail modal\'s linked-cleaning Edit/Delete, the calendar day-modal\'s cleaning chip, the domestic list\'s Edit/Delete) interpolated the domestic\'s id UNQUOTED — editCleaning(${d.id}) instead of editCleaning(\'${d.id}\') — which produces invalid JS the moment a UUID id (containing letters and hyphens) is substituted in, so the click silently did nothing. Two other call sites already quoted it correctly; all three broken ones now match. (3) Requiring a phone number to save ANY "Other" cleaning would ALSO have broken editing older entries saved before that field existed (e.g. a legacy "Nicole" entry with no phone on file) — phone is now encouraged (still needed for payment and to auto-send the inventory link) but no longer blocks saving/editing when absent. Also reworded the "Other" cleaner info box per feedback',c:'Bug'},
+  {k:'p0-40',t:'Outside cleaner: real photo cleaning guide + one-click send + self-test link',n:'DONE — (1) "Other" cleaner info box reworded again: dropped the "we\'ll need it for payment anyway" line and the two old manual-fallback buttons (copy checklist text / open property inventory), replaced with a single green "Send inventory link & cleaning guideline to domestic" button that triggers the normal save (unchanged saveDomestic() flow, just relabelled/consolidated). (2) The real Speranta cleaning guide PDF the owner sent (room-by-room checklists with photos — Kitchen inventory, Bathroom, Main Bedroom, Living Room/balcony, Second Bedroom) is now hosted as a static asset (demo/guides/speranta-cleaning-guide.pdf, routed via a new vercel.json rewrite to /speranta-cleaning-guide.pdf) and linked directly in the WhatsApp message via a new CLEANING_GUIDE_URLS map — chosen over converting the PDF\'s photos into WhatsApp text as the simplest, least fragile option. Properties without a guide yet (TV House) keep falling back to the existing plain-text STANDARD_CLEANING_PLAN checklist. (3) Saving an outside cleaning with a phone number no longer auto-closes the modal — it now opens WhatsApp AND shows a confirmation panel with a direct "Open the link myself" link plus a Done button, so the coordinator can immediately test the exact link the cleaner received before trusting it to them',c:'Bug'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -6162,10 +6180,12 @@ async function saveDomestic() {
       const idx = domestics.findIndex(d=>d.id===editId);
       if (idx>-1) domestics[idx] = nd(data);
       toast('Cleaning updated ✓','success');
+      closeModal('domestic-modal');
     } else if (editId) {
       const idx = domestics.findIndex(d=>d.id===editId);
       if (idx>-1) domestics[idx] = nd({...row,id:editId});
       toast('Cleaning updated ✓','success');
+      closeModal('domestic-modal');
     } else if (db) {
       const{data,error}=await db.from('domestics').insert([row]).select().single();
       if(error){toast('Save error: '+error.message,'error');return;}
@@ -6174,13 +6194,16 @@ async function saveDomestic() {
       if (cleanerPhone && data.access_token) {
         toast('Opening WhatsApp to send the inventory link…','info');
         sendOutsideCleanerWhatsApp(data);
+        showOutsideCleanerSentConfirmation(data);
+      } else {
+        closeModal('domestic-modal');
       }
     } else {
       domestics.unshift(nd({...row,id:'d'+Date.now()}));
       toast('Cleaning scheduled ✓','success');
+      closeModal('domestic-modal');
     }
     window._editCleanId = null;
-    closeModal('domestic-modal');
     renderCalendar();
     renderBookings();
     renderDashboard();
@@ -8071,6 +8094,8 @@ function openModal(id){
   // ── Domestic modal reset ──────────────────────────────────────────────────
   if (id==='domestic-modal') {
     populateBookingLinkDropdown(document.getElementById('d-linked-booking').value);
+    document.getElementById('d-cleaner-other-info').style.display = '';
+    document.getElementById('d-outside-sent-confirm').style.display = 'none';
     if (!window._editCleanId) {
       document.getElementById('domestic-modal-title').textContent = 'Schedule Cleaning';
       document.getElementById('d-linked-label').style.display = 'none';

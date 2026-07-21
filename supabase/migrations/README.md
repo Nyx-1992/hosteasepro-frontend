@@ -65,6 +65,7 @@ order.
 | 390_outside_cleaner_link.sql | both | Adds `domestics.access_token` (random per row) plus two `SECURITY DEFINER` RPCs — `get_outside_clean_info` and `submit_outside_inventory` — that check the (id, token) pair themselves and are the only way the `anon` role can read a clean or submit an inventory report. Backs `demo/outside-cleaner.html`, a no-login link outside cleaners open to fill out the same inventory checklist regular cleaners submit through the staff portal. **Corrected in place** — the first version joined `domestics.property_id` straight against `properties.id` (uuid) and errored (`operator does not exist: uuid = text`) because that column holds either the real UUID or a short key depending on vintage; both functions now resolve it the same way the JS side already does, before ever having successfully run |
 | 400_roadmap_state_p0_38.sql | both | Marks Roadmap item p0-38 (outside cleaner: no-login shareable link to fill out the real inventory checklist) done |
 | 410_roadmap_state_p0_39.sql | both | Marks Roadmap item p0-39 (p0-38 fixes: SQL join type mismatch, unquoted domestic ID breaking Edit/Delete, phone made optional) done |
+| 420_roadmap_state_p0_40.sql | both | Marks Roadmap item p0-40 (outside cleaner: real photo cleaning guide + one-click send + self-test link) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 

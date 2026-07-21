@@ -5,6 +5,7 @@
     { "source": "/domestic", "destination": "/demo/domestic.html" },
     { "source": "/outside-cleaner.html", "destination": "/demo/outside-cleaner.html" },
     { "source": "/outside-cleaner", "destination": "/demo/outside-cleaner.html" },
+    { "source": "/speranta-cleaning-guide.pdf", "destination": "/demo/guides/speranta-cleaning-guide.pdf" },
     { "source": "/manifest.json", "destination": "/demo/manifest.json" },
     { "source": "/sw.js", "destination": "/demo/sw.js" },
     { "source": "/(.*)", "destination": "/demo/index_fixed.html" }
