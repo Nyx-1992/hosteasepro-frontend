@@ -3930,7 +3930,8 @@ const ROADMAP = [
   {k:'p0-32',t:'Management Invoice — printable monthly statement for pass-through properties (B2)',n:'DONE — new "🧾 Management Invoice" sub-tab under Reports. Property + month picker, auto-computed gross rental proceeds (from bookings) and cleaning costs (from domestics, whichever property_id format that row happens to use), editable extra cost lines (management fee defaults to R6,000, matching the existing TV House arrangement), live net-due-to-owner total, and a branded printable PDF using the same html2canvas+jsPDF pipeline the invoice generator already uses. No schema change: everything is computed live from bookings/domestics, nothing new to store. Confirmed while building this that the Finance tab\'s own S&N income reporting already hardcodes property_id===\'speranta\' only, so TV House was already correctly excluded from S&N\'s own revenue — this feature is purely the owner-facing document that was missing, not a fix to existing reporting. TV House is the live case (auto-selected by default) but any property can be picked. Refined after review: renamed "Owner Statement" -> "Management Invoice" throughout (tab label, document title, PDF filename), and the PDF preview now reuses the guest invoice\'s exact visual template (gold/navy branding, ISSUED BY/PREPARED FOR panel, line-items table, director signatures, footer) instead of a bespoke layout, so it reads as the same document family',c:'HEP'},
   {k:'p0-33',t:'Post-review fixes batch — cleaner assignment, KB structure, checklist bug, invoice framing',n:'DONE — several fixes from live staging review. (1) Domestic assignment: "Other (outside cleaner)" option on the cleaner select reveals a name field plus quick actions to copy the standard cleaning checklist and jump to that property\'s inventory. (2) Same-day check-ins: pre-arrival dueNow was gated on today<check-in, so a same-day booking never showed the Send Pre-arrival button (checked_in became the only due stage) — now also due on the arrival day itself regardless of hoursUntilCI. (3) Knowledge Base: kb_articles gets a property_id column (migration 310) filtered by the existing property switcher, an edit pencil per tile, and Finance-category notes (salaries/fees) removed entirely — that content belongs in Reports/Team, not this operational page. (4) Knowledge Base split into its own top-level nav tab instead of living stacked below Property Manual. (5) Property Manual\'s Inventory and Inspection Checklist tabs consolidated into one "Inventory & Checklist" view since they\'re always used together. (6) Management Invoice: "NET DUE TO OWNER" (gross minus costs) was backwards — rental proceeds are pass-through and never touch S&N, so this document is a bill FROM S&N TO the owner for cleaning + management costs, not a net remittance. Gross rental income now shown as a reference line only, the total ("TOTAL DUE") is the sum of billable cost lines, and a banking-details grid was added since this is now framed as a payment request, matching the guest invoice. Root cause of the "empty inspection checklist" / "inventory not matching domestic app" reports traced to migration 280\'s seed data never having been run on staging — not a code bug',c:'HEP'},
   {k:'p0-34',t:'Round 2 post-review fixes — WhatsApp interstitial, TV House message, Management Invoice polish',n:'DONE — (1) deliverWhatsAppMessage switched from wa.me to web.whatsapp.com/send, which skips the "Open app / Continue to WhatsApp Web" interstitial and drops straight into the chat now that both Nicole and Nina have their browsers linked. (2) TV House pre-arrival message rewritten much shorter and attributed to "our caretaker" instead of naming Nina personally, since the caretaker now handles these check-ins — same trim for the Afrikaans version. (3) Management Invoice: fixed a real data bug where INV_COMPANY.bank.name (and, if present, org_settings.account_name — migration 330) was "SN Apt Management" missing the ampersand used everywhere else on the document; also fixed the hardcoded "SN APARTMENTS®" header wordmark on both the guest invoice and Management Invoice to "S&N APARTMENTS®". Added a Bookings/Nights Occupied/Cleans Performed summary row — real computed data, not filler — so the document reads fuller and closer to matching the guest invoice\'s page coverage, per owner feedback that it looked undersized. renderOwnerStatementTab() now calls loadOrgSettings() like the guest invoice tab does, so banking details reflect live org_settings instead of stale/default values. The DevTools "INP Issue" the owner saw when downloading is a harmless Chrome performance diagnostic (html2canvas blocking the main thread ~320ms during rendering) — the PDF generates successfully, confirmed by the file they sent back to us; nothing to fix there. (4) Invoices > Outgoing\'s old ad-hoc "Generate management fee invoice" form (which mis-used the generic guest-invoice generator) removed and replaced with a direct link to the real Management Invoice creator under Reports, so there\'s one document generator instead of two producing inconsistent output',c:'HEP'},
-  {k:'p0-35',t:'Real root cause of the recurring "INP Issue — blocked UI updates" popup on booking delete',n:'DONE — the p0-34 fix (skip re-rendering hidden tabs) didn\'t make the popup go away because it wasn\'t the actual cause: window.confirm() blocks the JS main thread for however long the USER takes to read and answer the dialog, and Chrome\'s INP/performance panel attributes that entire wait to the click handler that triggered it — which is exactly why the reported durations varied between clicks (1,477ms vs 1,654ms vs 1,654ms again) rather than being a fixed cost. Added a reusable non-blocking confirmAction() modal (#confirm-modal) and converted deleteBooking()/declineBooking() to it — the click now returns immediately (just opens the modal); the real delete/decline only runs from the modal\'s own button click, which is a separate, fast interaction. 8 other window.confirm() calls elsewhere (delete inspection report, delete inventory report, approve booking, delete cleaning session, delete task x2, remove checklist room, delete contact) still use the blocking native dialog and would show the same false-positive INP warning if profiled mid-dialog — not converted this round to keep the change scoped and testable; convert opportunistically or in a dedicated pass',c:'HEP'}]},
+  {k:'p0-35',t:'Real root cause of the recurring "INP Issue — blocked UI updates" popup on booking delete',n:'DONE — the p0-34 fix (skip re-rendering hidden tabs) didn\'t make the popup go away because it wasn\'t the actual cause: window.confirm() blocks the JS main thread for however long the USER takes to read and answer the dialog, and Chrome\'s INP/performance panel attributes that entire wait to the click handler that triggered it — which is exactly why the reported durations varied between clicks (1,477ms vs 1,654ms vs 1,654ms again) rather than being a fixed cost. Added a reusable non-blocking confirmAction() modal (#confirm-modal) and converted deleteBooking()/declineBooking() to it — the click now returns immediately (just opens the modal); the real delete/decline only runs from the modal\'s own button click, which is a separate, fast interaction. 8 other window.confirm() calls elsewhere (delete inspection report, delete inventory report, approve booking, delete cleaning session, delete task x2, remove checklist room, delete contact) still use the blocking native dialog and would show the same false-positive INP warning if profiled mid-dialog — not converted this round to keep the change scoped and testable; convert opportunistically or in a dedicated pass',c:'HEP'},
+  {k:'p0-36',t:'Guest Timeline: drop redundant Check-in day message, make every stage always previewable/resendable',n:'DONE — (1) Removed the "Check-in day" stage from GUEST_STAGE_DEFS entirely (and its buildCheckinDayMsg/CHECKIN_DAY_MSG templates) — pre-arrival already contains everything a guest needs for check-in, so a separate message was redundant, per owner feedback. Timeline now runs pre-arrival -> [mid-stay, 10+ nights] -> post-stay. (2) Fixed the real bug behind "clicked it by accident and now it\'s blocked": stage pills used to call toggleNinaTask() directly on click, silently flipping sent/not-sent state, and getGuestTouchpoints()\'s dueNow window for pre-arrival was a narrow 24h-before-arrival check — so an accidental click (or any booking past that window) left the stage marked not-sent with no due-now flag and therefore no Send button, stuck. Pills now call selectMsgStage() instead, which only changes which stage\'s message is being previewed/sent (bid -> key in _selectedMsgStage) and never mutates data; marking sent/not-sent is now an explicit separate "✓ Mark sent" / "↺ Mark not sent" button; and Send is always available for whichever stage is selected regardless of done/dueNow. Also widened checkin_msg\'s dueNow window to the whole stay (today < checkout) instead of just the 24h-before slice, so an unsent pre-arrival stays visibly flagged the whole time, not just briefly',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -6781,22 +6782,6 @@ Moenie huiwer om ons te kontak as jy iets nodig het nie. Geniet jou verblyf! �
   },
 };
 
-const CHECKIN_DAY_MSG = {
-  en: function(b) {
-    return `Hi ${guestFirstName(b)} 👋
-
-Hope you've settled in at ${propName(b.property_id)}! Just checking you found everything OK.
-
-We're on WhatsApp here for anything you need during your stay 🌊`;
-  },
-  af: function(b) {
-    return `Hallo ${guestFirstName(b)} 👋
-
-Hoop jy het lekker ingeskik by ${propName(b.property_id)}! Ons wil net seker maak jy het alles reggekry.
-
-Ons is hier op WhatsApp vir enigiets wat jy tydens jou verblyf nodig het 🌊`;
-  },
-};
 const MID_STAY_MSG = {
   en: function(b) {
     return `Hi ${guestFirstName(b)} 😊
@@ -6835,14 +6820,15 @@ Hoop om jou binnekort weer te gasheer! 🌊
 S&N Apt Management`;
   },
 };
-function buildCheckinDayMsg(b) { return pickMsg(CHECKIN_DAY_MSG)(b); }
 function buildMidStayMsg(b)    { return pickMsg(MID_STAY_MSG)(b); }
 function buildPostStayMsg(b)   { return pickMsg(POST_STAY_MSG)(b); }
 
 // mid-stay only makes sense for a long-enough stay to have a "middle"
+// "Check-in day" used to be its own stage/message here, but pre-arrival
+// already covers everything a guest needs for check-in — a separate
+// "Check-in day" message was redundant, per owner feedback.
 const GUEST_STAGE_DEFS = [
   { key:'checkin_msg',   label:'Pre-arrival',  icon:'💬', build: buildPreArrivalMsg },
-  { key:'checked_in',    label:'Check-in day', icon:'🛬', build: buildCheckinDayMsg },
   { key:'mid_stay_msg',  label:'Mid-stay',     icon:'🌊', build: buildMidStayMsg, minNights: 10 },
   { key:'followup_msg',  label:'Post-stay',    icon:'🎁', build: buildPostStayMsg },
 ];
@@ -6865,13 +6851,12 @@ function getGuestTouchpoints(b) {
       // 24h-before window for advance sends, but always due on the actual
       // arrival day itself (same-day bookings still need the door code —
       // hoursUntilCI can already be very negative by then if check_in has
-      // no real time component, so don't gate on it once today===ci).
-      dueNow = !done && (today === ci || (today < ci && hoursUntilCI <= 24 && hoursUntilCI > -6));
+      // no real time component, so don't gate on it once today===ci), AND
+      // still shown as due for the rest of the stay if never sent — so an
+      // accidental "mark not sent" (or a booking whose window already
+      // passed unsent) doesn't get stuck unreachable.
+      dueNow = !done && today < co;
       windowLabel = 'Send 24h before arrival';
-    } else if (def.key === 'checked_in') {
-      dueNow = !done && ci <= today && today < co;
-      windowLabel = 'Check-in day · ' + fmtDate(ci);
-      dueSince = ci;
     } else if (def.key === 'mid_stay_msg') {
       const midStr = new Date(new Date(ci).getTime() + (new Date(co) - new Date(ci)) / 2).toISOString().slice(0,10);
       dueNow = !done && today >= midStr && today < co;
@@ -6912,6 +6897,16 @@ function guestFaqEntries(propertyId) {
   const uuid = (PROPS[propertyId] || {}).uuid || propertyId;
   const manual = propertyManuals[uuid];
   return (manual && manual.faq && manual.faq.entries || []).filter(f => f.q || f.a);
+}
+
+// Manual override of which stage's message a Guest Timeline card is
+// showing/sending — bid -> stage key. Lets Nina click back to any stage
+// (e.g. re-open pre-arrival after it's marked sent) without that click
+// mutating sent/not-sent state.
+let _selectedMsgStage = {};
+function selectMsgStage(bid, key) {
+  _selectedMsgStage[bid] = key;
+  renderGuestTimeline();
 }
 
 function toggleMsgPreview(key) {
@@ -6966,6 +6961,13 @@ function renderGuestTimeline() {
     const col    = PLAT_COLORS[b.platform]||'#c17f3c';
     const stages = getGuestTouchpoints(b);
     const dueStage = stages.find(s => s.dueNow);
+    // Which stage's message is shown/sendable below — a manual pill click
+    // (selectMsgStage) overrides the auto-picked due stage, so any stage
+    // can always be previewed and (re)sent, whether or not it's "due" or
+    // already marked sent (fixes: an accidental "mark sent" click used to
+    // leave a stage stuck with no way to view/resend its message).
+    const activeKey = _selectedMsgStage[bid] || (dueStage && dueStage.key) || stages[0].key;
+    const activeStage = stages.find(s => s.key === activeKey) || stages[0];
     const stayCount = getGuestStayCount(b);
 
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;border-left:3px solid ${col}">
@@ -6985,24 +6987,26 @@ function renderGuestTimeline() {
         </div>
       </div>
 
-      <!-- Stage timeline: pre-arrival -> check-in day -> [mid-stay] -> post-stay -->
+      <!-- Stage timeline: pre-arrival -> [mid-stay] -> post-stay. Clicking a
+           pill just selects it for preview below — it no longer toggles
+           sent/not-sent, so an accidental click can't strand a stage with
+           no way to view or resend its message. -->
       <div style="display:flex;gap:4px;margin-bottom:10px">
         ${stages.map(s => `
-          <div title="${s.label} — ${s.done?'sent':s.dueNow?'due now':s.windowLabel}" onclick="toggleNinaTask('${bid}','${s.key}')"
-            style="flex:1;text-align:center;padding:6px 4px;border-radius:8px;cursor:pointer;background:${s.done?'var(--green-light)':s.dueNow?'var(--amber-light)':'var(--surface-2)'};border:1.5px solid ${s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--border)'}">
+          <div title="${s.label} — ${s.done?'sent':s.dueNow?'due now':s.windowLabel}" onclick="selectMsgStage('${bid}','${s.key}')"
+            style="flex:1;text-align:center;padding:6px 4px;border-radius:8px;cursor:pointer;background:${s.done?'var(--green-light)':s.dueNow?'var(--amber-light)':'var(--surface-2)'};border:1.5px solid ${s.key===activeKey?'var(--ocean)':s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--border)'}">
             <div style="font-size:.85rem">${s.done?'✓':s.icon}</div>
             <div style="font-size:.58rem;font-weight:600;color:${s.done?'#065f46':s.dueNow?'#92400e':'var(--muted)'};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.label}</div>
           </div>`).join('')}
       </div>
 
-      ${dueStage ? `
-      <div style="background:var(--amber-light);border-radius:8px;padding:8px 10px;margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px" onclick="toggleMsgPreview('${bid}-${dueStage.key}')">
-          <div style="font-size:.68rem;font-weight:700;color:#92400e">${dueStage.icon} ${dueStage.label} due now</div>
-          <span id="msgtoggle-${bid}-${dueStage.key}" style="font-size:.64rem;font-weight:600;color:#92400e;white-space:nowrap">▼ Expand</span>
+      <div style="background:${activeStage.done?'var(--green-light)':'var(--amber-light)'};border-radius:8px;padding:8px 10px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px" onclick="toggleMsgPreview('${bid}-${activeStage.key}')">
+          <div style="font-size:.68rem;font-weight:700;color:${activeStage.done?'#065f46':'#92400e'}">${activeStage.icon} ${activeStage.label}${activeStage.done?' — sent':activeStage.dueNow?' — due now':''}</div>
+          <span id="msgtoggle-${bid}-${activeStage.key}" style="font-size:.64rem;font-weight:600;color:${activeStage.done?'#065f46':'#92400e'};white-space:nowrap">▼ Expand</span>
         </div>
-        <div id="msgprev-${bid}-${dueStage.key}" data-expanded="false" style="font-size:.7rem;color:#78350f;white-space:pre-wrap;max-height:36px;overflow:hidden;cursor:pointer" onclick="toggleMsgPreview('${bid}-${dueStage.key}')">${dueStage.message}</div>
-      </div>` : ''}
+        <div id="msgprev-${bid}-${activeStage.key}" data-expanded="false" style="font-size:.7rem;color:${activeStage.done?'#065f46':'#78350f'};white-space:pre-wrap;max-height:36px;overflow:hidden;cursor:pointer" onclick="toggleMsgPreview('${bid}-${activeStage.key}')">${activeStage.message}</div>
+      </div>
 
       ${guestFaqEntries(b.property_id).length ? `
       <details style="margin-bottom:8px">
@@ -7018,10 +7022,14 @@ function renderGuestTimeline() {
       </details>` : ''}
 
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        ${dueStage ? `<button onclick="sendGuestTouchpoint('${bid}','${dueStage.key}')"
+        <button onclick="sendGuestTouchpoint('${bid}','${activeStage.key}')"
           style="display:inline-flex;align-items:center;gap:4px;background:#25D366;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;border:none;cursor:pointer">
-          💬 Send ${dueStage.label}
-        </button>` : ''}
+          💬 Send ${activeStage.label}
+        </button>
+        <button onclick="toggleNinaTask('${bid}','${activeStage.key}');renderGuestTimeline()"
+          style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);color:var(--ink);font-size:.74rem;padding:5px 10px;border-radius:7px;border:1px solid var(--border);cursor:pointer">
+          ${activeStage.done?'↺ Mark not sent':'✓ Mark sent'}
+        </button>
         <a href="https://web.whatsapp.com" target="wa_chat_tab" rel="noopener"
           style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);color:var(--ink);font-size:.74rem;padding:5px 10px;border-radius:7px;text-decoration:none;border:1px solid var(--border)">
           Open chat ↗
