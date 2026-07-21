@@ -6632,7 +6632,10 @@ const WA_NUMBER = '27636021847'; // Nicole — shared WhatsApp Business line for
 // on every single message. One shared tab means logging in once per
 // session instead of once per guest.
 function deliverWhatsAppMessage(phone, text) {
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, 'wa_chat_tab', 'noopener');
+  // web.whatsapp.com/send (vs. wa.me/api.whatsapp.com) skips the "Open app /
+  // Continue to WhatsApp Web" interstitial and goes straight into the chat
+  // with the message pre-filled, since the browser is already linked.
+  window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`, 'wa_chat_tab', 'noopener');
 }
 
 function guestFirstName(b) { return (b.guest_name || b.display_name || '').split(' ')[0] || 'there'; }
