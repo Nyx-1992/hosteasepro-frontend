@@ -62,6 +62,8 @@ order.
 | 360_roadmap_state_p0_36.sql | both | Marks Roadmap item p0-36 (Guest Timeline: drop redundant Check-in day message, make every stage always previewable/resendable) done |
 | 370_domestics_cleaner_phone.sql | both | Adds `domestics.cleaner_phone`, captured when assigning an outside ("Other") cleaner — needed for payment, and lets Nina WhatsApp them the standard cleaning checklist directly from the Schedule Cleaning modal |
 | 380_roadmap_state_p0_37.sql | both | Marks Roadmap item p0-37 (outside cleaner: phone number + direct WhatsApp send of the cleaning checklist) done |
+| 390_outside_cleaner_link.sql | both | Adds `domestics.access_token` (random per row) plus two `SECURITY DEFINER` RPCs — `get_outside_clean_info` and `submit_outside_inventory` — that check the (id, token) pair themselves and are the only way the `anon` role can read a clean or submit an inventory report. Backs `demo/outside-cleaner.html`, a no-login link outside cleaners open to fill out the same inventory checklist regular cleaners submit through the staff portal |
+| 400_roadmap_state_p0_38.sql | both | Marks Roadmap item p0-38 (outside cleaner: no-login shareable link to fill out the real inventory checklist) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 

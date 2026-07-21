@@ -1375,9 +1375,8 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <input id="d-cleaner-other-phone" type="tel" placeholder="e.g. 082 123 4567"/>
           <div style="margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:10px 12px;font-size:.78rem;color:#9a3412">
             <div style="font-weight:700;margin-bottom:6px">🧭 Not one of our regular cleaners</div>
-            <div style="margin-bottom:8px">We'll need their number for payment too. Share our standard cleaning checklist and this property's inventory with them before the clean.</div>
+            <div style="margin-bottom:8px">We'll need their number for payment too. Once you save, we'll open WhatsApp with a link so they can fill out the inventory themselves — no login needed.</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button type="button" class="btn btn-sm" style="background:#25D366;color:#fff" onclick="whatsAppCleaningPlanToCleaner()">💬 WhatsApp checklist to cleaner</button>
               <button type="button" class="btn btn-sm btn-ghost" onclick="copyCleaningPlan()">📋 Copy checklist text</button>
               <button type="button" class="btn btn-sm btn-ghost" onclick="openInventoryForOutsideCleaner()">📦 Open property inventory</button>
             </div>
@@ -2091,13 +2090,23 @@ function normalizeZaPhone(raw) {
   else if (!digits.startsWith('27')) digits = '27' + digits;
   return digits;
 }
-function whatsAppCleaningPlanToCleaner() {
-  const phoneRaw = (document.getElementById('d-cleaner-other-phone').value || '').trim();
-  if (!phoneRaw) { toast("Please enter the outside cleaner's phone number first", 'error'); return; }
-  const phone = normalizeZaPhone(phoneRaw);
-  const pid = document.getElementById('d-prop').value || 'speranta';
-  const propLabel = (PROPS[pid]||{}).name || pid;
-  const text = cleaningPlanText() + `\n\n*Property:* ${propLabel}`;
+// Shareable, no-login link an outside cleaner can open to fill out the
+// property's inventory checklist themselves — see migration 390
+// (get_outside_clean_info/submit_outside_inventory RPCs) and
+// demo/outside-cleaner.html.
+function outsideCleanerLink(domesticId, accessToken) {
+  return `${location.origin}/outside-cleaner?d=${domesticId}&t=${accessToken}`;
+}
+// Fired after a NEW "Other" cleaner cleaning is saved (see saveDomestic) —
+// opens WhatsApp straight to the cleaner's number with a short greeting,
+// their inventory link, and the standard checklist for reference.
+function sendOutsideCleanerWhatsApp(row) {
+  const phone = normalizeZaPhone(row.cleaner_phone || '');
+  if (!phone) return;
+  const firstName = (row.cleaner || 'there').split(' ')[0];
+  const propLabel = (PROPS[UUID_MAP[row.property_id] || row.property_id] || {}).name || propName(row.property_id);
+  const link = outsideCleanerLink(row.id, row.access_token);
+  const text = `Hi ${firstName}, thank you for cleaning our ${propLabel} property.\n\nPlease fill out the inventory checklist here:\n${link}\n\n${cleaningPlanText()}`;
   window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`, 'wa_chat_tab', 'noopener');
 }
 function openInventoryForOutsideCleaner() {
@@ -3956,7 +3965,8 @@ const ROADMAP = [
   {k:'p0-34',t:'Round 2 post-review fixes — WhatsApp interstitial, TV House message, Management Invoice polish',n:'DONE — (1) deliverWhatsAppMessage switched from wa.me to web.whatsapp.com/send, which skips the "Open app / Continue to WhatsApp Web" interstitial and drops straight into the chat now that both Nicole and Nina have their browsers linked. (2) TV House pre-arrival message rewritten much shorter and attributed to "our caretaker" instead of naming Nina personally, since the caretaker now handles these check-ins — same trim for the Afrikaans version. (3) Management Invoice: fixed a real data bug where INV_COMPANY.bank.name (and, if present, org_settings.account_name — migration 330) was "SN Apt Management" missing the ampersand used everywhere else on the document; also fixed the hardcoded "SN APARTMENTS®" header wordmark on both the guest invoice and Management Invoice to "S&N APARTMENTS®". Added a Bookings/Nights Occupied/Cleans Performed summary row — real computed data, not filler — so the document reads fuller and closer to matching the guest invoice\'s page coverage, per owner feedback that it looked undersized. renderOwnerStatementTab() now calls loadOrgSettings() like the guest invoice tab does, so banking details reflect live org_settings instead of stale/default values. The DevTools "INP Issue" the owner saw when downloading is a harmless Chrome performance diagnostic (html2canvas blocking the main thread ~320ms during rendering) — the PDF generates successfully, confirmed by the file they sent back to us; nothing to fix there. (4) Invoices > Outgoing\'s old ad-hoc "Generate management fee invoice" form (which mis-used the generic guest-invoice generator) removed and replaced with a direct link to the real Management Invoice creator under Reports, so there\'s one document generator instead of two producing inconsistent output',c:'HEP'},
   {k:'p0-35',t:'Real root cause of the recurring "INP Issue — blocked UI updates" popup on booking delete',n:'DONE — the p0-34 fix (skip re-rendering hidden tabs) didn\'t make the popup go away because it wasn\'t the actual cause: window.confirm() blocks the JS main thread for however long the USER takes to read and answer the dialog, and Chrome\'s INP/performance panel attributes that entire wait to the click handler that triggered it — which is exactly why the reported durations varied between clicks (1,477ms vs 1,654ms vs 1,654ms again) rather than being a fixed cost. Added a reusable non-blocking confirmAction() modal (#confirm-modal) and converted deleteBooking()/declineBooking() to it — the click now returns immediately (just opens the modal); the real delete/decline only runs from the modal\'s own button click, which is a separate, fast interaction. 8 other window.confirm() calls elsewhere (delete inspection report, delete inventory report, approve booking, delete cleaning session, delete task x2, remove checklist room, delete contact) still use the blocking native dialog and would show the same false-positive INP warning if profiled mid-dialog — not converted this round to keep the change scoped and testable; convert opportunistically or in a dedicated pass',c:'HEP'},
   {k:'p0-36',t:'Guest Timeline: drop redundant Check-in day message, make every stage always previewable/resendable',n:'DONE — (1) Removed the "Check-in day" stage from GUEST_STAGE_DEFS entirely (and its buildCheckinDayMsg/CHECKIN_DAY_MSG templates) — pre-arrival already contains everything a guest needs for check-in, so a separate message was redundant, per owner feedback. Timeline now runs pre-arrival -> [mid-stay, 10+ nights] -> post-stay. (2) Fixed the real bug behind "clicked it by accident and now it\'s blocked": stage pills used to call toggleNinaTask() directly on click, silently flipping sent/not-sent state, and getGuestTouchpoints()\'s dueNow window for pre-arrival was a narrow 24h-before-arrival check — so an accidental click (or any booking past that window) left the stage marked not-sent with no due-now flag and therefore no Send button, stuck. Pills now call selectMsgStage() instead, which only changes which stage\'s message is being previewed/sent (bid -> key in _selectedMsgStage) and never mutates data; marking sent/not-sent is now an explicit separate "✓ Mark sent" / "↺ Mark not sent" button; and Send is always available for whichever stage is selected regardless of done/dueNow. Also widened checkin_msg\'s dueNow window to the whole stay (today < checkout) instead of just the 24h-before slice, so an unsent pre-arrival stays visibly flagged the whole time, not just briefly',c:'HEP'},
-  {k:'p0-37',t:'Outside cleaner: phone number + direct WhatsApp send of the cleaning checklist',n:'DONE — the "Other (outside cleaner)" cleaner option now also asks for a phone/WhatsApp number (required, migration 370 adds domestics.cleaner_phone) — needed for paying them anyway, not just messaging. New "💬 WhatsApp checklist to cleaner" button opens web.whatsapp.com/send straight to that number with the standard cleaning checklist + property name pre-filled, so Nina doesn\'t have to separately save the contact first. Edit pre-fills both name and phone the same way it already did for the name alone',c:'HEP'}]},
+  {k:'p0-37',t:'Outside cleaner: phone number + direct WhatsApp send of the cleaning checklist',n:'DONE — the "Other (outside cleaner)" cleaner option now also asks for a phone/WhatsApp number (required, migration 370 adds domestics.cleaner_phone) — needed for paying them anyway, not just messaging. Edit pre-fills both name and phone the same way it already did for the name alone. Superseded by p0-38\'s shareable link — see that entry for the current WhatsApp send behavior',c:'HEP'},
+  {k:'p0-38',t:'Outside cleaner: no-login shareable link to fill out the real inventory checklist',n:'DONE — new demo/outside-cleaner.html (routed via vercel.json as /outside-cleaner?d=<domestics.id>&t=<access_token>), a standalone page requiring no login. It shows the SAME per-property inventory checklist "the ladies" use in the staff portal (sourced live from property_manuals) and submits into the same inventory_reports table/Cleaner Inventory Reports view the coordinator already sees — not a separate parallel system. Security: migration 390 adds domestics.access_token (random, generated per row) plus two SECURITY DEFINER RPCs (get_outside_clean_info, submit_outside_inventory) that are the ONLY way the anon role can read a domestics row or write an inventory report — both check the (id, token) pair server-side before doing anything, direct table RLS for anon stays closed. Saving a new "Other" cleaning now automatically opens WhatsApp to the cleaner\'s number with "Hi [name], thank you for cleaning our [property] property." followed by the inventory link and the standard checklist for reference — replaces p0-37\'s plain-text-only send',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -6158,6 +6168,10 @@ async function saveDomestic() {
       if(error){toast('Save error: '+error.message,'error');return;}
       domestics.unshift(nd(data));
       toast('Cleaning scheduled ✓','success');
+      if (cleanerPhone && data.access_token) {
+        toast('Opening WhatsApp to send the inventory link…','info');
+        sendOutsideCleanerWhatsApp(data);
+      }
     } else {
       domestics.unshift(nd({...row,id:'d'+Date.now()}));
       toast('Cleaning scheduled ✓','success');
