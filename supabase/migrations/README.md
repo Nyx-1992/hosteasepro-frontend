@@ -55,6 +55,8 @@ order.
 | 300_roadmap_state_p0_32.sql | both | Marks Roadmap item p0-32 (Owner statements, B2) done — no schema change was needed for B2 itself |
 | 310_kb_property_and_cleanup.sql | both | Adds `kb_articles.property_id` (default `'all'`) so General Notes tiles can be tagged to one property and filtered by the existing property switcher; deletes existing `kb_articles` rows with `category = 'Finance'` — that content (management fees, salaries, cleaner pay) doesn't belong on the operational Knowledge Base page |
 | 320_roadmap_state_p0_33.sql | both | Marks Roadmap item p0-33 (post-review fixes batch: cleaner assignment, KB structure, same-day checkin bug, Management Invoice framing) done |
+| 330_org_settings_account_name_fix.sql | both | Corrects `org_settings.account_name` from `"SN Apt Management"` to `"S&N Apt Management"` if present — it was missing the ampersand used everywhere else on the invoice/Management Invoice documents |
+| 340_roadmap_state_p0_34.sql | both | Marks Roadmap item p0-34 (round 2 post-review fixes: WhatsApp interstitial, TV House message, Management Invoice polish) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
