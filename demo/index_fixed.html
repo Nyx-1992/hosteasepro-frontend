@@ -1453,6 +1453,27 @@ function _buildMobileNavStub(){/* replaced by main script */}
   </div>
 </div>
 
+<!-- Reusable confirm dialog — replaces window.confirm() for actions where
+     it matters (e.g. delete). Native confirm() blocks the JS main thread
+     for as long as the user takes to respond, which shows up in Chrome's
+     performance panel as the triggering click "blocking UI updates" for
+     however long the user spent reading the dialog — a false alarm, but
+     an alarming-looking one. This modal is non-blocking: the click just
+     opens it and returns immediately; the real action runs from the
+     modal's own button click, See confirmAction(). -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header"><div class="modal-title">Please confirm</div><button class="modal-close" onclick="closeModal('confirm-modal')">×</button></div>
+    <div class="modal-body">
+      <div id="confirm-modal-message" style="font-size:.9rem;color:var(--ink);line-height:1.5"></div>
+      <div class="modal-footer" style="margin-top:18px">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('confirm-modal')">Cancel</button>
+        <button class="btn btn-sm" id="confirm-modal-yes" style="background:#dc2626;color:#fff">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="day-modal">
   <div class="modal" style="max-width:580px">
     <div class="modal-header"><div class="modal-title" id="day-modal-title"></div><button class="modal-close" onclick="closeModal('day-modal')">×</button></div>
@@ -4862,36 +4883,44 @@ async function approveBooking(id) {
   if (currentTab === 'dashboard') renderDashboard();
 }
 
-async function declineBooking(id) {
-  if (!confirm('Decline and cancel this booking?')) return;
-  if (db) {
-    const {error} = await db.from('bookings').update({status:'cancelled'}).eq('id',id);
-    if (error) { toast('Error: '+error.message,'error'); return; }
-  }
-  const b = bookings.find(x=>x.id===id);
-  if (b) b.status = 'cancelled';
-  toast('Booking declined','info');
-  if (currentTab === 'bookings')  { renderBookings(); if (laneViewActive) renderLaneView(); }
-  if (currentTab === 'dashboard') renderDashboard();
+function declineBooking(id) {
+  confirmAction('Decline and cancel this booking?', async () => {
+    if (db) {
+      const {error} = await db.from('bookings').update({status:'cancelled'}).eq('id',id);
+      if (error) { toast('Error: '+error.message,'error'); return; }
+    }
+    const b = bookings.find(x=>x.id===id);
+    if (b) b.status = 'cancelled';
+    toast('Booking declined','info');
+    if (currentTab === 'bookings')  { renderBookings(); if (laneViewActive) renderLaneView(); }
+    if (currentTab === 'dashboard') renderDashboard();
+  }, 'Decline');
 }
 
-async function deleteBooking(id) {
-  if (!confirm('Permanently delete this booking? This cannot be undone.')) return;
-  if (db) {
-    const {error} = await db.from('bookings').update({is_active:false}).eq('id',id);
-    if (error) { toast('Error: '+error.message,'error'); return; }
-  }
-  bookings = bookings.filter(x=>String(x.id)!==String(id));
-  toast('Booking deleted','info');
-  // Only re-render whichever tab is actually visible right now — doing
-  // Calendar/Dashboard/Bookings unconditionally on every delete was
-  // blocking the UI for 1s+ once enough bookings had accumulated
-  // (buildCalGrid rescans the full bookings array per calendar cell).
-  // Hidden tabs pick up the change automatically via renderTab() the
-  // next time the user switches to them.
-  if (currentTab === 'bookings')  { renderBookings(); if (laneViewActive) renderLaneView(); }
-  if (currentTab === 'dashboard') renderDashboard();
-  if (currentTab === 'calendar')  renderCalendar();
+function deleteBooking(id) {
+  // Native confirm() blocks the JS main thread for however long the user
+  // takes to respond, which is what Chrome's "INP Issue — blocked UI
+  // updates" popup was actually measuring on delete (the duration varied
+  // click to click, matching human reaction time, not a fixed render
+  // cost). confirmAction() returns immediately; the real work below only
+  // runs once the user clicks Delete in the non-blocking modal.
+  confirmAction('Permanently delete this booking? This cannot be undone.', async () => {
+    if (db) {
+      const {error} = await db.from('bookings').update({is_active:false}).eq('id',id);
+      if (error) { toast('Error: '+error.message,'error'); return; }
+    }
+    bookings = bookings.filter(x=>String(x.id)!==String(id));
+    toast('Booking deleted','info');
+    // Only re-render whichever tab is actually visible right now — doing
+    // Calendar/Dashboard/Bookings unconditionally on every delete was
+    // extra wasted work once enough bookings had accumulated
+    // (buildCalGrid rescans the full bookings array per calendar cell).
+    // Hidden tabs pick up the change automatically via renderTab() the
+    // next time the user switches to them.
+    if (currentTab === 'bookings')  { renderBookings(); if (laneViewActive) renderLaneView(); }
+    if (currentTab === 'dashboard') renderDashboard();
+    if (currentTab === 'calendar')  renderCalendar();
+  }, 'Delete');
 }
 
 function renderBookings() {
@@ -7975,6 +8004,15 @@ function openModal(id){
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',e=>{if(e.target===el)el.classList.remove('open');});});
+
+// Non-blocking replacement for window.confirm() — see #confirm-modal for why.
+function confirmAction(message, onConfirm, confirmLabel) {
+  document.getElementById('confirm-modal-message').textContent = message;
+  const yesBtn = document.getElementById('confirm-modal-yes');
+  yesBtn.textContent = confirmLabel || 'Confirm';
+  yesBtn.onclick = () => { closeModal('confirm-modal'); onConfirm(); };
+  openModal('confirm-modal');
+}
 function toast(msg,type='info'){
   const wrap=document.getElementById('toast-wrap');
   const t=document.createElement('div');t.className='toast '+(type||'');t.textContent=msg;
