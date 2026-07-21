@@ -5780,7 +5780,7 @@ function renderDomesticCalView() {
     const today = todaySAST();
     const monthStr = String(year)+'-'+String(month+1).padStart(2,'0');
     const monthDoms = domestics.filter(d=>d.date&&d.date.startsWith(monthStr));
-    const COLORS = {Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+    const COLORS = {Blessing:'#C9962E',Fatima:'#F0563B',Patricia:'#0FA898',Spiwe:'#2F6FED'};
 
     let g = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;font-size:.7rem;margin-bottom:8px">';
     ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
@@ -5819,29 +5819,33 @@ function renderDomesticCalView() {
       nextDays.push(d.toISOString().slice(0,10));
     }
     const CLEANERS = ['Blessing','Fatima','Patricia','Spiwe'];
-    const COLORS = {'Blessing':'#f59e0b','Fatima':'#8b5cf6','Patricia':'#2dd4a0','Spiwe':'#5b8ef0'};
-    availEl.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.75rem">'
-      + '<tr><th style="text-align:left;padding:4px 8px;color:var(--muted);font-weight:600">Cleaner</th>'
-      + nextDays.map(d=>'<th style="padding:4px 3px;color:var(--muted);font-weight:600;text-align:center;min-width:32px">'+parseInt(d.slice(8))+'<br><span style="font-size:.6rem">'+['Su','Mo','Tu','We','Th','Fr','Sa'][new Date(d).getDay()]+'</span></th>').join('')
-      + '</tr>'
-      + CLEANERS.map(name => {
-        const c = COLORS[name]||'#64748b';
-        return '<tr>'
-          + '<td style="padding:5px 8px;font-weight:600;color:'+c+'">'+name+'</td>'
+    // Same 4-swatch palette used for Team roles / KB categories elsewhere —
+    // "refined heatmap" direction from the design review.
+    const COLORS = {'Blessing':'#C9962E','Fatima':'#F0563B','Patricia':'#0FA898','Spiwe':'#2F6FED'};
+    const colCount = nextDays.length;
+    availEl.innerHTML = '<div style="overflow-x:auto"><div style="border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden;min-width:600px">'
+      + '<div style="display:grid;grid-template-columns:130px repeat('+colCount+',1fr);border-bottom:1px solid var(--border)">'
+      + '<div style="padding:9px 14px;font-family:var(--font-mono);font-size:.62rem;color:var(--muted);text-transform:uppercase">Cleaner</div>'
+      + nextDays.map(d=>'<div style="padding:9px 4px;text-align:center;font-family:var(--font-mono);font-size:.6rem;color:var(--muted);text-transform:uppercase">'+['Su','Mo','Tu','We','Th','Fr','Sa'][new Date(d).getDay()]+'<br><span class="tab-num">'+parseInt(d.slice(8))+'</span></div>').join('')
+      + '</div>'
+      + CLEANERS.map((name,i) => {
+        const c = COLORS[name]||'var(--muted)';
+        return '<div style="display:grid;grid-template-columns:130px repeat('+colCount+',1fr);align-items:center;'+(i<CLEANERS.length-1?'border-bottom:1px solid var(--border)':'')+'">'
+          + '<div style="padding:8px 14px;font-weight:700;font-size:.82rem;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:'+c+';flex-shrink:0"></span>'+name+'</div>'
           + nextDays.map(d => {
             const rec = cleanerAvailability.find(r=>r.cleaner===name&&r.date===d);
             const isAvail = rec?.available === true;
             const hasClean = domestics.some(dom=>dom.cleaner===name&&dom.date===d&&dom.status!=='cancelled');
-            const bg = hasClean ? 'rgba(45,212,160,.3)' : isAvail ? 'rgba(45,212,160,.1)' : 'rgba(255,107,107,.1)';
+            const bg = hasClean ? c+'33' : isAvail ? c+'18' : 'var(--surface-2)';
+            const fg = hasClean || isAvail ? c : 'var(--muted)';
             const icon = hasClean ? '🧹' : isAvail ? '✓' : '–';
-            const col = hasClean ? 'var(--green)' : isAvail ? 'var(--green)' : 'var(--muted)';
-            return '<td style="text-align:center;padding:4px 2px"><span style="display:inline-block;width:24px;height:24px;border-radius:6px;background:'+bg+';color:'+col+';font-size:.7rem;line-height:24px">'+icon+'</span></td>';
+            return '<div style="display:flex;justify-content:center;padding:7px 0"><span style="width:26px;height:26px;border-radius:8px;background:'+bg+';color:'+fg+';display:flex;align-items:center;justify-content:center;font-size:.72rem">'+icon+'</span></div>';
           }).join('')
-          + '</tr>';
+          + '</div>';
       }).join('')
-      + '</table></div>'
-      + '<div style="display:flex;gap:12px;margin-top:8px;font-size:.72rem;color:var(--muted)">'
-      + '<span>🧹 Clean booked</span><span style="color:var(--green)">✓ Available</span><span>– Unavailable</span>'
+      + '</div></div>'
+      + '<div style="display:flex;gap:12px;margin-top:10px;font-size:.72rem;color:var(--muted)">'
+      + '<span>🧹 Clean booked</span><span>✓ Available</span><span>– Unavailable</span>'
       + '</div>';
   }
 
@@ -6217,7 +6221,7 @@ function renderDomEarnings() {
   const el = document.getElementById('dom-earnings-summary'); if (!el) return;
   const monthStr = String(domCalYear)+'-'+String(domCalMonth+1).padStart(2,'0');
   const md = domestics.filter(d=>d.date&&d.date.startsWith(monthStr));
-  const COLORS = {Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+  const COLORS = {Blessing:'#C9962E',Fatima:'#F0563B',Patricia:'#0FA898',Spiwe:'#2F6FED'};
   const summary = {};
   md.forEach(d=>{
     if (!d.cleaner) return;
@@ -7229,16 +7233,18 @@ function renderGuestTimeline() {
         </div>
       </div>
 
-      <!-- Stage timeline: pre-arrival -> [mid-stay] -> post-stay. Clicking a
-           pill just selects it for preview below — it no longer toggles
-           sent/not-sent, so an accidental click can't strand a stage with
-           no way to view or resend its message. -->
-      <div style="display:flex;gap:4px;margin-bottom:10px">
-        ${stages.map(s => `
-          <div title="${s.label} — ${s.done?'sent':s.dueNow?'due now':s.windowLabel}" onclick="selectMsgStage('${bid}','${s.key}')"
-            style="flex:1;text-align:center;padding:6px 4px;border-radius:8px;cursor:pointer;background:${s.done?'var(--green-light)':s.dueNow?'var(--amber-light)':'var(--surface-2)'};border:1.5px solid ${s.key===activeKey?'var(--ocean)':s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--border)'}">
-            <div style="font-size:.85rem">${s.done?'✓':s.icon}</div>
-            <div style="font-size:.58rem;font-weight:600;color:${s.done?'#065f46':s.dueNow?'#92400e':'var(--muted)'};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.label}</div>
+      <!-- Stage timeline: pre-arrival -> [mid-stay] -> post-stay, as a small
+           stacked log-panel (same left-bar language as the Dashboard's
+           Urgent Actions). Clicking a row just selects it for preview below
+           — it no longer toggles sent/not-sent, so an accidental click
+           can't strand a stage with no way to view or resend its message. -->
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">
+        ${stages.map((s,i) => `
+          <div title="${s.windowLabel||''}" onclick="selectMsgStage('${bid}','${s.key}')"
+            style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;${i>0?'border-top:1px solid var(--border)':''};background:${s.key===activeKey?'var(--surface-2)':'transparent'}">
+            <span style="width:3px;height:16px;border-radius:2px;flex-shrink:0;background:${s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--border)'}"></span>
+            <span style="font-size:.78rem;flex:1;color:var(--ink)">${s.icon} ${s.label}</span>
+            <span style="font-family:var(--font-mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.03em;color:${s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--muted)'};flex-shrink:0">${s.done?'Sent':s.dueNow?'Due now':'Not yet'}</span>
           </div>`).join('')}
       </div>
 
@@ -8212,7 +8218,7 @@ function hideChartTooltip() {
 }
 async function renderCleanerEarningsReport() {
   const el=document.getElementById('cleaner-earnings'); if(!el)return;
-  const COLORS={Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+  const COLORS={Blessing:'#C9962E',Fatima:'#F0563B',Patricia:'#0FA898',Spiwe:'#2F6FED'};
   let data = domestics.filter(d=>d.status==='completed');
   if (db) { try { const res=await db.from('domestics').select('cleaner,date,amount_paid,property_id,status').eq('status','completed').order('date',{ascending:false}); if(res.data&&res.data.length>0)data=res.data; } catch(e){} }
   const earnings={};
