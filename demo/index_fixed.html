@@ -2550,12 +2550,13 @@ function openPhotoModal(inspId, photoIdx) {
 }
 
 function deleteInspection(id) {
-  if (!confirm('Delete this inspection report?')) return;
-  inspections = inspections.filter(r=>r.id!==id);
-  localStorage.setItem('hep_inspections', JSON.stringify(inspections));
-  toast('Report deleted','info');
-  renderInspectionHistory();
-  renderReportInspections();
+  confirmAction('Delete this inspection report?', () => {
+    inspections = inspections.filter(r=>r.id!==id);
+    localStorage.setItem('hep_inspections', JSON.stringify(inspections));
+    toast('Report deleted','info');
+    renderInspectionHistory();
+    renderReportInspections();
+  }, 'Delete');
 }
 
 function setInspFilter(filter, btn) {
@@ -2617,15 +2618,16 @@ const rid = r.id;
   }).join('');
 }
 
-async function deleteInventoryReport(id) {
-  if (!confirm('Delete this inventory report? This cannot be undone.')) return;
-  if (db) {
-    const { error } = await db.from('inventory_reports').delete().eq('id', id);
-    if (error) { toast('Delete error: '+error.message,'error'); return; }
-  }
-  inventoryReports = inventoryReports.filter(r => r.id !== id);
-  toast('Report deleted','info');
-  renderReportInventory();
+function deleteInventoryReport(id) {
+  confirmAction('Delete this inventory report? This cannot be undone.', async () => {
+    if (db) {
+      const { error } = await db.from('inventory_reports').delete().eq('id', id);
+      if (error) { toast('Delete error: '+error.message,'error'); return; }
+    }
+    inventoryReports = inventoryReports.filter(r => r.id !== id);
+    toast('Report deleted','info');
+    renderReportInventory();
+  }, 'Delete');
 }
 
 function renderReportInspections() {
@@ -4035,7 +4037,8 @@ const ROADMAP = [
   {k:'p0-39',t:'p0-38 fixes: SQL join type mismatch, unquoted domestic ID breaking Edit/Delete, phone made optional',n:'DONE — three real bugs found on first live run. (1) 390\'s migration errored ("operator does not exist: uuid = text") because domestics.property_id is stored as EITHER the real UUID or the short key (\'speranta\'/\'tvhouse\') depending on vintage — same drift already handled defensively elsewhere in the JS (openInventory(), computeOwnerStatementCosts()) but missed in the new SQL functions\' first pass. Both get_outside_clean_info and submit_outside_inventory now resolve the short key the same way. (2) The actual cause of "unable to edit the clean": three onclick call sites (booking-detail modal\'s linked-cleaning Edit/Delete, the calendar day-modal\'s cleaning chip, the domestic list\'s Edit/Delete) interpolated the domestic\'s id UNQUOTED — editCleaning(${d.id}) instead of editCleaning(\'${d.id}\') — which produces invalid JS the moment a UUID id (containing letters and hyphens) is substituted in, so the click silently did nothing. Two other call sites already quoted it correctly; all three broken ones now match. (3) Requiring a phone number to save ANY "Other" cleaning would ALSO have broken editing older entries saved before that field existed (e.g. a legacy "Nicole" entry with no phone on file) — phone is now encouraged (still needed for payment and to auto-send the inventory link) but no longer blocks saving/editing when absent. Also reworded the "Other" cleaner info box per feedback',c:'Bug'},
   {k:'p0-40',t:'Outside cleaner: real photo cleaning guide + one-click send + self-test link',n:'DONE — (1) "Other" cleaner info box reworded again: dropped the "we\'ll need it for payment anyway" line and the two old manual-fallback buttons (copy checklist text / open property inventory), replaced with a single green "Send inventory link & cleaning guideline to domestic" button that triggers the normal save (unchanged saveDomestic() flow, just relabelled/consolidated). (2) The real Speranta cleaning guide PDF the owner sent (room-by-room checklists with photos — Kitchen inventory, Bathroom, Main Bedroom, Living Room/balcony, Second Bedroom) is now hosted as a static asset (demo/guides/speranta-cleaning-guide.pdf, routed via a new vercel.json rewrite to /speranta-cleaning-guide.pdf) and linked directly in the WhatsApp message via a new CLEANING_GUIDE_URLS map — chosen over converting the PDF\'s photos into WhatsApp text as the simplest, least fragile option. Properties without a guide yet (TV House) keep falling back to the existing plain-text STANDARD_CLEANING_PLAN checklist. (3) Saving an outside cleaning with a phone number no longer auto-closes the modal — it now opens WhatsApp AND shows a confirmation panel with a direct "Open the link myself" link plus a Done button, so the coordinator can immediately test the exact link the cleaner received before trusting it to them',c:'Bug'},
   {k:'p0-41',t:'p0-40 fix: WhatsApp send was silently blocked by popup blockers; edits never sent at all; no send history',n:'DONE — three real bugs found on first live test. (1) "saved the cleaning but no message sent": the old code called window.open() for the WhatsApp compose window AFTER awaiting the Supabase insert — an await breaks a click\'s "user activation" in most browsers, so that window.open() gets silently blocked by the popup blocker with no error surfaced anywhere. Fixed by opening a blank tab SYNCHRONOUSLY inside the button\'s click handler (sendOutsideCleanerNow(), before any await), then navigating that already-open tab to the wa.me/web.whatsapp.com URL once the save finishes — setting .location on an already-open window is allowed even across origins, unlike calling window.open() late. (2) "also not after opening it up again": saveDomestic()\'s UPDATE branch (editing an existing cleaning) never called sendOutsideCleanerWhatsApp at all — only the INSERT branch did, so resending from an edit silently did nothing but save. The dedicated Send button now passes an explicit sendWhatsApp flag through saveDomestic() that both the insert AND update branches honour, so resending on an edit works exactly like the first send. (3) "no way of past messages sent checked": added domestics.link_sent_at (migration 430), set whenever a send actually happens; the "Other" cleaner box now shows "Last sent <date> — resend any time" and relabels the button "Resend…" instead of giving no indication either way',c:'Bug'},
-  {k:'p0-42',t:'Outside-cleaner inventory submit failed: RPC assumed domestics.org_id exists',n:'DONE — submit_outside_inventory (390) errored "column \\"org_id\\" does not exist" on the first real cleaner-side test, only surfaced because outside-cleaner.html\'s submit failure alert was a hardcoded generic message ("check your connection") until this round — fixed that too, it now shows the real e.message. Root cause: the function selected org_id straight off public.domestics, but that table has no such column — demo/index_fixed.html\'s own saveDomestic() never sets one when creating a domestics row, and the staff portal\'s own inventory insert (demo/domestic.html submitInventory) sources org_id from a hardcoded ORG_ID constant rather than the clean record, which is why this went unnoticed until now. get_outside_clean_info never touched org_id, which is why it worked on the first try while this one didn\'t. Migration 450 resolves org_id from public.properties instead (which does carry it, same as everywhere else in the app), joined via the same short-key -> UUID property resolution already used throughout',c:'Bug'}]},
+  {k:'p0-42',t:'Outside-cleaner inventory submit failed: RPC assumed domestics.org_id exists',n:'DONE — submit_outside_inventory (390) errored "column \\"org_id\\" does not exist" on the first real cleaner-side test, only surfaced because outside-cleaner.html\'s submit failure alert was a hardcoded generic message ("check your connection") until this round — fixed that too, it now shows the real e.message. Root cause: the function selected org_id straight off public.domestics, but that table has no such column — demo/index_fixed.html\'s own saveDomestic() never sets one when creating a domestics row, and the staff portal\'s own inventory insert (demo/domestic.html submitInventory) sources org_id from a hardcoded ORG_ID constant rather than the clean record, which is why this went unnoticed until now. get_outside_clean_info never touched org_id, which is why it worked on the first try while this one didn\'t. Migration 450 resolves org_id from public.properties instead (which does carry it, same as everywhere else in the app), joined via the same short-key -> UUID property resolution already used throughout',c:'Bug'},
+  {k:'p0-43',t:'Convert all remaining window.confirm() calls to the non-blocking confirmAction() modal',n:'DONE — p0-35 fixed deleteBooking()/declineBooking() and explicitly flagged 8 other confirm() call sites as a deferred follow-up; owner kept hitting the same "INP Issue — blocked UI updates" false-positive elsewhere in the app (e.g. approving a booking, deleting a task), confirming it was the same root cause repeating. Converted the rest: deleteInspection, deleteInventoryReport, approveBooking, deleteCleaning, deleteTask, deleteTaskFromDrawer, kmDeleteRoom (checklist room removal), deleteContact. Same pattern throughout — the function becomes a synchronous dispatcher that opens the #confirm-modal and only runs the actual delete/approve once the user clicks its own button, so the triggering click always returns immediately. No window.confirm() calls remain anywhere in the app',c:'Bug'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -4932,8 +4935,12 @@ function openBookingDetail(bookingId) {
   openModal('day-modal');
 }
 
-async function approveBooking(id) {
-  if (!confirm('Approve this booking? A confirmation email will be sent to the guest.')) return;
+function approveBooking(id) {
+  confirmAction('Approve this booking? A confirmation email will be sent to the guest.', async () => {
+    await approveBookingConfirmed(id);
+  }, 'Approve');
+}
+async function approveBookingConfirmed(id) {
   const b = bookings.find(x=>String(x.id)===String(id));
   if (!b) return;
 
@@ -6040,19 +6047,20 @@ async function editCleaning(id) {
   }
 }
 
-async function deleteCleaning(id) {
-  if (!confirm('Delete this cleaning session?')) return;
-  if (db) {
-    const {error} = await db.from('domestics').delete().eq('id', id);
-    if (error) { toast('Delete error: '+error.message,'error'); return; }
-  }
-  const idx = domestics.findIndex(d=>d.id===id);
-  if (idx>-1) domestics.splice(idx,1);
-  toast('Cleaning deleted','info');
-  closeModal('day-modal');
-  renderCalendar();
-  renderBookings();
-  if (typeof renderDomestic==='function') renderDomestic();
+function deleteCleaning(id) {
+  confirmAction('Delete this cleaning session?', async () => {
+    if (db) {
+      const {error} = await db.from('domestics').delete().eq('id', id);
+      if (error) { toast('Delete error: '+error.message,'error'); return; }
+    }
+    const idx = domestics.findIndex(d=>d.id===id);
+    if (idx>-1) domestics.splice(idx,1);
+    toast('Cleaning deleted','info');
+    closeModal('day-modal');
+    renderCalendar();
+    renderBookings();
+    if (typeof renderDomestic==='function') renderDomestic();
+  }, 'Delete');
 }
 
 
@@ -6635,15 +6643,16 @@ async function moveKanban(taskId, newCol) {
   renderKanban();
 }
 
-async function deleteTask(taskId) {
-  if (!confirm('Delete this task?')) return;
-  if (db) {
-    const { error } = await db.from('tasks').delete().eq('id',taskId);
-    if (error) { toast('Delete error: '+error.message,'error'); return; }
-  }
-  tasks.splice(tasks.findIndex(x=>String(x.id)===String(taskId)),1);
-  toast('Task deleted','info');
-  renderTasks();
+function deleteTask(taskId) {
+  confirmAction('Delete this task?', async () => {
+    if (db) {
+      const { error } = await db.from('tasks').delete().eq('id',taskId);
+      if (error) { toast('Delete error: '+error.message,'error'); return; }
+    }
+    tasks.splice(tasks.findIndex(x=>String(x.id)===String(taskId)),1);
+    toast('Task deleted','info');
+    renderTasks();
+  }, 'Delete');
 }
 
 function openTaskModalForKanban(colId) {
@@ -7335,10 +7344,11 @@ function kmAddRoom() {
   kmSaveInventory(content);
 }
 function kmDeleteRoom(ri) {
-  if (!confirm('Remove this room from the checklist?')) return;
-  const content = kmContent('inventory', {rooms:[]});
-  content.rooms = content.rooms.filter((_,i)=>i!==ri);
-  kmSaveInventory(content);
+  confirmAction('Remove this room from the checklist?', () => {
+    const content = kmContent('inventory', {rooms:[]});
+    content.rooms = content.rooms.filter((_,i)=>i!==ri);
+    kmSaveInventory(content);
+  }, 'Remove');
 }
 function kmUpdateRoom(ri, field, val) {
   const content = kmContent('inventory', {rooms:[]});
@@ -8299,11 +8309,12 @@ function saveNewContact() {
 }
 
 function deleteContact(id) {
-  if (!confirm('Delete this contact?')) return;
-  _customContacts = _customContacts.filter(c=>c.id!==id);
-  localStorage.setItem('hep_contacts', JSON.stringify(_customContacts));
-  toast('Contact deleted','info');
-  renderTeam();
+  confirmAction('Delete this contact?', () => {
+    _customContacts = _customContacts.filter(c=>c.id!==id);
+    localStorage.setItem('hep_contacts', JSON.stringify(_customContacts));
+    toast('Contact deleted','info');
+    renderTeam();
+  }, 'Delete');
 }
 
 function renderTeam() {
@@ -8675,11 +8686,13 @@ function showInventoryReport(reportId) {
   setTimeout(()=>{ const el=document.getElementById('dom-inv-reports'); if(el) el.scrollIntoView({behavior:'smooth'}); },400);
 }
 
-async function deleteTaskFromDrawer() {
-  if (!_drawerTaskId||!confirm('Delete this task?')) return;
-  if (db) await db.from('tasks').delete().eq('id',_drawerTaskId);
-  tasks.splice(tasks.findIndex(x=>String(x.id)===String(_drawerTaskId)),1);
-  closeTaskDrawer(); renderTasks(); toast('Task deleted','info');
+function deleteTaskFromDrawer() {
+  if (!_drawerTaskId) return;
+  confirmAction('Delete this task?', async () => {
+    if (db) await db.from('tasks').delete().eq('id',_drawerTaskId);
+    tasks.splice(tasks.findIndex(x=>String(x.id)===String(_drawerTaskId)),1);
+    closeTaskDrawer(); renderTasks(); toast('Task deleted','info');
+  }, 'Delete');
 }
 
 </script>

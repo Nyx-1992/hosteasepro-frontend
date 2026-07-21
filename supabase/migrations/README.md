@@ -70,6 +70,7 @@ order.
 | 440_roadmap_state_p0_41.sql | both | Marks Roadmap item p0-41 (p0-40 fix: WhatsApp send silently blocked by popup blockers, edits never sent at all, no send history) done |
 | 450_fix_submit_outside_inventory_org_id.sql | both | Fixes `submit_outside_inventory` (390), which errored `column "org_id" does not exist` on first live submit — it assumed `domestics` has an `org_id` column; it doesn't. Now resolves `org_id` from `properties` instead, same as the rest of the app does |
 | 460_roadmap_state_p0_42.sql | both | Marks Roadmap item p0-42 (outside-cleaner inventory submit failed: RPC assumed domestics.org_id exists) done |
+| 470_roadmap_state_p0_43.sql | both | Marks Roadmap item p0-43 (convert all remaining window.confirm() calls to the non-blocking confirmAction() modal) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
