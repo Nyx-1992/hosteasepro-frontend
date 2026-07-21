@@ -305,10 +305,13 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .msg-meta{font-size:.7rem;color:var(--muted);margin-bottom:3px}
 .msg-from{background:var(--sand);color:var(--ink);border-radius:14px 14px 14px 3px}
 .msg-mine{background:var(--accent);color:#fff;border-radius:14px 14px 3px 14px}
-/* LEGEND */
-.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:.78rem}
-.legend-dot{width:11px;height:11px;border-radius:2px;flex-shrink:0}
+/* LEGEND — ticket panels + chips */
+.legend-panels{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
+.legend-panel{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);flex:1;min-width:220px;padding:14px 16px}
+.legend-ptitle{font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+.legend-chips{display:flex;gap:6px;flex-wrap:wrap}
+.legend-chip{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:600;padding:5px 12px;border-radius:20px}
+.legend-cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 /* TOAST */
 .toast-wrap{position:fixed;bottom:22px;right:22px;z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 @media(max-width:768px){
@@ -597,17 +600,25 @@ function _buildMobileNavStub(){/* replaced by main script */}
           </div>
 
           <!-- Legend -->
-          <div class="card" style="margin-top:12px">
-            <div class="card-title">Legend</div>
-            <div class="legend">
-              <div class="legend-item"><div class="legend-dot" style="background:#E14666"></div>Airbnb</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#1E4C85"></div>Booking.com</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#F6C445"></div>LekkeSlaap</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#A8702E"></div>Direct/Manual</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>🧹 Cleaning</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>🔒 Blocked</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#e5e7eb;text-decoration:line-through;opacity:0.5;"></div>❌ Cancelled</div>
+          <div class="strip-label" style="margin-top:16px">Legend</div>
+          <div class="legend-panels">
+            <div class="legend-panel">
+              <div class="legend-ptitle">Platforms</div>
+              <div class="legend-chips">
+                <span class="legend-chip" style="background:#E1466618;color:#E14666"><span class="legend-cdot" style="background:#E14666"></span>Airbnb</span>
+                <span class="legend-chip" style="background:#1E4C8518;color:#1E4C85"><span class="legend-cdot" style="background:#1E4C85"></span>Booking.com</span>
+                <span class="legend-chip" style="background:#F6C44530;color:#8a6a10"><span class="legend-cdot" style="background:#F6C445"></span>LekkeSlaap</span>
+                <span class="legend-chip" style="background:#A8702E18;color:#A8702E"><span class="legend-cdot" style="background:#A8702E"></span>Direct/Manual</span>
+                <span class="legend-chip" style="background:#64748b18;color:#64748b"><span class="legend-cdot" style="background:#64748b"></span>Owner Stay</span>
+              </div>
+            </div>
+            <div class="legend-panel">
+              <div class="legend-ptitle">Status</div>
+              <div class="legend-chips">
+                <span class="legend-chip" style="background:#06b6d418;color:#0891b2"><span class="legend-cdot" style="background:#06b6d4"></span>🧹 Cleaning</span>
+                <span class="legend-chip" style="background:#94a3b818;color:#64748b"><span class="legend-cdot" style="background:#94a3b8"></span>🔒 Blocked</span>
+                <span class="legend-chip" style="background:#e5e7eb90;color:#64748b;text-decoration:line-through;opacity:.75"><span class="legend-cdot" style="background:#e5e7eb"></span>❌ Cancelled</span>
+              </div>
             </div>
           </div>
         </div>
