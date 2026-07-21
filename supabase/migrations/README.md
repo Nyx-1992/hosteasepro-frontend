@@ -58,6 +58,7 @@ order.
 | 330_org_settings_account_name_fix.sql | both | Corrects `org_settings.account_name` from `"SN Apt Management"` to `"S&N Apt Management"` if present — it was missing the ampersand used everywhere else on the invoice/Management Invoice documents |
 | 340_roadmap_state_p0_34.sql | both | Marks Roadmap item p0-34 (round 2 post-review fixes: WhatsApp interstitial, TV House message, Management Invoice polish) done |
 | 350_roadmap_state_p0_35.sql | both | Marks Roadmap item p0-35 (real root cause of the recurring "INP Issue" popup on booking delete — window.confirm() blocking the main thread) done |
+| 360_roadmap_state_p0_36.sql | both | Marks Roadmap item p0-36 (Guest Timeline: drop redundant Check-in day message, make every stage always previewable/resendable) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
