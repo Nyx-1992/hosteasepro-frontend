@@ -128,15 +128,13 @@ h2,h3{font-family:"DM Serif Display",serif}
 .stat-sub{font-size:.76rem;color:var(--muted);margin-top:3px}
 .tab-num{font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
 .strip-label{font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 10px;padding:0 2px}
-/* Console strip — dashboard's live stat segments */
-.dash-console{display:flex;flex-wrap:wrap;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden}
-.dash-seg{flex:1;min-width:170px;padding:16px 18px;border-right:1px solid var(--border);position:relative}
-.dash-seg:last-child{border-right:none}
+/* Console strip — dashboard's live stat segments (separate tiles) */
+.dash-console{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.dash-seg{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);padding:16px 18px;position:relative;overflow:hidden}
 .dash-seg::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--seg-c,var(--accent))}
 .dash-seg .k{font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
 .dash-seg .v{font-family:"DM Serif Display",serif;font-size:1.5rem;color:var(--ink)}
 .dash-seg .n{font-size:.74rem;color:var(--muted);margin-top:4px}
-@media(max-width:700px){.dash-seg{flex:1 1 50%;border-bottom:1px solid var(--border)}}
 /* Log panel — dashboard Urgent Actions */
 .log-panel{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden}
 .log-hero{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border);cursor:pointer}
@@ -216,10 +214,12 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 /* CALENDAR */
 .cal-wrap{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:20px}
 .cal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
-.cal-month{font-family:"DM Serif Display",serif;font-weight:700;font-size:1.5rem;letter-spacing:.01em}
+.cal-month{font-family:"DM Sans",sans-serif;font-weight:700;font-size:1.4rem}
 .cal-nav{display:flex;gap:8px}
 .cal-nav button{background:var(--sand);border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:.84rem;transition:all .15s}
 .cal-nav button:hover{background:var(--warm);border-color:var(--accent)}
+.cal-toggle-btn{padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
+.cal-toggle-btn.active{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border);border-top:1px solid var(--border)}
 .cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);background:var(--sand);letter-spacing:.05em}
 .cal-cell{min-height:88px;padding:4px 0 2px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:#fff;cursor:pointer;overflow:visible;position:relative;box-sizing:border-box}
@@ -521,12 +521,9 @@ function _buildMobileNavStub(){/* replaced by main script */}
             <div style="display:flex;align-items:center;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px">
               <!-- Property -->
               <div style="display:flex;gap:3px;flex-shrink:0" id="cal-prop-toggle">
-                <button class="active" onclick="setCalProp('all',this)"
-                  style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">All</button>
-                <button onclick="setCalProp('speranta',this)"
-                  style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">SP</button>
-                <button onclick="setCalProp('tvhouse',this)"
-                  style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">TV</button>
+                <button class="cal-toggle-btn active" onclick="setCalProp('all',this)">All</button>
+                <button class="cal-toggle-btn" onclick="setCalProp('speranta',this)">SP</button>
+                <button class="cal-toggle-btn" onclick="setCalProp('tvhouse',this)">TV</button>
               </div>
               <!-- Divider -->
               <span style="width:1px;height:20px;background:var(--border);display:inline-block;flex-shrink:0"></span>
@@ -5351,7 +5348,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const rl = isRealStart ? '4px':'0';
         const rr = isRealEnd   ? '4px':'0';
         const showLabel = isRealStart||isWeekStart;
-        const icon = isRealStart ? '🛬 ' : isWeekStart ? '↳ ' : '';
+        const icon = isRealStart ? '🛬 ' : '';
         const label = showLabel ? propTag+icon+shortName : ' ';
         const bar = document.createElement('div');
         // Explicit inline styles for Safari compatibility — no CSS class width inheritance
