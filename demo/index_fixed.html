@@ -147,6 +147,22 @@ h2,h3{font-family:"DM Serif Display",serif}
 .log-row .sev{font-family:var(--font-mono);font-size:1rem;width:18px;flex-shrink:0;text-align:center}
 .log-row .msg{font-size:.8rem;color:var(--ink);flex:1;min-width:0}
 .log-row .go{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);flex-shrink:0}
+/* Contact badge — Team & Contacts, role-colored band */
+.contact-badge{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden;position:relative;transition:box-shadow .15s}
+.contact-badge:hover{box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.contact-band{height:48px}
+.contact-avatar{position:absolute;top:29px;left:14px;width:38px;height:38px;border-radius:50%;background:var(--surface);border:3px solid var(--surface);display:flex;align-items:center;justify-content:center;font-family:"DM Serif Display",serif;font-size:.8rem;box-shadow:0 2px 6px rgba(0,0,0,.15);color:var(--ink)}
+.contact-del{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.3);border:none;border-radius:6px;width:22px;height:22px;cursor:pointer;color:#fff;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+.contact-info{padding:25px 14px 14px}
+.contact-name{font-weight:700;font-size:.9rem;color:var(--ink)}
+.contact-role{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.03em}
+.contact-row{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:.8rem;margin-top:8px}
+.contact-row .lbl{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contact-actions{display:flex;gap:4px;flex-shrink:0}
+.contact-actions a,.contact-row>a{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:.7rem;text-decoration:none;color:var(--ink)}
+.contact-actions a.wa{background:#25D366;color:#fff;border:none}
+.contact-sub{background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-top:8px}
+.contact-note{font-size:.75rem;color:var(--muted);font-style:italic;margin-top:8px;line-height:1.4}
 .tab-pane{width:100%}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .mb-4{margin-bottom:14px}.mb-6{margin-bottom:22px}
@@ -8268,24 +8284,25 @@ function toast(msg,type='info'){
 // ── CONTACTS DATA ────────────────────────────────────────────
 const BUILTIN_CONTACTS = [
   // Management
-  {id:'c-nicole',  cat:'management', name:'Nicole Babczyk',    role:'Co-Owner / Admin',        phone:'+27 63 602 1847',   email:'sn_apt_management@outlook.com',  wa:'+27636021847',  note:'Co-founder S&N Apt Management. Manages bookings, finances & operations.', color:'var(--accent)',  initials:'N'},
-  {id:'c-silja',   cat:'management', name:'Silja Faltin',      role:'Co-Owner / Admin',        phone:'',                  email:'s.faltin@tischlerei-faltin.de',  wa:'',              note:'Co-founder. TV House owner liaison.', color:'#7c3aed', initials:'S'},
-  {id:'c-nina',    cat:'management', name:'Nina Williams',      role:'Host Expert',             phone:'+27 79 977 9455',   email:'vanwyk.nina@gmail.com',          wa:'+27636021847',  note:'On-ground host manager. Business WhatsApp for all guest contact.', color:'var(--green2)', initials:'NW'},
+  {id:'c-nicole',  cat:'management', name:'Nicole Babczyk',    role:'Co-Owner / Admin',        phone:'+27 63 602 1847',   email:'sn_apt_management@outlook.com',  wa:'+27636021847',  note:'Co-founder S&N Apt Management. Manages bookings, finances & operations.', initials:'N'},
+  {id:'c-silja',   cat:'management', name:'Silja Faltin',      role:'Co-Owner / Admin',        phone:'',                  email:'s.faltin@tischlerei-faltin.de',  wa:'',              note:'Co-founder. TV House owner liaison.', initials:'S'},
+  {id:'c-nina',    cat:'management', name:'Nina Williams',      role:'Host Expert',             phone:'+27 79 977 9455',   email:'vanwyk.nina@gmail.com',          wa:'+27636021847',  note:'On-ground host manager. Business WhatsApp for all guest contact.', initials:'NW'},
   // Domestic
-  {id:'c-blessing',cat:'domestic',   name:'Blessing',          role:'Cleaner — Speranta',      phone:'062 532 2932',      email:'',    wa:'27625322932', note:'Paid via ewallet directly. Rate: R350/clean.', color:'#f59e0b', initials:'BL'},
-  {id:'c-fatima',  cat:'domestic',   name:'Fatima',            role:'Cleaner — Both properties',phone:'063 175 8111',     email:'',    wa:'27631758111', note:'Covers both properties. R350 Speranta / R450 TV House.', color:'#8b5cf6', initials:'FA'},
-  {id:'c-patricia',cat:'domestic',   name:'Patricia Mutizwa',  role:'Cleaner — TV House',      phone:'063 735 3892',      email:'',    wa:'27637353892', note:'Primary TV House cleaner. EFT payment. R350 Speranta / R450 TV House.', color:'#10b981', initials:'PM'},
-  {id:'c-spiwe',   cat:'domestic',   name:'Spiwe Gwingwizna',  role:'Cleaner — Speranta',      phone:'084 915 0894',      email:'',    wa:'27849150894', note:'Speranta cleaner. Ewallet payment. R350/clean.', color:'#3b82f6', initials:'SP'},
-  {id:'c-tino',    cat:'domestic',   name:'Takudzwa Dumbura',  role:'Caretaker (Tino)',        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat with wife Keithy. Born 13 July 1996.', color:'#64748b', initials:'TI'},
-  {id:'c-keithy',  cat:'domestic',   name:'Keithy Ngwenya',    role:"Caretaker's Wife",        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat. Born 9 February 1997.', color:'#94a3b8', initials:'KE'},
+  {id:'c-blessing',cat:'domestic',   name:'Blessing',          role:'Cleaner — Speranta',      phone:'062 532 2932',      email:'',    wa:'27625322932', note:'Paid via ewallet directly. Rate: R350/clean.', initials:'BL'},
+  {id:'c-fatima',  cat:'domestic',   name:'Fatima',            role:'Cleaner — Both properties',phone:'063 175 8111',     email:'',    wa:'27631758111', note:'Covers both properties. R350 Speranta / R450 TV House.', initials:'FA'},
+  {id:'c-patricia',cat:'domestic',   name:'Patricia Mutizwa',  role:'Cleaner — TV House',      phone:'063 735 3892',      email:'',    wa:'27637353892', note:'Primary TV House cleaner. EFT payment. R350 Speranta / R450 TV House.', initials:'PM'},
+  {id:'c-spiwe',   cat:'domestic',   name:'Spiwe Gwingwizna',  role:'Cleaner — Speranta',      phone:'084 915 0894',      email:'',    wa:'27849150894', note:'Speranta cleaner. Ewallet payment. R350/clean.', initials:'SP'},
+  {id:'c-tino',    cat:'domestic',   name:'Takudzwa Dumbura',  role:'Caretaker (Tino)',        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat with wife Keithy. Born 13 July 1996.', initials:'TI'},
+  {id:'c-keithy',  cat:'domestic',   name:'Keithy Ngwenya',    role:"Caretaker's Wife",        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat. Born 9 February 1997.', initials:'KE'},
   // Maintenance
-  {id:'c-pool',    cat:'maintenance', name:'Pool Service',      role:'Swimming Pool Maintenance',phone:'',                 email:'',    wa:'',            note:'Contact details TBC. Add pool service provider here.', color:'#0ea5e9', initials:'🏊'},
+  {id:'c-pool',    cat:'maintenance', name:'Pool Service',      role:'Swimming Pool Maintenance',phone:'',                 email:'',    wa:'',            note:'Contact details TBC. Add pool service provider here.', initials:'🏊'},
   // Suppliers
-  {id:'c-weatherprofe', cat:'supplier', name:'WeatherProfe Paint Shop', role:'Paint Supplier', phone:'',                  email:'',    wa:'',            note:'Personal contact: Heather, front desk.', color:'#84cc16', initials:'WP',
+  {id:'c-weatherprofe', cat:'supplier', name:'WeatherProfe Paint Shop', role:'Paint Supplier', phone:'',                  email:'',    wa:'',            note:'Personal contact: Heather, front desk.', initials:'WP',
     contacts:[{name:'Heather', role:'Front Desk', phone:'083 445 6126', email:''}]},
-  {id:'c-dropalong', cat:'supplier',  name:'Drop Along Plumbing', role:'Plumbing Contractor',  phone:'',                  email:'',    wa:'',            note:'Trusted plumbing contractor.',          color:'#f97316', initials:'DA',
+  {id:'c-dropalong', cat:'supplier',  name:'Drop Along Plumbing', role:'Plumbing Contractor',  phone:'',                  email:'',    wa:'',            note:'Trusted plumbing contractor.',          initials:'DA',
     contacts:[{name:'Francois van Wyk', role:'Personal Contact', phone:'084 075 4684', email:'francois@ldrop.co.za', wa:'27840754684'}]},
 ];
+const CAT_COLORS = {management:'var(--accent)', domestic:'var(--teal)', maintenance:'var(--coral)', supplier:'var(--muted)', other:'var(--muted)'};
 
 let _customContacts = JSON.parse(localStorage.getItem('hep_contacts')||'[]');
 let _contactFilter  = 'all';
@@ -8348,7 +8365,6 @@ function saveNewContact() {
     email:   document.getElementById('nc-email').value,
     wa:      document.getElementById('nc-wa').value,
     note:    document.getElementById('nc-notes').value,
-    color:   '#64748b',
     initials: name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
     contacts: contactName ? [{name:contactName, phone:contactPhone, email:contactEmail}] : [],
   };
@@ -8409,49 +8425,44 @@ function renderTeam() {
 function contactCard(c) {
   const isCustom = c.id.startsWith('cc-');
   const subContacts = (c.contacts||[]).filter(x=>x.name||x.phone);
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;border-top:3px solid ${c.color};transition:box-shadow .15s"
-    onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'">
-    <!-- Header -->
-    <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:11px">
-      <div style="width:38px;height:38px;border-radius:10px;background:${c.color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:${c.initials.length>2?'.9rem':'.82rem'};font-weight:700;flex-shrink:0">${c.initials}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:.9rem;color:var(--ink)">${c.name}</div>
-        <div style="font-size:.74rem;color:var(--muted);margin-top:1px">${c.role||''}</div>
-      </div>
-      ${isCustom?`<button onclick="deleteContact('${c.id}')" title="Delete" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;padding:2px;flex-shrink:0">✕</button>`:''}
-    </div>
-    <!-- Contact info -->
-    <div style="font-size:.8rem;display:flex;flex-direction:column;gap:4px;margin-bottom:${subContacts.length||c.note?'10px':'0'}">
-      ${c.phone?`<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-        <span style="color:var(--muted)">📱 ${c.phone}</span>
-        <div style="display:flex;gap:4px">
-          <a href="tel:${c.phone}" style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:.7rem;text-decoration:none;color:var(--ink)">Call</a>
-          ${c.wa?`<a href="https://wa.me/${c.wa}" target="_blank" style="background:#25D366;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;text-decoration:none">WA</a>`:''}
+  const col = CAT_COLORS[c.cat] || 'var(--muted)';
+  return `<div class="contact-badge">
+    <div class="contact-band" style="background:${col}"></div>
+    ${isCustom?`<button class="contact-del" onclick="deleteContact('${c.id}')" title="Delete">✕</button>`:''}
+    <div class="contact-avatar" style="font-size:${c.initials.length>2?'.72rem':'.8rem'}">${c.initials}</div>
+    <div class="contact-info">
+      <div class="contact-name">${c.name}</div>
+      <div class="contact-role">${c.role||''}</div>
+      ${c.phone?`<div class="contact-row">
+        <span class="lbl">📱 ${c.phone}</span>
+        <div class="contact-actions">
+          <a href="tel:${c.phone}">Call</a>
+          ${c.wa?`<a class="wa" href="https://wa.me/${c.wa}" target="_blank">WA</a>`:''}
         </div>
       </div>`:''}
-      ${c.email?`<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-        <span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">✉️ ${c.email}</span>
-        <a href="mailto:${c.email}" style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:.7rem;text-decoration:none;color:var(--ink);flex-shrink:0">Email</a>
+      ${c.email?`<div class="contact-row">
+        <span class="lbl">✉️ ${c.email}</span>
+        <a href="mailto:${c.email}">Email</a>
       </div>`:''}
+      <!-- Personal contacts (sub-contacts) -->
+      ${subContacts.map(sc=>`
+        <div class="contact-sub">
+          <div style="font-size:.76rem;font-weight:600;color:var(--ink);margin-bottom:3px">${sc.name}${sc.role?` <span style="font-weight:400;color:var(--muted)">· ${sc.role}</span>`:''}</div>
+          ${sc.phone?`<div class="contact-row" style="margin-top:0;font-size:.74rem">
+            <span class="lbl">📱 ${sc.phone}</span>
+            <div class="contact-actions">
+              <a href="tel:${sc.phone}">Call</a>
+              ${sc.wa?`<a class="wa" href="https://wa.me/${sc.wa}" target="_blank">WA</a>`:''}
+            </div>
+          </div>`:''}
+          ${sc.email?`<div class="contact-row" style="margin-top:2px;font-size:.74rem">
+            <span class="lbl">✉️ ${sc.email}</span>
+            <a href="mailto:${sc.email}">Email</a>
+          </div>`:''}
+        </div>`).join('')}
+      <!-- Notes -->
+      ${c.note?`<div class="contact-note">${c.note}</div>`:''}
     </div>
-    <!-- Personal contacts (sub-contacts) -->
-    ${subContacts.map(sc=>`
-      <div style="background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:2px solid ${c.color}">
-        <div style="font-size:.76rem;font-weight:600;color:var(--ink);margin-bottom:3px">${sc.name}${sc.role?` <span style="font-weight:400;color:var(--muted)">· ${sc.role}</span>`:''}  </div>
-        ${sc.phone?`<div style="font-size:.74rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between">
-          <span>📱 ${sc.phone}</span>
-          <div style="display:flex;gap:3px">
-            <a href="tel:${sc.phone}" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:.68rem;text-decoration:none;color:var(--ink)">Call</a>
-            ${sc.wa?`<a href="https://wa.me/${sc.wa}" target="_blank" style="background:#25D366;color:#fff;border-radius:5px;padding:1px 6px;font-size:.68rem;text-decoration:none">WA</a>`:''}
-          </div>
-        </div>`:''}
-        ${sc.email?`<div style="font-size:.74rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between;margin-top:2px">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">✉️ ${sc.email}</span>
-          <a href="mailto:${sc.email}" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:.68rem;text-decoration:none;color:var(--ink);flex-shrink:0;margin-left:4px">Email</a>
-        </div>`:''}
-      </div>`).join('')}
-    <!-- Notes -->
-    ${c.note?`<div style="font-size:.75rem;color:var(--muted);font-style:italic;margin-top:${subContacts.length?'4px':'0'};line-height:1.4">${c.note}</div>`:''}
   </div>`;
 }
 
