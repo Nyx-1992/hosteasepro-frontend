@@ -163,6 +163,28 @@ h2,h3{font-family:"DM Serif Display",serif}
 .contact-actions a.wa{background:#25D366;color:#fff;border:none}
 .contact-sub{background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-top:8px}
 .contact-note{font-size:.75rem;color:var(--muted);font-style:italic;margin-top:8px;line-height:1.4}
+/* Bookings lane card — stat segments + connected rail (Console x Timeline) */
+.lane-card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sh)}
+.lane-hd{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+.lane-name{font-weight:700;font-size:1.02rem;color:var(--ink)}
+.lane-addr{font-size:.74rem;color:var(--muted);margin-top:2px}
+.lane-segs{display:flex;border-bottom:1px solid var(--border)}
+.lane-seg{flex:1;padding:9px 12px;border-right:1px solid var(--border);text-align:center}
+.lane-seg:last-child{border-right:none}
+.lane-seg .k{font-family:var(--font-mono);font-size:.58rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+.lane-seg .v{font-size:.85rem;margin-top:2px;font-weight:700;color:var(--ink)}
+.lane-body{padding:14px 18px 4px;flex:1;overflow-y:auto;max-height:520px}
+.lane-rail{position:relative;padding-left:20px}
+.lane-rail::before{content:'';position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.lane-node{position:relative;padding-bottom:14px}
+.lane-node:last-child{padding-bottom:0}
+.lane-dot{position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--border);border:2px solid var(--surface)}
+.lane-dot.now{background:var(--blue)}
+.lane-now-card{background:#2F6FED0A;border:1px solid #2F6FED22;border-radius:10px;padding:12px 14px;margin-left:-14px}
+.lane-nname{font-weight:700;font-size:.9rem;color:var(--ink)}
+.lane-nsub{font-size:.75rem;color:var(--muted);margin-top:2px}
+.lane-item{border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-left:-14px;transition:box-shadow .15s}
+.lane-item:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
 .tab-pane{width:100%}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .mb-4{margin-bottom:14px}.mb-6{margin-bottom:22px}
@@ -234,8 +256,15 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-nav{display:flex;gap:8px}
 .cal-nav button{background:var(--sand);border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:.84rem;transition:all .15s}
 .cal-nav button:hover{background:var(--warm);border-color:var(--accent)}
-.cal-toggle-btn{padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
-.cal-toggle-btn.active{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:700}
+/* Calendar toolbar — underline tabs */
+.cal-utabs{display:flex;gap:22px;border-bottom:1px solid var(--border);margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
+.cal-utab{padding:0 0 9px;font-size:.86rem;font-weight:600;color:var(--muted);border:none;border-bottom:2px solid transparent;cursor:pointer;background:none;font-family:inherit;white-space:nowrap}
+.cal-utab.active{color:var(--ink);border-bottom-color:var(--accent)}
+.cal-usub{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.cal-umini{display:flex;gap:14px}
+.cal-umini-btn{background:none;border:none;font-family:inherit;font-size:.78rem;color:var(--muted);cursor:pointer;padding:0;font-weight:600;white-space:nowrap}
+.cal-umini-btn.active{color:var(--accent)}
+.cal-udiv{width:1px;height:16px;background:var(--border);flex-shrink:0}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border);border-top:1px solid var(--border)}
 .cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);background:var(--sand);letter-spacing:.05em}
 .cal-cell{min-height:88px;padding:4px 0 2px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:#fff;cursor:pointer;overflow:visible;position:relative;box-sizing:border-box}
@@ -535,39 +564,28 @@ function _buildMobileNavStub(){/* replaced by main script */}
 
         <!-- ══ BOOKINGS CALENDAR VIEW ══ -->
         <div id="calview-bookings">
-          <!-- ── Calendar toolbar: compact single-area ── -->
-          <div style="margin-bottom:10px;display:flex;flex-direction:column;gap:6px">
-            <!-- Row 1: Property + View + Actions all in one scrollable strip -->
-            <div style="display:flex;align-items:center;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px">
-              <!-- Property -->
-              <div style="display:flex;gap:3px;flex-shrink:0" id="cal-prop-toggle">
-                <button class="cal-toggle-btn active" onclick="setCalProp('all',this)">All</button>
-                <button class="cal-toggle-btn" onclick="setCalProp('speranta',this)">SP</button>
-                <button class="cal-toggle-btn" onclick="setCalProp('tvhouse',this)">TV</button>
+          <!-- ── Calendar toolbar: underline tabs ── -->
+          <div style="margin-bottom:14px">
+            <div class="cal-utabs" id="cal-prop-toggle">
+              <button class="cal-utab active" onclick="setCalProp('all',this)">All Properties</button>
+              <button class="cal-utab" onclick="setCalProp('speranta',this)">Speranta Flat</button>
+              <button class="cal-utab" onclick="setCalProp('tvhouse',this)">TV House</button>
+            </div>
+            <div class="cal-usub">
+              <div class="cal-umini">
+                <button id="calview-month-btn" class="cal-umini-btn active" onclick="setCalView('month')">Month</button>
+                <button id="calview-week-btn" class="cal-umini-btn" onclick="setCalView('week')">Week</button>
+                <button id="calview-day-btn" class="cal-umini-btn" onclick="setCalView('day')">Day</button>
               </div>
-              <!-- Divider -->
-              <span style="width:1px;height:20px;background:var(--border);display:inline-block;flex-shrink:0"></span>
-              <!-- View -->
-              <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:8px;padding:2px;flex-shrink:0">
-                <button id="calview-month-btn" onclick="setCalView('month')"
-                  style="padding:3px 9px;border-radius:6px;border:none;font-size:.7rem;font-weight:600;cursor:pointer;background:var(--ink);color:#fff;white-space:nowrap">Mo</button>
-                <button id="calview-week-btn" onclick="setCalView('week')"
-                  style="padding:3px 9px;border-radius:6px;border:none;font-size:.7rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);white-space:nowrap">Wk</button>
-                <button id="calview-day-btn" onclick="setCalView('day')"
-                  style="padding:3px 9px;border-radius:6px;border:none;font-size:.7rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);white-space:nowrap">Dy</button>
+              <span class="cal-udiv"></span>
+              <div class="cal-umini">
+                <button id="cleaning-toggle-btn" class="cal-umini-btn" onclick="toggleCleaningOverlay(this)">🧹 Cleaning</button>
+                <button id="cancelled-toggle-btn" class="cal-umini-btn" onclick="toggleCancelledOnCal(this)">❌ Cancelled</button>
               </div>
-              <!-- Divider -->
-              <span style="width:1px;height:20px;background:var(--border);display:inline-block;flex-shrink:0"></span>
-              <!-- Toggles -->
-              <button id="cleaning-toggle-btn" onclick="toggleCleaningOverlay(this)"
-                style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">🧹</button>
-              <button onclick="toggleCancelledOnCal(this)"
-                style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">❌</button>
-              <!-- Actions pushed right -->
-              <button onclick="openModal('domestic-modal')"
-                style="padding:4px 12px;border-radius:14px;border:none;background:var(--green);color:#fff;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;margin-left:auto">+ Clean</button>
-              <button onclick="exportDomestics()"
-                style="padding:4px 8px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.7rem;cursor:pointer;font-family:inherit;flex-shrink:0">⬇</button>
+              <span style="margin-left:auto;display:flex;gap:6px">
+                <button onclick="openModal('domestic-modal')" class="btn btn-sm" style="background:var(--green);color:#fff">+ Clean</button>
+                <button onclick="exportDomestics()" class="btn btn-sm btn-ghost">⬇</button>
+              </span>
             </div>
           </div>
 
@@ -4767,68 +4785,63 @@ function renderLaneView() {
     const statusCol  = isOccupied ? '#0369a1' : '#15803d';
     const statusText = isOccupied ? '🏠 Occupied' : '✓ Available';
 
-    return `<div style="background:var(--card-bg);border-radius:18px;border:1.5px solid var(--border);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+    // Mini progress ring for the current guest's node — nights elapsed / total
+    const ringR = 10, ringC = 2*Math.PI*ringR;
+    const stayPct = current ? Math.min(1, Math.max(0, ((current.nights||1)-nightsLeft)/Math.max(1,current.nights||1))) : 0;
+    const ringFilled = (stayPct*ringC).toFixed(1);
+
+    return `<div class="lane-card">
 
       <!-- ── Header ── -->
-      <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border)">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-          <div>
-            <div style="font-weight:700;font-size:1.05rem;color:var(--ink)">${prop.name}</div>
-            <div style="font-size:.73rem;color:var(--muted);margin-top:1px">${prop.address}</div>
-          </div>
-          <span style="background:${statusBg};color:${statusCol};font-size:.74rem;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">
-            ${statusText}
-          </span>
+      <div class="lane-hd">
+        <div>
+          <div class="lane-name">${prop.name}</div>
+          <div class="lane-addr">${prop.address}</div>
         </div>
-        <!-- Quick stats row -->
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${[
-            ['📋', pending.length+' pending',   pending.length?'#fef3c7':'var(--sand)', pending.length?'#92400e':'var(--muted)'],
-            ['📅', upcoming.length+' upcoming',  'var(--sand)', 'var(--muted)'],
-            [isOccupied&&nightsLeft<=1?'🛫':'⏳',
-             isOccupied?(nightsLeft<=0?'Checking out today':nightsLeft===1?'Last night':'Out in '+nightsLeft+'d'):'Next: '+(upcoming[0]?fmtDate(upcoming[0].check_in):'—'),
-             isOccupied&&nightsLeft<=1?'#fef3c7':'var(--sand)',
-             isOccupied&&nightsLeft<=1?'#92400e':'var(--muted)'],
-          ].map(([icon,text,bg,col])=>`
-            <span style="background:${bg};color:${col};font-size:.72rem;font-weight:600;padding:3px 9px;border-radius:10px;display:inline-flex;align-items:center;gap:3px">
-              ${icon} ${text}
-            </span>`).join('')}
-        </div>
+        <span style="background:${statusBg};color:${statusCol};font-size:.74rem;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">
+          ${statusText}
+        </span>
       </div>
 
-      <!-- ── Current guest with lifecycle ── -->
-      ${current ? `
-      <div style="padding:14px 20px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-bottom:1px solid #bae6fd">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px">
-          <div>
-            <div style="font-weight:700;font-size:.95rem;color:var(--ink)">${current.display_name}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:.75rem;color:var(--muted);margin-top:3px">
-              <span>🛬 ${fmtDate(current.check_in)}</span>
-              <span>🛫 ${fmtDate(current.check_out)}</span>
-              <span>🌙 ${current.nights||0}n</span>
-              <span>👥 ${current.number_of_guests||1}</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:5px;flex-shrink:0">
-            <span class="badge badge-${current.platform}">${current.platform==='direct'?'🌐':current.platform}</span>
-            <button onclick="openBookingDetail('${current.id}')" style="background:rgba(255,255,255,.7);border:1px solid #bae6fd;border-radius:7px;padding:3px 8px;font-size:.72rem;cursor:pointer;color:#0369a1">View ›</button>
-          </div>
-        </div>
-        <!-- Stay progress bar only, no text label -->
-        <div style="height:4px;background:#bae6fd;border-radius:2px;overflow:hidden;margin-bottom:12px">
-          <div style="height:4px;background:#0369a1;border-radius:2px;width:${Math.min(100,Math.round(((current.nights||1)-nightsLeft)/Math.max(1,current.nights||1)*100))}%;transition:width .5s"></div>
-        </div>
-        <!-- 4-step lifecycle -->
-        ${lifecycleSteps(current, hasClean(current), pid)}
-      </div>` : ''}
+      <!-- ── Stat segments ── -->
+      <div class="lane-segs">
+        <div class="lane-seg"><div class="k">Pending</div><div class="v tab-num">${pending.length}</div></div>
+        <div class="lane-seg"><div class="k">Upcoming</div><div class="v tab-num">${upcoming.length}</div></div>
+        <div class="lane-seg"><div class="k">${isOccupied?'Out in':'Next'}</div><div class="v">${isOccupied?(nightsLeft<=0?'Today':nightsLeft===1?'1d':nightsLeft+'d'):(upcoming[0]?fmtDate(upcoming[0].check_in):'—')}</div></div>
+      </div>
 
-      <!-- ── Booking cards ── -->
-      <div style="padding:10px 20px;flex:1;overflow-y:auto;max-height:480px">
+      <!-- ── Rail: current guest (with lifecycle) + upcoming/past bookings ── -->
+      <div class="lane-body">
         ${shown.filter(b=>b!==current).length===0&&!current ? emptyState('📭',
           `No ${bookingFilter==='all'?'':bookingFilter+' '}bookings for ${prop.name} yet`,
           `<button class="btn btn-sm btn-primary" onclick="openModal('booking-modal')" style="margin-right:6px">+ Add Booking</button>
            <button class="btn btn-sm btn-ghost" onclick="syncICalFeeds(false)">🔄 Sync calendars</button>`
-        ) : ''}
+        ) : `<div class="lane-rail">
+
+        ${current ? `
+        <div class="lane-node">
+          <span class="lane-dot now"></span>
+          <div class="lane-now-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <svg width="26" height="26" viewBox="0 0 26 26" style="flex-shrink:0">
+                  <circle cx="13" cy="13" r="10" fill="none" stroke="#2F6FED22" stroke-width="4"/>
+                  <circle cx="13" cy="13" r="10" fill="none" stroke="#2F6FED" stroke-width="4" stroke-linecap="round" stroke-dasharray="${ringFilled} ${ringC.toFixed(1)}" transform="rotate(-90 13 13)"/>
+                </svg>
+                <div style="min-width:0">
+                  <div class="lane-nname">${current.display_name}</div>
+                  <div class="lane-nsub">🛬 ${fmtDate(current.check_in)} → 🛫 ${fmtDate(current.check_out)} · 🌙 ${current.nights||0}n · 👥 ${current.number_of_guests||1}</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:5px;flex-shrink:0">
+                <span class="badge badge-${current.platform}">${current.platform==='direct'?'🌐':current.platform}</span>
+                <button onclick="openBookingDetail('${current.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:3px 8px;font-size:.72rem;cursor:pointer;color:#0369a1">View ›</button>
+              </div>
+            </div>
+            <!-- 4-step lifecycle -->
+            ${lifecycleSteps(current, hasClean(current), pid)}
+          </div>
+        </div>` : ''}
 
         ${shown.filter(b=>b.id!==current?.id).map(b => {
           const isPending  = b.status==='pending';
@@ -4842,7 +4855,9 @@ function renderLaneView() {
           const urgencyBg  = isPending?'#fffbeb':isPast?'var(--sand)':'var(--card-bg)';
           const borderCol  = isPending?'#f59e0b':isImminent?'#f97316':isPast?'var(--border)':'var(--border)';
 
-          return `<div style="border:1.5px solid ${borderCol};border-radius:14px;padding:13px 15px;margin-bottom:10px;background:${urgencyBg};cursor:pointer;transition:box-shadow .15s"
+          return `<div class="lane-node">
+          <span class="lane-dot"></span>
+          <div class="lane-item" style="border-color:${borderCol};background:${urgencyBg}"
             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
 
             <!-- Top row: name + badges -->
@@ -4903,8 +4918,10 @@ function renderLaneView() {
                   style="background:var(--sand);border:1px solid var(--border);border-radius:7px;padding:4px 9px;font-size:.74rem;cursor:pointer;color:var(--ink)">View ›</button>
               </div>
             </div>
+          </div>
           </div>`;
         }).join('')}
+        </div>`}
       </div>
 
       <!-- ── Footer ── -->
@@ -5489,8 +5506,8 @@ let showKPIPanel = false;
 
 function toggleCleaningOverlay(btn) {
   showCleaningOverlay = !showCleaningOverlay;
-  btn.textContent = showCleaningOverlay ? '🧹 Hide Cleaning' : '🧹 Show Cleaning';
-  btn.className = showCleaningOverlay ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost';
+  btn.textContent = showCleaningOverlay ? '🧹 Hide Cleaning' : '🧹 Cleaning';
+  btn.classList.toggle('active', showCleaningOverlay);
   const panel = document.getElementById('domestic-sessions-panel');
   if (panel) panel.style.display = showCleaningOverlay ? 'block' : 'none';
   renderCalendar();
@@ -5500,7 +5517,7 @@ function toggleCleaningOverlay(btn) {
   function toggleCancelledOnCal(btn) {
   showCancelledOnCal = !showCancelledOnCal;
   btn.textContent = showCancelledOnCal ? '❌ Show All' : '❌ Cancelled';
-  btn.className = showCancelledOnCal ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost';
+  btn.classList.toggle('active', showCancelledOnCal);
   renderCalendar();
 }
 
@@ -5644,10 +5661,7 @@ function setCalView(view) {
     const panel = document.getElementById('calview-'+v+'-panel');
     const btn   = document.getElementById('calview-'+v+'-btn');
     if (panel) panel.style.display = v===view ? 'block' : 'none';
-    if (btn) {
-      btn.style.background = v===view ? 'var(--ink)' : 'transparent';
-      btn.style.color      = v===view ? '#fff' : 'var(--muted)';
-    }
+    if (btn) btn.classList.toggle('active', v===view);
   });
   renderCalendar();
 }
