@@ -6918,6 +6918,16 @@ function guestFaqEntries(propertyId) {
   return (manual && manual.faq && manual.faq.entries || []).filter(f => f.q || f.a);
 }
 
+function toggleMsgPreview(key) {
+  const el = document.getElementById('msgprev-'+key);
+  if (!el) return;
+  const expanded = el.dataset.expanded === 'true';
+  el.dataset.expanded = expanded ? 'false' : 'true';
+  el.style.maxHeight = expanded ? '36px' : 'none';
+  const toggle = document.getElementById('msgtoggle-'+key);
+  if (toggle) toggle.textContent = expanded ? '▼ Expand' : '▲ Collapse';
+}
+
 function sendGuestTouchpoint(bookingId, stageKey) {
   const b = bookings.find(x => String(x.id) === String(bookingId));
   if (!b) return;
@@ -6985,8 +6995,11 @@ function renderGuestTimeline() {
 
       ${dueStage ? `
       <div style="background:var(--amber-light);border-radius:8px;padding:8px 10px;margin-bottom:8px">
-        <div style="font-size:.68rem;font-weight:700;color:#92400e;margin-bottom:4px">${dueStage.icon} ${dueStage.label} due now</div>
-        <div style="font-size:.7rem;color:#78350f;white-space:pre-wrap;max-height:36px;overflow:hidden">${dueStage.message.slice(0,110)}…</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px" onclick="toggleMsgPreview('${bid}-${dueStage.key}')">
+          <div style="font-size:.68rem;font-weight:700;color:#92400e">${dueStage.icon} ${dueStage.label} due now</div>
+          <span id="msgtoggle-${bid}-${dueStage.key}" style="font-size:.64rem;font-weight:600;color:#92400e;white-space:nowrap">▼ Expand</span>
+        </div>
+        <div id="msgprev-${bid}-${dueStage.key}" data-expanded="false" style="font-size:.7rem;color:#78350f;white-space:pre-wrap;max-height:36px;overflow:hidden;cursor:pointer" onclick="toggleMsgPreview('${bid}-${dueStage.key}')">${dueStage.message}</div>
       </div>` : ''}
 
       ${guestFaqEntries(b.property_id).length ? `
