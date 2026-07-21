@@ -4858,8 +4858,8 @@ async function approveBooking(id) {
     toast('Booking confirmed ✓ (no guest email on file)','success');
   }
 
-  renderBookings(); renderDashboard();
-  if (typeof renderLaneView === 'function') renderLaneView();
+  if (currentTab === 'bookings')  { renderBookings(); if (typeof renderLaneView === 'function') renderLaneView(); }
+  if (currentTab === 'dashboard') renderDashboard();
 }
 
 async function declineBooking(id) {
@@ -4871,8 +4871,8 @@ async function declineBooking(id) {
   const b = bookings.find(x=>x.id===id);
   if (b) b.status = 'cancelled';
   toast('Booking declined','info');
-  renderBookings(); renderDashboard();
-  if (laneViewActive) renderLaneView();
+  if (currentTab === 'bookings')  { renderBookings(); if (laneViewActive) renderLaneView(); }
+  if (currentTab === 'dashboard') renderDashboard();
 }
 
 async function deleteBooking(id) {
@@ -4883,8 +4883,15 @@ async function deleteBooking(id) {
   }
   bookings = bookings.filter(x=>String(x.id)!==String(id));
   toast('Booking deleted','info');
-  renderBookings(); renderDashboard(); renderCalendar();
-  if (laneViewActive) renderLaneView();
+  // Only re-render whichever tab is actually visible right now — doing
+  // Calendar/Dashboard/Bookings unconditionally on every delete was
+  // blocking the UI for 1s+ once enough bookings had accumulated
+  // (buildCalGrid rescans the full bookings array per calendar cell).
+  // Hidden tabs pick up the change automatically via renderTab() the
+  // next time the user switches to them.
+  if (currentTab === 'bookings')  { renderBookings(); if (laneViewActive) renderLaneView(); }
+  if (currentTab === 'dashboard') renderDashboard();
+  if (currentTab === 'calendar')  renderCalendar();
 }
 
 function renderBookings() {
