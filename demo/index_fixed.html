@@ -3395,7 +3395,7 @@ let INV_COMPANY = {
   reg:'2024/643198/07',
   tax:'9008226327',
   email:'SN_Apt_Management@outlook.com',
-  bank:{name:'SN Apt Management',bank:'Nedbank',acc:'1292867345',type:'Current Account',branch:'198765',ref_email:'SN_Apt_Management@outlook.com'}
+  bank:{name:'S&N Apt Management',bank:'Nedbank',acc:'1292867345',type:'Current Account',branch:'198765',ref_email:'SN_Apt_Management@outlook.com'}
 };
 
 async function loadOrgSettings() {
@@ -3600,7 +3600,7 @@ function invRender() {
   preview.innerHTML =
     '<div style="background:#F5EFE6;padding:22px 28px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #B8962E">'+
       '<div>'+
-        '<div style="color:#1A2340;font-size:16px;font-weight:700;letter-spacing:.08em">SN APARTMENTS®</div>'+
+        '<div style="color:#1A2340;font-size:16px;font-weight:700;letter-spacing:.08em">S&N APARTMENTS®</div>'+
         '<div style="font-size:13px;color:#8b5e2a;font-style:italic;margin-top:3px">Beyond the booking</div>'+
         '<div style="font-size:10px;color:#a68a5b;letter-spacing:.06em;margin-top:2px">CURATED STAYS · PERSONAL SERVICE</div>'+
       '</div>'+
@@ -7607,7 +7607,7 @@ function renderOwnerStatementTab() {
   document.getElementById('ownstmt-prop').innerHTML = propKeys.map(k =>
     `<option value="${k}" ${k===ownerStmtProp?'selected':''}>${PROPS[k].name}</option>`).join('');
   document.getElementById('ownstmt-month').value = ownerStmtMonth;
-  onOwnerStmtChange();
+  loadOrgSettings().then(() => onOwnerStmtChange());
 }
 
 function onOwnerStmtChange() {
@@ -7657,6 +7657,14 @@ function ownStmtUpdateCost(i, field, val) {
 
 function renderOwnerStatementPreview() {
   const gross = ownStmtGross();
+  const stmtBookings = ownStmtBookings();
+  const stmtNights = stmtBookings.reduce((s,b) => s + (b.nights||0), 0);
+  const {start: stmtStart, end: stmtEnd} = ownStmtMonthRange();
+  const stmtCleans = domestics.filter(d => {
+    if (d.status === 'cancelled') return false;
+    const key = UUID_MAP[d.property_id] || d.property_id;
+    return key === ownerStmtProp && d.date >= stmtStart && d.date <= stmtEnd;
+  }).length;
   // Rental proceeds are pass-through — they go straight to the owner, never
   // through S&N — so they're shown for reference only and are NOT netted
   // against what's billed. This document is a bill FROM S&N TO the owner
@@ -7690,7 +7698,7 @@ function renderOwnerStatementPreview() {
   document.getElementById('ownstmt-preview').innerHTML =
     '<div style="background:#F5EFE6;padding:22px 28px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #B8962E">'+
       '<div>'+
-        '<div style="color:#1A2340;font-size:16px;font-weight:700;letter-spacing:.08em">SN APARTMENTS®</div>'+
+        '<div style="color:#1A2340;font-size:16px;font-weight:700;letter-spacing:.08em">S&N APARTMENTS®</div>'+
         '<div style="font-size:13px;color:#8b5e2a;font-style:italic;margin-top:3px">Beyond the booking</div>'+
         '<div style="font-size:10px;color:#a68a5b;letter-spacing:.06em;margin-top:2px">CURATED STAYS · PERSONAL SERVICE</div>'+
       '</div>'+
@@ -7702,6 +7710,11 @@ function renderOwnerStatementPreview() {
     '<div style="display:flex;justify-content:space-between;padding:10px 28px;font-size:11.5px;background:#FAF7F2;border-bottom:1px solid #E8E4DE">'+
       '<div><span style="font-weight:700;color:#8b5e2a;margin-right:6px">PERIOD:</span>'+monthLabel+'</div>'+
       '<div><span style="font-weight:700;color:#8b5e2a;margin-right:6px">PROPERTY:</span>'+propLabel+'</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:14px 28px;gap:10px;background:#FAF7F2;border-bottom:1px solid #E8E4DE">'+
+      '<div><div style="font-size:9.5px;font-weight:700;color:#8b5e2a;letter-spacing:.06em;margin-bottom:3px">BOOKINGS</div><div style="font-size:13px;font-weight:700;color:#1A2340">'+stmtBookings.length+'</div></div>'+
+      '<div><div style="font-size:9.5px;font-weight:700;color:#8b5e2a;letter-spacing:.06em;margin-bottom:3px">NIGHTS OCCUPIED</div><div style="font-size:13px;font-weight:700;color:#1A2340">'+stmtNights+'</div></div>'+
+      '<div><div style="font-size:9.5px;font-weight:700;color:#8b5e2a;letter-spacing:.06em;margin-bottom:3px">CLEANS PERFORMED</div><div style="font-size:13px;font-weight:700;color:#1A2340">'+stmtCleans+'</div></div>'+
     '</div>'+
     '<div style="padding:8px 28px;font-size:10.5px;color:#777;background:#FAF7F2;border-bottom:1px solid #E8E4DE">This period&rsquo;s gross rental income (for reference — proceeds go directly to the owner): <strong style="color:#444">'+fmt(gross)+'</strong></div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #E8E4DE">'+
