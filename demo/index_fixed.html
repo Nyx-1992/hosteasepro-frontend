@@ -4775,7 +4775,7 @@ function renderLaneView() {
     const current = allProp.find(b=>b.check_in<=today&&b.check_out>=today&&b.status!=='cancelled'&&!isCaretaker(b));
     const pending = allProp.filter(b=>b.status==='pending');
     const shown   = filterForLane(allProp).sort((a,b)=> bookingFilter==='upcoming' ? a.check_in.localeCompare(b.check_in) : b.check_in.localeCompare(a.check_in));
-    const upcoming= allProp.filter(b=>b.check_in>today&&b.status!=='cancelled');
+    const upcoming= allProp.filter(b=>b.check_in>today&&b.status!=='cancelled').sort((a,b)=>a.check_in.localeCompare(b.check_in));
 
     // Occupied status — warm neutral
     const isOccupied = !!current;
@@ -5299,7 +5299,7 @@ function setCalProp(prop, btn) {
   calProp = prop;
   document.querySelectorAll('#cal-prop-toggle button').forEach(b=>b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  renderCalendar();
+  requestAnimationFrame(() => renderCalendar());
 }
 
 function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
@@ -5510,15 +5510,21 @@ function toggleCleaningOverlay(btn) {
   btn.classList.toggle('active', showCleaningOverlay);
   const panel = document.getElementById('domestic-sessions-panel');
   if (panel) panel.style.display = showCleaningOverlay ? 'block' : 'none';
-  renderCalendar();
-  if (showCleaningOverlay) renderDomesticEarnings();
+  // Deferred to the next frame so the button's own active-state paints
+  // immediately instead of waiting behind the (data-size-dependent)
+  // calendar re-render — this is what was showing up as an INP warning
+  // on the clicked button with a real-sized bookings/domestics dataset.
+  requestAnimationFrame(() => {
+    renderCalendar();
+    if (showCleaningOverlay) renderDomesticEarnings();
+  });
 }
 
   function toggleCancelledOnCal(btn) {
   showCancelledOnCal = !showCancelledOnCal;
   btn.textContent = showCancelledOnCal ? '❌ Show All' : '❌ Cancelled';
   btn.classList.toggle('active', showCancelledOnCal);
-  renderCalendar();
+  requestAnimationFrame(() => renderCalendar());
 }
 
 function toggleKPIPanel() {
@@ -5663,7 +5669,7 @@ function setCalView(view) {
     if (panel) panel.style.display = v===view ? 'block' : 'none';
     if (btn) btn.classList.toggle('active', v===view);
   });
-  renderCalendar();
+  requestAnimationFrame(() => renderCalendar());
 }
 
 // ── Weekly view renderer ──────────────────────────────────────
