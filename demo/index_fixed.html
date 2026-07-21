@@ -1371,11 +1371,14 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div class="form-field span-full" id="d-cleaner-other-wrap" style="display:none">
           <label>Outside cleaner's name *</label>
           <input id="d-cleaner-other" placeholder="e.g. agency name or cleaner's name"/>
+          <label style="margin-top:8px">Outside cleaner's phone/WhatsApp number *</label>
+          <input id="d-cleaner-other-phone" type="tel" placeholder="e.g. 082 123 4567"/>
           <div style="margin-top:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;padding:10px 12px;font-size:.78rem;color:#9a3412">
             <div style="font-weight:700;margin-bottom:6px">🧭 Not one of our regular cleaners</div>
-            <div style="margin-bottom:8px">Share our standard cleaning checklist and this property's inventory with them before the clean.</div>
+            <div style="margin-bottom:8px">We'll need their number for payment too. Share our standard cleaning checklist and this property's inventory with them before the clean.</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <button type="button" class="btn btn-sm btn-ghost" onclick="copyCleaningPlan()">📋 Copy cleaning checklist</button>
+              <button type="button" class="btn btn-sm" style="background:#25D366;color:#fff" onclick="whatsAppCleaningPlanToCleaner()">💬 WhatsApp checklist to cleaner</button>
+              <button type="button" class="btn btn-sm btn-ghost" onclick="copyCleaningPlan()">📋 Copy checklist text</button>
               <button type="button" class="btn btn-sm btn-ghost" onclick="openInventoryForOutsideCleaner()">📦 Open property inventory</button>
             </div>
           </div>
@@ -2048,15 +2051,17 @@ function onCleanerSelectChange() {
 }
 // Pre-fills the cleaner field for edit; falls back to "Other" + the free-text
 // name when the saved cleaner isn't one of our four regulars.
-function setCleanerFieldValue(name) {
+function setCleanerFieldValue(name, phone) {
   const known = CLEANERS.map(c=>c.name);
   const sel = document.getElementById('d-cleaner');
   if (name && !known.includes(name)) {
     sel.value = '__other__';
     document.getElementById('d-cleaner-other').value = name;
+    document.getElementById('d-cleaner-other-phone').value = phone || '';
   } else {
     sel.value = name || '';
     document.getElementById('d-cleaner-other').value = '';
+    document.getElementById('d-cleaner-other-phone').value = '';
   }
   onCleanerSelectChange();
 }
@@ -2075,6 +2080,25 @@ function cleaningPlanText() {
 async function copyCleaningPlan() {
   try { await navigator.clipboard.writeText(cleaningPlanText()); toast('Cleaning checklist copied ✓','success'); }
   catch(e) { toast('Could not copy — check clipboard permissions','error'); }
+}
+// ZA-local ('082 123 4567') -> international ('27821234567') for wa.me/
+// web.whatsapp.com links. Best-effort — good enough for the numbers our
+// cleaners/agencies actually give us.
+function normalizeZaPhone(raw) {
+  let digits = (raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('0')) digits = '27' + digits.slice(1);
+  else if (!digits.startsWith('27')) digits = '27' + digits;
+  return digits;
+}
+function whatsAppCleaningPlanToCleaner() {
+  const phoneRaw = (document.getElementById('d-cleaner-other-phone').value || '').trim();
+  if (!phoneRaw) { toast("Please enter the outside cleaner's phone number first", 'error'); return; }
+  const phone = normalizeZaPhone(phoneRaw);
+  const pid = document.getElementById('d-prop').value || 'speranta';
+  const propLabel = (PROPS[pid]||{}).name || pid;
+  const text = cleaningPlanText() + `\n\n*Property:* ${propLabel}`;
+  window.open(`https://web.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}`, 'wa_chat_tab', 'noopener');
 }
 function openInventoryForOutsideCleaner() {
   const pid = document.getElementById('d-prop').value || 'speranta';
@@ -3931,7 +3955,8 @@ const ROADMAP = [
   {k:'p0-33',t:'Post-review fixes batch — cleaner assignment, KB structure, checklist bug, invoice framing',n:'DONE — several fixes from live staging review. (1) Domestic assignment: "Other (outside cleaner)" option on the cleaner select reveals a name field plus quick actions to copy the standard cleaning checklist and jump to that property\'s inventory. (2) Same-day check-ins: pre-arrival dueNow was gated on today<check-in, so a same-day booking never showed the Send Pre-arrival button (checked_in became the only due stage) — now also due on the arrival day itself regardless of hoursUntilCI. (3) Knowledge Base: kb_articles gets a property_id column (migration 310) filtered by the existing property switcher, an edit pencil per tile, and Finance-category notes (salaries/fees) removed entirely — that content belongs in Reports/Team, not this operational page. (4) Knowledge Base split into its own top-level nav tab instead of living stacked below Property Manual. (5) Property Manual\'s Inventory and Inspection Checklist tabs consolidated into one "Inventory & Checklist" view since they\'re always used together. (6) Management Invoice: "NET DUE TO OWNER" (gross minus costs) was backwards — rental proceeds are pass-through and never touch S&N, so this document is a bill FROM S&N TO the owner for cleaning + management costs, not a net remittance. Gross rental income now shown as a reference line only, the total ("TOTAL DUE") is the sum of billable cost lines, and a banking-details grid was added since this is now framed as a payment request, matching the guest invoice. Root cause of the "empty inspection checklist" / "inventory not matching domestic app" reports traced to migration 280\'s seed data never having been run on staging — not a code bug',c:'HEP'},
   {k:'p0-34',t:'Round 2 post-review fixes — WhatsApp interstitial, TV House message, Management Invoice polish',n:'DONE — (1) deliverWhatsAppMessage switched from wa.me to web.whatsapp.com/send, which skips the "Open app / Continue to WhatsApp Web" interstitial and drops straight into the chat now that both Nicole and Nina have their browsers linked. (2) TV House pre-arrival message rewritten much shorter and attributed to "our caretaker" instead of naming Nina personally, since the caretaker now handles these check-ins — same trim for the Afrikaans version. (3) Management Invoice: fixed a real data bug where INV_COMPANY.bank.name (and, if present, org_settings.account_name — migration 330) was "SN Apt Management" missing the ampersand used everywhere else on the document; also fixed the hardcoded "SN APARTMENTS®" header wordmark on both the guest invoice and Management Invoice to "S&N APARTMENTS®". Added a Bookings/Nights Occupied/Cleans Performed summary row — real computed data, not filler — so the document reads fuller and closer to matching the guest invoice\'s page coverage, per owner feedback that it looked undersized. renderOwnerStatementTab() now calls loadOrgSettings() like the guest invoice tab does, so banking details reflect live org_settings instead of stale/default values. The DevTools "INP Issue" the owner saw when downloading is a harmless Chrome performance diagnostic (html2canvas blocking the main thread ~320ms during rendering) — the PDF generates successfully, confirmed by the file they sent back to us; nothing to fix there. (4) Invoices > Outgoing\'s old ad-hoc "Generate management fee invoice" form (which mis-used the generic guest-invoice generator) removed and replaced with a direct link to the real Management Invoice creator under Reports, so there\'s one document generator instead of two producing inconsistent output',c:'HEP'},
   {k:'p0-35',t:'Real root cause of the recurring "INP Issue — blocked UI updates" popup on booking delete',n:'DONE — the p0-34 fix (skip re-rendering hidden tabs) didn\'t make the popup go away because it wasn\'t the actual cause: window.confirm() blocks the JS main thread for however long the USER takes to read and answer the dialog, and Chrome\'s INP/performance panel attributes that entire wait to the click handler that triggered it — which is exactly why the reported durations varied between clicks (1,477ms vs 1,654ms vs 1,654ms again) rather than being a fixed cost. Added a reusable non-blocking confirmAction() modal (#confirm-modal) and converted deleteBooking()/declineBooking() to it — the click now returns immediately (just opens the modal); the real delete/decline only runs from the modal\'s own button click, which is a separate, fast interaction. 8 other window.confirm() calls elsewhere (delete inspection report, delete inventory report, approve booking, delete cleaning session, delete task x2, remove checklist room, delete contact) still use the blocking native dialog and would show the same false-positive INP warning if profiled mid-dialog — not converted this round to keep the change scoped and testable; convert opportunistically or in a dedicated pass',c:'HEP'},
-  {k:'p0-36',t:'Guest Timeline: drop redundant Check-in day message, make every stage always previewable/resendable',n:'DONE — (1) Removed the "Check-in day" stage from GUEST_STAGE_DEFS entirely (and its buildCheckinDayMsg/CHECKIN_DAY_MSG templates) — pre-arrival already contains everything a guest needs for check-in, so a separate message was redundant, per owner feedback. Timeline now runs pre-arrival -> [mid-stay, 10+ nights] -> post-stay. (2) Fixed the real bug behind "clicked it by accident and now it\'s blocked": stage pills used to call toggleNinaTask() directly on click, silently flipping sent/not-sent state, and getGuestTouchpoints()\'s dueNow window for pre-arrival was a narrow 24h-before-arrival check — so an accidental click (or any booking past that window) left the stage marked not-sent with no due-now flag and therefore no Send button, stuck. Pills now call selectMsgStage() instead, which only changes which stage\'s message is being previewed/sent (bid -> key in _selectedMsgStage) and never mutates data; marking sent/not-sent is now an explicit separate "✓ Mark sent" / "↺ Mark not sent" button; and Send is always available for whichever stage is selected regardless of done/dueNow. Also widened checkin_msg\'s dueNow window to the whole stay (today < checkout) instead of just the 24h-before slice, so an unsent pre-arrival stays visibly flagged the whole time, not just briefly',c:'HEP'}]},
+  {k:'p0-36',t:'Guest Timeline: drop redundant Check-in day message, make every stage always previewable/resendable',n:'DONE — (1) Removed the "Check-in day" stage from GUEST_STAGE_DEFS entirely (and its buildCheckinDayMsg/CHECKIN_DAY_MSG templates) — pre-arrival already contains everything a guest needs for check-in, so a separate message was redundant, per owner feedback. Timeline now runs pre-arrival -> [mid-stay, 10+ nights] -> post-stay. (2) Fixed the real bug behind "clicked it by accident and now it\'s blocked": stage pills used to call toggleNinaTask() directly on click, silently flipping sent/not-sent state, and getGuestTouchpoints()\'s dueNow window for pre-arrival was a narrow 24h-before-arrival check — so an accidental click (or any booking past that window) left the stage marked not-sent with no due-now flag and therefore no Send button, stuck. Pills now call selectMsgStage() instead, which only changes which stage\'s message is being previewed/sent (bid -> key in _selectedMsgStage) and never mutates data; marking sent/not-sent is now an explicit separate "✓ Mark sent" / "↺ Mark not sent" button; and Send is always available for whichever stage is selected regardless of done/dueNow. Also widened checkin_msg\'s dueNow window to the whole stay (today < checkout) instead of just the 24h-before slice, so an unsent pre-arrival stays visibly flagged the whole time, not just briefly',c:'HEP'},
+  {k:'p0-37',t:'Outside cleaner: phone number + direct WhatsApp send of the cleaning checklist',n:'DONE — the "Other (outside cleaner)" cleaner option now also asks for a phone/WhatsApp number (required, migration 370 adds domestics.cleaner_phone) — needed for paying them anyway, not just messaging. New "💬 WhatsApp checklist to cleaner" button opens web.whatsapp.com/send straight to that number with the standard cleaning checklist + property name pre-filled, so Nina doesn\'t have to separately save the contact first. Edit pre-fills both name and phone the same way it already did for the name alone',c:'HEP'}]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -5906,7 +5931,7 @@ async function editCleaning(id) {
   const d = domestics.find(x=>x.id===id);
   if (!d) return;
   closeModal('day-modal');
-  setCleanerFieldValue(d.cleaner || '');
+  setCleanerFieldValue(d.cleaner || '', d.cleaner_phone || '');
   document.getElementById('d-prop').value    = d.property_id || 'speranta';
   document.getElementById('d-date').value    = d.date || '';
   document.getElementById('d-time').value    = d.time || '10:00';
@@ -6085,9 +6110,12 @@ async function saveDomestic() {
   if (!date) { toast('Please set a date','error'); return; }
   if (!validateCleanDate()) return;
   let cleaner = document.getElementById('d-cleaner').value;
+  let cleanerPhone = null;
   if (cleaner === '__other__') {
     cleaner = (document.getElementById('d-cleaner-other').value || '').trim();
     if (!cleaner) { toast("Please enter the outside cleaner's name", 'error'); return; }
+    cleanerPhone = (document.getElementById('d-cleaner-other-phone').value || '').trim();
+    if (!cleanerPhone) { toast("Please enter the outside cleaner's phone number — we'll need it for payment too", 'error'); return; }
   }
   const pid     = document.getElementById('d-prop').value;
   const linkedId= document.getElementById('d-linked-booking').value ||
@@ -6102,6 +6130,7 @@ async function saveDomestic() {
     linked_booking_id: linkedId || null,
     checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},
     amount_paid: computedRate,
+    cleaner_phone: cleanerPhone,
   };
   const editId = window._editCleanId;
   // Preserve an existing booking link on edit if the form fields came back empty
