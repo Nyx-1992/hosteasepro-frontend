@@ -2129,7 +2129,11 @@ function sendOutsideCleanerNow() {
 // PDF where we have one, else the standard text checklist).
 function sendOutsideCleanerWhatsApp(row, waWin) {
   const phone = normalizeZaPhone(row.cleaner_phone || '');
-  if (!phone) { if (waWin && !waWin.closed) waWin.close(); return; }
+  if (!phone) {
+    toast('Saved, but no phone number on file for '+(row.cleaner||'this cleaner')+' — could not send WhatsApp','error');
+    if (waWin && !waWin.closed) waWin.close();
+    return;
+  }
   const firstName = (row.cleaner || 'there').split(' ')[0];
   const propKey = UUID_MAP[row.property_id] || row.property_id;
   const propLabel = (PROPS[propKey] || {}).name || propName(row.property_id);
@@ -6244,6 +6248,7 @@ async function saveDomestic(sendOpts) {
         if (idx>-1) domestics[idx].link_sent_at = data.link_sent_at;
         showOutsideCleanerSentConfirmation(data);
       } else {
+        if (wantsSend && !data.access_token) toast('Saved, but this row has no access_token — run migration 390 on this database','error');
         bail();
         closeModal('domestic-modal');
       }
@@ -6266,6 +6271,7 @@ async function saveDomestic(sendOpts) {
         newRow.link_sent_at = data.link_sent_at;
         showOutsideCleanerSentConfirmation(data);
       } else {
+        if (wantsSend && !data.access_token) toast('Saved, but this row has no access_token — run migration 390 on this database','error');
         bail();
         closeModal('domestic-modal');
       }
