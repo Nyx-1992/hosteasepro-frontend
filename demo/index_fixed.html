@@ -4,29 +4,35 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>HostEase Pro v2.4</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="/demo/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
+@font-face{font-family:"DM Serif Display";src:url(/demo/fonts/Tektur-Medium.ttf) format("truetype");font-weight:400 700;font-style:normal;font-display:swap}
+@font-face{font-family:"DM Sans";src:url(/demo/fonts/Jura-Light.ttf) format("truetype");font-weight:300 400;font-style:normal;font-display:swap}
+@font-face{font-family:"DM Sans";src:url(/demo/fonts/Jura-Medium.ttf) format("truetype");font-weight:500 700;font-style:normal;font-display:swap}
+@font-face{font-family:"Geist Mono";src:url(/demo/fonts/GeistMono-Regular.ttf) format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geist Mono";src:url(/demo/fonts/GeistMono-Bold.ttf) format("truetype");font-weight:700;font-style:normal;font-display:swap}
 :root{
+  --font-mono:"Geist Mono",ui-monospace,monospace;
   /* Brand */
-  --ink:#1a1a2e;--ink2:#16213e;
+  --ink:#1B1F24;--ink2:#12161A;
   --ocean:#0E4D6B;--ocean-light:#e0f2fe;
-  --accent:#c17f3c;--accent2:#8b5e2a;
-  --warm:#f3e6d3;       /* tag/badge/hover bg — was referenced ~10x, never defined, silently transparent everywhere */
+  --accent:#2F6FED;--accent2:#2451B8;
+  --warm:#E8EEFC;       /* tag/badge/hover bg — was referenced ~10x, never defined, silently transparent everywhere */
+  --teal:#0FA898;--coral:#F0563B;
   /* Semantic */
   --green:#16a34a;--green2:#52b788;--green-light:#dcfce7;
-  --red:#dc2626;--red-light:#fee2e2;
-  --amber:#d97706;--amber-light:#fef3c7;
-  --blue:#2563eb;--blue-light:#dbeafe;
+  --red:#E0543D;--red-light:#fbe4df;
+  --amber:#E0972F;--amber-light:#fbecd6;
+  --blue:#2F6FED;--blue-light:#E8EEFC;
   /* Neutral surface system */
-  --sand:#f8f7f4;       /* page background */
+  --sand:#FAFAF6;       /* page background */
   --surface:#ffffff;    /* card / panel */
-  --surface-2:#f3f2ef;  /* inset / subtle bg */
-  --surface-3:#eae9e4;  /* border-adjacent bg */
-  --border:#e4e2dc;     /* default border */
+  --surface-2:#F3F1EA;  /* inset / subtle bg */
+  --surface-3:#E9E7DD;  /* border-adjacent bg */
+  --border:#E4E2D8;     /* default border */
   --border-strong:#c9c6be; /* strong border */
   --muted:#71717a;      /* secondary text */
   --muted-2:#a1a1aa;    /* tertiary text */
@@ -94,7 +100,7 @@ h2,h3{font-family:"DM Serif Display",serif}
 .s-nav{flex:1;padding:10px 0;overflow-y:auto}
 .nav-item{display:flex;align-items:center;gap:10px;padding:11px 22px;font-size:.86rem;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;border-left:3px solid transparent}
 .nav-item:hover{color:#fff;background:rgba(255,255,255,.05)}
-.nav-item.active{color:#fff;background:rgba(193,127,60,.13);border-left-color:var(--accent)}
+.nav-item.active{color:#fff;background:rgba(47,111,237,.18);border-left-color:var(--accent)}
 .nav-icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0}
 .s-user{padding:14px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:9px}
 .avatar{width:33px;height:33px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0}
@@ -120,6 +126,29 @@ h2,h3{font-family:"DM Serif Display",serif}
 .stat-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;font-weight:700}
 .stat-value{font-family:"DM Serif Display",serif;font-size:1.9rem;color:var(--ink)}
 .stat-sub{font-size:.76rem;color:var(--muted);margin-top:3px}
+.tab-num{font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
+.strip-label{font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 10px;padding:0 2px}
+/* Console strip — dashboard's live stat segments */
+.dash-console{display:flex;flex-wrap:wrap;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden}
+.dash-seg{flex:1;min-width:170px;padding:16px 18px;border-right:1px solid var(--border);position:relative}
+.dash-seg:last-child{border-right:none}
+.dash-seg::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--seg-c,var(--accent))}
+.dash-seg .k{font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.dash-seg .v{font-family:"DM Serif Display",serif;font-size:1.5rem;color:var(--ink)}
+.dash-seg .n{font-size:.74rem;color:var(--muted);margin-top:4px}
+@media(max-width:700px){.dash-seg{flex:1 1 50%;border-bottom:1px solid var(--border)}}
+/* Log panel — dashboard Urgent Actions */
+.log-panel{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden}
+.log-hero{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border);cursor:pointer}
+.log-hero .sev{font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;display:block;margin-bottom:5px}
+.log-hero .msg{font-size:.88rem;color:var(--ink)}
+.log-hero .act{font-family:var(--font-mono);font-size:.72rem;font-weight:700;color:#fff;background:var(--ink);border:none;padding:7px 13px;border-radius:8px;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.log-row{display:flex;align-items:center;gap:12px;padding:10px 18px;border-top:1px solid var(--border);cursor:pointer;transition:background .15s}
+.log-row:hover{background:var(--surface-2)}
+.log-row .bar{width:3px;height:18px;border-radius:2px;flex-shrink:0}
+.log-row .sev{font-family:var(--font-mono);font-size:1rem;width:18px;flex-shrink:0;text-align:center}
+.log-row .msg{font-size:.8rem;color:var(--ink);flex:1;min-width:0}
+.log-row .go{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);flex-shrink:0}
 .tab-pane{width:100%}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .mb-4{margin-bottom:14px}.mb-6{margin-bottom:22px}
@@ -196,9 +225,9 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-cell{min-height:88px;padding:4px 0 2px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:#fff;cursor:pointer;overflow:visible;position:relative;box-sizing:border-box}
 .cal-bar{display:block;width:100%;box-sizing:border-box;font-size:.63rem;font-weight:600;padding:2px 5px;margin-bottom:2px;min-height:18px;line-height:14px;color:#fff;position:relative;z-index:2;overflow:visible;white-space:nowrap}
 .cal-date{padding:0 5px}
-.cal-cell:hover{background:#fffbf5}
+.cal-cell:hover{background:var(--warm)}
 .cal-cell.other{background:var(--sand);opacity:.55;cursor:default}
-.cal-cell.today{background:#fffbf5}
+.cal-cell.today{background:var(--warm)}
 .cal-date{font-size:.8rem;font-weight:600;margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-sizing:content-box}
 .cal-cell.today .cal-date{background:var(--accent);color:#fff;border-radius:50%}
 .cal-event{font-size:.66rem;padding:2px 5px;margin-bottom:2px;font-weight:600;border-radius:3px;position:relative;z-index:2;overflow:visible;white-space:nowrap;display:inline-block;max-width:100%}
@@ -430,20 +459,19 @@ function _buildMobileNavStub(){/* replaced by main script */}
            last, since those are for browsing rather than acting on. -->
       <div class="tab-pane active" id="tab-dashboard">
         <!-- Pending alert -->
-        <div id="dash-pending-alert" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;padding:14px 18px;margin-bottom:16px"></div>
+        <div id="dash-pending-alert" style="display:none;background:var(--amber-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 18px;margin-bottom:16px"></div>
 
         <!-- Urgent Actions — full width, top of page. Was a narrow sidebar
              squeezed below the calendars; moved here so it's the first thing
              seen, not the last. Populated by renderDashboard(). -->
-        <div class="card" id="dash-urgent-card" style="padding:16px 18px;margin-bottom:18px;background:var(--ink);color:#fff">
-          <div style="font-family:'DM Serif Display',serif;font-size:1rem;margin-bottom:12px;color:#fff;display:flex;align-items:center;gap:6px">
-            <span style="animation:pulse 2s infinite">🔔</span> Urgent Actions
-          </div>
-          <div id="dash-urgent" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px"></div>
+        <div class="strip-label">Signal — needs attention</div>
+        <div class="log-panel" id="dash-urgent-card" style="margin-bottom:24px">
+          <div id="dash-urgent"></div>
         </div>
 
         <!-- Stat cards: today's movements -->
-        <div class="stat-grid" id="dash-stats" style="margin-bottom:18px"></div>
+        <div class="strip-label">Today's movements</div>
+        <div class="dash-console" id="dash-stats" style="margin-bottom:24px"></div>
 
         <!-- Next arrivals: Speranta + TV House side by side -->
         <div class="grid-2" style="margin-bottom:18px" id="dash-arrivals-grid"></div>
@@ -4295,11 +4323,11 @@ function renderDashboard() {
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:1.3rem;animation:pulse 1.5s infinite">🔔</span>
           <div>
-            <div style="font-weight:700;font-size:.9rem;color:#92400e">${pendingDirect.length} S&N Apartments booking${pendingDirect.length>1?'s':''} awaiting approval</div>
-            <div style="font-size:.76rem;color:#a16207">${pendingDirect.map(b=>b.display_name+' · '+fmtDate(b.check_in)).join(' · ')}</div>
+            <div style="font-weight:700;font-size:.9rem;color:var(--ink)">${pendingDirect.length} S&N Apartments booking${pendingDirect.length>1?'s':''} awaiting approval</div>
+            <div style="font-size:.76rem;color:var(--muted)">${pendingDirect.map(b=>b.display_name+' · '+fmtDate(b.check_in)).join(' · ')}</div>
           </div>
         </div>
-        <button class="btn btn-sm" style="background:#d97706;color:#fff;margin-left:auto" onclick="switchTab('bookings');setBookingFilter('pending')">Review →</button>
+        <button class="btn btn-sm" style="background:var(--amber);color:#fff;margin-left:auto" onclick="switchTab('bookings');setBookingFilter('pending')">Review →</button>
       </div>`;
     } else { alertEl.style.display='none'; }
   }
@@ -4549,25 +4577,28 @@ function renderDashboard() {
     // be noise every time the dashboard refreshes.
     if (_lastUrgentCount > 0) toast('🎉 Nice work — everything\'s handled!', 'celebrate');
     _lastUrgentCount = 0;
-    urgentEl.innerHTML = '<div style="grid-column:1/-1;color:rgba(255,255,255,.75);font-size:.9rem;text-align:center;padding:22px 0;display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:1.3rem">✅</span> All clear — nothing needs you right now</div>';
+    urgentEl.innerHTML = '<div style="color:var(--muted);font-size:.9rem;text-align:center;padding:22px 0;display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:1.3rem">✅</span> All clear — nothing needs you right now</div>';
     return;
   }
   _lastUrgentCount = urgentItems.length;
 
-  urgentEl.innerHTML = urgentItems.map(item => `
-    <div onclick="${item.action}" style="background:rgba(255,255,255,.07);border-radius:10px;padding:10px 12px;cursor:pointer;border-left:3px solid ${item.color};transition:background .15s"
-      onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-        <span style="font-size:.9rem">${item.icon}</span>
-        <span style="font-weight:700;font-size:.8rem;color:#fff">${item.label}</span>
+  urgentEl.innerHTML = urgentItems.map((item,i) => i===0 ? `
+    <div class="log-hero" style="background:${item.color}14" onclick="${item.action}">
+      <div style="min-width:0">
+        <span class="sev" style="color:${item.color}">${item.icon} ${item.label}</span>
+        <span class="msg">${item.detail}</span>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-left:20px">
-        <div style="font-size:.72rem;color:rgba(255,255,255,.55)">${item.detail}</div>
-        ${item.dismissAction ? `<button onclick="event.stopPropagation();${item.dismissAction}"
-          style="flex-shrink:0;background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:.68rem;font-weight:600;cursor:pointer">
-          ✓ Informed
-        </button>` : ''}
-      </div>
+      ${item.dismissAction
+        ? `<button class="act" onclick="event.stopPropagation();${item.dismissAction}">✓ Informed</button>`
+        : `<span class="act" style="cursor:pointer">View →</span>`}
+    </div>` : `
+    <div class="log-row" onclick="${item.action}">
+      <span class="bar" style="background:${item.color}"></span>
+      <span class="sev">${item.icon}</span>
+      <span class="msg"><b style="font-weight:700">${item.label}</b> — ${item.detail}</span>
+      ${item.dismissAction
+        ? `<button class="go" onclick="event.stopPropagation();${item.dismissAction}" style="background:none;border:none;cursor:pointer;font-family:inherit">✓ Informed</button>`
+        : `<span class="go">→</span>`}
     </div>`).join('');
 }
 
@@ -4587,7 +4618,7 @@ async function acknowledgeCancelledClean(id) {
 }
 
 function statCard(label, value, sub, color='var(--accent)') {
-  return `<div class="stat-card" style="border-top-color:${color}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div><div class="stat-sub">${sub}</div></div>`;
+  return `<div class="dash-seg" style="--seg-c:${color}"><div class="k">${label}</div><div class="v tab-num">${value}</div><div class="n">${sub}</div></div>`;
 }
 const sCard = statCard; // alias
 
