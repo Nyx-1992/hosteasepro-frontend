@@ -167,7 +167,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .badge-cancelled{background:#fee2e2;color:#991b1b}
 .badge-airbnb{background:#E1466622;color:#E14666}
 .badge-booking{background:#1E4C8522;color:#1E4C85}.badge-direct{background:#E8EEFC;color:#2F6FED;font-weight:700}.badge-blocked{background:#f1f5f9;color:#64748b}.badge-owner{background:#e2e8f0;color:#475569}
-.badge-lekkeslaap{background:#E8B23A30;color:#8a5f12}
+.badge-lekkeslaap{background:#F6C44530;color:#8a6a10}
 .badge-fewo{background:#7c3aed22;color:#5b21b6}
 .badge-manual{background:#fef3c7;color:#92400e}
 .badge-scheduled{background:#fef3c7;color:#92400e}
@@ -237,7 +237,7 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-event.blk-solo{border-radius:4px}
 .ev-airbnb{background:#E14666;color:#fff}
 .ev-booking{background:#1E4C85;color:#fff}
-.ev-lekkeslaap{background:#E8B23A;color:#1a1a2e}
+.ev-lekkeslaap{background:#F6C445;color:#1a1a2e}
 .ev-manual{background:#A8702E;color:#fff}
 .ev-owner{background:#64748b;color:#fff}
 .ev-caretaker{background:#94a3b8;color:#fff}
@@ -585,7 +585,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
             <div class="legend">
               <div class="legend-item"><div class="legend-dot" style="background:#E14666"></div>Airbnb</div>
               <div class="legend-item"><div class="legend-dot" style="background:#1E4C85"></div>Booking.com</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#E8B23A"></div>LekkeSlaap</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#F6C445"></div>LekkeSlaap</div>
               <div class="legend-item"><div class="legend-dot" style="background:#A8702E"></div>Direct/Manual</div>
               <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
               <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>🧹 Cleaning</div>
@@ -949,7 +949,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
               <th>Month</th>
               <th style="color:#E14666">Airbnb</th>
               <th style="color:#1E4C85">Booking.com</th>
-              <th style="color:#E8B23A">LekkeSlaap</th>
+              <th style="color:#8a6a10">LekkeSlaap</th>
               <th style="color:#A8702E">Direct</th>
               <th>Total Net</th>
             </tr></thead>
@@ -1684,7 +1684,7 @@ const NINA_BOOKING_TASKS = [
 let db = null;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
 
-const PLAT_COLORS = {airbnb:'#E14666',booking:'#1E4C85',lekkeslaap:'#E8B23A',manual:'#A8702E',direct:'#2F6FED',owner:'#64748b',blocked:'#94a3b8',caretaker:'#94a3b8'};
+const PLAT_COLORS = {airbnb:'#E14666',booking:'#1E4C85',lekkeslaap:'#F6C445',manual:'#A8702E',direct:'#2F6FED',owner:'#64748b',blocked:'#94a3b8',caretaker:'#94a3b8'};
 const MONTHS  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -5390,7 +5390,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
           'margin-left:'+startOffset,
           'box-sizing:border-box',
           'background:'+color,
-          'color:'+(isCancelled?'#6b7280':color==='#E8B23A'?'#1a1a2e':'#fff'),
+          'color:'+(isCancelled?'#6b7280':color==='#F6C445'?'#1a1a2e':'#fff'),
           'font-size:.63rem',
           'font-weight:600',
           'padding:2px 6px',
@@ -7569,7 +7569,7 @@ async function renderReports(monthsBack) {
   const fmt    = n => 'R' + Math.round(n).toLocaleString('en-ZA');
   const fmtK   = n => n >= 1000 ? 'R' + (n/1000).toFixed(1) + 'k' : fmt(n);
   const today  = todaySAST();
-  const pColors = {airbnb:'#E14666', booking:'#1E4C85', lekkeslaap:'#E8B23A', manual:'#A8702E'};
+  const pColors = {airbnb:'#E14666', booking:'#1E4C85', lekkeslaap:'#F6C445', manual:'#A8702E'};
   const pNames  = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', manual:'Direct'};
 
   document.getElementById('report-stats').innerHTML = '<div class="text-muted" style="padding:10px">Loading live data…</div>';
@@ -8142,7 +8142,7 @@ function showChartTooltip(month, data) {
   const tooltipEl = document.getElementById('report-chart-tooltip');
   if (!tooltipEl) return;
   const pNames = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', manual:'Direct'};
-  const pColors = {airbnb:'#E14666', booking:'#1E4C85', lekkeslaap:'#E8B23A', manual:'#A8702E'};
+  const pColors = {airbnb:'#E14666', booking:'#1E4C85', lekkeslaap:'#F6C445', manual:'#A8702E'};
   const fmt = n => 'R' + Math.round(n).toLocaleString('en-ZA');
   const [y,mo] = month.split('-');
   const moName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1];
