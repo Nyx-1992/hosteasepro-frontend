@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Cleaning Inventory — S&N Apt Management</title>
+<script src="/demo/config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--card:#1a1d27;--card2:#222535;--border:rgba(255,255,255,.08);
+  --text:#f0f0f0;--muted:rgba(255,255,255,.45);--accent:#c17f3c;
+  --green:#2dd4a0;--red:#ff6b6b;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',-apple-system,sans-serif}
+.wrap{max-width:520px;margin:0 auto;padding:20px 16px 100px}
+.header{margin-bottom:18px}
+.header h1{font-size:1.15rem;font-weight:700}
+.header .sub{font-size:.82rem;color:var(--muted);margin-top:3px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+.room-header{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.95rem;margin-bottom:10px}
+.item-row{display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer;min-height:44px}
+.item-row:last-of-type{border-bottom:none}
+.item-name{font-size:.88rem;flex:1}
+.item-toggle{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.9rem;background:rgba(45,212,160,.15);color:var(--green);flex-shrink:0}
+.item-row.flagged .item-toggle{background:rgba(255,107,107,.18);color:var(--red)}
+.flag-note{display:none;padding:0 4px 10px}
+.flag-note.show{display:block}
+.flag-input{width:100%;padding:9px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:.84rem;font-family:inherit}
+textarea{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:.86rem;font-family:inherit;resize:vertical;min-height:70px}
+label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:6px;font-weight:600}
+.btn{display:block;width:100%;padding:14px;border-radius:12px;border:none;font-size:.92rem;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:disabled{opacity:.6}
+.state{text-align:center;padding:60px 20px;color:var(--muted)}
+.state .big{font-size:2.4rem;margin-bottom:12px}
+.state h2{color:var(--text);font-size:1.1rem;margin-bottom:8px}
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="state"><div class="big">⏳</div><h2>Loading…</h2></div>
+</div>
+<script>
+const SUPABASE_URL = (window.HEP_CONFIG||{}).supabaseUrl;
+const SUPABASE_KEY = (window.HEP_CONFIG||{}).supabaseAnonKey;
+let db = null;
+try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){}
+
+const params = new URLSearchParams(location.search);
+const cleanId = params.get('d');
+const token = params.get('t');
+
+let cleanInfo = null;
+let rooms = [];
+let flagState = {}; // 'room::item' -> { flagged, note }
+
+function safeKey(s) { return s.replace(/[^a-zA-Z0-9]/g, '_'); }
+
+function renderError(msg) {
+  document.getElementById('app').innerHTML = `<div class="state"><div class="big">⚠️</div><h2>Can't open this link</h2><div>${msg}</div></div>`;
+}
+
+function renderDone() {
+  document.getElementById('app').innerHTML = `<div class="state"><div class="big">🎉</div><h2>Thank you!</h2><div>Your inventory report has been submitted to S&N Apt Management.</div></div>`;
+}
+
+function renderForm() {
+  const el = document.getElementById('app');
+  el.innerHTML = `
+    <div class="header">
+      <h1>🧹 Cleaning Inventory — ${cleanInfo.property_name}</h1>
+      <div class="sub">${cleanInfo.cleaner} · ${cleanInfo.clean_date}</div>
+      <div class="sub" style="margin-top:8px">Tap an item to flag an issue. Everything else is assumed OK.</div>
+    </div>
+    ${rooms.map(room => `
+      <div class="card">
+        <div class="room-header"><span>${room.icon||'📦'}</span><span>${room.room}</span></div>
+        ${(room.items||[]).map(item => {
+          const k = safeKey(room.room + '::' + item);
+          return `<div class="item-row" id="ir-${k}" onclick="toggleItem('${room.room.replace(/'/g,"\\'")}','${item.replace(/'/g,"\\'")}','${k}')">
+            <span class="item-name">${item}</span><div class="item-toggle" id="it-${k}">✓</div>
+          </div>
+          <div class="flag-note" id="fn-${k}">
+            <input class="flag-input" placeholder="Describe the issue…" onchange="setNote('${room.room.replace(/'/g,"\\'")}','${item.replace(/'/g,"\\'")}',this.value)" onclick="event.stopPropagation()"/>
+          </div>`;
+        }).join('')}
+      </div>`).join('')}
+    <div class="card">
+      <label>General notes (optional)</label>
+      <textarea id="gen-note" placeholder="Anything else worth flagging?"></textarea>
+    </div>
+    <button class="btn btn-primary" id="submit-btn" onclick="submitReport()">✓ Submit Inventory Report</button>
+  `;
+}
+
+function toggleItem(room, item, k) {
+  const key = room + '::' + item;
+  if (!flagState[key]) flagState[key] = { flagged:false, note:'' };
+  flagState[key].flagged = !flagState[key].flagged;
+  const row = document.getElementById('ir-'+k);
+  const tog = document.getElementById('it-'+k);
+  const note = document.getElementById('fn-'+k);
+  if (row) row.classList.toggle('flagged', flagState[key].flagged);
+  if (tog) tog.textContent = flagState[key].flagged ? '⚠' : '✓';
+  if (note) note.classList.toggle('show', flagState[key].flagged);
+}
+function setNote(room, item, val) {
+  const key = room + '::' + item;
+  if (!flagState[key]) flagState[key] = { flagged:true, note:'' };
+  flagState[key].note = val;
+}
+
+let submitting = false;
+async function submitReport() {
+  if (submitting) return;
+  submitting = true;
+  const btn = document.getElementById('submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+  const flagged = Object.entries(flagState).filter(([k,v]) => v.flagged)
+    .map(([k,v]) => ({ room: k.split('::')[0], item: k.split('::')[1], note: v.note||'' }));
+  const generalNote = (document.getElementById('gen-note').value || '').trim();
+  try {
+    const { error } = await db.rpc('submit_outside_inventory', {
+      p_id: cleanId, p_token: token, p_flagged: flagged, p_notes: generalNote || null,
+    });
+    if (error) throw error;
+    renderDone();
+  } catch (e) {
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Submit Inventory Report'; }
+    alert("Couldn't submit — check your connection and try again.");
+  } finally {
+    submitting = false;
+  }
+}
+
+(async function init() {
+  if (!db || !cleanId || !token) { renderError('This link is missing information. Please ask S&N Apt Management to resend it.'); return; }
+  try {
+    const { data, error } = await db.rpc('get_outside_clean_info', { p_id: cleanId, p_token: token });
+    const row = Array.isArray(data) ? data[0] : data;
+    if (error || !row) { renderError('This link is invalid or has expired. Please ask S&N Apt Management to resend it.'); return; }
+    cleanInfo = row;
+    rooms = row.rooms || [];
+    renderForm();
+  } catch (e) {
+    renderError('Something went wrong loading this link. Please try again or ask S&N Apt Management to resend it.');
+  }
+})();
+</script>
+</body>
+</html>
