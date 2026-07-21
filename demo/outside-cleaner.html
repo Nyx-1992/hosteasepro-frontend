@@ -129,7 +129,8 @@ async function submitReport() {
     renderDone();
   } catch (e) {
     if (btn) { btn.disabled = false; btn.textContent = '✓ Submit Inventory Report'; }
-    alert("Couldn't submit — check your connection and try again.");
+    console.error('submitReport:', e);
+    alert("Couldn't submit: " + (e && e.message ? e.message : 'unknown error'));
   } finally {
     submitting = false;
   }
