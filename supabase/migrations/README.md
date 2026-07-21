@@ -66,6 +66,8 @@ order.
 | 400_roadmap_state_p0_38.sql | both | Marks Roadmap item p0-38 (outside cleaner: no-login shareable link to fill out the real inventory checklist) done |
 | 410_roadmap_state_p0_39.sql | both | Marks Roadmap item p0-39 (p0-38 fixes: SQL join type mismatch, unquoted domestic ID breaking Edit/Delete, phone made optional) done |
 | 420_roadmap_state_p0_40.sql | both | Marks Roadmap item p0-40 (outside cleaner: real photo cleaning guide + one-click send + self-test link) done |
+| 430_domestics_link_sent_at.sql | both | Adds `domestics.link_sent_at`, set whenever the outside-cleaner inventory link + cleaning guideline is actually sent via WhatsApp — backs the "Last sent <date> / Resend" status in the Schedule Cleaning modal, fixing "no way of checking past messages sent" |
+| 440_roadmap_state_p0_41.sql | both | Marks Roadmap item p0-41 (p0-40 fix: WhatsApp send silently blocked by popup blockers, edits never sent at all, no send history) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
