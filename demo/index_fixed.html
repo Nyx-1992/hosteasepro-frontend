@@ -800,33 +800,24 @@ function _buildMobileNavStub(){/* replaced by main script */}
               👥 Team Chat
             </button>
           </div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <label for="msg-language-select" style="font-size:.78rem;color:var(--muted);font-weight:600">🌐 Message language</label>
-            <select id="msg-language-select" onchange="saveUserSetting('language', this.value); renderGuestTimeline();" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;background:#fff"></select>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px">
+              <label for="msg-language-select" style="font-size:.78rem;color:var(--muted);font-weight:600">🌐 Message language</label>
+              <select id="msg-language-select" onchange="saveUserSetting('language', this.value); renderGuestTimeline();" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;background:#fff"></select>
+            </div>
+            <a href="https://web.whatsapp.com" target="wa_chat_tab" rel="noopener noreferrer" title="+27 79 977 9455 · S&N Apt Management"
+              style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:#25D366;text-decoration:none;padding:6px 13px;border:1px solid var(--border);border-radius:20px;background:var(--surface)">
+              💬 WhatsApp Web ↗
+            </a>
           </div>
         </div>
 
         <!-- WhatsApp sub-tab -->
         <div id="msg-subtab-wa">
-          <!-- Open WhatsApp Web banner -->
-          <div style="background:linear-gradient(135deg,#25D366,#128C7E);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-            <div>
-              <div style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:4px">💬 WhatsApp Business</div>
-              <div style="font-size:.8rem;color:rgba(255,255,255,.8)">+27 79 977 9455 · S&N Apt Management</div>
-            </div>
-            <a href="https://web.whatsapp.com" target="wa_chat_tab" rel="noopener noreferrer"
-              style="background:#fff;color:#128C7E;font-weight:700;font-size:.85rem;padding:10px 20px;border-radius:10px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:opacity .2s;white-space:nowrap"
-              onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-              Open WhatsApp Web ↗
-            </a>
-          </div>
-
           <!-- Guest Timeline: per-booking stage cards, replacing the old generic
                template-link list — each guest gets their own due-now touchpoint
                instead of picking blind from a list of canned messages. -->
-          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">
-            Guest Timeline — upcoming & recent guests
-          </div>
+          <div class="strip-label">Guest Timeline — upcoming &amp; recent guests</div>
           <div id="wa-guest-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
         </div>
 
@@ -7247,7 +7238,7 @@ function renderGuestTimeline() {
     const activeStage = stages.find(s => s.key === activeKey) || stages[0];
     const stayCount = getGuestStayCount(b);
 
-    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;border-left:3px solid ${col}">
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${col};border-radius:12px;padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px">
         <div style="min-width:0">
           <div style="font-weight:700;font-size:.88rem;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap">
@@ -7255,27 +7246,26 @@ function renderGuestTimeline() {
             ${stayCount>1?`<span style="background:var(--warm);color:var(--accent2);font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap">🔁 ${stayCount===2?'2nd':stayCount+'th'} stay</span>`:''}
           </div>
           <div style="font-size:.73rem;color:var(--muted);margin-top:2px">
-            ${propName(b.property_id)} · ${fmtDate(b.check_in_date || b.check_in?.slice(0,10))} → ${fmtDate(b.check_out_date || b.check_out?.slice(0,10))}
+            ${propName(b.property_id)} · ${b.platform==='direct'?'Direct':b.platform} · ${fmtDate(b.check_in_date || b.check_in?.slice(0,10))} → ${fmtDate(b.check_out_date || b.check_out?.slice(0,10))}
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
-          <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform}</span>
+        <div style="flex-shrink:0">
           ${isNow?'<span style="background:#dbeafe;color:#1d4ed8;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:6px">Staying</span>':isPast?'<span style="background:var(--surface-2);color:var(--muted);font-size:.62rem;padding:2px 6px;border-radius:6px">Checked out</span>':`<span style="background:#fef9c3;color:#92400e;font-size:.62rem;font-weight:600;padding:2px 6px;border-radius:6px">In ${dIn}d</span>`}
         </div>
       </div>
 
-      <!-- Stage timeline: pre-arrival -> [mid-stay] -> post-stay, as a small
-           stacked log-panel (same left-bar language as the Dashboard's
-           Urgent Actions). Clicking a row just selects it for preview below
-           — it no longer toggles sent/not-sent, so an accidental click
-           can't strand a stage with no way to view or resend its message. -->
-      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">
+      <!-- Stage row: pre-arrival -> [mid-stay] -> post-stay, as equal-width
+           segments (platform now reads from the left-edge stripe + subtitle
+           instead of its own chip/row). Clicking a segment just selects it
+           for preview below — it no longer toggles sent/not-sent, so an
+           accidental click can't strand a stage with no way to view or
+           resend its message. -->
+      <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">
         ${stages.map((s,i) => `
           <div title="${s.windowLabel||''}" onclick="selectMsgStage('${bid}','${s.key}')"
-            style="display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;${i>0?'border-top:1px solid var(--border)':''};background:${s.key===activeKey?'var(--surface-2)':'transparent'}">
-            <span style="width:3px;height:16px;border-radius:2px;flex-shrink:0;background:${s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--border)'}"></span>
-            <span style="font-size:.78rem;flex:1;color:var(--ink)">${s.icon} ${s.label}</span>
-            <span style="font-family:var(--font-mono);font-size:.6rem;text-transform:uppercase;letter-spacing:.03em;color:${s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--muted)'};flex-shrink:0">${s.done?'Sent':s.dueNow?'Due now':'Not yet'}</span>
+            style="flex:1;text-align:center;padding:7px 6px;cursor:pointer;${i<stages.length-1?'border-right:1px solid var(--border)':''};background:${s.key===activeKey?'var(--surface-2)':'transparent'}">
+            <div style="font-family:var(--font-mono);font-size:.56rem;text-transform:uppercase;letter-spacing:.02em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.label}</div>
+            <div style="font-size:.82rem;margin-top:3px;color:${s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--muted)'}">${s.done?'✓':s.dueNow?'●':'○'}</div>
           </div>`).join('')}
       </div>
 
