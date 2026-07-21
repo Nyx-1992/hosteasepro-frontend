@@ -60,6 +60,8 @@ order.
 | 340_roadmap_state_p0_34.sql | both | Marks Roadmap item p0-34 (round 2 post-review fixes: WhatsApp interstitial, TV House message, Management Invoice polish) done |
 | 350_roadmap_state_p0_35.sql | both | Marks Roadmap item p0-35 (real root cause of the recurring "INP Issue" popup on booking delete — window.confirm() blocking the main thread) done |
 | 360_roadmap_state_p0_36.sql | both | Marks Roadmap item p0-36 (Guest Timeline: drop redundant Check-in day message, make every stage always previewable/resendable) done |
+| 370_domestics_cleaner_phone.sql | both | Adds `domestics.cleaner_phone`, captured when assigning an outside ("Other") cleaner — needed for payment, and lets Nina WhatsApp them the standard cleaning checklist directly from the Schedule Cleaning modal |
+| 380_roadmap_state_p0_37.sql | both | Marks Roadmap item p0-37 (outside cleaner: phone number + direct WhatsApp send of the cleaning checklist) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
