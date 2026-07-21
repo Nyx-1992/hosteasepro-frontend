@@ -1156,14 +1156,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
             <div id="inv-outgoing-list"><div class="text-muted">Loading…</div></div>
           </div>
           <div class="card">
-            <div class="card-title" style="margin-bottom:12px">Generate management fee invoice</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">
-              <div><label class="form-label">Month</label><input type="month" class="form-input" id="mgmt-month"></div>
-              <div><label class="form-label">Amount</label><input type="number" class="form-input" id="mgmt-amount" value="6000"></div>
-              <div><label class="form-label">Billed to</label><input type="text" class="form-input" id="mgmt-billed" value="Mirka &amp; Antonin"></div>
-            </div>
-            <button onclick="generateMgmtInvoice()" style="padding:10px 22px;border-radius:8px;border:none;background:#1A2340;color:#F5EFE6;font-size:.85rem;font-weight:700;cursor:pointer">
-              Generate &amp; Download PDF
+            <div class="card-title" style="margin-bottom:6px">Generate a management fee invoice</div>
+            <div style="font-size:.83rem;color:var(--muted);margin-bottom:14px">Management fee invoices are now generated from the Management Invoice creator, so numbering, branding and banking details always match — no separate form to keep in sync here.</div>
+            <button onclick="switchTab('reports');switchReportSub('owner')" style="padding:10px 22px;border-radius:8px;border:none;background:#1A2340;color:#F5EFE6;font-size:.85rem;font-weight:700;cursor:pointer">
+              🧾 Open Management Invoice creator
             </button>
           </div>
         </div>
@@ -3684,27 +3680,6 @@ async function loadOutgoing() {
       data.map(function(r,i){ return '<tr style="'+(i%2===1?'background:var(--surface-2)':'')+'"><td style="font-size:.8rem;font-weight:600">'+(r.month||r.date)+'</td><td style="font-size:.8rem">'+(r.description||'—')+'</td><td style="font-size:.78rem;color:var(--muted)">'+(r.notes||'—')+'</td><td style="text-align:right;font-size:.8rem;font-weight:600;color:var(--green2)">R'+Number(r.amount).toLocaleString('en-ZA')+'</td></tr>'; }).join('')+
       '</tbody></table></div>';
   } catch(e){el.innerHTML='<div class="text-muted" style="color:var(--red)">Error: '+e.message+'</div>';}
-}
-
-function generateMgmtInvoice() {
-  const month  = document.getElementById('mgmt-month').value;
-  const amount = document.getElementById('mgmt-amount').value;
-  const billed = document.getElementById('mgmt-billed').value;
-  if(!month){ toast('Please pick a month first','error'); return; }
-  const d = new Date(month+'-01T00:00:00');
-  const monthName = d.toLocaleDateString('en-ZA',{month:'long',year:'numeric'});
-  document.getElementById('inv-guest').value   = billed;
-  document.getElementById('inv-company').value = 'TV House Owners';
-  document.getElementById('inv-email').value   = '';
-  document.getElementById('inv-addr').value    = '';
-  document.getElementById('inv-dates').value   = monthName;
-  invLines = [{desc:'Property Management Fee — '+monthName, amount:parseFloat(amount)||6000}];
-  invRefManual = false;
-  invRenderLines();
-  switchInvoiceSub('guest');
-  const propEl = document.getElementById('inv-prop');
-  for(let i=0;i<propEl.options.length;i++){ if(propEl.options[i].text==='TV House'){propEl.selectedIndex=i;break;} }
-  invRender();
 }
 
 async function loadIncoming() {
