@@ -165,9 +165,9 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .badge-checked-in,.badge-checkedin{background:#dbeafe;color:#1e40af}
 .badge-checked-out,.badge-checkedout{background:#f3f4f6;color:#374151}
 .badge-cancelled{background:#fee2e2;color:#991b1b}
-.badge-airbnb{background:#FF385C22;color:#FF385C}
-.badge-booking{background:#00358022;color:#003580}.badge-direct{background:#e0f2fe;color:#0369a1;font-weight:700}.badge-blocked{background:#f1f5f9;color:#64748b}.badge-owner{background:#e2e8f0;color:#475569}
-.badge-lekkeslaap{background:#FFC30030;color:#a07800}
+.badge-airbnb{background:#E1466622;color:#E14666}
+.badge-booking{background:#1E4C8522;color:#1E4C85}.badge-direct{background:#E8EEFC;color:#2F6FED;font-weight:700}.badge-blocked{background:#f1f5f9;color:#64748b}.badge-owner{background:#e2e8f0;color:#475569}
+.badge-lekkeslaap{background:#E8B23A30;color:#8a5f12}
 .badge-fewo{background:#7c3aed22;color:#5b21b6}
 .badge-manual{background:#fef3c7;color:#92400e}
 .badge-scheduled{background:#fef3c7;color:#92400e}
@@ -235,10 +235,10 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-event.blk-start{border-radius:4px 0 0 4px;margin-left:0}
 .cal-event.blk-end{border-radius:0 4px 4px 0;margin-right:0}
 .cal-event.blk-solo{border-radius:4px}
-.ev-airbnb{background:#FF385C;color:#fff}
-.ev-booking{background:#003580;color:#fff}
-.ev-lekkeslaap{background:#FFC300;color:#1a1a2e}
-.ev-manual{background:#c17f3c;color:#fff}
+.ev-airbnb{background:#E14666;color:#fff}
+.ev-booking{background:#1E4C85;color:#fff}
+.ev-lekkeslaap{background:#E8B23A;color:#1a1a2e}
+.ev-manual{background:#A8702E;color:#fff}
 .ev-owner{background:#64748b;color:#fff}
 .ev-caretaker{background:#94a3b8;color:#fff}
 .ev-cleaning{background:#06b6d4;color:#fff}
@@ -583,10 +583,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div class="card" style="margin-top:12px">
             <div class="card-title">Legend</div>
             <div class="legend">
-              <div class="legend-item"><div class="legend-dot" style="background:#FF385C"></div>Airbnb</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#003580"></div>Booking.com</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#FFC300"></div>LekkeSlaap</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Direct/Manual</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#E14666"></div>Airbnb</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#1E4C85"></div>Booking.com</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#E8B23A"></div>LekkeSlaap</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#A8702E"></div>Direct/Manual</div>
               <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
               <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>🧹 Cleaning</div>
               <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>🔒 Blocked</div>
@@ -947,10 +947,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div class="table-wrap"><table id="report-monthly-net-table">
             <thead><tr>
               <th>Month</th>
-              <th style="color:#FF385C">Airbnb</th>
-              <th style="color:#003580">Booking.com</th>
-              <th style="color:#f59e0b">LekkeSlaap</th>
-              <th style="color:#c17f3c">Direct</th>
+              <th style="color:#E14666">Airbnb</th>
+              <th style="color:#1E4C85">Booking.com</th>
+              <th style="color:#E8B23A">LekkeSlaap</th>
+              <th style="color:#A8702E">Direct</th>
               <th>Total Net</th>
             </tr></thead>
             <tbody id="report-monthly-net-body">
@@ -1684,7 +1684,7 @@ const NINA_BOOKING_TASKS = [
 let db = null;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
 
-const PLAT_COLORS = {airbnb:'#FF385C',booking:'#003580',lekkeslaap:'#FFC300',manual:'#c17f3c',direct:'#0369a1',owner:'#64748b',blocked:'#94a3b8',caretaker:'#94a3b8'};
+const PLAT_COLORS = {airbnb:'#E14666',booking:'#1E4C85',lekkeslaap:'#E8B23A',manual:'#A8702E',direct:'#2F6FED',owner:'#64748b',blocked:'#94a3b8',caretaker:'#94a3b8'};
 const MONTHS  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -4885,7 +4885,7 @@ function openBookingDetail(bookingId) {
   );
   const today = todaySAST();
   const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
-  const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#c17f3c'));
+  const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#A8702E'));
   const canManage = currentUser.role !== 'host';
 
   document.getElementById('day-modal-title').textContent = b.display_name||'Booking';
@@ -5331,7 +5331,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const color = isOwner          ? PLAT_COLORS['owner'] :
                       effectivelyBlocked ? PLAT_COLORS['blocked'] :
                       isCancelled      ? '#9ca3af' :
-                      PLAT_COLORS[b.platform]||'#c17f3c';
+                      PLAT_COLORS[b.platform]||'#A8702E';
         const propTag = showProp ? '['+(b.property_id==='speranta'?'SP':'TV')+'] ' : '';
         // Short name for mobile — first name only, max 10 chars
         const fullName = b.display_name || b.guest_name || b.platform || 'Guest';
@@ -5390,7 +5390,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
           'margin-left:'+startOffset,
           'box-sizing:border-box',
           'background:'+color,
-          'color:'+(isCancelled?'#6b7280':color==='#FFC300'?'#1a1a2e':'#fff'),
+          'color:'+(isCancelled?'#6b7280':color==='#E8B23A'?'#1a1a2e':'#fff'),
           'font-size:.63rem',
           'font-weight:600',
           'padding:2px 6px',
@@ -5948,7 +5948,7 @@ function showDay(ds) {
 
   // Bookings — with cleaning status chip in corner
   bEvts.forEach(b=>{
-    const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#c17f3c'));
+    const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#A8702E'));
     const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
     const _bid = b.id;
     const coDate = b.check_out_date || b.check_out?.slice(0,10);
@@ -6522,7 +6522,7 @@ function renderGuestManagement() {
       const isNow  = b.check_in<=today && b.check_out>=today;
       const isPast = b.check_out<today;
       const daysUntil = Math.ceil((new Date(b.check_in)-new Date())/86400000);
-      const col = PLAT_COLORS[b.platform]||'#c17f3c';
+      const col = PLAT_COLORS[b.platform]||'#A8702E';
       const cleanOk = domestics.some(d =>
         d.property_id===b.property_id && d.status!=='cancelled' &&
         Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10))) <= 2*86400000
@@ -7167,7 +7167,7 @@ function renderGuestTimeline() {
     const isNow  = b.check_in<=today && b.check_out>=today;
     const isPast = b.check_out<today;
     const dIn    = Math.round((new Date(b.check_in)-new Date())/86400000);
-    const col    = PLAT_COLORS[b.platform]||'#c17f3c';
+    const col    = PLAT_COLORS[b.platform]||'#A8702E';
     const stages = getGuestTouchpoints(b);
     const dueStage = stages.find(s => s.dueNow);
     // Which stage's message is shown/sendable below — a manual pill click
@@ -7569,7 +7569,7 @@ async function renderReports(monthsBack) {
   const fmt    = n => 'R' + Math.round(n).toLocaleString('en-ZA');
   const fmtK   = n => n >= 1000 ? 'R' + (n/1000).toFixed(1) + 'k' : fmt(n);
   const today  = todaySAST();
-  const pColors = {airbnb:'#FF385C', booking:'#003580', lekkeslaap:'#FFC300', manual:'#c17f3c'};
+  const pColors = {airbnb:'#E14666', booking:'#1E4C85', lekkeslaap:'#E8B23A', manual:'#A8702E'};
   const pNames  = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', manual:'Direct'};
 
   document.getElementById('report-stats').innerHTML = '<div class="text-muted" style="padding:10px">Loading live data…</div>';
@@ -7619,7 +7619,7 @@ const platOrder = ['airbnb','booking','lekkeslaap','manual'];
   document.getElementById('report-stats').innerHTML =
     sCard('Speranta Revenue', fmt(totalRev), spPaid.length+' paid bookings · '+totalNights+' nights', 'var(--green2)') +
     sCard('Avg Per Night', fmt(avgNight), 'all platforms combined', 'var(--accent)') +
-    sCard('Best Platform', fmt(airbnbAvg)+'/night', 'Airbnb · R'+(airbnbAvg-lsAvg)+' more than LekkeSlaap', '#FF385C') +
+    sCard('Best Platform', fmt(airbnbAvg)+'/night', 'Airbnb · R'+(airbnbAvg-lsAvg)+' more than LekkeSlaap', '#E14666') +
     sCard('Pipeline', upcoming.length+' bookings', upcomingNights+' upcoming nights', 'var(--blue)');
 
   // ── MONTHLY DATA ──
@@ -8142,7 +8142,7 @@ function showChartTooltip(month, data) {
   const tooltipEl = document.getElementById('report-chart-tooltip');
   if (!tooltipEl) return;
   const pNames = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', manual:'Direct'};
-  const pColors = {airbnb:'#FF385C', booking:'#003580', lekkeslaap:'#FFC300', manual:'#c17f3c'};
+  const pColors = {airbnb:'#E14666', booking:'#1E4C85', lekkeslaap:'#E8B23A', manual:'#A8702E'};
   const fmt = n => 'R' + Math.round(n).toLocaleString('en-ZA');
   const [y,mo] = month.split('-');
   const moName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1];
