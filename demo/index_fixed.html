@@ -283,14 +283,11 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .nina-task-text.done{text-decoration:line-through;color:var(--muted)}
 /* KB */
 .kb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
-.kb-card{position:relative;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden;cursor:pointer;transition:box-shadow .15s}
+.kb-card{position:relative;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);padding:16px;cursor:pointer;transition:box-shadow .15s}
 .kb-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.08)}
-.kb-band{height:40px}
-.kb-icon{position:absolute;top:21px;left:14px;width:34px;height:34px;border-radius:50%;background:var(--surface);border:3px solid var(--surface);display:flex;align-items:center;justify-content:center;font-size:.92rem;box-shadow:0 2px 6px rgba(0,0,0,.15)}
-.kb-edit-btn{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.3);border:none;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:.78rem;color:#fff;display:flex;align-items:center;justify-content:center}
-.kb-body{padding:20px 16px 16px}
-.kb-cat{font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--muted);margin-bottom:5px}
-.kb-title{font-weight:700;margin-bottom:7px;font-size:.92rem;color:var(--ink)}
+.kb-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding:3px 9px 3px 7px;border-radius:20px;margin-bottom:10px}
+.kb-edit-btn{position:absolute;top:12px;right:12px;background:var(--surface-2);border:none;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:.78rem;color:var(--ink);display:flex;align-items:center;justify-content:center}
+.kb-title{font-weight:700;margin-bottom:6px;font-size:.92rem;color:var(--ink)}
 .kb-preview{font-size:.8rem;color:var(--muted);line-height:1.5}
 .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:600;background:var(--warm);color:var(--ink);margin:2px}
 /* REPORTS */
@@ -7543,17 +7540,19 @@ function kmUpdateFaq(ei, field, val) {
 // Finance-category notes were dropped from here per owner feedback — that
 // content belongs in Reports/Team, not this operational reference page —
 // so it's filtered out defensively even if a stray row still exists in DB.
-// Category-colored bands, matching Team & Contacts' role-colored badges —
-// same idea (type = color), applied to KB categories instead of staff roles.
+// Category color-coding, matching Team & Contacts' role-colored badges —
+// same idea (type = color), applied to KB categories instead of staff
+// roles, but as a small corner chip rather than a full band: inspired by
+// the badge language, not a copy of it.
 const KB_CAT_STYLE = {
-  'Procedures': {color:'var(--accent)', icon:'📋'},
-  'Access':     {color:'var(--coral)',  icon:'🔑'},
-  'WiFi':       {color:'var(--blue)',   icon:'📶'},
-  'Maintenance':{color:'var(--muted)',  icon:'🔧'},
-  'Guest Info': {color:'var(--teal)',   icon:'🛎️'},
-  'Emergency':  {color:'var(--red)',    icon:'🚨'},
+  'Procedures': {color:'#C9962E', icon:'📋'},
+  'Access':     {color:'#F0563B', icon:'🔑'},
+  'WiFi':       {color:'#2F6FED', icon:'📶'},
+  'Maintenance':{color:'#71717a', icon:'🔧'},
+  'Guest Info': {color:'#0FA898', icon:'🛎️'},
+  'Emergency':  {color:'#E0543D', icon:'🚨'},
 };
-function kbCatStyle(cat) { return KB_CAT_STYLE[cat] || {color:'var(--muted)', icon:'📚'}; }
+function kbCatStyle(cat) { return KB_CAT_STYLE[cat] || {color:'#71717a', icon:'📚'}; }
 
 function renderKB(search='') {
   const q=(search||'').toLowerCase();
@@ -7568,15 +7567,13 @@ function renderKB(search='') {
     const st = kbCatStyle(cat);
     return`<div class="mb-6">
       <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${st.icon} ${cat}</div>
-      <div class="kb-grid">${arts.map(a=>`<div class="kb-card" onclick="showKB('${a.id}')">
-        <div class="kb-band" style="background:${st.color}"></div>
+      <div class="kb-grid">${arts.map(a=>{
+        const as = kbCatStyle(a.category);
+        return `<div class="kb-card" onclick="showKB('${a.id}')">
         <button class="kb-edit-btn" onclick="event.stopPropagation();editKB('${a.id}')" title="Edit">✏️</button>
-        <div class="kb-icon">${st.icon}</div>
-        <div class="kb-body">
-          <div class="kb-cat">${a.category}${a.property_id&&a.property_id!=='all'?' · '+PROPS[a.property_id]?.short:''}</div>
-          <div class="kb-title">${a.title}</div><div class="kb-preview">${a.content.slice(0,90)}…</div><div style="margin-top:8px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
-        </div>
-      </div>`).join('')}</div>
+        <div class="kb-chip" style="background:${as.color}14;color:${as.color}">${as.icon} ${a.category}${a.property_id&&a.property_id!=='all'?' · '+PROPS[a.property_id]?.short:''}</div>
+        <div class="kb-title">${a.title}</div><div class="kb-preview">${a.content.slice(0,90)}…</div><div style="margin-top:8px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      </div>`;}).join('')}</div>
     </div>`;
   }).join('')||'<div class="empty-state"><div class="empty-icon">📚</div>No articles found</div>';
 }
@@ -7584,7 +7581,7 @@ function showKB(id) {
   const a=kbArticles.find(x=>x.id==id); if(!a)return;
   const st = kbCatStyle(a.category);
   document.getElementById('day-modal-title').textContent=a.title;
-  document.getElementById('day-modal-body').innerHTML=`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:${st.color};margin-bottom:10px">${st.icon} ${a.category}</div><div style="line-height:1.7;white-space:pre-line;font-size:.9rem">${a.content}</div><div style="margin-top:14px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
+  document.getElementById('day-modal-body').innerHTML=`<div style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding:3px 9px 3px 7px;border-radius:20px;margin-bottom:12px;background:${st.color}14;color:${st.color}">${st.icon} ${a.category}</div><div style="line-height:1.7;white-space:pre-line;font-size:.9rem">${a.content}</div><div style="margin-top:14px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
   openModal('day-modal');
 }
 function editKB(id) {
