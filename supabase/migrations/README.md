@@ -73,6 +73,7 @@ order.
 | 470_roadmap_state_p0_43.sql | both | Marks Roadmap item p0-43 (convert all remaining window.confirm() calls to the non-blocking confirmAction() modal) done |
 | 480_roadmap_state_p0_44.sql | both | Marks Roadmap item p0-44 (staff portal's own separate "Assign Cleaning" flow never got the outside-cleaner phone/send feature) done |
 | 490_roadmap_state_p0_45.sql | both | Marks Roadmap item p0-45 (inventory report "Create task" button vanished for good once reviewed, with no way to redo a deleted task) done |
+| 500_roadmap_state_p0_46.sql | both | Marks Roadmap item p0-46 (confirm-delete popup rendered behind an already-open modal) done |
 
 ## ACTIVE INCIDENT (2026-07-18) — is_org_admin / is_org_member broken on BOTH databases from 2026-07-18 until 085 is applied
 
