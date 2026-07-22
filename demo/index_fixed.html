@@ -6842,7 +6842,7 @@ function renderKanban() {
   if (filterLabelEl) filterLabelEl.textContent = taskAssigneeFilter !== 'all' ? 'Showing tasks for: '+taskAssigneeFilter : '';
   boardEl.innerHTML = KANBAN_COLS.map(col => {
     const colTasks = projectTasks.filter(t => (t.kanban_status||'todo') === col.id);
-    return `<div style="background:${col.bg};border-radius:14px;padding:13px;min-height:300px;border:1.5px solid ${col.color}22">
+    return `<div style="background:var(--surface-2);border-radius:14px;padding:13px;min-height:300px;border:1.5px solid ${col.color}22">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div style="font-size:.78rem;font-weight:700;color:${col.color};text-transform:uppercase;letter-spacing:.06em">${col.label}</div>
         <span style="background:${col.color}22;color:${col.color};font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px">${colTasks.length}</span>
