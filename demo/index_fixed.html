@@ -1408,15 +1408,13 @@ function _buildMobileNavStub(){/* replaced by main script */}
           </div>
         </div>
 
-        <!-- Business info -->
+        <!-- Business info — moved to its own admin-only tab (banking/legal/tax
+             don't belong in a general Settings page anyone with owner/admin
+             access can scroll past) -->
         <div class="card" style="margin-bottom:18px">
-          <div style="font-weight:700;font-size:1rem;margin-bottom:12px">🏦 Business Info</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.82rem">
-            <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Business Name</div>SN Apt Management</div>
-            <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Registration</div>2024/643198/07</div>
-            <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Tax Number</div>9008226327</div>
-            <div style="background:var(--surface-2);border-radius:8px;padding:12px"><div style="font-size:.68rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Bank</div>Nedbank · 198765</div>
-          </div>
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🔐 Business Info</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Registration, tax number and banking details have moved to their own tab.</div>
+          <button class="btn btn-sm btn-ghost" onclick="switchTab('vault')">Open Business Info →</button>
         </div>
 
         <!-- Display preferences -->
