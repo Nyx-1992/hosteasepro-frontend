@@ -213,6 +213,31 @@ h2,h3{font-family:"DM Serif Display",serif}
 .ring-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;transition:all .15s}
 .ring-check.done{border-color:#16a34a;background:#d1fae5}
 .ring-note{padding:10px 15px 12px}
+/* Inspection card — room grid overview, expand for photos/issues/notes */
+.insp-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;border-left:4px solid var(--cond)}
+.insp-hd{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.insp-prop{font-weight:700;font-size:.92rem;color:var(--ink)}
+.insp-sub{font-size:.75rem;color:var(--muted);margin-top:2px}
+.insp-tag{font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:20px}
+.insp-del{background:var(--red-light);color:var(--red);border:none;border-radius:6px;padding:3px 8px;font-size:.72rem;cursor:pointer}
+.insp-rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:7px}
+.insp-room{position:relative;border-radius:10px;padding:9px 4px;text-align:center;cursor:pointer;transition:transform .15s}
+.insp-room:hover{transform:scale(1.05)}
+.insp-room.pass{background:var(--green-light,#dcfce7)}
+.insp-room.fail{background:var(--red-light)}
+.insp-room .ic{font-size:1.05rem}
+.insp-room .lbl{font-size:.58rem;font-weight:700;margin-top:4px;line-height:1.2;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.insp-room-badge{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+.insp-toggle{margin-top:10px;font-family:var(--font-mono);font-size:.66rem;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 0}
+.insp-toggle:hover{color:var(--ink)}
+.insp-detail{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.insp-detail-photos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.insp-detail-photos img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer}
+.insp-detail-issues{margin-bottom:8px}
+.insp-detail-issues .lbl{font-size:.72rem;font-weight:700;color:var(--red);margin-bottom:4px}
+.insp-issue-row{font-size:.78rem;color:var(--ink);padding:3px 0}
+.insp-detail-note{font-size:.8rem;color:var(--muted);background:var(--surface-2);border-radius:8px;padding:8px 10px;font-style:italic}
+.insp-detail-empty{font-size:.78rem;color:var(--muted)}
 .tab-pane{width:100%}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .mb-4{margin-bottom:14px}.mb-6{margin-bottom:22px}
@@ -394,27 +419,19 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 @media (prefers-reduced-motion: reduce){.skeleton-row{animation:none;opacity:.6}}
 .divider{height:1px;background:var(--border);margin:14px 0}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
-/* Mobile bottom nav — always defined */
-.mobile-nav{position:fixed;bottom:0;left:0;right:0;background:#16213e;z-index:9999;padding:8px 0 12px;border-top:1px solid rgba(255,255,255,.15);display:none;box-shadow:0 -2px 20px rgba(0,0,0,.25);-webkit-transform:translateZ(0);transform:translateZ(0)}
-.mobile-nav-inner{display:flex;justify-content:space-around;align-items:center}
-.mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 10px;border-radius:10px;min-width:54px;-webkit-tap-highlight-color:transparent}
-.mob-nav-icon{font-size:1.2rem;line-height:1.3}
-.mob-nav-label{font-size:.58rem;color:rgba(255,255,255,.45);font-weight:600;letter-spacing:.02em}
-.mob-nav-item.active .mob-nav-label{color:var(--accent)}
+/* Mobile nav — single mechanism: topbar hamburger opens a left drawer with every tab */
 .mob-drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000}
 .mob-drawer-overlay.open{display:block}
 .mob-drawer{position:fixed;left:-265px;top:0;bottom:0;width:265px;background:var(--ink);z-index:9001;transition:left .28s ease;display:flex;flex-direction:column;overflow:hidden}
 .mob-drawer.open{left:0}
 @media(min-width:769px){
-  .mobile-nav{display:none!important}
   #mob-menu-btn{display:none!important}
 }
 @media(max-width:900px){#dash-lower-grid{grid-template-columns:1fr!important}}
 @media(max-width:768px){
   .sidebar{display:none!important}
-  .main{margin-left:0!important;padding-bottom:74px}
+  .main{margin-left:0!important}
   .content{padding:10px}
-#mob-menu-btn{display:none!important}
   .topbar{padding:10px 14px}
   .page-title{font-size:1.1rem}
   .stat-grid{grid-template-columns:1fr 1fr}
@@ -476,8 +493,8 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 <body>
 <script>
 // Safe stubs — overridden when main script loads
-function openDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d){d.style.transform='translateX(0)';d.style.webkitTransform='translateX(0)';}if(o)o.style.display='block';}
-function closeDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d){d.style.transform='translateX(-110%)';d.style.webkitTransform='translateX(-110%)';}if(o)o.style.display='none';}
+function openDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d)d.classList.add('open');if(o)o.classList.add('open');}
+function closeDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d)d.classList.remove('open');if(o)o.classList.remove('open');}
 function toggleMobSidebar(){openDrawer();}
 function _buildMobileNavStub(){/* replaced by main script */}
 </script>
@@ -623,7 +640,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
 
           <!-- Calendar wrapper -->
           <div class="cal-wrap">
-            <div class="cal-header">
+            <div class="cal-header" id="cal-header">
               <div class="cal-month" id="cal-month-label"></div>
               <div class="cal-nav">
                 <button onclick="calNav(-1)">← Prev</button>
@@ -988,8 +1005,8 @@ function _buildMobileNavStub(){/* replaced by main script */}
           </div>
           <div style="overflow-x:auto">
             <div id="report-monthly-chart" style="display:flex;align-items:flex-end;gap:5px;height:180px;min-width:500px;padding:4px 0"></div>
+            <div id="report-month-labels" style="display:flex;gap:5px;min-width:500px;margin-top:4px"></div>
           </div>
-          <div id="report-month-labels" style="display:flex;gap:5px;min-width:500px;margin-top:4px"></div>
           <div id="report-chart-tooltip" style="display:none;margin-top:12px;padding:10px 14px;background:var(--sand);border-radius:8px;font-size:.82rem;line-height:1.7"></div>
         </div>
         <!-- Platform + best month row -->
@@ -1584,10 +1601,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
   </div>
 </div>
 
-<!-- MOBILE BOTTOM NAV -->
-<div class="mobile-nav" id="mobile-nav">
-  <div class="mobile-nav-inner" id="mob-nav-inner"></div>
-</div>
 <!-- MOBILE DRAWER -->
 <div class="mob-drawer-overlay" id="mob-overlay" onclick="closeDrawer()"></div>
 <div class="mob-drawer" id="mob-drawer">
@@ -1780,6 +1793,7 @@ let taskAssigneeFilter = 'all'; // 'all' | 'Nicole' | 'Silja' | 'Nina Williams'
 let taskPriorityFilter = 'all';  // 'all' | 'high' | 'medium' | 'low'
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let calViewMode = 'month'; // 'month' | 'week' | 'day'
+let _calMobileDefaultSet = false;
 let calMode     = 'bookings'; // 'bookings' | 'domestic'
 let domCalYear = new Date().getFullYear(), domCalMonth = new Date().getMonth();
 let calProp = 'all';
@@ -2390,47 +2404,27 @@ function buildNav() {
     `<div class="nav-item ${n.id===currentTab?'active':''}" data-nav-id="${n.id}" onclick="switchTab('${n.id}')"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
   ).join('');
 }
+// Full nav list inside the slide-out drawer (opened via the topbar hamburger
+// or the bottom nav's "More" icon) — the bottom nav only has room for 5-6
+// icons, so this is how the other tabs (Messages, Property Manual, Knowledge
+// Base, Team, Invoices, Roadmap, Settings) are reachable on mobile at all.
+function buildMobileDrawerNav() {
+  const listEl = document.getElementById('mob-nav-list');
+  if (!listEl || !currentUser) return;
+  const items = NAV.filter(n => n.roles.includes(currentUser.role));
+  listEl.innerHTML = items.map(n =>
+    `<div class="nav-item ${n.id===currentTab?'active':''}" data-nav-id="${n.id}" onclick="switchTab('${n.id}');closeDrawer()"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
+  ).join('');
+}
+
+// Mobile nav is a single mechanism: the topbar hamburger opens a left-side
+// drawer with every tab. (Used to also have a separate bottom tab bar, but
+// that left the hamburger's own drawer empty while duplicating a handful of
+// tabs at the bottom — one confusing nav instead of a clear one. Consolidated
+// down to just the drawer.)
 function buildMobileNav() {
-  const nav = document.getElementById('mobile-nav');
-  const inner = document.getElementById('mob-nav-inner');
-  if (!nav || !inner || !currentUser) return;
-  // Invisible on desktop regardless of content — skip the rebuild entirely
-  // there instead of doing full innerHTML + two forced style recalcs on
-  // every tab click just to redraw something nobody can see.
-  if (window.innerWidth > 768) { nav.style.setProperty('display','none','important'); return; }
-
-const MOB_NAV = [
-    {id:'dashboard', icon:'🏠', label:'Home',     roles:['owner','admin','host']},
-    {id:'bookings',  icon:'📋', label:'Bookings', roles:['owner','admin','host']},
-    {id:'calendar',  icon:'📅', label:'Calendar', roles:['owner','admin','host']},
-    {id:'tasks',     icon:'✅', label:'Tasks',     roles:['owner','admin','host']},
-    {id:'reports',   icon:'📊', label:'Reports',  roles:['owner','admin']},
-  ];
-  inner.innerHTML = MOB_NAV.filter(item => item.roles.includes(currentUser.role)).map(item => `
-    <div onclick="switchTab('${item.id}')"
-      style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;cursor:pointer;flex:1;
-             color:${currentTab===item.id ? '#FF385C' : 'rgba(255,255,255,0.6)'};
-             border-top:2px solid ${currentTab===item.id ? '#FF385C' : 'transparent'};
-             transition:all .15s">
-      <span style="font-size:1.2rem;line-height:1">${item.icon}</span>
-      <span style="font-size:.58rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${item.label}</span>
-    </div>`).join('');
-
-  // Force display on mobile
-  const isMobile = window.innerWidth <= 768;
-  nav.setAttribute('style',
-    'display:' + (isMobile ? 'flex' : 'none') + '!important;' +
-    'position:fixed!important;bottom:0!important;left:0!important;right:0!important;' +
-    'z-index:9999!important;background:#16213e!important;' +
-    'padding:6px 0 env(safe-area-inset-bottom,10px)!important;' +
-    'border-top:1px solid rgba(255,255,255,.12)!important;' +
-    'visibility:visible!important;opacity:1!important;' +
-    '-webkit-transform:translateZ(0)!important;transform:translateZ(0)!important'
-  );
-  // Also fix inner
-  inner.setAttribute('style',
-    'display:flex!important;width:100%!important;justify-content:space-around!important'
-  );
+  if (!currentUser) return;
+  buildMobileDrawerNav();
 }
 
 function switchTab(id) {
@@ -2477,6 +2471,26 @@ function getInspChecklist(propShortKey) {
   const uuid = (PROPS[propShortKey] || {}).uuid || propShortKey;
   const saved = propertyManuals[uuid] && propertyManuals[uuid].inspection && propertyManuals[uuid].inspection.checklist;
   return (saved && saved.length) ? saved : INSP_CHECKLIST;
+}
+
+// Room-grid icon + short label per known checklist key — falls back to a
+// generic icon and the full label for custom per-property checklist items.
+const INSP_ROOM_ICON = {
+  entrance:'🚪', living:'🛋️', kitchen:'🍳', bathroom:'🛁', bedrooms:'🛏️', balcony:'🌿',
+  geyser:'🚿', electrical:'💡', wifi:'📶', inventory:'📦', maintenance:'🔧', cleanliness:'✨',
+};
+const INSP_ROOM_SHORT = {
+  entrance:'Entrance', living:'Living', kitchen:'Kitchen', bathroom:'Bathroom', bedrooms:'Bedrooms', balcony:'Balcony',
+  geyser:'Geyser', electrical:'Electrical', wifi:'WiFi & TV', inventory:'Inventory', maintenance:'Maintenance', cleanliness:'Cleanliness',
+};
+function inspRoomIcon(key) { return INSP_ROOM_ICON[key] || '📋'; }
+function inspRoomLabel(item) { return INSP_ROOM_SHORT[item.key] || item.label; }
+
+let inspExpanded = {};
+function toggleInspExpand(id) {
+  inspExpanded[id] = !inspExpanded[id];
+  renderInspectionHistory();
+  renderReportInspections();
 }
 
 const INSP_CONDITION_LABELS = {
@@ -2601,49 +2615,47 @@ function renderInspectionHistory() {
 
 function renderInspectionCard(r, compact) {
   const cond = INSP_CONDITION_LABELS[r.condition] || INSP_CONDITION_LABELS.good;
-  const passCount = r.passCount ?? Object.values(r.checklist||{}).filter(Boolean).length;
-  const total = r.totalCount ?? INSP_CHECKLIST.length;
-  const pct = total ? Math.round(passCount/total*100) : 0;
-  const barCol = pct>=90?'#16a34a':pct>=70?'#f59e0b':'#dc2626';
+  const checklist = getInspChecklist(r.property_id);
+  const failedKeys = Object.entries(r.checklist||{}).filter(([k,v])=>!v).map(([k])=>k);
+  const expanded = !!inspExpanded[r.id];
 
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;border-left:4px solid ${cond.color}">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+  const rooms = checklist.map(item => {
+    const tracked = r.checklist && Object.prototype.hasOwnProperty.call(r.checklist, item.key);
+    const failed = tracked && !r.checklist[item.key];
+    return `<div class="insp-room ${failed?'fail':'pass'}" onclick="toggleInspExpand('${r.id}')" title="${item.label}">
+      ${failed?'<div class="insp-room-badge"></div>':''}
+      <div class="ic">${inspRoomIcon(item.key)}</div>
+      <div class="lbl">${inspRoomLabel(item)}</div>
+    </div>`;
+  }).join('');
+
+  const hasDetail = r.photos?.length || failedKeys.length || r.notes;
+  const detail = expanded ? `<div class="insp-detail">
+      ${r.photos?.length ? `<div class="insp-detail-photos">
+        ${r.photos.map((p,i) => `<img src="${p}" onclick="event.stopPropagation();openPhotoModal('${r.id}',${i})" title="Click to enlarge"/>`).join('')}
+      </div>` : ''}
+      ${failedKeys.length ? `<div class="insp-detail-issues">
+        <div class="lbl">Issues flagged</div>
+        ${failedKeys.map(k => { const item = checklist.find(i=>i.key===k); return `<div class="insp-issue-row">⚠️ ${item?.label||k}</div>`; }).join('')}
+      </div>` : ''}
+      ${r.notes ? `<div class="insp-detail-note">"${r.notes}"</div>` : ''}
+      ${!hasDetail ? `<div class="insp-detail-empty">No photos or notes for this report.</div>` : ''}
+    </div>` : '';
+
+  return `<div class="insp-card" style="--cond:${cond.color}">
+    <div class="insp-hd">
       <div>
-        <div style="font-weight:700;font-size:.92rem;color:var(--ink)">${propName(r.property_id)} — ${fmtDate(r.date)}</div>
-        <div style="font-size:.75rem;color:var(--muted);margin-top:2px">Inspector: ${r.inspector} · ${new Date(r.created_at).toLocaleDateString('en-ZA')}</div>
+        <div class="insp-prop">${propName(r.property_id)} — ${fmtDate(r.date)}</div>
+        <div class="insp-sub">Inspector: ${r.inspector} · ${new Date(r.created_at).toLocaleDateString('en-ZA')}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span style="background:${cond.bg};color:${cond.color};font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:20px">${cond.text}</span>
-        <button onclick="deleteInspection('${r.id}')"
-          style="background:var(--red-light);color:var(--red);border:none;border-radius:6px;padding:3px 8px;font-size:.72rem;cursor:pointer">✕</button>
+        <span class="insp-tag" style="background:${cond.bg};color:${cond.color}">${cond.text}</span>
+        <button class="insp-del" onclick="deleteInspection('${r.id}')">✕</button>
       </div>
     </div>
-    <!-- Score bar -->
-    <div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;font-size:.74rem;color:var(--muted);margin-bottom:4px">
-        <span>Checklist score</span><span style="font-weight:700;color:${barCol}">${passCount}/${total} passed</span>
-      </div>
-      <div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden">
-        <div style="height:6px;background:${barCol};border-radius:3px;width:${pct}%;transition:width .4s"></div>
-      </div>
-    </div>
-    <!-- Failed items -->
-    ${Object.entries(r.checklist||{}).filter(([k,v])=>!v).length > 0 ? `
-    <div style="margin-bottom:10px">
-      <div style="font-size:.72rem;font-weight:600;color:var(--red);margin-bottom:4px">Issues flagged:</div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px">
-        ${Object.entries(r.checklist||{}).filter(([k,v])=>!v).map(([k]) => {
-          const item = INSP_CHECKLIST.find(i=>i.key===k);
-          return `<span style="background:var(--red-light);color:var(--red);font-size:.72rem;padding:2px 8px;border-radius:6px">${item?.label||k}</span>`;
-        }).join('')}
-      </div>
-    </div>` : ''}
-    ${r.notes ? `<div style="font-size:.8rem;color:var(--muted);background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-style:italic">"${r.notes}"</div>` : ''}
-    ${r.photos?.length ? `
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${r.photos.map((p,i) => `<img src="${p}" onclick="openPhotoModal('${r.id}',${i})"
-        style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" title="Click to enlarge"/>`).join('')}
-    </div>` : ''}
+    <div class="insp-rooms">${rooms}</div>
+    <button class="insp-toggle" onclick="toggleInspExpand('${r.id}')">${expanded?'Hide details ▴':'View details ▾'}</button>
+    ${detail}
   </div>`;
 }
 
@@ -2775,7 +2787,17 @@ function renderReportInspections() {
 function renderTab(id) {
   if (id==='dashboard') renderDashboard();
   else if (id==='bookings')  renderBookings();
-  else if (id==='calendar')  { renderCalendar(); if(showCleaningOverlay) renderDomesticEarnings(); }
+  else if (id==='calendar')  {
+    // Month view's 7-column grid doesn't fit a phone screen — default to
+    // the already-mobile-friendly Day agenda there instead, once, the
+    // first time Calendar is opened. Leaves it alone after that so a
+    // manual switch to Month/Week sticks for the rest of the session.
+    if (!_calMobileDefaultSet) {
+      _calMobileDefaultSet = true;
+      if (window.innerWidth <= 768) { calViewMode = 'day'; syncCalViewPanels(); }
+    }
+    renderCalendar(); if(showCleaningOverlay) renderDomesticEarnings();
+  }
   else if (id==='domestic')  switchTab('calendar'); // redirect — domestic merged into calendar
   else if (id==='tasks')     setTaskSubTab(window._taskSubTab || 'guest');
   else if (id==='messages')  renderMessages();
@@ -5698,14 +5720,27 @@ function setCalMode(mode) {
 }
 
 // ── Calendar view: Month / Week / Day ────────────────────────
-function setCalView(view) {
-  calViewMode = view;
+// Month/Week/Day each need this kept in sync with calViewMode — pulled out
+// so the mobile-default logic (renderTab's 'calendar' case) can apply it
+// once on first load without going through setCalView's own render trigger.
+function syncCalViewPanels() {
   ['month','week','day'].forEach(v => {
     const panel = document.getElementById('calview-'+v+'-panel');
     const btn   = document.getElementById('calview-'+v+'-btn');
-    if (panel) panel.style.display = v===view ? 'block' : 'none';
-    if (btn) btn.classList.toggle('active', v===view);
+    if (panel) panel.style.display = v===calViewMode ? 'block' : 'none';
+    if (btn) btn.classList.toggle('active', v===calViewMode);
   });
+  // The month label + Prev/Today/Next nav only makes sense (and is only
+  // wired up) for Month view — Week and Day each have their own correctly-
+  // scoped nav (Prev week/This week/Next week, Yesterday/Today/Tomorrow),
+  // so showing both was a redundant, wrong-granularity duplicate.
+  const header = document.getElementById('cal-header');
+  if (header) header.style.display = calViewMode==='month' ? 'flex' : 'none';
+}
+
+function setCalView(view) {
+  calViewMode = view;
+  syncCalViewPanels();
   requestAnimationFrame(() => renderCalendar());
 }
 
@@ -5737,20 +5772,26 @@ function renderWeekView() {
   const DOW_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   el.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px">
+    <div style="text-align:center;margin-bottom:10px;display:flex;gap:8px;justify-content:center">
+      <button onclick="calNavWeek(-1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">← Prev week</button>
+      <button onclick="calNavWeek(0)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">This week</button>
+      <button onclick="calNavWeek(1)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">Next week →</button>
+    </div>
+    <div style="overflow-x:auto">
+    <div style="display:grid;grid-template-columns:repeat(7,minmax(88px,1fr));gap:2px;margin-bottom:8px;min-width:620px">
       ${DOW_LABELS.map((d,i) => `
         <div style="text-align:center;font-size:.7rem;font-weight:700;color:var(--muted);padding:6px 2px;text-transform:uppercase;letter-spacing:.05em;
           ${days[i]===today?'color:var(--accent);':''}">${d}<br>
           <span style="font-size:.8rem;font-weight:${days[i]===today?'700':'400'};color:${days[i]===today?'var(--accent)':'var(--ink)'}">${days[i].slice(8)}</span>
         </div>`).join('')}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;min-height:200px">
+    <div style="display:grid;grid-template-columns:repeat(7,minmax(88px,1fr));gap:2px;min-width:620px">
       ${days.map(ds => {
-        const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled' && b.status!=='blocked');
+        const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled' && b.status!=='blocked' && !isCaretaker(b));
         const dayCleans   = fd.filter(d => d.date===ds);
         const isToday     = ds===today;
         return `<div onclick="showDay('${ds}')"
-          style="border:1px solid var(--border);border-radius:8px;padding:6px 4px;min-height:120px;cursor:pointer;
+          style="border:1px solid var(--border);border-radius:8px;padding:6px 4px;min-height:56px;cursor:pointer;
                  background:${isToday?'var(--ocean-light)':'var(--surface)'};
                  ${isToday?'border-color:var(--ocean);':''}"
           onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${isToday?'var(--ocean-light)':'var(--surface)'}'">
@@ -5767,10 +5808,6 @@ function renderWeekView() {
         </div>`;
       }).join('')}
     </div>
-    <div style="text-align:center;margin-top:10px;display:flex;gap:8px;justify-content:center">
-      <button onclick="calNavWeek(-1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">← Prev week</button>
-      <button onclick="calNavWeek(0)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">This week</button>
-      <button onclick="calNavWeek(1)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">Next week →</button>
     </div>`;
 }
 
@@ -5785,12 +5822,11 @@ function calNavWeek(dir) {
 function renderDayView() {
   const el = document.getElementById('cal-day-detail');
   if (!el) return;
-  // Use today's date as default day
-  const today = todaySAST();
-  const ds = today;
+  // Defaults to today, but tracks whatever date Yesterday/Today/Tomorrow last navigated to
+  const ds = _currentDayStr || todaySAST();
   const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
   const fd = calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp);
-  const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled');
+  const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled' && !isCaretaker(b));
   const dayCleans   = fd.filter(d => d.date===ds);
   const fmtDs = new Date(ds).toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
@@ -6799,22 +6835,28 @@ function renderKanban() {
   if (filterLabelEl) filterLabelEl.textContent = taskAssigneeFilter !== 'all' ? 'Showing tasks for: '+taskAssigneeFilter : '';
   boardEl.innerHTML = KANBAN_COLS.map(col => {
     const colTasks = projectTasks.filter(t => (t.kanban_status||'todo') === col.id);
-    return `<div style="background:${col.bg};border-radius:14px;padding:13px;min-height:300px;border:1.5px solid ${col.color}22">
+    return `<div style="background:var(--surface-2);border-radius:14px;padding:13px;min-height:300px;border:1.5px solid ${col.color}22">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div style="font-size:.78rem;font-weight:700;color:${col.color};text-transform:uppercase;letter-spacing:.06em">${col.label}</div>
         <span style="background:${col.color}22;color:${col.color};font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px">${colTasks.length}</span>
       </div>
-      ${colTasks.map(t => `
+      ${colTasks.map(t => {
+        const prioLevel = {low:1,medium:2,high:3}[t.priority||'medium'] || 2;
+        const prioColor = {low:'#16a34a',medium:'#d97706',high:'#dc2626'}[t.priority||'medium'] || '#d97706';
+        return `
         <div style="background:white;border-radius:10px;padding:11px 13px;margin-bottom:8px;border:1px solid ${col.color}33;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer" onclick="openTaskDrawer('${t.id}')">
           <div style="font-weight:600;font-size:.83rem;color:var(--ink);margin-bottom:5px">${t.title}</div>
           ${t.notes||t.description?`<div style="font-size:.74rem;color:var(--muted);margin-bottom:6px">${t.notes||t.description}</div>`:''}
+          <div style="display:flex;border-radius:6px;overflow:hidden;height:5px;margin-bottom:7px">
+            ${[1,2,3].map(i=>`<div style="flex:1;background:${i<=prioLevel?prioColor:'var(--border)'};${i<3?'border-right:1px solid #fff':''}"></div>`).join('')}
+          </div>
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px">
             <span style="font-size:.68rem;color:var(--muted)">📍 ${propName(t.property_id||'all')}</span>
             <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">
               ${(t.assigned||'').split(',').filter(s=>s.trim()&&s.trim()!=='Unassigned').map(a=>{const c=assigneeColor(a.trim());const s=a.trim()==='Nina Williams'?'Nina':a.trim();return `<span style="background:${c.bg};color:${c.text};font-size:.62rem;font-weight:600;padding:1px 7px;border-radius:10px">${s}</span>`;}).join('') || '<span style="font-size:.62rem;color:var(--muted)">Unassigned</span>'}
             </div>
-            <div style="display:flex;gap:4px;align-items:center">
-              <span style="font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;background:${t.priority==='high'?'#fee2e2':t.priority==='medium'?'#fef3c7':'#dcfce7'};color:${t.priority==='high'?'#dc2626':t.priority==='medium'?'#d97706':'#16a34a'}">${t.priority||'medium'}</span>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font-size:.66rem;font-weight:700;color:${prioColor}">${t.priority||'medium'}</span>
               ${t.due?`<span style="font-size:.68rem;color:var(--muted)">📅 ${fmtDate(t.due||t.task_date)}</span>`:''}
             </div>
           </div>
@@ -6828,7 +6870,8 @@ function renderKanban() {
             <button onclick="deleteTask('${t.id}')"
               style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:3px 7px;font-size:.67rem;cursor:pointer;margin-left:auto">✕</button>
           </div>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
       <!-- Add card button -->
       <button onclick="openTaskModalForKanban('${col.id}')"
         style="width:100%;background:transparent;border:1.5px dashed ${col.color}66;border-radius:10px;padding:8px;font-size:.78rem;color:${col.color};cursor:pointer;margin-top:4px;font-weight:600">
