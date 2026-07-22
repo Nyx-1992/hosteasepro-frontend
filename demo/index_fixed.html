@@ -640,7 +640,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
 
           <!-- Calendar wrapper -->
           <div class="cal-wrap">
-            <div class="cal-header">
+            <div class="cal-header" id="cal-header">
               <div class="cal-month" id="cal-month-label"></div>
               <div class="cal-nav">
                 <button onclick="calNav(-1)">← Prev</button>
@@ -1793,6 +1793,7 @@ let taskAssigneeFilter = 'all'; // 'all' | 'Nicole' | 'Silja' | 'Nina Williams'
 let taskPriorityFilter = 'all';  // 'all' | 'high' | 'medium' | 'low'
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let calViewMode = 'month'; // 'month' | 'week' | 'day'
+let _calMobileDefaultSet = false;
 let calMode     = 'bookings'; // 'bookings' | 'domestic'
 let domCalYear = new Date().getFullYear(), domCalMonth = new Date().getMonth();
 let calProp = 'all';
@@ -2786,7 +2787,17 @@ function renderReportInspections() {
 function renderTab(id) {
   if (id==='dashboard') renderDashboard();
   else if (id==='bookings')  renderBookings();
-  else if (id==='calendar')  { renderCalendar(); if(showCleaningOverlay) renderDomesticEarnings(); }
+  else if (id==='calendar')  {
+    // Month view's 7-column grid doesn't fit a phone screen — default to
+    // the already-mobile-friendly Day agenda there instead, once, the
+    // first time Calendar is opened. Leaves it alone after that so a
+    // manual switch to Month/Week sticks for the rest of the session.
+    if (!_calMobileDefaultSet) {
+      _calMobileDefaultSet = true;
+      if (window.innerWidth <= 768) { calViewMode = 'day'; syncCalViewPanels(); }
+    }
+    renderCalendar(); if(showCleaningOverlay) renderDomesticEarnings();
+  }
   else if (id==='domestic')  switchTab('calendar'); // redirect — domestic merged into calendar
   else if (id==='tasks')     setTaskSubTab(window._taskSubTab || 'guest');
   else if (id==='messages')  renderMessages();
@@ -5709,14 +5720,27 @@ function setCalMode(mode) {
 }
 
 // ── Calendar view: Month / Week / Day ────────────────────────
-function setCalView(view) {
-  calViewMode = view;
+// Month/Week/Day each need this kept in sync with calViewMode — pulled out
+// so the mobile-default logic (renderTab's 'calendar' case) can apply it
+// once on first load without going through setCalView's own render trigger.
+function syncCalViewPanels() {
   ['month','week','day'].forEach(v => {
     const panel = document.getElementById('calview-'+v+'-panel');
     const btn   = document.getElementById('calview-'+v+'-btn');
-    if (panel) panel.style.display = v===view ? 'block' : 'none';
-    if (btn) btn.classList.toggle('active', v===view);
+    if (panel) panel.style.display = v===calViewMode ? 'block' : 'none';
+    if (btn) btn.classList.toggle('active', v===calViewMode);
   });
+  // The month label + Prev/Today/Next nav only makes sense (and is only
+  // wired up) for Month view — Week and Day each have their own correctly-
+  // scoped nav (Prev week/This week/Next week, Yesterday/Today/Tomorrow),
+  // so showing both was a redundant, wrong-granularity duplicate.
+  const header = document.getElementById('cal-header');
+  if (header) header.style.display = calViewMode==='month' ? 'flex' : 'none';
+}
+
+function setCalView(view) {
+  calViewMode = view;
+  syncCalViewPanels();
   requestAnimationFrame(() => renderCalendar());
 }
 
@@ -5748,20 +5772,26 @@ function renderWeekView() {
   const DOW_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 
   el.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px">
+    <div style="text-align:center;margin-bottom:10px;display:flex;gap:8px;justify-content:center">
+      <button onclick="calNavWeek(-1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">← Prev week</button>
+      <button onclick="calNavWeek(0)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">This week</button>
+      <button onclick="calNavWeek(1)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">Next week →</button>
+    </div>
+    <div style="overflow-x:auto">
+    <div style="display:grid;grid-template-columns:repeat(7,minmax(88px,1fr));gap:2px;margin-bottom:8px;min-width:620px">
       ${DOW_LABELS.map((d,i) => `
         <div style="text-align:center;font-size:.7rem;font-weight:700;color:var(--muted);padding:6px 2px;text-transform:uppercase;letter-spacing:.05em;
           ${days[i]===today?'color:var(--accent);':''}">${d}<br>
           <span style="font-size:.8rem;font-weight:${days[i]===today?'700':'400'};color:${days[i]===today?'var(--accent)':'var(--ink)'}">${days[i].slice(8)}</span>
         </div>`).join('')}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;min-height:200px">
+    <div style="display:grid;grid-template-columns:repeat(7,minmax(88px,1fr));gap:2px;min-width:620px">
       ${days.map(ds => {
         const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled' && b.status!=='blocked');
         const dayCleans   = fd.filter(d => d.date===ds);
         const isToday     = ds===today;
         return `<div onclick="showDay('${ds}')"
-          style="border:1px solid var(--border);border-radius:8px;padding:6px 4px;min-height:120px;cursor:pointer;
+          style="border:1px solid var(--border);border-radius:8px;padding:6px 4px;min-height:56px;cursor:pointer;
                  background:${isToday?'var(--ocean-light)':'var(--surface)'};
                  ${isToday?'border-color:var(--ocean);':''}"
           onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='${isToday?'var(--ocean-light)':'var(--surface)'}'">
@@ -5778,10 +5808,6 @@ function renderWeekView() {
         </div>`;
       }).join('')}
     </div>
-    <div style="text-align:center;margin-top:10px;display:flex;gap:8px;justify-content:center">
-      <button onclick="calNavWeek(-1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">← Prev week</button>
-      <button onclick="calNavWeek(0)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">This week</button>
-      <button onclick="calNavWeek(1)"  style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 14px;cursor:pointer;font-size:.82rem">Next week →</button>
     </div>`;
 }
 
