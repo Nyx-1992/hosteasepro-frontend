@@ -5787,7 +5787,7 @@ function renderWeekView() {
     </div>
     <div style="display:grid;grid-template-columns:repeat(7,minmax(88px,1fr));gap:2px;min-width:620px">
       ${days.map(ds => {
-        const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled' && b.status!=='blocked');
+        const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled' && b.status!=='blocked' && !isCaretaker(b));
         const dayCleans   = fd.filter(d => d.date===ds);
         const isToday     = ds===today;
         return `<div onclick="showDay('${ds}')"
@@ -5822,12 +5822,11 @@ function calNavWeek(dir) {
 function renderDayView() {
   const el = document.getElementById('cal-day-detail');
   if (!el) return;
-  // Use today's date as default day
-  const today = todaySAST();
-  const ds = today;
+  // Defaults to today, but tracks whatever date Yesterday/Today/Tomorrow last navigated to
+  const ds = _currentDayStr || todaySAST();
   const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
   const fd = calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp);
-  const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled');
+  const dayBookings = fb.filter(b => b.check_in<=ds && b.check_out>ds && b.status!=='cancelled' && !isCaretaker(b));
   const dayCleans   = fd.filter(d => d.date===ds);
   const fmtDs = new Date(ds).toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 
