@@ -1811,6 +1811,7 @@ let domCalYear = new Date().getFullYear(), domCalMonth = new Date().getMonth();
 let calProp = 'all';
 let showCancelledOnCal = false;
 let bookings = [], tasks = [], domestics = [], kbArticles = [], contacts = [], vault = [];
+let _liveDataPending = false; // true from the first render until the real Supabase fetch resolves — see renderDashboard()'s urgent-actions guard
 let messages = [
   {id:'m1',from:'Nicole',   role:'admin',text:'Speranta: Joe Ladlow arrives 17 Apr. Welcome pack ready?',       time:'09:14'},
   {id:'m2',from:'Nina Williams',role:'host', text:'On it! Blessing confirmed cleaning after Hedda on the 17th.',time:'09:32'},
@@ -2847,6 +2848,7 @@ async function loadData() {
   domestics = SAMPLE_DOMESTICS.map(nd);
   kbArticles = SAMPLE_KB;
   contacts = BUILTIN_CONTACTS.map(c=>({...c}));
+  _liveDataPending = !!db; // a real fetch is about to replace this sample data momentarily
   renderTab(currentTab);
   if (!db) return;
   try {
@@ -2893,8 +2895,13 @@ async function loadData() {
       });
     }
     // db-status hidden on mobile — status logged to console only
+    _liveDataPending = false;
     renderTab(currentTab);
-  } catch(e) { console.warn('DB load:', e); }
+  } catch(e) {
+    console.warn('DB load:', e);
+    _liveDataPending = false;
+    renderTab(currentTab);
+  }
 }
 
 
@@ -4572,6 +4579,17 @@ function renderDashboard() {
   // ── Urgent actions ──
   const urgentEl = document.getElementById('dash-urgent');
   if (!urgentEl) return;
+
+  // While the real Supabase fetch is still in flight, `domestics`/`tasks`
+  // are still SAMPLE_* fallback data — realistic-looking demo entries with
+  // real staff names and old dates that trip the "never completed" rule
+  // below. Showing that as a flash of scary-looking real alerts on every
+  // login (before the live data replaces it a moment later) is worse than
+  // just showing a loading state here for that first render.
+  if (_liveDataPending) {
+    urgentEl.innerHTML = skeletonRows(3);
+    return;
+  }
 
   const urgentItems = [];
 
