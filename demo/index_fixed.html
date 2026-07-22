@@ -130,6 +130,12 @@ h2,h3{font-family:"DM Serif Display",serif}
 .strip-label{font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 10px;padding:0 2px}
 /* Console strip — dashboard's live stat segments (separate tiles) */
 .dash-console{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.pipe-toggle{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;user-select:none}
+.pipe-switch{width:30px;height:17px;border-radius:10px;background:var(--border);position:relative;transition:background .15s ease;flex-shrink:0}
+.pipe-switch::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.pipe-toggle.active{color:var(--ink)}
+.pipe-toggle.active .pipe-switch{background:var(--blue)}
+.pipe-toggle.active .pipe-switch::after{left:15px}
 .dash-seg{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);padding:16px 18px;position:relative;overflow:hidden}
 .dash-seg::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--seg-c,var(--accent))}
 .dash-seg .k{font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
@@ -940,15 +946,18 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <!-- Time frame selector -->
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
           <div style="font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Speranta Flat · S&N Income Only</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap" id="report-timeframe-btns">
-            <button class="btn btn-sm btn-primary" onclick="setReportTimeframe(3,this)">3 months</button>
-            <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(6,this)">6 months</button>
-            <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(12,this)">12 months</button>
-            <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(0,this)">All time</button>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="display:flex;gap:6px;flex-wrap:wrap" id="report-timeframe-btns">
+              <button class="btn btn-sm btn-primary" onclick="setReportTimeframe(3,this)">3 months</button>
+              <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(6,this)">6 months</button>
+              <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(12,this)">12 months</button>
+              <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(0,this)">All time</button>
+            </div>
+            <div class="pipe-toggle active" id="pipe-toggle" onclick="togglePipelineStat(this)"><span class="pipe-switch"></span>Include pipeline</div>
           </div>
         </div>
         <!-- Stat cards -->
-        <div class="stat-grid" id="report-stats"></div>
+        <div class="dash-console" id="report-stats"></div>
         <!-- Monthly chart -->
         <div class="card mb-6">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
@@ -972,6 +981,27 @@ function _buildMobileNavStub(){/* replaced by main script */}
             <div class="card-title">📈 Key Insights</div>
             <div id="report-insights"></div>
           </div>
+        </div>
+
+        <!-- Per-platform rate calculator -->
+        <div class="card mb-6">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🧮 Per-Platform Rate Calculator</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Work out what to list on each platform so every channel lands on the price or payout you want. Commission rates below are editable starting points — <strong>verify against your own contracts.</strong></div>
+
+          <div id="rate-calc-fees" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:18px"></div>
+
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding-top:14px;border-top:1px solid var(--border)">
+            <div style="display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden">
+              <button type="button" id="rate-calc-mode-guest" class="btn btn-sm" style="border-radius:0" onclick="setRateCalcMode('guest')">Target guest price</button>
+              <button type="button" id="rate-calc-mode-net" class="btn btn-sm btn-ghost" style="border-radius:0;border-left:1.5px solid var(--border)" onclick="setRateCalcMode('net')">Desired net</button>
+            </div>
+            <div class="form-field" style="margin:0;max-width:200px">
+              <label id="rate-calc-input-label">Target guest price (ZAR)</label>
+              <input type="number" id="rate-calc-input" min="0" step="1" placeholder="e.g. 1200" oninput="renderRateCalcResults()">
+            </div>
+          </div>
+
+          <div id="rate-calc-results" style="overflow-x:auto"></div>
         </div>
 
            <!-- Platform Revenue Summary — Monthly Breakdown -->
@@ -1007,27 +1037,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
             <div class="card-title">💡 Pricing Insight</div>
             <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
           </div>
-        </div>
-
-        <!-- Per-platform rate calculator -->
-        <div class="card mb-6">
-          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🧮 Per-Platform Rate Calculator</div>
-          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Work out what to list on each platform so every channel lands on the price or payout you want. Commission rates below are editable starting points — <strong>verify against your own contracts.</strong></div>
-
-          <div id="rate-calc-fees" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-bottom:18px"></div>
-
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding-top:14px;border-top:1px solid var(--border)">
-            <div style="display:inline-flex;border:1.5px solid var(--border);border-radius:9px;overflow:hidden">
-              <button type="button" id="rate-calc-mode-guest" class="btn btn-sm" style="border-radius:0" onclick="setRateCalcMode('guest')">Target guest price</button>
-              <button type="button" id="rate-calc-mode-net" class="btn btn-sm btn-ghost" style="border-radius:0;border-left:1.5px solid var(--border)" onclick="setRateCalcMode('net')">Desired net</button>
-            </div>
-            <div class="form-field" style="margin:0;max-width:200px">
-              <label id="rate-calc-input-label">Target guest price (ZAR)</label>
-              <input type="number" id="rate-calc-input" min="0" step="1" placeholder="e.g. 1200" oninput="renderRateCalcResults()">
-            </div>
-          </div>
-
-          <div id="rate-calc-results" style="overflow-x:auto"></div>
         </div>
 
         </div><!-- end rsub-revenue -->
@@ -7699,7 +7708,7 @@ const platOrder = ['airbnb','booking','lekkeslaap','manual'];
     sCard('Speranta Revenue', fmt(totalRev), spPaid.length+' paid bookings · '+totalNights+' nights', 'var(--green2)') +
     sCard('Avg Per Night', fmt(avgNight), 'all platforms combined', 'var(--accent)') +
     sCard('Best Platform', fmt(airbnbAvg)+'/night', 'Airbnb · R'+(airbnbAvg-lsAvg)+' more than LekkeSlaap', '#E14666') +
-    sCard('Pipeline', upcoming.length+' bookings', upcomingNights+' upcoming nights', 'var(--blue)');
+    `<div id="report-stat-pipeline" style="${_showPipeline?'':'display:none'}">${sCard('Pipeline', upcoming.length+' bookings', upcomingNights+' upcoming nights', 'var(--blue)')}</div>`;
 
   // ── MONTHLY DATA ──
   const monthlyData = {};
@@ -8182,6 +8191,14 @@ async function generateOwnerStatementPDF() {
     btn.textContent = origText;
     btn.disabled = false;
   }
+}
+
+let _showPipeline = true;
+function togglePipelineStat(el) {
+  _showPipeline = !_showPipeline;
+  el.classList.toggle('active', _showPipeline);
+  const card = document.getElementById('report-stat-pipeline');
+  if (card) card.style.display = _showPipeline ? '' : 'none';
 }
 
 let _showForecast = true;
