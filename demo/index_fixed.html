@@ -419,27 +419,19 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 @media (prefers-reduced-motion: reduce){.skeleton-row{animation:none;opacity:.6}}
 .divider{height:1px;background:var(--border);margin:14px 0}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
-/* Mobile bottom nav — always defined */
-.mobile-nav{position:fixed;bottom:0;left:0;right:0;background:#16213e;z-index:9999;padding:8px 0 12px;border-top:1px solid rgba(255,255,255,.15);display:none;box-shadow:0 -2px 20px rgba(0,0,0,.25);-webkit-transform:translateZ(0);transform:translateZ(0)}
-.mobile-nav-inner{display:flex;justify-content:space-around;align-items:center}
-.mob-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:4px 10px;border-radius:10px;min-width:54px;-webkit-tap-highlight-color:transparent}
-.mob-nav-icon{font-size:1.2rem;line-height:1.3}
-.mob-nav-label{font-size:.58rem;color:rgba(255,255,255,.45);font-weight:600;letter-spacing:.02em}
-.mob-nav-item.active .mob-nav-label{color:var(--accent)}
+/* Mobile nav — single mechanism: topbar hamburger opens a left drawer with every tab */
 .mob-drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9000}
 .mob-drawer-overlay.open{display:block}
 .mob-drawer{position:fixed;left:-265px;top:0;bottom:0;width:265px;background:var(--ink);z-index:9001;transition:left .28s ease;display:flex;flex-direction:column;overflow:hidden}
 .mob-drawer.open{left:0}
 @media(min-width:769px){
-  .mobile-nav{display:none!important}
   #mob-menu-btn{display:none!important}
 }
 @media(max-width:900px){#dash-lower-grid{grid-template-columns:1fr!important}}
 @media(max-width:768px){
   .sidebar{display:none!important}
-  .main{margin-left:0!important;padding-bottom:74px}
+  .main{margin-left:0!important}
   .content{padding:10px}
-#mob-menu-btn{display:none!important}
   .topbar{padding:10px 14px}
   .page-title{font-size:1.1rem}
   .stat-grid{grid-template-columns:1fr 1fr}
@@ -501,8 +493,8 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 <body>
 <script>
 // Safe stubs — overridden when main script loads
-function openDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d){d.style.transform='translateX(0)';d.style.webkitTransform='translateX(0)';}if(o)o.style.display='block';}
-function closeDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d){d.style.transform='translateX(-110%)';d.style.webkitTransform='translateX(-110%)';}if(o)o.style.display='none';}
+function openDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d)d.classList.add('open');if(o)o.classList.add('open');}
+function closeDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d)d.classList.remove('open');if(o)o.classList.remove('open');}
 function toggleMobSidebar(){openDrawer();}
 function _buildMobileNavStub(){/* replaced by main script */}
 </script>
@@ -1609,10 +1601,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
   </div>
 </div>
 
-<!-- MOBILE BOTTOM NAV -->
-<div class="mobile-nav" id="mobile-nav">
-  <div class="mobile-nav-inner" id="mob-nav-inner"></div>
-</div>
 <!-- MOBILE DRAWER -->
 <div class="mob-drawer-overlay" id="mob-overlay" onclick="closeDrawer()"></div>
 <div class="mob-drawer" id="mob-drawer">
@@ -2415,47 +2403,27 @@ function buildNav() {
     `<div class="nav-item ${n.id===currentTab?'active':''}" data-nav-id="${n.id}" onclick="switchTab('${n.id}')"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
   ).join('');
 }
+// Full nav list inside the slide-out drawer (opened via the topbar hamburger
+// or the bottom nav's "More" icon) — the bottom nav only has room for 5-6
+// icons, so this is how the other tabs (Messages, Property Manual, Knowledge
+// Base, Team, Invoices, Roadmap, Settings) are reachable on mobile at all.
+function buildMobileDrawerNav() {
+  const listEl = document.getElementById('mob-nav-list');
+  if (!listEl || !currentUser) return;
+  const items = NAV.filter(n => n.roles.includes(currentUser.role));
+  listEl.innerHTML = items.map(n =>
+    `<div class="nav-item ${n.id===currentTab?'active':''}" data-nav-id="${n.id}" onclick="switchTab('${n.id}');closeDrawer()"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
+  ).join('');
+}
+
+// Mobile nav is a single mechanism: the topbar hamburger opens a left-side
+// drawer with every tab. (Used to also have a separate bottom tab bar, but
+// that left the hamburger's own drawer empty while duplicating a handful of
+// tabs at the bottom — one confusing nav instead of a clear one. Consolidated
+// down to just the drawer.)
 function buildMobileNav() {
-  const nav = document.getElementById('mobile-nav');
-  const inner = document.getElementById('mob-nav-inner');
-  if (!nav || !inner || !currentUser) return;
-  // Invisible on desktop regardless of content — skip the rebuild entirely
-  // there instead of doing full innerHTML + two forced style recalcs on
-  // every tab click just to redraw something nobody can see.
-  if (window.innerWidth > 768) { nav.style.setProperty('display','none','important'); return; }
-
-const MOB_NAV = [
-    {id:'dashboard', icon:'🏠', label:'Home',     roles:['owner','admin','host']},
-    {id:'bookings',  icon:'📋', label:'Bookings', roles:['owner','admin','host']},
-    {id:'calendar',  icon:'📅', label:'Calendar', roles:['owner','admin','host']},
-    {id:'tasks',     icon:'✅', label:'Tasks',     roles:['owner','admin','host']},
-    {id:'reports',   icon:'📊', label:'Reports',  roles:['owner','admin']},
-  ];
-  inner.innerHTML = MOB_NAV.filter(item => item.roles.includes(currentUser.role)).map(item => `
-    <div onclick="switchTab('${item.id}')"
-      style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;cursor:pointer;flex:1;
-             color:${currentTab===item.id ? '#FF385C' : 'rgba(255,255,255,0.6)'};
-             border-top:2px solid ${currentTab===item.id ? '#FF385C' : 'transparent'};
-             transition:all .15s">
-      <span style="font-size:1.2rem;line-height:1">${item.icon}</span>
-      <span style="font-size:.58rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${item.label}</span>
-    </div>`).join('');
-
-  // Force display on mobile
-  const isMobile = window.innerWidth <= 768;
-  nav.setAttribute('style',
-    'display:' + (isMobile ? 'flex' : 'none') + '!important;' +
-    'position:fixed!important;bottom:0!important;left:0!important;right:0!important;' +
-    'z-index:9999!important;background:#16213e!important;' +
-    'padding:6px 0 env(safe-area-inset-bottom,10px)!important;' +
-    'border-top:1px solid rgba(255,255,255,.12)!important;' +
-    'visibility:visible!important;opacity:1!important;' +
-    '-webkit-transform:translateZ(0)!important;transform:translateZ(0)!important'
-  );
-  // Also fix inner
-  inner.setAttribute('style',
-    'display:flex!important;width:100%!important;justify-content:space-around!important'
-  );
+  if (!currentUser) return;
+  buildMobileDrawerNav();
 }
 
 function switchTab(id) {
