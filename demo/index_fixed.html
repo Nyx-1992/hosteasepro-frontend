@@ -4,29 +4,35 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>HostEase Pro v2.4</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <script src="/demo/config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
+@font-face{font-family:"DM Serif Display";src:url(/demo/fonts/Tektur-Medium.ttf) format("truetype");font-weight:400 700;font-style:normal;font-display:swap}
+@font-face{font-family:"DM Sans";src:url(/demo/fonts/Jura-Light.ttf) format("truetype");font-weight:300 400;font-style:normal;font-display:swap}
+@font-face{font-family:"DM Sans";src:url(/demo/fonts/Jura-Medium.ttf) format("truetype");font-weight:500 700;font-style:normal;font-display:swap}
+@font-face{font-family:"Geist Mono";src:url(/demo/fonts/GeistMono-Regular.ttf) format("truetype");font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:"Geist Mono";src:url(/demo/fonts/GeistMono-Bold.ttf) format("truetype");font-weight:700;font-style:normal;font-display:swap}
 :root{
+  --font-mono:"Geist Mono",ui-monospace,monospace;
   /* Brand */
-  --ink:#1a1a2e;--ink2:#16213e;
+  --ink:#1B1F24;--ink2:#121a30;
   --ocean:#0E4D6B;--ocean-light:#e0f2fe;
-  --accent:#c17f3c;--accent2:#8b5e2a;
-  --warm:#f3e6d3;       /* tag/badge/hover bg — was referenced ~10x, never defined, silently transparent everywhere */
+  --accent:#C9962E;--accent2:#A67424;
+  --warm:#F5E9CE;       /* tag/badge/hover bg — was referenced ~10x, never defined, silently transparent everywhere */
+  --teal:#0FA898;--coral:#F0563B;
   /* Semantic */
   --green:#16a34a;--green2:#52b788;--green-light:#dcfce7;
-  --red:#dc2626;--red-light:#fee2e2;
-  --amber:#d97706;--amber-light:#fef3c7;
-  --blue:#2563eb;--blue-light:#dbeafe;
+  --red:#E0543D;--red-light:#fbe4df;
+  --amber:#E0972F;--amber-light:#fbecd6;
+  --blue:#2F6FED;--blue-light:#E8EEFC;
   /* Neutral surface system */
-  --sand:#f8f7f4;       /* page background */
+  --sand:#FAFAF6;       /* page background */
   --surface:#ffffff;    /* card / panel */
-  --surface-2:#f3f2ef;  /* inset / subtle bg */
-  --surface-3:#eae9e4;  /* border-adjacent bg */
-  --border:#e4e2dc;     /* default border */
+  --surface-2:#F3F1EA;  /* inset / subtle bg */
+  --surface-3:#E9E7DD;  /* border-adjacent bg */
+  --border:#E4E2D8;     /* default border */
   --border-strong:#c9c6be; /* strong border */
   --muted:#71717a;      /* secondary text */
   --muted-2:#a1a1aa;    /* tertiary text */
@@ -94,7 +100,7 @@ h2,h3{font-family:"DM Serif Display",serif}
 .s-nav{flex:1;padding:10px 0;overflow-y:auto}
 .nav-item{display:flex;align-items:center;gap:10px;padding:11px 22px;font-size:.86rem;color:rgba(255,255,255,.55);cursor:pointer;transition:all .15s;border-left:3px solid transparent}
 .nav-item:hover{color:#fff;background:rgba(255,255,255,.05)}
-.nav-item.active{color:#fff;background:rgba(193,127,60,.13);border-left-color:var(--accent)}
+.nav-item.active{color:#fff;background:rgba(201,150,46,.18);border-left-color:var(--accent)}
 .nav-icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0}
 .s-user{padding:14px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:9px}
 .avatar{width:33px;height:33px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0}
@@ -105,7 +111,7 @@ h2,h3{font-family:"DM Serif Display",serif}
 .logout-btn:hover{color:#fff}
 .main{margin-left:240px;display:flex;flex-direction:column;min-height:100vh}
 .topbar{background:#fff;border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-.page-title{font-family:"DM Serif Display",serif;font-size:1.45rem}
+.page-title{font-family:"DM Sans",sans-serif;font-weight:700;font-size:1.4rem}
 .topbar-right{display:flex;gap:10px;align-items:center}
 .status-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:var(--warm);color:var(--ink)}
 .content{padding:28px;flex:1}
@@ -113,13 +119,100 @@ h2,h3{font-family:"DM Serif Display",serif}
 @keyframes tabIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 /* CARDS */
 .card{background:var(--surface);border-radius:var(--r);box-shadow:var(--sh);padding:20px;border:1px solid var(--border);transition:box-shadow .2s ease}
-.card-title{font-family:"DM Serif Display",serif;font-size:1.05rem;margin-bottom:14px;color:var(--ink)}
+.card-title{font-family:"DM Sans",sans-serif;font-weight:700;font-size:1rem;margin-bottom:14px;color:var(--ink)}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
 .stat-card{background:var(--card);border-radius:var(--r);padding:18px 22px;box-shadow:var(--sh);border-top:3px solid var(--accent);transition:transform .2s ease,box-shadow .2s ease}
 .stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,.1)}
 .stat-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;font-weight:700}
 .stat-value{font-family:"DM Serif Display",serif;font-size:1.9rem;color:var(--ink)}
 .stat-sub{font-size:.76rem;color:var(--muted);margin-top:3px}
+.tab-num{font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
+.strip-label{font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 10px;padding:0 2px}
+/* Console strip — dashboard's live stat segments (separate tiles) */
+.dash-console{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.pipe-toggle{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;user-select:none}
+.pipe-switch{width:30px;height:17px;border-radius:10px;background:var(--border);position:relative;transition:background .15s ease;flex-shrink:0}
+.pipe-switch::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.pipe-toggle.active{color:var(--ink)}
+.pipe-toggle.active .pipe-switch{background:var(--blue)}
+.pipe-toggle.active .pipe-switch::after{left:15px}
+.dash-seg{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);padding:16px 18px;position:relative;overflow:hidden}
+.dash-seg::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--seg-c,var(--accent))}
+.dash-seg .k{font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px}
+.dash-seg .v{font-family:"DM Serif Display",serif;font-size:1.5rem;color:var(--ink)}
+.dash-seg .n{font-size:.74rem;color:var(--muted);margin-top:4px}
+/* Log panel — dashboard Urgent Actions */
+.log-panel{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden}
+.log-hero{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border);cursor:pointer}
+.log-hero .sev{font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;display:block;margin-bottom:5px}
+.log-hero .msg{font-size:.88rem;color:var(--ink)}
+.log-hero .act{font-family:var(--font-mono);font-size:.72rem;font-weight:700;color:#fff;background:var(--ink);border:none;padding:7px 13px;border-radius:8px;white-space:nowrap;flex-shrink:0;cursor:pointer}
+.log-row{display:flex;align-items:center;gap:12px;padding:10px 18px;border-top:1px solid var(--border);cursor:pointer;transition:background .15s}
+.log-row:hover{background:var(--surface-2)}
+.log-row .bar{width:3px;height:18px;border-radius:2px;flex-shrink:0}
+.log-row .sev{font-family:var(--font-mono);font-size:1rem;width:18px;flex-shrink:0;text-align:center}
+.log-row .msg{font-size:.8rem;color:var(--ink);flex:1;min-width:0}
+.log-row .go{font-family:var(--font-mono);font-size:.68rem;color:var(--muted);flex-shrink:0}
+/* Contact badge — Team & Contacts, role-colored band */
+.contact-badge{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden;position:relative;transition:box-shadow .15s}
+.contact-badge:hover{box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.contact-band{height:48px}
+.contact-avatar{position:absolute;top:29px;left:14px;width:38px;height:38px;border-radius:50%;background:var(--surface);border:3px solid var(--surface);display:flex;align-items:center;justify-content:center;font-family:"DM Serif Display",serif;font-size:.8rem;box-shadow:0 2px 6px rgba(0,0,0,.15);color:var(--ink)}
+.contact-del{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.3);border:none;border-radius:6px;width:22px;height:22px;cursor:pointer;color:#fff;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+.contact-info{padding:25px 14px 14px}
+.contact-name{font-weight:700;font-size:.9rem;color:var(--ink)}
+.contact-role{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.03em}
+.contact-row{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:.8rem;margin-top:8px}
+.contact-row .lbl{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.contact-actions{display:flex;gap:4px;flex-shrink:0}
+.contact-actions a,.contact-row>a{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:.7rem;text-decoration:none;color:var(--ink)}
+.contact-actions a.wa{background:#25D366;color:#fff;border:none}
+.contact-sub{background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-top:8px}
+.contact-note{font-size:.75rem;color:var(--muted);font-style:italic;margin-top:8px;line-height:1.4}
+/* Bookings lane card — stat segments + connected rail (Console x Timeline) */
+.lane-card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sh)}
+.lane-hd{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+.lane-name{font-weight:700;font-size:1.02rem;color:var(--ink)}
+.lane-addr{font-size:.74rem;color:var(--muted);margin-top:2px}
+.lane-segs{display:flex;border-bottom:1px solid var(--border)}
+.lane-seg{flex:1;padding:9px 12px;border-right:1px solid var(--border);text-align:center}
+.lane-seg:last-child{border-right:none}
+.lane-seg .k{font-family:var(--font-mono);font-size:.58rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+.lane-seg .v{font-size:.85rem;margin-top:2px;font-weight:700;color:var(--ink)}
+.lane-body{padding:14px 18px 4px;flex:1;overflow-y:auto;max-height:520px}
+.lane-rail{position:relative;padding-left:20px}
+.lane-rail::before{content:'';position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.lane-node{position:relative;padding-bottom:14px}
+.lane-node:last-child{padding-bottom:0}
+.lane-dot{position:absolute;left:-20px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--border);border:2px solid var(--surface)}
+.lane-dot.now{background:var(--blue)}
+.lane-now-card{background:#2F6FED0A;border:1px solid #2F6FED22;border-radius:10px;padding:12px 14px;margin-left:-14px}
+.lane-nname{font-weight:700;font-size:.9rem;color:var(--ink)}
+.lane-nsub{font-size:.75rem;color:var(--muted);margin-top:2px}
+.lane-item{border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-left:-14px;transition:box-shadow .15s}
+.lane-item:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+/* Ring card — Task Management guest checklist, segmented progress ring */
+.ring-card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);overflow:hidden;box-shadow:var(--sh)}
+.ring-card.now{border-color:var(--blue)}
+.ring-card.past{opacity:.85}
+.ring-hd{padding:13px 15px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+.ring-name{font-weight:700;font-size:.88rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ring-sub{font-size:.72rem;color:var(--muted);margin-top:1px}
+.ring-pill{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:8px;flex-shrink:0;white-space:nowrap}
+.ring-body{padding:16px 15px 8px;display:flex;flex-direction:column;align-items:center}
+.ring-wrap{position:relative;width:104px;height:104px}
+.ring-seg{cursor:pointer}
+.ring-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.ring-txt .n{font-family:"DM Serif Display",serif;font-size:1.35rem;color:var(--ink)}
+.ring-txt .d{font-family:var(--font-mono);font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.ring-toggle{margin-top:6px;font-family:var(--font-mono);font-size:.64rem;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 6px}
+.ring-toggle:hover{color:var(--ink)}
+.ring-checklist{padding:2px 15px 4px}
+.ring-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.ring-row:last-child{border-bottom:none}
+.ring-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;transition:all .15s}
+.ring-check.done{border-color:#16a34a;background:#d1fae5}
+.ring-note{padding:10px 15px 12px}
 .tab-pane{width:100%}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .mb-4{margin-bottom:14px}.mb-6{margin-bottom:22px}
@@ -138,9 +231,9 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .badge-checked-in,.badge-checkedin{background:#dbeafe;color:#1e40af}
 .badge-checked-out,.badge-checkedout{background:#f3f4f6;color:#374151}
 .badge-cancelled{background:#fee2e2;color:#991b1b}
-.badge-airbnb{background:#FF385C22;color:#FF385C}
-.badge-booking{background:#00358022;color:#003580}.badge-direct{background:#e0f2fe;color:#0369a1;font-weight:700}.badge-blocked{background:#f1f5f9;color:#64748b}.badge-owner{background:#e2e8f0;color:#475569}
-.badge-lekkeslaap{background:#FFC30030;color:#a07800}
+.badge-airbnb{background:#E1466622;color:#E14666}
+.badge-booking{background:#1E4C8522;color:#1E4C85}.badge-direct{background:#E8EEFC;color:#2F6FED;font-weight:700}.badge-blocked{background:#f1f5f9;color:#64748b}.badge-owner{background:#e2e8f0;color:#475569}
+.badge-lekkeslaap{background:#F6C44530;color:#8a6a10}
 .badge-fewo{background:#7c3aed22;color:#5b21b6}
 .badge-manual{background:#fef3c7;color:#92400e}
 .badge-scheduled{background:#fef3c7;color:#92400e}
@@ -187,18 +280,27 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 /* CALENDAR */
 .cal-wrap{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;margin-bottom:20px}
 .cal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
-.cal-month{font-family:"DM Serif Display",serif;font-size:1.25rem}
+.cal-month{font-family:"DM Sans",sans-serif;font-weight:700;font-size:1.4rem}
 .cal-nav{display:flex;gap:8px}
 .cal-nav button{background:var(--sand);border:1.5px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer;font-family:inherit;font-size:.84rem;transition:all .15s}
 .cal-nav button:hover{background:var(--warm);border-color:var(--accent)}
+/* Calendar toolbar — underline tabs */
+.cal-utabs{display:flex;gap:22px;border-bottom:1px solid var(--border);margin-bottom:10px;overflow-x:auto;scrollbar-width:none}
+.cal-utab{padding:0 0 9px;font-size:.86rem;font-weight:600;color:var(--muted);border:none;border-bottom:2px solid transparent;cursor:pointer;background:none;font-family:inherit;white-space:nowrap}
+.cal-utab.active{color:var(--ink);border-bottom-color:var(--accent)}
+.cal-usub{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.cal-umini{display:flex;gap:14px}
+.cal-umini-btn{background:none;border:none;font-family:inherit;font-size:.78rem;color:var(--muted);cursor:pointer;padding:0;font-weight:600;white-space:nowrap}
+.cal-umini-btn.active{color:var(--accent)}
+.cal-udiv{width:1px;height:16px;background:var(--border);flex-shrink:0}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border-left:1px solid var(--border);border-top:1px solid var(--border)}
 .cal-day-head{padding:9px;text-align:center;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);background:var(--sand);letter-spacing:.05em}
 .cal-cell{min-height:88px;padding:4px 0 2px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:#fff;cursor:pointer;overflow:visible;position:relative;box-sizing:border-box}
 .cal-bar{display:block;width:100%;box-sizing:border-box;font-size:.63rem;font-weight:600;padding:2px 5px;margin-bottom:2px;min-height:18px;line-height:14px;color:#fff;position:relative;z-index:2;overflow:visible;white-space:nowrap}
 .cal-date{padding:0 5px}
-.cal-cell:hover{background:#fffbf5}
+.cal-cell:hover{background:var(--warm)}
 .cal-cell.other{background:var(--sand);opacity:.55;cursor:default}
-.cal-cell.today{background:#fffbf5}
+.cal-cell.today{background:var(--warm)}
 .cal-date{font-size:.8rem;font-weight:600;margin-bottom:3px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;padding:0 5px;box-sizing:content-box}
 .cal-cell.today .cal-date{background:var(--accent);color:#fff;border-radius:50%}
 .cal-event{font-size:.66rem;padding:2px 5px;margin-bottom:2px;font-weight:600;border-radius:3px;position:relative;z-index:2;overflow:visible;white-space:nowrap;display:inline-block;max-width:100%}
@@ -206,10 +308,10 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .cal-event.blk-start{border-radius:4px 0 0 4px;margin-left:0}
 .cal-event.blk-end{border-radius:0 4px 4px 0;margin-right:0}
 .cal-event.blk-solo{border-radius:4px}
-.ev-airbnb{background:#FF385C;color:#fff}
-.ev-booking{background:#003580;color:#fff}
-.ev-lekkeslaap{background:#FFC300;color:#1a1a2e}
-.ev-manual{background:#c17f3c;color:#fff}
+.ev-airbnb{background:#E14666;color:#fff}
+.ev-booking{background:#1E4C85;color:#fff}
+.ev-lekkeslaap{background:#F6C445;color:#1a1a2e}
+.ev-manual{background:#A8702E;color:#fff}
 .ev-owner{background:#64748b;color:#fff}
 .ev-caretaker{background:#94a3b8;color:#fff}
 .ev-cleaning{background:#06b6d4;color:#fff}
@@ -238,10 +340,11 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .nina-task-text.done{text-decoration:line-through;color:var(--muted)}
 /* KB */
 .kb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
-.kb-card{background:var(--card);border-radius:var(--r);padding:18px;box-shadow:var(--sh);cursor:pointer;transition:all .15s;border:1.5px solid transparent}
-.kb-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shl)}
-.kb-cat{font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--accent);margin-bottom:5px}
-.kb-title{font-weight:600;margin-bottom:7px;font-size:.92rem}
+.kb-card{position:relative;border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);padding:16px;cursor:pointer;transition:box-shadow .15s}
+.kb-card:hover{box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.kb-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding:3px 9px 3px 7px;border-radius:20px;margin-bottom:10px}
+.kb-edit-btn{position:absolute;top:12px;right:12px;background:var(--surface-2);border:none;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:.78rem;color:var(--ink);display:flex;align-items:center;justify-content:center}
+.kb-title{font-weight:700;margin-bottom:6px;font-size:.92rem;color:var(--ink)}
 .kb-preview{font-size:.8rem;color:var(--muted);line-height:1.5}
 .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:600;background:var(--warm);color:var(--ink);margin:2px}
 /* REPORTS */
@@ -259,10 +362,13 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .msg-meta{font-size:.7rem;color:var(--muted);margin-bottom:3px}
 .msg-from{background:var(--sand);color:var(--ink);border-radius:14px 14px 14px 3px}
 .msg-mine{background:var(--accent);color:#fff;border-radius:14px 14px 3px 14px}
-/* LEGEND */
-.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
-.legend-item{display:flex;align-items:center;gap:5px;font-size:.78rem}
-.legend-dot{width:11px;height:11px;border-radius:2px;flex-shrink:0}
+/* LEGEND — ticket panels + chips */
+.legend-panels{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px}
+.legend-panel{border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);flex:1;min-width:220px;padding:14px 16px}
+.legend-ptitle{font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+.legend-chips{display:flex;gap:6px;flex-wrap:wrap}
+.legend-chip{display:inline-flex;align-items:center;gap:6px;font-size:.76rem;font-weight:600;padding:5px 12px;border-radius:20px}
+.legend-cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
 /* TOAST */
 .toast-wrap{position:fixed;bottom:22px;right:22px;z-index:99999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
 @media(max-width:768px){
@@ -430,20 +536,19 @@ function _buildMobileNavStub(){/* replaced by main script */}
            last, since those are for browsing rather than acting on. -->
       <div class="tab-pane active" id="tab-dashboard">
         <!-- Pending alert -->
-        <div id="dash-pending-alert" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:12px;padding:14px 18px;margin-bottom:16px"></div>
+        <div id="dash-pending-alert" style="display:none;background:var(--amber-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 18px;margin-bottom:16px"></div>
 
         <!-- Urgent Actions — full width, top of page. Was a narrow sidebar
              squeezed below the calendars; moved here so it's the first thing
              seen, not the last. Populated by renderDashboard(). -->
-        <div class="card" id="dash-urgent-card" style="padding:16px 18px;margin-bottom:18px;background:var(--ink);color:#fff">
-          <div style="font-family:'DM Serif Display',serif;font-size:1rem;margin-bottom:12px;color:#fff;display:flex;align-items:center;gap:6px">
-            <span style="animation:pulse 2s infinite">🔔</span> Urgent Actions
-          </div>
-          <div id="dash-urgent" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px"></div>
+        <div class="strip-label">Signal — needs attention</div>
+        <div class="log-panel" id="dash-urgent-card" style="margin-bottom:24px">
+          <div id="dash-urgent"></div>
         </div>
 
         <!-- Stat cards: today's movements -->
-        <div class="stat-grid" id="dash-stats" style="margin-bottom:18px"></div>
+        <div class="strip-label">Today's movements</div>
+        <div class="dash-console" id="dash-stats" style="margin-bottom:24px"></div>
 
         <!-- Next arrivals: Speranta + TV House side by side -->
         <div class="grid-2" style="margin-bottom:18px" id="dash-arrivals-grid"></div>
@@ -487,42 +592,28 @@ function _buildMobileNavStub(){/* replaced by main script */}
 
         <!-- ══ BOOKINGS CALENDAR VIEW ══ -->
         <div id="calview-bookings">
-          <!-- ── Calendar toolbar: compact single-area ── -->
-          <div style="margin-bottom:10px;display:flex;flex-direction:column;gap:6px">
-            <!-- Row 1: Property + View + Actions all in one scrollable strip -->
-            <div style="display:flex;align-items:center;gap:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px">
-              <!-- Property -->
-              <div style="display:flex;gap:3px;flex-shrink:0" id="cal-prop-toggle">
-                <button class="active" onclick="setCalProp('all',this)"
-                  style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--accent);background:var(--accent);color:#fff;font-size:.72rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">All</button>
-                <button onclick="setCalProp('speranta',this)"
-                  style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">SP</button>
-                <button onclick="setCalProp('tvhouse',this)"
-                  style="padding:4px 10px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.72rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap">TV</button>
+          <!-- ── Calendar toolbar: underline tabs ── -->
+          <div style="margin-bottom:14px">
+            <div class="cal-utabs" id="cal-prop-toggle">
+              <button class="cal-utab active" onclick="setCalProp('all',this)">All Properties</button>
+              <button class="cal-utab" onclick="setCalProp('speranta',this)">Speranta Flat</button>
+              <button class="cal-utab" onclick="setCalProp('tvhouse',this)">TV House</button>
+            </div>
+            <div class="cal-usub">
+              <div class="cal-umini">
+                <button id="calview-month-btn" class="cal-umini-btn active" onclick="setCalView('month')">Month</button>
+                <button id="calview-week-btn" class="cal-umini-btn" onclick="setCalView('week')">Week</button>
+                <button id="calview-day-btn" class="cal-umini-btn" onclick="setCalView('day')">Day</button>
               </div>
-              <!-- Divider -->
-              <span style="width:1px;height:20px;background:var(--border);display:inline-block;flex-shrink:0"></span>
-              <!-- View -->
-              <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:8px;padding:2px;flex-shrink:0">
-                <button id="calview-month-btn" onclick="setCalView('month')"
-                  style="padding:3px 9px;border-radius:6px;border:none;font-size:.7rem;font-weight:600;cursor:pointer;background:var(--ink);color:#fff;white-space:nowrap">Mo</button>
-                <button id="calview-week-btn" onclick="setCalView('week')"
-                  style="padding:3px 9px;border-radius:6px;border:none;font-size:.7rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);white-space:nowrap">Wk</button>
-                <button id="calview-day-btn" onclick="setCalView('day')"
-                  style="padding:3px 9px;border-radius:6px;border:none;font-size:.7rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);white-space:nowrap">Dy</button>
+              <span class="cal-udiv"></span>
+              <div class="cal-umini">
+                <button id="cleaning-toggle-btn" class="cal-umini-btn" onclick="toggleCleaningOverlay(this)">🧹 Cleaning</button>
+                <button id="cancelled-toggle-btn" class="cal-umini-btn" onclick="toggleCancelledOnCal(this)">❌ Cancelled</button>
               </div>
-              <!-- Divider -->
-              <span style="width:1px;height:20px;background:var(--border);display:inline-block;flex-shrink:0"></span>
-              <!-- Toggles -->
-              <button id="cleaning-toggle-btn" onclick="toggleCleaningOverlay(this)"
-                style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">🧹</button>
-              <button onclick="toggleCancelledOnCal(this)"
-                style="padding:4px 9px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">❌</button>
-              <!-- Actions pushed right -->
-              <button onclick="openModal('domestic-modal')"
-                style="padding:4px 12px;border-radius:14px;border:none;background:var(--green);color:#fff;font-size:.7rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;margin-left:auto">+ Clean</button>
-              <button onclick="exportDomestics()"
-                style="padding:4px 8px;border-radius:14px;border:1.5px solid var(--border);background:var(--sand);color:var(--ink);font-size:.7rem;cursor:pointer;font-family:inherit;flex-shrink:0">⬇</button>
+              <span style="margin-left:auto;display:flex;gap:6px">
+                <button onclick="openModal('domestic-modal')" class="btn btn-sm" style="background:var(--green);color:#fff">+ Clean</button>
+                <button onclick="exportDomestics()" class="btn btn-sm btn-ghost">⬇</button>
+              </span>
             </div>
           </div>
 
@@ -555,17 +646,25 @@ function _buildMobileNavStub(){/* replaced by main script */}
           </div>
 
           <!-- Legend -->
-          <div class="card" style="margin-top:12px">
-            <div class="card-title">Legend</div>
-            <div class="legend">
-              <div class="legend-item"><div class="legend-dot" style="background:#FF385C"></div>Airbnb</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#003580"></div>Booking.com</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#FFC300"></div>LekkeSlaap</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#c17f3c"></div>Direct/Manual</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#64748b"></div>Owner Stay</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#06b6d4"></div>🧹 Cleaning</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#94a3b8"></div>🔒 Blocked</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#e5e7eb;text-decoration:line-through;opacity:0.5;"></div>❌ Cancelled</div>
+          <div class="strip-label" style="margin-top:16px">Legend</div>
+          <div class="legend-panels">
+            <div class="legend-panel">
+              <div class="legend-ptitle">Platforms</div>
+              <div class="legend-chips">
+                <span class="legend-chip" style="background:#E1466618;color:#E14666"><span class="legend-cdot" style="background:#E14666"></span>Airbnb</span>
+                <span class="legend-chip" style="background:#1E4C8518;color:#1E4C85"><span class="legend-cdot" style="background:#1E4C85"></span>Booking.com</span>
+                <span class="legend-chip" style="background:#F6C44530;color:#8a6a10"><span class="legend-cdot" style="background:#F6C445"></span>LekkeSlaap</span>
+                <span class="legend-chip" style="background:#A8702E18;color:#A8702E"><span class="legend-cdot" style="background:#A8702E"></span>Direct/Manual</span>
+                <span class="legend-chip" style="background:#64748b18;color:#64748b"><span class="legend-cdot" style="background:#64748b"></span>Owner Stay</span>
+              </div>
+            </div>
+            <div class="legend-panel">
+              <div class="legend-ptitle">Status</div>
+              <div class="legend-chips">
+                <span class="legend-chip" style="background:#06b6d418;color:#0891b2"><span class="legend-cdot" style="background:#06b6d4"></span>🧹 Cleaning</span>
+                <span class="legend-chip" style="background:#94a3b818;color:#64748b"><span class="legend-cdot" style="background:#94a3b8"></span>🔒 Blocked</span>
+                <span class="legend-chip" style="background:#e5e7eb90;color:#64748b;text-decoration:line-through;opacity:.75"><span class="legend-cdot" style="background:#e5e7eb"></span>❌ Cancelled</span>
+              </div>
             </div>
           </div>
         </div>
@@ -729,33 +828,24 @@ function _buildMobileNavStub(){/* replaced by main script */}
               👥 Team Chat
             </button>
           </div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <label for="msg-language-select" style="font-size:.78rem;color:var(--muted);font-weight:600">🌐 Message language</label>
-            <select id="msg-language-select" onchange="saveUserSetting('language', this.value); renderGuestTimeline();" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;background:#fff"></select>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px">
+              <label for="msg-language-select" style="font-size:.78rem;color:var(--muted);font-weight:600">🌐 Message language</label>
+              <select id="msg-language-select" onchange="saveUserSetting('language', this.value); renderGuestTimeline();" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;background:#fff"></select>
+            </div>
+            <a href="https://web.whatsapp.com" target="wa_chat_tab" rel="noopener noreferrer" title="+27 79 977 9455 · S&N Apt Management"
+              style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:#25D366;text-decoration:none;padding:6px 13px;border:1px solid var(--border);border-radius:20px;background:var(--surface)">
+              💬 WhatsApp Web ↗
+            </a>
           </div>
         </div>
 
         <!-- WhatsApp sub-tab -->
         <div id="msg-subtab-wa">
-          <!-- Open WhatsApp Web banner -->
-          <div style="background:linear-gradient(135deg,#25D366,#128C7E);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
-            <div>
-              <div style="font-weight:700;font-size:1rem;color:#fff;margin-bottom:4px">💬 WhatsApp Business</div>
-              <div style="font-size:.8rem;color:rgba(255,255,255,.8)">+27 79 977 9455 · S&N Apt Management</div>
-            </div>
-            <a href="https://web.whatsapp.com" target="wa_chat_tab" rel="noopener noreferrer"
-              style="background:#fff;color:#128C7E;font-weight:700;font-size:.85rem;padding:10px 20px;border-radius:10px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:opacity .2s;white-space:nowrap"
-              onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
-              Open WhatsApp Web ↗
-            </a>
-          </div>
-
           <!-- Guest Timeline: per-booking stage cards, replacing the old generic
                template-link list — each guest gets their own due-now touchpoint
                instead of picking blind from a list of canned messages. -->
-          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:12px">
-            Guest Timeline — upcoming & recent guests
-          </div>
+          <div class="strip-label">Guest Timeline — upcoming &amp; recent guests</div>
           <div id="wa-guest-cards" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px"></div>
         </div>
 
@@ -878,20 +968,22 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <!-- Time frame selector -->
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
           <div style="font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Speranta Flat · S&N Income Only</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap" id="report-timeframe-btns">
-            <button class="btn btn-sm btn-primary" onclick="setReportTimeframe(3,this)">3 months</button>
-            <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(6,this)">6 months</button>
-            <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(12,this)">12 months</button>
-            <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(0,this)">All time</button>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+            <div style="display:flex;gap:6px;flex-wrap:wrap" id="report-timeframe-btns">
+              <button class="btn btn-sm btn-primary" onclick="setReportTimeframe(3,this)">3 months</button>
+              <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(6,this)">6 months</button>
+              <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(12,this)">12 months</button>
+              <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(0,this)">All time</button>
+            </div>
+            <div class="pipe-toggle active" id="pipe-toggle" onclick="toggleIncludePipeline(this)" title="Controls pipeline &amp; forecast across every chart, stat and insight on this page"><span class="pipe-switch"></span>Include pipeline</div>
           </div>
         </div>
         <!-- Stat cards -->
-        <div class="stat-grid" id="report-stats"></div>
+        <div class="dash-console" id="report-stats"></div>
         <!-- Monthly chart -->
         <div class="card mb-6">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
             <div class="card-title" style="margin:0">📊 Monthly Revenue by Platform</div>
-            <button id="forecast-toggle-btn" onclick="toggleForecast()" style="padding:5px 12px;font-size:.75rem;font-weight:600;border:1.5px solid var(--border);border-radius:20px;background:var(--sand);cursor:pointer;color:var(--muted)">✦ Hide forecast</button>>
             <div style="display:flex;gap:14px;flex-wrap:wrap" id="report-legend"></div>
           </div>
           <div style="overflow-x:auto">
@@ -909,41 +1001,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div class="card">
             <div class="card-title">📈 Key Insights</div>
             <div id="report-insights"></div>
-          </div>
-        </div>
-
-           <!-- Platform Revenue Summary — Monthly Breakdown -->
-        <div class="card" style="margin-top:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-            <div class="card-title" style="margin:0">📊 Net Revenue by Month — Speranta (completed months only)</div>
-            <span style="font-size:.72rem;color:var(--muted);font-style:italic">Updated after each month closes</span>
-          </div>
-          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏠 Speranta — S&N Rental Income</div>
-          <div class="table-wrap"><table id="report-monthly-net-table">
-            <thead><tr>
-              <th>Month</th>
-              <th style="color:#FF385C">Airbnb</th>
-              <th style="color:#003580">Booking.com</th>
-              <th style="color:#f59e0b">LekkeSlaap</th>
-              <th style="color:#c17f3c">Direct</th>
-              <th>Total Net</th>
-            </tr></thead>
-            <tbody id="report-monthly-net-body">
-              <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">Loading…</td></tr>
-            </tbody>
-            <tfoot id="report-monthly-net-foot"></tfoot>
-          </table></div>
-       </div>
-
-        <!-- TV House Mgmt Income + Pricing Insight -->
-        <div class="grid-2 mb-6" style="margin-top:12px">
-          <div class="card">
-            <div class="card-title">🏠 TV House — Mgmt Income</div>
-            <div id="report-tv-occ"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">💡 Pricing Insight</div>
-            <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
           </div>
         </div>
 
@@ -966,6 +1023,41 @@ function _buildMobileNavStub(){/* replaced by main script */}
           </div>
 
           <div id="rate-calc-results" style="overflow-x:auto"></div>
+        </div>
+
+           <!-- Platform Revenue Summary — Monthly Breakdown -->
+        <div class="card" style="margin-top:12px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin:0">📊 Net Revenue by Month — Speranta (completed months only)</div>
+            <span style="font-size:.72rem;color:var(--muted);font-style:italic">Updated after each month closes</span>
+          </div>
+          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏠 Speranta — S&N Rental Income</div>
+          <div class="table-wrap"><table id="report-monthly-net-table">
+            <thead><tr>
+              <th>Month</th>
+              <th style="color:#E14666">Airbnb</th>
+              <th style="color:#1E4C85">Booking.com</th>
+              <th style="color:#8a6a10">LekkeSlaap</th>
+              <th style="color:#A8702E">Direct</th>
+              <th>Total Net</th>
+            </tr></thead>
+            <tbody id="report-monthly-net-body">
+              <tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">Loading…</td></tr>
+            </tbody>
+            <tfoot id="report-monthly-net-foot"></tfoot>
+          </table></div>
+       </div>
+
+        <!-- TV House Mgmt Income + Pricing Insight -->
+        <div class="grid-2 mb-6" style="margin-top:12px">
+          <div class="card">
+            <div class="card-title">🏠 TV House — Mgmt Income</div>
+            <div id="report-tv-occ"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">💡 Pricing Insight</div>
+            <div id="pricing-insight" style="background:var(--sand);border-radius:9px;padding:14px;font-size:.88rem;line-height:1.6"></div>
+          </div>
         </div>
 
         </div><!-- end rsub-revenue -->
@@ -1659,7 +1751,7 @@ const NINA_BOOKING_TASKS = [
 let db = null;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
 
-const PLAT_COLORS = {airbnb:'#FF385C',booking:'#003580',lekkeslaap:'#FFC300',manual:'#c17f3c',direct:'#0369a1',owner:'#64748b',blocked:'#94a3b8',caretaker:'#94a3b8'};
+const PLAT_COLORS = {airbnb:'#E14666',booking:'#1E4C85',lekkeslaap:'#F6C445',manual:'#A8702E',direct:'#2F6FED',owner:'#64748b',blocked:'#94a3b8',caretaker:'#94a3b8'};
 const MONTHS  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const M_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -2282,14 +2374,30 @@ const NAV = [
   {id:'settings',  label:'Settings',     icon:'⚙️', roles:['owner','admin']},
 ];
 function buildNav() {
-  document.getElementById('sidebar-nav').innerHTML = NAV.filter(n=>n.roles.includes(currentUser.role)).map(n=>
-    `<div class="nav-item ${n.id===currentTab?'active':''}" onclick="switchTab('${n.id}')"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
+  const navEl = document.getElementById('sidebar-nav');
+  const items = NAV.filter(n=>n.roles.includes(currentUser.role));
+  const existing = Array.from(navEl.children);
+  const sameSet = existing.length === items.length && existing.every((el,i) => el.dataset.navId === items[i].id);
+  if (sameSet) {
+    // Same items as last render (the common case — role doesn't change
+    // mid-session) — just flip .active instead of tearing down and
+    // rebuilding all nodes on every single tab click (this was the main
+    // contributor to the nav-item INP warning).
+    existing.forEach(el => el.classList.toggle('active', el.dataset.navId === currentTab));
+    return;
+  }
+  navEl.innerHTML = items.map(n=>
+    `<div class="nav-item ${n.id===currentTab?'active':''}" data-nav-id="${n.id}" onclick="switchTab('${n.id}')"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
   ).join('');
 }
 function buildMobileNav() {
   const nav = document.getElementById('mobile-nav');
   const inner = document.getElementById('mob-nav-inner');
   if (!nav || !inner || !currentUser) return;
+  // Invisible on desktop regardless of content — skip the rebuild entirely
+  // there instead of doing full innerHTML + two forced style recalcs on
+  // every tab click just to redraw something nobody can see.
+  if (window.innerWidth > 768) { nav.style.setProperty('display','none','important'); return; }
 
 const MOB_NAV = [
     {id:'dashboard', icon:'🏠', label:'Home',     roles:['owner','admin','host']},
@@ -2669,7 +2777,7 @@ function renderTab(id) {
   else if (id==='bookings')  renderBookings();
   else if (id==='calendar')  { renderCalendar(); if(showCleaningOverlay) renderDomesticEarnings(); }
   else if (id==='domestic')  switchTab('calendar'); // redirect — domestic merged into calendar
-  else if (id==='tasks')     renderTasks();
+  else if (id==='tasks')     setTaskSubTab(window._taskSubTab || 'guest');
   else if (id==='messages')  renderMessages();
   else if (id==='knowledge') { renderKnowledgeManual(); }
   else if (id==='kb')        { renderKB(); }
@@ -4036,9 +4144,17 @@ const ROADMAP = [
   {k:'p0-24',t:'Known limitation — some Booking.com listings send zero guest-identifying iCal data',n:'Not a bug, confirmed by fetching TV House\'s raw booking.com feed directly: every event is "CLOSED - Not available" with no other field at all (no description, no reference, no name) — a real paid stay and a manual owner closure are byte-for-byte indistinguishable in this feed. LekkeSlaap embeds Reference/Customer/Email/Cell in SUMMARY and we parse it (parseICalSummaryFields); Airbnb and Speranta\'s own booking.com feed both surface at least a "Reserved" placeholder we correctly treat as real. TV House\'s booking.com connection just doesn\'t send more — likely a channel-manager/listing-config difference on Booking.com\'s side, not something our parser can fix. DONE — day-detail modal\'s blocked entries now have both a "Convert to booking" guest-name save (flips to a confirmed booking) and a "confirmed owner block" checkbox (bookings.is_owner_block) so ambiguous blocks get explicitly resolved one way or the other instead of sitting as a permanent guess, no SQL needed. The real fix would still be Booking.com\'s Connectivity/Partner API instead of iCal, a much bigger integration — out of scope for now',c:'HEP'},
   {k:'p0-25',t:'"Edit clean" on a linked cleaning doesn\'t save a date change',n:'DONE — turned out to already be fixed, as a side effect of p0-39\'s unquoted-id fix. Re-verified both original suspects directly: (1) editCleaning()\'s domestics.find(x=>x.id===id) is fine — every call site now passes a quoted string id (p0-39), and domestics ids are always UUID strings on both the JS and DB side, so strict === reliably matches; (2) validateCleanDate() correctly blocking a date earlier than the linked booking\'s checkout is intentional guard-rail behavior, not a bug, and it does show a clear toast explaining why. The ACTUAL original cause was the booking-detail modal\'s "Edit clean" button being one of the 3 unquoted editCleaning(${d.id}) call sites p0-39 fixed — clicking it silently did nothing at all, which is exactly what "doesn\'t save a date change" looks like from the outside. All 5 current editCleaning() call sites confirmed correctly quoted',c:'Bug'},
   {k:'p0-26',t:'--warm CSS variable referenced ~10x, never defined',n:'DONE — found while visually verifying the Roadmap redesign. Every tag/badge and several hover states (status-tag, .tag, .btn-ghost:hover, invoice/finance category chips, Roadmap category badges, etc.) referenced var(--warm) across the whole app, but it was never defined in :root — silently transparent everywhere it was used, app-wide, since before this session. Fixed with one addition to :root rather than touched at each call site',c:'Bug'},
-  {k:'p0-27',t:'"Today\'s Check-outs" section on the Bookings tab',n:'DONE — reported after a checkout-day guest was missing from staging (traced to stale data, not a code bug — see p0-28). Compact card row at the top of the Bookings tab (icon-only task toggles, two-per-row) showing only today\'s checkout-day guests, reusing the same checklist fields/DB columns as the Guest Management tab (checked_out, followup_msg, cleaning booked) via the existing toggleNinaTask()/booking_checklists plumbing so ticking stays in sync. A card drops out once every task is done or check-out is no longer today. Also fixed a real bug found while building this: the property lane\'s "current guest" lookup used check_out>today instead of >=today, so a guest checking out today silently vanished from the whole Bookings tab (not shown as current, not shown as upcoming) the moment their checkout date arrived — same off-by-one existed in the dashboard "Currently staying" card, Guest Management\'s isNow/isPast split, and the WhatsApp launcher card; all four fixed to treat checkout day as still-current',c:'HEP'},
   {k:'p0-28',t:'Staging-only stale cancelled booking (Hassad Aly, id 573)',n:'DONE — data correction, not a code issue. Same false-positive auto-cancellation incident already restored on production earlier this session; staging has its own independent booking history and was never restored, which is why staging showed 0 checkouts for a date production correctly showed one. Fixed via supabase/migrations/240_staging_restore_hassad_aly_booking.sql (staging only)',c:'Bug'},
   {k:'p0-29',t:'fmtDate() called with a full timestamp instead of a plain date in 2 spots',n:'DONE — re-verified both flagged spots (booking-detail modal, cleaner-assignment day view) directly against the current code: both read check_in/check_out off objects sourced from the global bookings array, which the nb() normalizer (used at every load path — initial load, refresh, sample data, invoice view) already truncates to a plain 10-char YYYY-MM-DD via check_in: String(b.check_in_date||b.check_in||\'\').slice(0,10) — so fmtDate() never actually receives a full timestamp through either of these call sites. Confirmed with a direct extraction/eval test of fmtDate() + the normalizer against a realistic full-ISO-timestamp input. Likely already fixed by nb() before this item was even logged, just never verified/closed out',c:'Bug'},
+  {k:'p0-39',t:'p0-38 fixes: SQL join type mismatch, unquoted domestic ID breaking Edit/Delete, phone made optional',n:'DONE — three real bugs found on first live run. (1) 390\'s migration errored ("operator does not exist: uuid = text") because domestics.property_id is stored as EITHER the real UUID or the short key (\'speranta\'/\'tvhouse\') depending on vintage — same drift already handled defensively elsewhere in the JS (openInventory(), computeOwnerStatementCosts()) but missed in the new SQL functions\' first pass. Both get_outside_clean_info and submit_outside_inventory now resolve the short key the same way. (2) The actual cause of "unable to edit the clean": three onclick call sites (booking-detail modal\'s linked-cleaning Edit/Delete, the calendar day-modal\'s cleaning chip, the domestic list\'s Edit/Delete) interpolated the domestic\'s id UNQUOTED — editCleaning(${d.id}) instead of editCleaning(\'${d.id}\') — which produces invalid JS the moment a UUID id (containing letters and hyphens) is substituted in, so the click silently did nothing. Two other call sites already quoted it correctly; all three broken ones now match. (3) Requiring a phone number to save ANY "Other" cleaning would ALSO have broken editing older entries saved before that field existed (e.g. a legacy "Nicole" entry with no phone on file) — phone is now encouraged (still needed for payment and to auto-send the inventory link) but no longer blocks saving/editing when absent. Also reworded the "Other" cleaner info box per feedback',c:'Bug'},
+  {k:'p0-40',t:'Outside cleaner: real photo cleaning guide + one-click send + self-test link',n:'DONE — (1) "Other" cleaner info box reworded again: dropped the "we\'ll need it for payment anyway" line and the two old manual-fallback buttons (copy checklist text / open property inventory), replaced with a single green "Send inventory link & cleaning guideline to domestic" button that triggers the normal save (unchanged saveDomestic() flow, just relabelled/consolidated). (2) The real Speranta cleaning guide PDF the owner sent (room-by-room checklists with photos — Kitchen inventory, Bathroom, Main Bedroom, Living Room/balcony, Second Bedroom) is now hosted as a static asset (demo/guides/speranta-cleaning-guide.pdf, routed via a new vercel.json rewrite to /speranta-cleaning-guide.pdf) and linked directly in the WhatsApp message via a new CLEANING_GUIDE_URLS map — chosen over converting the PDF\'s photos into WhatsApp text as the simplest, least fragile option. Properties without a guide yet (TV House) keep falling back to the existing plain-text STANDARD_CLEANING_PLAN checklist. (3) Saving an outside cleaning with a phone number no longer auto-closes the modal — it now opens WhatsApp AND shows a confirmation panel with a direct "Open the link myself" link plus a Done button, so the coordinator can immediately test the exact link the cleaner received before trusting it to them',c:'Bug'},
+  {k:'p0-41',t:'p0-40 fix: WhatsApp send was silently blocked by popup blockers; edits never sent at all; no send history',n:'DONE — three real bugs found on first live test. (1) "saved the cleaning but no message sent": the old code called window.open() for the WhatsApp compose window AFTER awaiting the Supabase insert — an await breaks a click\'s "user activation" in most browsers, so that window.open() gets silently blocked by the popup blocker with no error surfaced anywhere. Fixed by opening a blank tab SYNCHRONOUSLY inside the button\'s click handler (sendOutsideCleanerNow(), before any await), then navigating that already-open tab to the wa.me/web.whatsapp.com URL once the save finishes — setting .location on an already-open window is allowed even across origins, unlike calling window.open() late. (2) "also not after opening it up again": saveDomestic()\'s UPDATE branch (editing an existing cleaning) never called sendOutsideCleanerWhatsApp at all — only the INSERT branch did, so resending from an edit silently did nothing but save. The dedicated Send button now passes an explicit sendWhatsApp flag through saveDomestic() that both the insert AND update branches honour, so resending on an edit works exactly like the first send. (3) "no way of past messages sent checked": added domestics.link_sent_at (migration 430), set whenever a send actually happens; the "Other" cleaner box now shows "Last sent <date> — resend any time" and relabels the button "Resend…" instead of giving no indication either way',c:'Bug'},
+  {k:'p0-42',t:'Outside-cleaner inventory submit failed: RPC assumed domestics.org_id exists',n:'DONE — submit_outside_inventory (390) errored "column \\"org_id\\" does not exist" on the first real cleaner-side test, only surfaced because outside-cleaner.html\'s submit failure alert was a hardcoded generic message ("check your connection") until this round — fixed that too, it now shows the real e.message. Root cause: the function selected org_id straight off public.domestics, but that table has no such column — demo/index_fixed.html\'s own saveDomestic() never sets one when creating a domestics row, and the staff portal\'s own inventory insert (demo/domestic.html submitInventory) sources org_id from a hardcoded ORG_ID constant rather than the clean record, which is why this went unnoticed until now. get_outside_clean_info never touched org_id, which is why it worked on the first try while this one didn\'t. Migration 450 resolves org_id from public.properties instead (which does carry it, same as everywhere else in the app), joined via the same short-key -> UUID property resolution already used throughout',c:'Bug'},
+  {k:'p0-43',t:'Convert all remaining window.confirm() calls to the non-blocking confirmAction() modal',n:'DONE — p0-35 fixed deleteBooking()/declineBooking() and explicitly flagged 8 other confirm() call sites as a deferred follow-up; owner kept hitting the same "INP Issue — blocked UI updates" false-positive elsewhere in the app (e.g. approving a booking, deleting a task), confirming it was the same root cause repeating. Converted the rest: deleteInspection, deleteInventoryReport, approveBooking, deleteCleaning, deleteTask, deleteTaskFromDrawer, kmDeleteRoom (checklist room removal), deleteContact. Same pattern throughout — the function becomes a synchronous dispatcher that opens the #confirm-modal and only runs the actual delete/approve once the user clicks its own button, so the triggering click always returns immediately. No window.confirm() calls remain anywhere in the app',c:'Bug'},
+  {k:'p0-45',t:'Inventory report "Create task" button vanished for good once reviewed, with no way to redo a deleted task',n:'DONE — reported live: coordinator created a task from Fatima\'s note-only report ("mould cleaner finished, soap low" — 0 flagged items but a general note, all_ok=false), then deleted that task from the Tasks tab, and the "⚡ Create task" button was gone with no way to make it again. Root cause: both places this card renders (renderReportInventory\'s Cleaner Inventory Reports tab, and the Domestic Cal View\'s embedded reports panel) wrapped BOTH "Mark reviewed" and "Create task" in one block gated on `!r.reviewed` — and createTaskFromFlag() itself sets reviewed=true, so clicking Create task made its own button disappear forever, regardless of whether the task it created still exists. Also: createBtn was gated on flags.length > 0, excluding notes-only reports like this one, even though createTaskFromFlag() already has its own fallback title ("Follow up: <property> cleaner note") clearly built to support exactly this case — just never reachable. Fixed both: Create task now shows whenever there\'s a flag OR a note, independent of reviewed/task_created, so it survives a deleted task; Mark reviewed still hides itself once reviewed, but no longer takes Create task down with it',c:'Bug'},
+  {k:'p0-46',t:'Confirm-delete popup rendered behind an already-open modal (booking/day modal)',n:'DONE — reported on both prod and staging: deleting a cleaning session from inside the booking-detail/day modal showed the "Please confirm" dialog BEHIND it, only clickable after closing the booking window first. Root cause: #confirm-modal and every other modal (day-modal, domestic-modal, task-modal, etc.) all share the plain .modal-overlay class, which hardcodes z-index:200 for all of them — with equal z-index, CSS stacking ties go to whichever is LATER in the DOM, not whichever opened more recently, and #confirm-modal happens to sit earlier in the HTML than day-modal. Since confirmAction() (p0-35/p0-43) is specifically meant to layer a confirmation ON TOP of whatever modal triggered it, gave #confirm-modal its own z-index:260 so it always wins regardless of DOM order',c:'Bug'}]},
+ {id:'p05',lbl:'Phase 0.5 — Feature Build-out',meta:'Weeks 4–10, ongoing',col:'#F0563B',tasks:[
+  {k:'p0-27',t:'"Today\'s Check-outs" section on the Bookings tab',n:'DONE — reported after a checkout-day guest was missing from staging (traced to stale data, not a code bug — see p0-28). Compact card row at the top of the Bookings tab (icon-only task toggles, two-per-row) showing only today\'s checkout-day guests, reusing the same checklist fields/DB columns as the Guest Management tab (checked_out, followup_msg, cleaning booked) via the existing toggleNinaTask()/booking_checklists plumbing so ticking stays in sync. A card drops out once every task is done or check-out is no longer today. Also fixed a real bug found while building this: the property lane\'s "current guest" lookup used check_out>today instead of >=today, so a guest checking out today silently vanished from the whole Bookings tab (not shown as current, not shown as upcoming) the moment their checkout date arrived — same off-by-one existed in the dashboard "Currently staying" card, Guest Management\'s isNow/isPast split, and the WhatsApp launcher card; all four fixed to treat checkout day as still-current',c:'HEP'},
   {k:'p0-30',t:'Guest Timeline — Messages tab rebuilt around per-booking touchpoints (B1)',n:'DONE — replaced the old generic WhatsApp template-link list (pick blind from 6 canned messages) with a per-booking stage timeline: pre-arrival -> check-in day -> mid-stay (10+ night stays only) -> post-stay, each stage showing done/due-now/upcoming and a ready-to-send WhatsApp message for whichever is due right now. Post-stay message bakes in the RETURN10 rebooking promo + direct-booking link, ready for when the direct-booking page is live. Mark-as-sent reuses booking_checklists (guest_contacted_at/checked_in_at/follow_up_sent_at already existed; mid_stay_msg_at is the one new column, migration 260) via the existing toggleNinaTask() plumbing, so it stays in sync with the Guest Management tab. Lightweight "returning guest" badge derived by matching phone/name across existing bookings — no new guests table, kept it lightweight as scoped. WhatsApp delivery isolated into one deliverWhatsAppMessage() function so a future WhatsApp Business API swap doesn\'t touch the message-building code. Refined after first staging review: only mid-stay (not post-stay — the RETURN10/direct-booking push isn\'t something to actively chase yet, and every historical booking looked "overdue" the moment this shipped, flooding Urgent Actions) surfaces as an Urgent Action; mid-stay threshold raised from 4 to 10 nights; every WhatsApp send/open now targets one shared named tab instead of "_blank" so WhatsApp Web only needs logging into once per session instead of once per guest',c:'HEP'},
   {k:'p0-31',t:'Property Manual — Knowledge tab rebuilt as operational source of truth (B3)',n:'DONE — new property_manuals table (migration 280), one row per (property, section). Replaces two pieces of data that were hardcoded and duplicated with no in-app way to edit them: INVENTORY (demo/domestic.html\'s cleaner checklist during a clean) and INSP_CHECKLIST (was a single GLOBAL list for every property\'s inspection form in demo/index_fixed.html, now genuinely per-property). Seed data transcribed as-is from those hardcoded structures via a script that read the real objects, not hand-typed, so no transcription risk. New Guest FAQ section (previously didn\'t exist) is editable per property and surfaces as a copy-to-clipboard quick reference on the Guest Timeline (B1) so Nina can drop a real answer into whatever message she\'s sending. The old flat "Knowledge Base" (kbArticles/SAMPLE_KB) is kept as-is, relabeled "General Notes" below the new per-property sections — on inspection its content was real business data (door codes, procedures, emergency contacts, finance notes), not placeholder junk, so nothing there needed killing; the actual dead content was the hardcoded/duplicated checklist data now replaced. Known gap, not touched: demo/domestic.html\'s separate NINA_CHECKLISTS (a differently-structured, more detailed inspection checklist used only inside the cleaner portal\'s own Nina-view) is a third, still-hardcoded parallel structure not unified with this — out of scope for this pass, flagging rather than silently leaving it undiscovered',c:'HEP'},
   {k:'p0-32',t:'Management Invoice — printable monthly statement for pass-through properties (B2)',n:'DONE — new "🧾 Management Invoice" sub-tab under Reports. Property + month picker, auto-computed gross rental proceeds (from bookings) and cleaning costs (from domestics, whichever property_id format that row happens to use), editable extra cost lines (management fee defaults to R6,000, matching the existing TV House arrangement), live net-due-to-owner total, and a branded printable PDF using the same html2canvas+jsPDF pipeline the invoice generator already uses. No schema change: everything is computed live from bookings/domestics, nothing new to store. Confirmed while building this that the Finance tab\'s own S&N income reporting already hardcodes property_id===\'speranta\' only, so TV House was already correctly excluded from S&N\'s own revenue — this feature is purely the owner-facing document that was missing, not a fix to existing reporting. TV House is the live case (auto-selected by default) but any property can be picked. Refined after review: renamed "Owner Statement" -> "Management Invoice" throughout (tab label, document title, PDF filename), and the PDF preview now reuses the guest invoice\'s exact visual template (gold/navy branding, ISSUED BY/PREPARED FOR panel, line-items table, director signatures, footer) instead of a bespoke layout, so it reads as the same document family',c:'HEP'},
@@ -4048,14 +4164,8 @@ const ROADMAP = [
   {k:'p0-36',t:'Guest Timeline: drop redundant Check-in day message, make every stage always previewable/resendable',n:'DONE — (1) Removed the "Check-in day" stage from GUEST_STAGE_DEFS entirely (and its buildCheckinDayMsg/CHECKIN_DAY_MSG templates) — pre-arrival already contains everything a guest needs for check-in, so a separate message was redundant, per owner feedback. Timeline now runs pre-arrival -> [mid-stay, 10+ nights] -> post-stay. (2) Fixed the real bug behind "clicked it by accident and now it\'s blocked": stage pills used to call toggleNinaTask() directly on click, silently flipping sent/not-sent state, and getGuestTouchpoints()\'s dueNow window for pre-arrival was a narrow 24h-before-arrival check — so an accidental click (or any booking past that window) left the stage marked not-sent with no due-now flag and therefore no Send button, stuck. Pills now call selectMsgStage() instead, which only changes which stage\'s message is being previewed/sent (bid -> key in _selectedMsgStage) and never mutates data; marking sent/not-sent is now an explicit separate "✓ Mark sent" / "↺ Mark not sent" button; and Send is always available for whichever stage is selected regardless of done/dueNow. Also widened checkin_msg\'s dueNow window to the whole stay (today < checkout) instead of just the 24h-before slice, so an unsent pre-arrival stays visibly flagged the whole time, not just briefly',c:'HEP'},
   {k:'p0-37',t:'Outside cleaner: phone number + direct WhatsApp send of the cleaning checklist',n:'DONE — the "Other (outside cleaner)" cleaner option now also asks for a phone/WhatsApp number (required, migration 370 adds domestics.cleaner_phone) — needed for paying them anyway, not just messaging. Edit pre-fills both name and phone the same way it already did for the name alone. Superseded by p0-38\'s shareable link — see that entry for the current WhatsApp send behavior',c:'HEP'},
   {k:'p0-38',t:'Outside cleaner: no-login shareable link to fill out the real inventory checklist',n:'DONE — new demo/outside-cleaner.html (routed via vercel.json as /outside-cleaner?d=<domestics.id>&t=<access_token>), a standalone page requiring no login. It shows the SAME per-property inventory checklist "the ladies" use in the staff portal (sourced live from property_manuals) and submits into the same inventory_reports table/Cleaner Inventory Reports view the coordinator already sees — not a separate parallel system. Security: migration 390 adds domestics.access_token (random, generated per row) plus two SECURITY DEFINER RPCs (get_outside_clean_info, submit_outside_inventory) that are the ONLY way the anon role can read a domestics row or write an inventory report — both check the (id, token) pair server-side before doing anything, direct table RLS for anon stays closed. Saving a new "Other" cleaning now automatically opens WhatsApp to the cleaner\'s number with "Hi [name], thank you for cleaning our [property] property." followed by the inventory link and the standard checklist for reference — replaces p0-37\'s plain-text-only send',c:'HEP'},
-  {k:'p0-39',t:'p0-38 fixes: SQL join type mismatch, unquoted domestic ID breaking Edit/Delete, phone made optional',n:'DONE — three real bugs found on first live run. (1) 390\'s migration errored ("operator does not exist: uuid = text") because domestics.property_id is stored as EITHER the real UUID or the short key (\'speranta\'/\'tvhouse\') depending on vintage — same drift already handled defensively elsewhere in the JS (openInventory(), computeOwnerStatementCosts()) but missed in the new SQL functions\' first pass. Both get_outside_clean_info and submit_outside_inventory now resolve the short key the same way. (2) The actual cause of "unable to edit the clean": three onclick call sites (booking-detail modal\'s linked-cleaning Edit/Delete, the calendar day-modal\'s cleaning chip, the domestic list\'s Edit/Delete) interpolated the domestic\'s id UNQUOTED — editCleaning(${d.id}) instead of editCleaning(\'${d.id}\') — which produces invalid JS the moment a UUID id (containing letters and hyphens) is substituted in, so the click silently did nothing. Two other call sites already quoted it correctly; all three broken ones now match. (3) Requiring a phone number to save ANY "Other" cleaning would ALSO have broken editing older entries saved before that field existed (e.g. a legacy "Nicole" entry with no phone on file) — phone is now encouraged (still needed for payment and to auto-send the inventory link) but no longer blocks saving/editing when absent. Also reworded the "Other" cleaner info box per feedback',c:'Bug'},
-  {k:'p0-40',t:'Outside cleaner: real photo cleaning guide + one-click send + self-test link',n:'DONE — (1) "Other" cleaner info box reworded again: dropped the "we\'ll need it for payment anyway" line and the two old manual-fallback buttons (copy checklist text / open property inventory), replaced with a single green "Send inventory link & cleaning guideline to domestic" button that triggers the normal save (unchanged saveDomestic() flow, just relabelled/consolidated). (2) The real Speranta cleaning guide PDF the owner sent (room-by-room checklists with photos — Kitchen inventory, Bathroom, Main Bedroom, Living Room/balcony, Second Bedroom) is now hosted as a static asset (demo/guides/speranta-cleaning-guide.pdf, routed via a new vercel.json rewrite to /speranta-cleaning-guide.pdf) and linked directly in the WhatsApp message via a new CLEANING_GUIDE_URLS map — chosen over converting the PDF\'s photos into WhatsApp text as the simplest, least fragile option. Properties without a guide yet (TV House) keep falling back to the existing plain-text STANDARD_CLEANING_PLAN checklist. (3) Saving an outside cleaning with a phone number no longer auto-closes the modal — it now opens WhatsApp AND shows a confirmation panel with a direct "Open the link myself" link plus a Done button, so the coordinator can immediately test the exact link the cleaner received before trusting it to them',c:'Bug'},
-  {k:'p0-41',t:'p0-40 fix: WhatsApp send was silently blocked by popup blockers; edits never sent at all; no send history',n:'DONE — three real bugs found on first live test. (1) "saved the cleaning but no message sent": the old code called window.open() for the WhatsApp compose window AFTER awaiting the Supabase insert — an await breaks a click\'s "user activation" in most browsers, so that window.open() gets silently blocked by the popup blocker with no error surfaced anywhere. Fixed by opening a blank tab SYNCHRONOUSLY inside the button\'s click handler (sendOutsideCleanerNow(), before any await), then navigating that already-open tab to the wa.me/web.whatsapp.com URL once the save finishes — setting .location on an already-open window is allowed even across origins, unlike calling window.open() late. (2) "also not after opening it up again": saveDomestic()\'s UPDATE branch (editing an existing cleaning) never called sendOutsideCleanerWhatsApp at all — only the INSERT branch did, so resending from an edit silently did nothing but save. The dedicated Send button now passes an explicit sendWhatsApp flag through saveDomestic() that both the insert AND update branches honour, so resending on an edit works exactly like the first send. (3) "no way of past messages sent checked": added domestics.link_sent_at (migration 430), set whenever a send actually happens; the "Other" cleaner box now shows "Last sent <date> — resend any time" and relabels the button "Resend…" instead of giving no indication either way',c:'Bug'},
-  {k:'p0-42',t:'Outside-cleaner inventory submit failed: RPC assumed domestics.org_id exists',n:'DONE — submit_outside_inventory (390) errored "column \\"org_id\\" does not exist" on the first real cleaner-side test, only surfaced because outside-cleaner.html\'s submit failure alert was a hardcoded generic message ("check your connection") until this round — fixed that too, it now shows the real e.message. Root cause: the function selected org_id straight off public.domestics, but that table has no such column — demo/index_fixed.html\'s own saveDomestic() never sets one when creating a domestics row, and the staff portal\'s own inventory insert (demo/domestic.html submitInventory) sources org_id from a hardcoded ORG_ID constant rather than the clean record, which is why this went unnoticed until now. get_outside_clean_info never touched org_id, which is why it worked on the first try while this one didn\'t. Migration 450 resolves org_id from public.properties instead (which does carry it, same as everywhere else in the app), joined via the same short-key -> UUID property resolution already used throughout',c:'Bug'},
-  {k:'p0-43',t:'Convert all remaining window.confirm() calls to the non-blocking confirmAction() modal',n:'DONE — p0-35 fixed deleteBooking()/declineBooking() and explicitly flagged 8 other confirm() call sites as a deferred follow-up; owner kept hitting the same "INP Issue — blocked UI updates" false-positive elsewhere in the app (e.g. approving a booking, deleting a task), confirming it was the same root cause repeating. Converted the rest: deleteInspection, deleteInventoryReport, approveBooking, deleteCleaning, deleteTask, deleteTaskFromDrawer, kmDeleteRoom (checklist room removal), deleteContact. Same pattern throughout — the function becomes a synchronous dispatcher that opens the #confirm-modal and only runs the actual delete/approve once the user clicks its own button, so the triggering click always returns immediately. No window.confirm() calls remain anywhere in the app',c:'Bug'},
-  {k:'p0-44',t:'Outside cleaner: the staff portal\'s own separate "Assign Cleaning" flow never got the phone/send feature',n:'DONE — p0-37 through p0-42 added the phone-capture + WhatsApp-send feature only to demo/index_fixed.html\'s "Schedule Cleaning" modal. demo/domestic.html (the cleaner-facing staff portal PWA) turns out to have its own separate, self-contained "Assign Cleaning" modal for its PIN-login coordinator ("Nina") view, used to assign a cleaner straight from a checkout list — it already had an "Other…" one-off cleaner option but no phone field and no send, since that script never shares code with index_fixed.html. Added the same phone field, the same synchronous-tab-open fix for the WhatsApp popup blocker (window.open() called after an await gets silently blocked), and the same guide-link-or-checklist-fallback message, reusing the existing access_token/cleaner_phone/link_sent_at columns (390/370/430) — no new migration needed. Kept leaner than the main modal on purpose: sends automatically on save when a phone is given, no separate dedicated button or "test the link yourself" panel, matching this modal\'s existing quick assign-and-go design rather than importing the heavier flow wholesale',c:'HEP'},
-  {k:'p0-45',t:'Inventory report "Create task" button vanished for good once reviewed, with no way to redo a deleted task',n:'DONE — reported live: coordinator created a task from Fatima\'s note-only report ("mould cleaner finished, soap low" — 0 flagged items but a general note, all_ok=false), then deleted that task from the Tasks tab, and the "⚡ Create task" button was gone with no way to make it again. Root cause: both places this card renders (renderReportInventory\'s Cleaner Inventory Reports tab, and the Domestic Cal View\'s embedded reports panel) wrapped BOTH "Mark reviewed" and "Create task" in one block gated on `!r.reviewed` — and createTaskFromFlag() itself sets reviewed=true, so clicking Create task made its own button disappear forever, regardless of whether the task it created still exists. Also: createBtn was gated on flags.length > 0, excluding notes-only reports like this one, even though createTaskFromFlag() already has its own fallback title ("Follow up: <property> cleaner note") clearly built to support exactly this case — just never reachable. Fixed both: Create task now shows whenever there\'s a flag OR a note, independent of reviewed/task_created, so it survives a deleted task; Mark reviewed still hides itself once reviewed, but no longer takes Create task down with it',c:'Bug'},
-  {k:'p0-46',t:'Confirm-delete popup rendered behind an already-open modal (booking/day modal)',n:'DONE — reported on both prod and staging: deleting a cleaning session from inside the booking-detail/day modal showed the "Please confirm" dialog BEHIND it, only clickable after closing the booking window first. Root cause: #confirm-modal and every other modal (day-modal, domestic-modal, task-modal, etc.) all share the plain .modal-overlay class, which hardcodes z-index:200 for all of them — with equal z-index, CSS stacking ties go to whichever is LATER in the DOM, not whichever opened more recently, and #confirm-modal happens to sit earlier in the HTML than day-modal. Since confirmAction() (p0-35/p0-43) is specifically meant to layer a confirmation ON TOP of whatever modal triggered it, gave #confirm-modal its own z-index:260 so it always wins regardless of DOM order',c:'Bug'}]},
+  {k:'p0-44',t:'Outside cleaner: the staff portal\'s own separate "Assign Cleaning" flow never got the phone/send feature',n:'DONE — p0-37 through p0-42 added the phone-capture + WhatsApp-send feature only to demo/index_fixed.html\'s "Schedule Cleaning" modal. demo/domestic.html (the cleaner-facing staff portal PWA) turns out to have its own separate, self-contained "Assign Cleaning" modal for its PIN-login coordinator ("Nina") view, used to assign a cleaner straight from a checkout list — it already had an "Other…" one-off cleaner option but no phone field and no send, since that script never shares code with index_fixed.html. Added the same phone field, the same synchronous-tab-open fix for the WhatsApp popup blocker (window.open() called after an await gets silently blocked), and the same guide-link-or-checklist-fallback message, reusing the existing access_token/cleaner_phone/link_sent_at columns (390/370/430) — no new migration needed. Kept leaner than the main modal on purpose: sends automatically on save when a phone is given, no separate dedicated button or "test the link yourself" panel, matching this modal\'s existing quick assign-and-go design rather than importing the heavier flow wholesale',c:'HEP'}
+]},
  {id:'p1',lbl:'Phase 1 — Multi-tenancy',meta:'Weeks 6–16',col:'#378ADD',tasks:[
   {k:'p1-1',t:'Remove hardcoded property/org UUIDs from JS',n:'DONE (main pieces) — org_id was already dynamic (getOrgId()); PROPS/UUID_MAP were already runtime-overridden by loadProperties() but several call sites still had their own separate hardcoded UUID maps (saveBooking, saveTask, task-edit, cleaner-assignment, propName()) — all now read PROPS[key].uuid dynamically instead. ICAL_FEEDS was the real gap: fully hardcoded to S&N\'s two properties, meaning no other org\'s bookings could ever sync — now loads per-org from public.ical_feeds (client) at login and before every manual sync; scripts/ics-import.js (the 6-hourly background cron) now loads active feeds across every org from the same table instead of one hardcoded org, so a new host\'s background sync works as soon as their feeds are in that table. properties.cleaning_fee turned out to already exist (the earlier "missing column" note was stale) — loadProperties() was already reading it correctly. Remaining gap, flagged not hidden: the background script\'s linked-clean-cancellation step still only recognizes S&N\'s two properties (domestics.property_id uses a short-key scheme with no per-org derivation server-side yet) — revisit when a second org needs that specific feature',c:'Architecture'},
   {k:'p1-2',t:'Org-creation flow — new customer without code changes',n:'Org name, properties, iCal feeds, staff invites',c:'Architecture'},
@@ -4080,16 +4190,17 @@ const ROADMAP = [
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
   {k:'p3-5',t:'White-label booking pages per customer org',n:'org_settings drives logo, colours, domain',c:'Architecture'}]}
 ];
-let rmState = {}, rmOpen = {now:true,p0:false,p1:false,p2:false,p3:false,bugs:false};
+let rmState = {}, rmOpen = {now:true,p0:false,p05:false,p1:false,p2:false,p3:false,bugs:false};
 
 // Timeline story — one per phase, growing in size/vibrancy to visualise the
 // product's own growth (a simple two-property dashboard becoming a real
 // multi-tenant platform), not just a progress list.
 const PHASE_STORY = {
-  p0: { icon:'🌱', size:40, tagline:'A simple two-property dashboard becomes a real, secured product' },
-  p1: { icon:'🏗️', size:48, tagline:'One org\'s tool becomes a platform any host can run on' },
-  p2: { icon:'🤝', size:56, tagline:'Real feedback from a real second customer' },
-  p3: { icon:'🚀', size:64, tagline:'HEP becomes a business' },
+  p0:  { icon:'🌱', size:40, tagline:'A simple two-property dashboard becomes a real, secured product' },
+  p05: { icon:'🧩', size:44, tagline:'The foundation becomes a real day-to-day product for the first tenant' },
+  p1:  { icon:'🏗️', size:48, tagline:'One org\'s tool becomes a platform any host can run on' },
+  p2:  { icon:'🤝', size:56, tagline:'Real feedback from a real second customer' },
+  p3:  { icon:'🚀', size:64, tagline:'HEP becomes a business' },
 };
 
 function rmTimelineHtml(){
@@ -4148,16 +4259,29 @@ async function rmToggle(k){
 
 function rmTogglePhase(id){ rmOpen[id] = !rmOpen[id]; rmRender(); }
 
+// Long "DONE" notes often pack several fixes into one run-on paragraph using inline
+// (1)...(2)...(3) markers — break each onto its own line so dense entries stay readable
+// instead of reading as one squashed block of text. Escape first: several notes contain
+// literal "<"/">" (e.g. "today<check-in") that the browser would otherwise swallow as tags.
+function rmFormatNote(n){
+  if (!n) return '';
+  const esc = n.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const markers = esc.match(/\(\d+\)/g);
+  if (!markers || markers.length < 2) return esc;
+  let seen = 0;
+  return esc.replace(/\(\d+\)/g, m => { seen++; return (seen>1 ? '<br><br>' : '') + m; });
+}
+
 function rmTaskRowHtml(t){
   const d = !!rmState[t.k];
-  return '<div onclick="rmToggle(\''+t.k+'\')" style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-top:1px solid var(--border);cursor:pointer">'+
+  return '<div onclick="rmToggle(\''+t.k+'\')" style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-top:1px solid var(--border);cursor:pointer">'+
     '<div style="width:17px;height:17px;border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;'+
       (d ? 'background:var(--accent);border:1.5px solid var(--accent)' : 'border:1.5px solid var(--muted)')+'">'+
       (d ? '<span style="color:#fff;font-size:11px;line-height:1">✓</span>' : '')+'</div>'+
     '<div style="flex:1;min-width:0">'+
       '<div style="font-size:.84rem;color:var(--ink);'+(d?'text-decoration:line-through;opacity:.55':'')+'">'+t.t+
         ' <span style="font-size:.62rem;padding:1px 7px;border-radius:10px;background:var(--warm);color:var(--ink);vertical-align:middle">'+t.c+'</span></div>'+
-      (t.n ? '<div style="font-size:.72rem;color:var(--muted);margin-top:2px;'+(d?'opacity:.55':'')+'">'+t.n+'</div>' : '')+
+      (t.n ? '<div style="font-size:.72rem;line-height:1.6;color:var(--muted);margin-top:4px;'+(d?'opacity:.55':'')+'">'+rmFormatNote(t.n)+'</div>' : '')+
     '</div></div>';
 }
 
@@ -4295,11 +4419,11 @@ function renderDashboard() {
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:1.3rem;animation:pulse 1.5s infinite">🔔</span>
           <div>
-            <div style="font-weight:700;font-size:.9rem;color:#92400e">${pendingDirect.length} S&N Apartments booking${pendingDirect.length>1?'s':''} awaiting approval</div>
-            <div style="font-size:.76rem;color:#a16207">${pendingDirect.map(b=>b.display_name+' · '+fmtDate(b.check_in)).join(' · ')}</div>
+            <div style="font-weight:700;font-size:.9rem;color:var(--ink)">${pendingDirect.length} S&N Apartments booking${pendingDirect.length>1?'s':''} awaiting approval</div>
+            <div style="font-size:.76rem;color:var(--muted)">${pendingDirect.map(b=>b.display_name+' · '+fmtDate(b.check_in)).join(' · ')}</div>
           </div>
         </div>
-        <button class="btn btn-sm" style="background:#d97706;color:#fff;margin-left:auto" onclick="switchTab('bookings');setBookingFilter('pending')">Review →</button>
+        <button class="btn btn-sm" style="background:var(--amber);color:#fff;margin-left:auto" onclick="switchTab('bookings');setBookingFilter('pending')">Review →</button>
       </div>`;
     } else { alertEl.style.display='none'; }
   }
@@ -4549,25 +4673,28 @@ function renderDashboard() {
     // be noise every time the dashboard refreshes.
     if (_lastUrgentCount > 0) toast('🎉 Nice work — everything\'s handled!', 'celebrate');
     _lastUrgentCount = 0;
-    urgentEl.innerHTML = '<div style="grid-column:1/-1;color:rgba(255,255,255,.75);font-size:.9rem;text-align:center;padding:22px 0;display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:1.3rem">✅</span> All clear — nothing needs you right now</div>';
+    urgentEl.innerHTML = '<div style="color:var(--muted);font-size:.9rem;text-align:center;padding:22px 0;display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:1.3rem">✅</span> All clear — nothing needs you right now</div>';
     return;
   }
   _lastUrgentCount = urgentItems.length;
 
-  urgentEl.innerHTML = urgentItems.map(item => `
-    <div onclick="${item.action}" style="background:rgba(255,255,255,.07);border-radius:10px;padding:10px 12px;cursor:pointer;border-left:3px solid ${item.color};transition:background .15s"
-      onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-        <span style="font-size:.9rem">${item.icon}</span>
-        <span style="font-weight:700;font-size:.8rem;color:#fff">${item.label}</span>
+  urgentEl.innerHTML = urgentItems.map((item,i) => i===0 ? `
+    <div class="log-hero" style="background:${item.color}14" onclick="${item.action}">
+      <div style="min-width:0">
+        <span class="sev" style="color:${item.color}">${item.icon} ${item.label}</span>
+        <span class="msg">${item.detail}</span>
       </div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-left:20px">
-        <div style="font-size:.72rem;color:rgba(255,255,255,.55)">${item.detail}</div>
-        ${item.dismissAction ? `<button onclick="event.stopPropagation();${item.dismissAction}"
-          style="flex-shrink:0;background:rgba(255,255,255,.12);color:#fff;border:none;border-radius:6px;padding:3px 9px;font-size:.68rem;font-weight:600;cursor:pointer">
-          ✓ Informed
-        </button>` : ''}
-      </div>
+      ${item.dismissAction
+        ? `<button class="act" onclick="event.stopPropagation();${item.dismissAction}">✓ Informed</button>`
+        : `<span class="act" style="cursor:pointer">View →</span>`}
+    </div>` : `
+    <div class="log-row" onclick="${item.action}">
+      <span class="bar" style="background:${item.color}"></span>
+      <span class="sev">${item.icon}</span>
+      <span class="msg"><b style="font-weight:700">${item.label}</b> — ${item.detail}</span>
+      ${item.dismissAction
+        ? `<button class="go" onclick="event.stopPropagation();${item.dismissAction}" style="background:none;border:none;cursor:pointer;font-family:inherit">✓ Informed</button>`
+        : `<span class="go">→</span>`}
     </div>`).join('');
 }
 
@@ -4587,7 +4714,7 @@ async function acknowledgeCancelledClean(id) {
 }
 
 function statCard(label, value, sub, color='var(--accent)') {
-  return `<div class="stat-card" style="border-top-color:${color}"><div class="stat-label">${label}</div><div class="stat-value">${value}</div><div class="stat-sub">${sub}</div></div>`;
+  return `<div class="dash-seg" style="--seg-c:${color}"><div class="k">${label}</div><div class="v tab-num">${value}</div><div class="n">${sub}</div></div>`;
 }
 const sCard = statCard; // alias
 
@@ -4685,7 +4812,7 @@ function renderLaneView() {
     const current = allProp.find(b=>b.check_in<=today&&b.check_out>=today&&b.status!=='cancelled'&&!isCaretaker(b));
     const pending = allProp.filter(b=>b.status==='pending');
     const shown   = filterForLane(allProp).sort((a,b)=> bookingFilter==='upcoming' ? a.check_in.localeCompare(b.check_in) : b.check_in.localeCompare(a.check_in));
-    const upcoming= allProp.filter(b=>b.check_in>today&&b.status!=='cancelled');
+    const upcoming= allProp.filter(b=>b.check_in>today&&b.status!=='cancelled').sort((a,b)=>a.check_in.localeCompare(b.check_in));
 
     // Occupied status — warm neutral
     const isOccupied = !!current;
@@ -4695,68 +4822,63 @@ function renderLaneView() {
     const statusCol  = isOccupied ? '#0369a1' : '#15803d';
     const statusText = isOccupied ? '🏠 Occupied' : '✓ Available';
 
-    return `<div style="background:var(--card-bg);border-radius:18px;border:1.5px solid var(--border);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 12px rgba(0,0,0,.06)">
+    // Mini progress ring for the current guest's node — nights elapsed / total
+    const ringR = 10, ringC = 2*Math.PI*ringR;
+    const stayPct = current ? Math.min(1, Math.max(0, ((current.nights||1)-nightsLeft)/Math.max(1,current.nights||1))) : 0;
+    const ringFilled = (stayPct*ringC).toFixed(1);
+
+    return `<div class="lane-card">
 
       <!-- ── Header ── -->
-      <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border)">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-          <div>
-            <div style="font-weight:700;font-size:1.05rem;color:var(--ink)">${prop.name}</div>
-            <div style="font-size:.73rem;color:var(--muted);margin-top:1px">${prop.address}</div>
-          </div>
-          <span style="background:${statusBg};color:${statusCol};font-size:.74rem;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">
-            ${statusText}
-          </span>
+      <div class="lane-hd">
+        <div>
+          <div class="lane-name">${prop.name}</div>
+          <div class="lane-addr">${prop.address}</div>
         </div>
-        <!-- Quick stats row -->
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          ${[
-            ['📋', pending.length+' pending',   pending.length?'#fef3c7':'var(--sand)', pending.length?'#92400e':'var(--muted)'],
-            ['📅', upcoming.length+' upcoming',  'var(--sand)', 'var(--muted)'],
-            [isOccupied&&nightsLeft<=1?'🛫':'⏳',
-             isOccupied?(nightsLeft<=0?'Checking out today':nightsLeft===1?'Last night':'Out in '+nightsLeft+'d'):'Next: '+(upcoming[0]?fmtDate(upcoming[0].check_in):'—'),
-             isOccupied&&nightsLeft<=1?'#fef3c7':'var(--sand)',
-             isOccupied&&nightsLeft<=1?'#92400e':'var(--muted)'],
-          ].map(([icon,text,bg,col])=>`
-            <span style="background:${bg};color:${col};font-size:.72rem;font-weight:600;padding:3px 9px;border-radius:10px;display:inline-flex;align-items:center;gap:3px">
-              ${icon} ${text}
-            </span>`).join('')}
-        </div>
+        <span style="background:${statusBg};color:${statusCol};font-size:.74rem;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">
+          ${statusText}
+        </span>
       </div>
 
-      <!-- ── Current guest with lifecycle ── -->
-      ${current ? `
-      <div style="padding:14px 20px;background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-bottom:1px solid #bae6fd">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px">
-          <div>
-            <div style="font-weight:700;font-size:.95rem;color:var(--ink)">${current.display_name}</div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:.75rem;color:var(--muted);margin-top:3px">
-              <span>🛬 ${fmtDate(current.check_in)}</span>
-              <span>🛫 ${fmtDate(current.check_out)}</span>
-              <span>🌙 ${current.nights||0}n</span>
-              <span>👥 ${current.number_of_guests||1}</span>
-            </div>
-          </div>
-          <div style="display:flex;gap:5px;flex-shrink:0">
-            <span class="badge badge-${current.platform}">${current.platform==='direct'?'🌐':current.platform}</span>
-            <button onclick="openBookingDetail('${current.id}')" style="background:rgba(255,255,255,.7);border:1px solid #bae6fd;border-radius:7px;padding:3px 8px;font-size:.72rem;cursor:pointer;color:#0369a1">View ›</button>
-          </div>
-        </div>
-        <!-- Stay progress bar only, no text label -->
-        <div style="height:4px;background:#bae6fd;border-radius:2px;overflow:hidden;margin-bottom:12px">
-          <div style="height:4px;background:#0369a1;border-radius:2px;width:${Math.min(100,Math.round(((current.nights||1)-nightsLeft)/Math.max(1,current.nights||1)*100))}%;transition:width .5s"></div>
-        </div>
-        <!-- 4-step lifecycle -->
-        ${lifecycleSteps(current, hasClean(current), pid)}
-      </div>` : ''}
+      <!-- ── Stat segments ── -->
+      <div class="lane-segs">
+        <div class="lane-seg"><div class="k">Pending</div><div class="v tab-num">${pending.length}</div></div>
+        <div class="lane-seg"><div class="k">Upcoming</div><div class="v tab-num">${upcoming.length}</div></div>
+        <div class="lane-seg"><div class="k">${isOccupied?'Out in':'Next'}</div><div class="v">${isOccupied?(nightsLeft<=0?'Today':nightsLeft===1?'1d':nightsLeft+'d'):(upcoming[0]?fmtDate(upcoming[0].check_in):'—')}</div></div>
+      </div>
 
-      <!-- ── Booking cards ── -->
-      <div style="padding:10px 20px;flex:1;overflow-y:auto;max-height:480px">
+      <!-- ── Rail: current guest (with lifecycle) + upcoming/past bookings ── -->
+      <div class="lane-body">
         ${shown.filter(b=>b!==current).length===0&&!current ? emptyState('📭',
           `No ${bookingFilter==='all'?'':bookingFilter+' '}bookings for ${prop.name} yet`,
           `<button class="btn btn-sm btn-primary" onclick="openModal('booking-modal')" style="margin-right:6px">+ Add Booking</button>
            <button class="btn btn-sm btn-ghost" onclick="syncICalFeeds(false)">🔄 Sync calendars</button>`
-        ) : ''}
+        ) : `<div class="lane-rail">
+
+        ${current ? `
+        <div class="lane-node">
+          <span class="lane-dot now"></span>
+          <div class="lane-now-card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <svg width="26" height="26" viewBox="0 0 26 26" style="flex-shrink:0">
+                  <circle cx="13" cy="13" r="10" fill="none" stroke="#2F6FED22" stroke-width="4"/>
+                  <circle cx="13" cy="13" r="10" fill="none" stroke="#2F6FED" stroke-width="4" stroke-linecap="round" stroke-dasharray="${ringFilled} ${ringC.toFixed(1)}" transform="rotate(-90 13 13)"/>
+                </svg>
+                <div style="min-width:0">
+                  <div class="lane-nname">${current.display_name}</div>
+                  <div class="lane-nsub">🛬 ${fmtDate(current.check_in)} → 🛫 ${fmtDate(current.check_out)} · 🌙 ${current.nights||0}n · 👥 ${current.number_of_guests||1}</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:5px;flex-shrink:0">
+                <span class="badge badge-${current.platform}">${current.platform==='direct'?'🌐':current.platform}</span>
+                <button onclick="openBookingDetail('${current.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:3px 8px;font-size:.72rem;cursor:pointer;color:#0369a1">View ›</button>
+              </div>
+            </div>
+            <!-- 4-step lifecycle -->
+            ${lifecycleSteps(current, hasClean(current), pid)}
+          </div>
+        </div>` : ''}
 
         ${shown.filter(b=>b.id!==current?.id).map(b => {
           const isPending  = b.status==='pending';
@@ -4770,7 +4892,9 @@ function renderLaneView() {
           const urgencyBg  = isPending?'#fffbeb':isPast?'var(--sand)':'var(--card-bg)';
           const borderCol  = isPending?'#f59e0b':isImminent?'#f97316':isPast?'var(--border)':'var(--border)';
 
-          return `<div style="border:1.5px solid ${borderCol};border-radius:14px;padding:13px 15px;margin-bottom:10px;background:${urgencyBg};cursor:pointer;transition:box-shadow .15s"
+          return `<div class="lane-node">
+          <span class="lane-dot"></span>
+          <div class="lane-item" style="border-color:${borderCol};background:${urgencyBg}"
             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow='none'">
 
             <!-- Top row: name + badges -->
@@ -4831,8 +4955,10 @@ function renderLaneView() {
                   style="background:var(--sand);border:1px solid var(--border);border-radius:7px;padding:4px 9px;font-size:.74rem;cursor:pointer;color:var(--ink)">View ›</button>
               </div>
             </div>
+          </div>
           </div>`;
         }).join('')}
+        </div>`}
       </div>
 
       <!-- ── Footer ── -->
@@ -4857,7 +4983,7 @@ function openBookingDetail(bookingId) {
   );
   const today = todaySAST();
   const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
-  const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#c17f3c'));
+  const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#A8702E'));
   const canManage = currentUser.role !== 'host';
 
   document.getElementById('day-modal-title').textContent = b.display_name||'Booking';
@@ -5210,7 +5336,7 @@ function setCalProp(prop, btn) {
   calProp = prop;
   document.querySelectorAll('#cal-prop-toggle button').forEach(b=>b.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  renderCalendar();
+  requestAnimationFrame(() => renderCalendar());
 }
 
 function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
@@ -5303,7 +5429,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const color = isOwner          ? PLAT_COLORS['owner'] :
                       effectivelyBlocked ? PLAT_COLORS['blocked'] :
                       isCancelled      ? '#9ca3af' :
-                      PLAT_COLORS[b.platform]||'#c17f3c';
+                      PLAT_COLORS[b.platform]||'#A8702E';
         const propTag = showProp ? '['+(b.property_id==='speranta'?'SP':'TV')+'] ' : '';
         // Short name for mobile — first name only, max 10 chars
         const fullName = b.display_name || b.guest_name || b.platform || 'Guest';
@@ -5320,7 +5446,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const rl = isRealStart ? '4px':'0';
         const rr = isRealEnd   ? '4px':'0';
         const showLabel = isRealStart||isWeekStart;
-        const icon = isRealStart ? '🛬 ' : isWeekStart ? '↳ ' : '';
+        const icon = isRealStart ? '🛬 ' : '';
         const label = showLabel ? propTag+icon+shortName : ' ';
         const bar = document.createElement('div');
         // Explicit inline styles for Safari compatibility — no CSS class width inheritance
@@ -5362,7 +5488,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
           'margin-left:'+startOffset,
           'box-sizing:border-box',
           'background:'+color,
-          'color:'+(isCancelled?'#6b7280':color==='#FFC300'?'#1a1a2e':'#fff'),
+          'color:'+(isCancelled?'#6b7280':color==='#F6C445'?'#1a1a2e':'#fff'),
           'font-size:.63rem',
           'font-weight:600',
           'padding:2px 6px',
@@ -5417,19 +5543,25 @@ let showKPIPanel = false;
 
 function toggleCleaningOverlay(btn) {
   showCleaningOverlay = !showCleaningOverlay;
-  btn.textContent = showCleaningOverlay ? '🧹 Hide Cleaning' : '🧹 Show Cleaning';
-  btn.className = showCleaningOverlay ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost';
+  btn.textContent = showCleaningOverlay ? '🧹 Hide Cleaning' : '🧹 Cleaning';
+  btn.classList.toggle('active', showCleaningOverlay);
   const panel = document.getElementById('domestic-sessions-panel');
   if (panel) panel.style.display = showCleaningOverlay ? 'block' : 'none';
-  renderCalendar();
-  if (showCleaningOverlay) renderDomesticEarnings();
+  // Deferred to the next frame so the button's own active-state paints
+  // immediately instead of waiting behind the (data-size-dependent)
+  // calendar re-render — this is what was showing up as an INP warning
+  // on the clicked button with a real-sized bookings/domestics dataset.
+  requestAnimationFrame(() => {
+    renderCalendar();
+    if (showCleaningOverlay) renderDomesticEarnings();
+  });
 }
 
   function toggleCancelledOnCal(btn) {
   showCancelledOnCal = !showCancelledOnCal;
   btn.textContent = showCancelledOnCal ? '❌ Show All' : '❌ Cancelled';
-  btn.className = showCancelledOnCal ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-ghost';
-  renderCalendar();
+  btn.classList.toggle('active', showCancelledOnCal);
+  requestAnimationFrame(() => renderCalendar());
 }
 
 function toggleKPIPanel() {
@@ -5572,12 +5704,9 @@ function setCalView(view) {
     const panel = document.getElementById('calview-'+v+'-panel');
     const btn   = document.getElementById('calview-'+v+'-btn');
     if (panel) panel.style.display = v===view ? 'block' : 'none';
-    if (btn) {
-      btn.style.background = v===view ? 'var(--ink)' : 'transparent';
-      btn.style.color      = v===view ? '#fff' : 'var(--muted)';
-    }
+    if (btn) btn.classList.toggle('active', v===view);
   });
-  renderCalendar();
+  requestAnimationFrame(() => renderCalendar());
 }
 
 // ── Weekly view renderer ──────────────────────────────────────
@@ -5719,7 +5848,7 @@ function renderDomesticCalView() {
     const today = todaySAST();
     const monthStr = String(year)+'-'+String(month+1).padStart(2,'0');
     const monthDoms = domestics.filter(d=>d.date&&d.date.startsWith(monthStr));
-    const COLORS = {Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+    const COLORS = {Blessing:'#C9962E',Fatima:'#F0563B',Patricia:'#0FA898',Spiwe:'#2F6FED'};
 
     let g = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;font-size:.7rem;margin-bottom:8px">';
     ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
@@ -5758,29 +5887,33 @@ function renderDomesticCalView() {
       nextDays.push(d.toISOString().slice(0,10));
     }
     const CLEANERS = ['Blessing','Fatima','Patricia','Spiwe'];
-    const COLORS = {'Blessing':'#f59e0b','Fatima':'#8b5cf6','Patricia':'#2dd4a0','Spiwe':'#5b8ef0'};
-    availEl.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.75rem">'
-      + '<tr><th style="text-align:left;padding:4px 8px;color:var(--muted);font-weight:600">Cleaner</th>'
-      + nextDays.map(d=>'<th style="padding:4px 3px;color:var(--muted);font-weight:600;text-align:center;min-width:32px">'+parseInt(d.slice(8))+'<br><span style="font-size:.6rem">'+['Su','Mo','Tu','We','Th','Fr','Sa'][new Date(d).getDay()]+'</span></th>').join('')
-      + '</tr>'
-      + CLEANERS.map(name => {
-        const c = COLORS[name]||'#64748b';
-        return '<tr>'
-          + '<td style="padding:5px 8px;font-weight:600;color:'+c+'">'+name+'</td>'
+    // Same 4-swatch palette used for Team roles / KB categories elsewhere —
+    // "refined heatmap" direction from the design review.
+    const COLORS = {'Blessing':'#C9962E','Fatima':'#F0563B','Patricia':'#0FA898','Spiwe':'#2F6FED'};
+    const colCount = nextDays.length;
+    availEl.innerHTML = '<div style="overflow-x:auto"><div style="border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden;min-width:600px">'
+      + '<div style="display:grid;grid-template-columns:130px repeat('+colCount+',1fr);border-bottom:1px solid var(--border)">'
+      + '<div style="padding:9px 14px;font-family:var(--font-mono);font-size:.62rem;color:var(--muted);text-transform:uppercase">Cleaner</div>'
+      + nextDays.map(d=>'<div style="padding:9px 4px;text-align:center;font-family:var(--font-mono);font-size:.6rem;color:var(--muted);text-transform:uppercase">'+['Su','Mo','Tu','We','Th','Fr','Sa'][new Date(d).getDay()]+'<br><span class="tab-num">'+parseInt(d.slice(8))+'</span></div>').join('')
+      + '</div>'
+      + CLEANERS.map((name,i) => {
+        const c = COLORS[name]||'var(--muted)';
+        return '<div style="display:grid;grid-template-columns:130px repeat('+colCount+',1fr);align-items:center;'+(i<CLEANERS.length-1?'border-bottom:1px solid var(--border)':'')+'">'
+          + '<div style="padding:8px 14px;font-weight:700;font-size:.82rem;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:'+c+';flex-shrink:0"></span>'+name+'</div>'
           + nextDays.map(d => {
             const rec = cleanerAvailability.find(r=>r.cleaner===name&&r.date===d);
             const isAvail = rec?.available === true;
             const hasClean = domestics.some(dom=>dom.cleaner===name&&dom.date===d&&dom.status!=='cancelled');
-            const bg = hasClean ? 'rgba(45,212,160,.3)' : isAvail ? 'rgba(45,212,160,.1)' : 'rgba(255,107,107,.1)';
+            const bg = hasClean ? c+'33' : isAvail ? c+'18' : 'var(--surface-2)';
+            const fg = hasClean || isAvail ? c : 'var(--muted)';
             const icon = hasClean ? '🧹' : isAvail ? '✓' : '–';
-            const col = hasClean ? 'var(--green)' : isAvail ? 'var(--green)' : 'var(--muted)';
-            return '<td style="text-align:center;padding:4px 2px"><span style="display:inline-block;width:24px;height:24px;border-radius:6px;background:'+bg+';color:'+col+';font-size:.7rem;line-height:24px">'+icon+'</span></td>';
+            return '<div style="display:flex;justify-content:center;padding:7px 0"><span style="width:26px;height:26px;border-radius:8px;background:'+bg+';color:'+fg+';display:flex;align-items:center;justify-content:center;font-size:.72rem">'+icon+'</span></div>';
           }).join('')
-          + '</tr>';
+          + '</div>';
       }).join('')
-      + '</table></div>'
-      + '<div style="display:flex;gap:12px;margin-top:8px;font-size:.72rem;color:var(--muted)">'
-      + '<span>🧹 Clean booked</span><span style="color:var(--green)">✓ Available</span><span>– Unavailable</span>'
+      + '</div></div>'
+      + '<div style="display:flex;gap:12px;margin-top:10px;font-size:.72rem;color:var(--muted)">'
+      + '<span>🧹 Clean booked</span><span>✓ Available</span><span>– Unavailable</span>'
       + '</div>';
   }
 
@@ -5920,7 +6053,7 @@ function showDay(ds) {
 
   // Bookings — with cleaning status chip in corner
   bEvts.forEach(b=>{
-    const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#c17f3c'));
+    const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'#A8702E'));
     const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
     const _bid = b.id;
     const coDate = b.check_out_date || b.check_out?.slice(0,10);
@@ -6156,7 +6289,7 @@ function renderDomEarnings() {
   const el = document.getElementById('dom-earnings-summary'); if (!el) return;
   const monthStr = String(domCalYear)+'-'+String(domCalMonth+1).padStart(2,'0');
   const md = domestics.filter(d=>d.date&&d.date.startsWith(monthStr));
-  const COLORS = {Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+  const COLORS = {Blessing:'#C9962E',Fatima:'#F0563B',Patricia:'#0FA898',Spiwe:'#2F6FED'};
   const summary = {};
   md.forEach(d=>{
     if (!d.cleaner) return;
@@ -6452,6 +6585,8 @@ function setTaskSubTab(tab) {
       <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:2px">Priority</span>
       ${prioBtns}
     </div>`;
+  } else if (tab === 'guest') {
+    filtersEl.innerHTML = `<div class="pipe-toggle${guestMgmtShowCompleted?' active':''}" id="guest-completed-toggle" onclick="toggleGuestCompleted(this)"><span class="pipe-switch"></span>Show completed past guests</div>`;
   } else {
     filtersEl.innerHTML = '';
   }
@@ -6463,6 +6598,49 @@ function setTaskSubTab(tab) {
 }
 
 // ── GUEST MANAGEMENT ──────────────────────────────────────────
+let guestMgmtShowCompleted = false;
+function toggleGuestCompleted(el) {
+  guestMgmtShowCompleted = !guestMgmtShowCompleted;
+  el.classList.toggle('active', guestMgmtShowCompleted);
+  renderGuestManagement();
+}
+
+let ringExpanded = {};
+function toggleRingExpand(bid) {
+  ringExpanded[bid] = !ringExpanded[bid];
+  renderGuestManagement();
+}
+
+// Segmented progress ring: each task is its own arc (done=green, next=gold, later=grey),
+// with a wide invisible hit-stroke laid over each arc so it's independently clickable.
+function ringSVG(tasks, size) {
+  size = size || 104;
+  const strokeW = 9, gap = 6, hitW = 26;
+  const cx = size/2, cy = size/2;
+  const r = cx - strokeW/2 - 4;
+  const C = 2*Math.PI*r;
+  const perSeg = C/tasks.length;
+  const segLen = perSeg - gap;
+  let nextAssigned = false;
+  const arcs = tasks.map((t,i) => {
+    const offset = (-(i*perSeg)).toFixed(1);
+    let color;
+    if (t.done) color = '#16a34a';
+    else if (!nextAssigned) { color = 'var(--accent)'; nextAssigned = true; }
+    else color = 'var(--border)';
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linecap="round" stroke-dasharray="${segLen.toFixed(1)} ${(C-segLen).toFixed(1)}" stroke-dashoffset="${offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+  }).join('');
+  const hits = tasks.map((t,i) => {
+    const offset = (-(i*perSeg)).toFixed(1);
+    return `<circle class="ring-seg" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="transparent" stroke-width="${hitW}" stroke-dasharray="${segLen.toFixed(1)} ${(C-segLen).toFixed(1)}" stroke-dashoffset="${offset}" transform="rotate(-90 ${cx} ${cy})" onclick="${t.onclick}"><title>${t.label}${t.done?' ✓ done':''}</title></circle>`;
+  }).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${strokeW}" opacity=".35"/>
+    ${arcs}
+    ${hits}
+  </svg>`;
+}
+
 function renderGuestManagement() {
   const today = todaySAST();
   const gridEl = document.getElementById('guest-booking-grid');
@@ -6475,88 +6653,90 @@ function renderGuestManagement() {
     const daysUntil  = Math.ceil((new Date(b.check_in)-new Date())/86400000);
     const daysSinceOut = Math.round((new Date()-new Date(b.check_out))/86400000);
     return propMatch && daysUntil <= 14 && daysSinceOut <= 7;
-  }).sort((a,b) => a.check_in.localeCompare(b.check_in));
+  }).map(b => {
+    const bid = String(b.id);
+    if (!ninaBTaskProgress[bid]) ninaBTaskProgress[bid] = {};
+    const prog = ninaBTaskProgress[bid];
+    const isPast = b.check_out<today;
+    const cleanOk = domestics.some(d =>
+      d.property_id===b.property_id && d.status!=='cancelled' &&
+      Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10))) <= 2*86400000
+    );
+    const tasks = [
+      {key:'checkin_msg',   icon:'💬', label:'Check-in message sent'},
+      {key:'checked_in',    icon:'🛬', label:'Guests checked in'},
+      {key:'checked_out',   icon:'🛫', label:'Checkout completed'},
+      {key:'followup_msg',  icon:'📩', label:'Follow-up msg sent'},
+      {key:'book_domestic', icon:'🧹', label:'Cleaning booked', done: cleanOk},
+    ];
+    const doneCount = tasks.filter(t => t.done !== undefined ? t.done : prog[t.key]).length;
+    return {b, bid, prog, isPast, tasks, doneCount, totalCount: tasks.length};
+  }).filter(x => guestMgmtShowCompleted || !(x.isPast && x.doneCount === x.totalCount))
+    .sort((x,y) => x.b.check_in.localeCompare(y.b.check_in));
 
   if (!relevant.length) {
     gridEl.innerHTML = `<div style="text-align:center;padding:48px;color:var(--muted)">
       <div style="font-size:2.5rem;margin-bottom:12px">🏠</div>
-      <div style="font-size:.9rem">No bookings in the active window (next 14 days / last 7 days)</div>
+      <div style="font-size:.9rem">${guestMgmtShowCompleted ? 'No bookings in the active window (next 14 days / last 7 days)' : 'No guests need attention right now — try "Show completed past guests" to see finished ones'}</div>
     </div>`;
     return;
   }
 
   gridEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
-    ${relevant.map(b => {
-      const bid = String(b.id);
-      if (!ninaBTaskProgress[bid]) ninaBTaskProgress[bid] = {};
-      const prog = ninaBTaskProgress[bid];
+    ${relevant.map(({b, bid, prog, isPast, tasks, doneCount, totalCount}) => {
       const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
       const isNow  = b.check_in<=today && b.check_out>=today;
-      const isPast = b.check_out<today;
       const daysUntil = Math.ceil((new Date(b.check_in)-new Date())/86400000);
-      const col = PLAT_COLORS[b.platform]||'#c17f3c';
-      const cleanOk = domestics.some(d =>
-        d.property_id===b.property_id && d.status!=='cancelled' &&
-        Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10))) <= 2*86400000
-      );
 
-      const tasks = [
-        {key:'checkin_msg',   icon:'💬', label:'Check-in message sent'},
-        {key:'checked_in',    icon:'🛬', label:'Guests checked in'},
-        {key:'checked_out',   icon:'🛫', label:'Checkout completed'},
-        {key:'followup_msg',  icon:'📩', label:'Follow-up msg sent'},
-        {key:'book_domestic', icon:'🧹', label:'Cleaning booked', done: cleanOk},
-      ];
+      const tasksWithClick = tasks.map(t => {
+        const done = t.done !== undefined ? t.done : !!prog[t.key];
+        const isClean = t.key==='book_domestic';
+        const onclick = isClean
+          ? (done ? '' : `bookCleaningForGuest('${b.property_id}','${b.check_out?.slice(0,10)}','${bid}')`)
+          : `toggleNinaTask('${bid}','${t.key}')`;
+        return {...t, done, onclick};
+      });
 
-      const doneCount = tasks.filter(t => t.done !== undefined ? t.done : prog[t.key]).length;
-      const totalCount = tasks.length;
+      const expanded = !!ringExpanded[bid];
 
-      // Progress bar colour
-      const pct = Math.round(doneCount/totalCount*100);
-      const barCol = pct===100?'#16a34a':pct>=60?'var(--accent)':'#f59e0b';
-
-      return `<div style="background:var(--card-bg);border-radius:16px;border:1.5px solid var(--border);overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05);${isNow?'border-color:#0369a1':isPast?'opacity:.85':''}">
+      return `<div class="ring-card ${isNow?'now':isPast?'past':''}">
         <!-- Card header -->
-        <div style="padding:13px 15px 10px;border-bottom:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px">
-            <div style="min-width:0">
-              <div style="font-weight:700;font-size:.88rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.display_name}</div>
-              <div style="font-size:.72rem;color:var(--muted);margin-top:1px">${propName(b.property_id)} · ${nights}n · ${fmtDate(b.check_in)}→${fmtDate(b.check_out)}</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
-              <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform==='direct'?'🌐':b.platform}</span>
-              ${isNow?'<span style="background:#dbeafe;color:#1e40af;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:8px">Staying</span>':isPast?'<span style="background:var(--sand);color:var(--muted);font-size:.62rem;padding:2px 6px;border-radius:8px">Past</span>':'<span style="background:#fef3c7;color:#92400e;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:8px">In '+daysUntil+'d</span>'}
-            </div>
+        <div class="ring-hd">
+          <div style="min-width:0">
+            <div class="ring-name">${b.display_name}</div>
+            <div class="ring-sub">${propName(b.property_id)} · ${nights}n · ${fmtDate(b.check_in)}→${fmtDate(b.check_out)}</div>
           </div>
-          <!-- Progress bar -->
-          <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden">
-            <div style="height:3px;background:${barCol};border-radius:2px;width:${pct}%;transition:width .4s"></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+            <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform==='direct'?'🌐':b.platform}</span>
+            ${isNow?'<span class="ring-pill" style="background:#dbeafe;color:#1e40af">Staying</span>':isPast?'<span class="ring-pill" style="background:var(--sand);color:var(--muted)">Past</span>':'<span class="ring-pill" style="background:#fef3c7;color:#92400e">In '+daysUntil+'d</span>'}
           </div>
-          <div style="font-size:.63rem;color:var(--muted);margin-top:3px">${doneCount}/${totalCount} tasks complete</div>
         </div>
 
-        <!-- Task checklist -->
-        <div style="padding:10px 15px">
-          ${tasks.map(t => {
-            const done = t.done !== undefined ? t.done : !!prog[t.key];
-            const isClean = t.key==='book_domestic';
-            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer"
-              onclick="${isClean
-                ? (done ? '' : `bookCleaningForGuest('${b.property_id}','${b.check_out?.slice(0,10)}','${bid}')`)
-                : `toggleNinaTask('${bid}','${t.key}')`}">
-              <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${done?'#16a34a':'var(--border)'};background:${done?'#d1fae5':'transparent'};display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;transition:all .15s">
-                ${done?'✓':''}
-              </div>
-              <span style="font-size:.73rem;${done?'color:var(--muted);text-decoration:line-through':'color:var(--ink)'}">
+        <!-- Segmented progress ring -->
+        <div class="ring-body">
+          <div class="ring-wrap">
+            ${ringSVG(tasksWithClick)}
+            <div class="ring-txt" onclick="toggleRingExpand('${bid}')" title="Click to see the full checklist">
+              <div class="n tab-num">${doneCount}/${totalCount}</div>
+              <div class="d">tasks</div>
+            </div>
+          </div>
+          <button class="ring-toggle" onclick="toggleRingExpand('${bid}')">${expanded?'Hide checklist ▴':'View checklist ▾'}</button>
+        </div>
+
+        <!-- Fallback checklist (expand on demand) -->
+        ${expanded ? `<div class="ring-checklist">
+          ${tasksWithClick.map(t => `<div class="ring-row" onclick="${t.onclick}">
+              <div class="ring-check ${t.done?'done':''}">${t.done?'✓':''}</div>
+              <span style="font-size:.73rem;${t.done?'color:var(--muted);text-decoration:line-through':'color:var(--ink)'}">
                 ${t.icon} ${t.label}
               </span>
-              ${t.key==='checkin_msg'&&!done?`<span style="margin-left:auto;font-size:.6rem;background:#fef3c7;color:#92400e;padding:2px 5px;border-radius:5px;flex-shrink:0">28h reminder</span>`:''}
-            </div>`;
-          }).join('')}
-        </div>
+              ${t.key==='checkin_msg'&&!t.done?`<span style="margin-left:auto;font-size:.6rem;background:#fef3c7;color:#92400e;padding:2px 5px;border-radius:5px;flex-shrink:0">28h reminder</span>`:''}
+            </div>`).join('')}
+        </div>` : ''}
 
         <!-- Note field -->
-        <div style="padding:8px 15px 12px">
+        <div class="ring-note">
           <input placeholder="Add a note…" value="${(ninaBTaskProgress[bid]||{})._note||''}"
             onchange="saveGuestNote('${bid}',this.value)"
             style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.76rem;outline:none;background:var(--sand);box-sizing:border-box;transition:border .15s"
@@ -7139,7 +7319,7 @@ function renderGuestTimeline() {
     const isNow  = b.check_in<=today && b.check_out>=today;
     const isPast = b.check_out<today;
     const dIn    = Math.round((new Date(b.check_in)-new Date())/86400000);
-    const col    = PLAT_COLORS[b.platform]||'#c17f3c';
+    const col    = PLAT_COLORS[b.platform]||'#A8702E';
     const stages = getGuestTouchpoints(b);
     const dueStage = stages.find(s => s.dueNow);
     // Which stage's message is shown/sendable below — a manual pill click
@@ -7151,7 +7331,7 @@ function renderGuestTimeline() {
     const activeStage = stages.find(s => s.key === activeKey) || stages[0];
     const stayCount = getGuestStayCount(b);
 
-    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;border-left:3px solid ${col}">
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-left:4px solid ${col};border-radius:12px;padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px">
         <div style="min-width:0">
           <div style="font-weight:700;font-size:.88rem;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap">
@@ -7159,25 +7339,26 @@ function renderGuestTimeline() {
             ${stayCount>1?`<span style="background:var(--warm);color:var(--accent2);font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap">🔁 ${stayCount===2?'2nd':stayCount+'th'} stay</span>`:''}
           </div>
           <div style="font-size:.73rem;color:var(--muted);margin-top:2px">
-            ${propName(b.property_id)} · ${fmtDate(b.check_in_date || b.check_in?.slice(0,10))} → ${fmtDate(b.check_out_date || b.check_out?.slice(0,10))}
+            ${propName(b.property_id)} · ${b.platform==='direct'?'Direct':b.platform} · ${fmtDate(b.check_in_date || b.check_in?.slice(0,10))} → ${fmtDate(b.check_out_date || b.check_out?.slice(0,10))}
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
-          <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform}</span>
+        <div style="flex-shrink:0">
           ${isNow?'<span style="background:#dbeafe;color:#1d4ed8;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:6px">Staying</span>':isPast?'<span style="background:var(--surface-2);color:var(--muted);font-size:.62rem;padding:2px 6px;border-radius:6px">Checked out</span>':`<span style="background:#fef9c3;color:#92400e;font-size:.62rem;font-weight:600;padding:2px 6px;border-radius:6px">In ${dIn}d</span>`}
         </div>
       </div>
 
-      <!-- Stage timeline: pre-arrival -> [mid-stay] -> post-stay. Clicking a
-           pill just selects it for preview below — it no longer toggles
-           sent/not-sent, so an accidental click can't strand a stage with
-           no way to view or resend its message. -->
-      <div style="display:flex;gap:4px;margin-bottom:10px">
-        ${stages.map(s => `
-          <div title="${s.label} — ${s.done?'sent':s.dueNow?'due now':s.windowLabel}" onclick="selectMsgStage('${bid}','${s.key}')"
-            style="flex:1;text-align:center;padding:6px 4px;border-radius:8px;cursor:pointer;background:${s.done?'var(--green-light)':s.dueNow?'var(--amber-light)':'var(--surface-2)'};border:1.5px solid ${s.key===activeKey?'var(--ocean)':s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--border)'}">
-            <div style="font-size:.85rem">${s.done?'✓':s.icon}</div>
-            <div style="font-size:.58rem;font-weight:600;color:${s.done?'#065f46':s.dueNow?'#92400e':'var(--muted)'};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.label}</div>
+      <!-- Stage row: pre-arrival -> [mid-stay] -> post-stay, as equal-width
+           segments (platform now reads from the left-edge stripe + subtitle
+           instead of its own chip/row). Clicking a segment just selects it
+           for preview below — it no longer toggles sent/not-sent, so an
+           accidental click can't strand a stage with no way to view or
+           resend its message. -->
+      <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">
+        ${stages.map((s,i) => `
+          <div title="${s.windowLabel||''}" onclick="selectMsgStage('${bid}','${s.key}')"
+            style="flex:1;text-align:center;padding:7px 6px;cursor:pointer;${i<stages.length-1?'border-right:1px solid var(--border)':''};background:${s.key===activeKey?'var(--surface-2)':'transparent'}">
+            <div style="font-family:var(--font-mono);font-size:.56rem;text-transform:uppercase;letter-spacing:.02em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.label}</div>
+            <div style="font-size:.82rem;margin-top:3px;color:${s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--muted)'}">${s.done?'✓':s.dueNow?'●':'○'}</div>
           </div>`).join('')}
       </div>
 
@@ -7479,6 +7660,20 @@ function kmUpdateFaq(ei, field, val) {
 // Finance-category notes were dropped from here per owner feedback — that
 // content belongs in Reports/Team, not this operational reference page —
 // so it's filtered out defensively even if a stray row still exists in DB.
+// Category color-coding, matching Team & Contacts' role-colored badges —
+// same idea (type = color), applied to KB categories instead of staff
+// roles, but as a small corner chip rather than a full band: inspired by
+// the badge language, not a copy of it.
+const KB_CAT_STYLE = {
+  'Procedures': {color:'#C9962E', icon:'📋'},
+  'Access':     {color:'#F0563B', icon:'🔑'},
+  'WiFi':       {color:'#2F6FED', icon:'📶'},
+  'Maintenance':{color:'#71717a', icon:'🔧'},
+  'Guest Info': {color:'#0FA898', icon:'🛎️'},
+  'Emergency':  {color:'#E0543D', icon:'🚨'},
+};
+function kbCatStyle(cat) { return KB_CAT_STYLE[cat] || {color:'#71717a', icon:'📚'}; }
+
 function renderKB(search='') {
   const q=(search||'').toLowerCase();
   const filtered=kbArticles.filter(a =>
@@ -7489,19 +7684,24 @@ function renderKB(search='') {
   const cats=[...new Set(filtered.map(a=>a.category))];
   document.getElementById('kb-content').innerHTML=cats.map(cat=>{
     const arts=filtered.filter(a=>a.category===cat);
+    const st = kbCatStyle(cat);
     return`<div class="mb-6">
-      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:10px">${cat}</div>
-      <div class="kb-grid">${arts.map(a=>`<div class="kb-card" style="position:relative" onclick="showKB('${a.id}')">
-        <button onclick="event.stopPropagation();editKB('${a.id}')" title="Edit" style="position:absolute;top:8px;right:8px;background:var(--surface-2);border:none;border-radius:6px;width:24px;height:24px;cursor:pointer;font-size:.78rem">✏️</button>
-        <div class="kb-cat">${a.category}${a.property_id&&a.property_id!=='all'?' · '+PROPS[a.property_id]?.short:''}</div>
-        <div class="kb-title">${a.title}</div><div class="kb-preview">${a.content.slice(0,90)}…</div><div style="margin-top:8px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div></div>`).join('')}</div>
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)">${st.icon} ${cat}</div>
+      <div class="kb-grid">${arts.map(a=>{
+        const as = kbCatStyle(a.category);
+        return `<div class="kb-card" onclick="showKB('${a.id}')">
+        <button class="kb-edit-btn" onclick="event.stopPropagation();editKB('${a.id}')" title="Edit">✏️</button>
+        <div class="kb-chip" style="background:${as.color}14;color:${as.color}">${as.icon} ${a.category}${a.property_id&&a.property_id!=='all'?' · '+PROPS[a.property_id]?.short:''}</div>
+        <div class="kb-title">${a.title}</div><div class="kb-preview">${a.content.slice(0,90)}…</div><div style="margin-top:8px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      </div>`;}).join('')}</div>
     </div>`;
   }).join('')||'<div class="empty-state"><div class="empty-icon">📚</div>No articles found</div>';
 }
 function showKB(id) {
   const a=kbArticles.find(x=>x.id==id); if(!a)return;
+  const st = kbCatStyle(a.category);
   document.getElementById('day-modal-title').textContent=a.title;
-  document.getElementById('day-modal-body').innerHTML=`<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--accent);margin-bottom:10px">${a.category}</div><div style="line-height:1.7;white-space:pre-line;font-size:.9rem">${a.content}</div><div style="margin-top:14px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
+  document.getElementById('day-modal-body').innerHTML=`<div style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;letter-spacing:.05em;font-weight:700;padding:3px 9px 3px 7px;border-radius:20px;margin-bottom:12px;background:${st.color}14;color:${st.color}">${st.icon} ${a.category}</div><div style="line-height:1.7;white-space:pre-line;font-size:.9rem">${a.content}</div><div style="margin-top:14px">${(a.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>`;
   openModal('day-modal');
 }
 function editKB(id) {
@@ -7541,7 +7741,7 @@ async function renderReports(monthsBack) {
   const fmt    = n => 'R' + Math.round(n).toLocaleString('en-ZA');
   const fmtK   = n => n >= 1000 ? 'R' + (n/1000).toFixed(1) + 'k' : fmt(n);
   const today  = todaySAST();
-  const pColors = {airbnb:'#FF385C', booking:'#003580', lekkeslaap:'#FFC300', manual:'#c17f3c'};
+  const pColors = {airbnb:'#E14666', booking:'#1E4C85', lekkeslaap:'#F6C445', manual:'#A8702E'};
   const pNames  = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', manual:'Direct'};
 
   document.getElementById('report-stats').innerHTML = '<div class="text-muted" style="padding:10px">Loading live data…</div>';
@@ -7566,7 +7766,8 @@ async function renderReports(monthsBack) {
   }
 
 const spAll  = allBookings.filter(b => b.property_id==='speranta' && b.status!=='cancelled');
-  const spPaid = spAll.filter(b => (b.revenue||0) > 0 && (!cutoff || b.check_in >= cutoff));
+  const spPaidAll = spAll.filter(b => (b.revenue||0) > 0 && (!cutoff || b.check_in >= cutoff));
+  const spPaid = _includePipeline ? spPaidAll : spPaidAll.filter(b => b.check_in <= today);
 const platOrder = ['airbnb','booking','lekkeslaap','manual'];
 
   // ── Aggregates ──
@@ -7591,8 +7792,8 @@ const platOrder = ['airbnb','booking','lekkeslaap','manual'];
   document.getElementById('report-stats').innerHTML =
     sCard('Speranta Revenue', fmt(totalRev), spPaid.length+' paid bookings · '+totalNights+' nights', 'var(--green2)') +
     sCard('Avg Per Night', fmt(avgNight), 'all platforms combined', 'var(--accent)') +
-    sCard('Best Platform', fmt(airbnbAvg)+'/night', 'Airbnb · R'+(airbnbAvg-lsAvg)+' more than LekkeSlaap', '#FF385C') +
-    sCard('Pipeline', upcoming.length+' bookings', upcomingNights+' upcoming nights', 'var(--blue)');
+    sCard('Best Platform', fmt(airbnbAvg)+'/night', 'Airbnb · R'+(airbnbAvg-lsAvg)+' more than LekkeSlaap', '#E14666') +
+    (_includePipeline ? sCard('Pipeline', upcoming.length+' bookings', upcomingNights+' upcoming nights', 'var(--blue)') : '');
 
   // ── MONTHLY DATA ──
   const monthlyData = {};
@@ -8077,29 +8278,11 @@ async function generateOwnerStatementPDF() {
   }
 }
 
-let _showForecast = true;
-function toggleForecast() {
-  _showForecast = !_showForecast;
-  const btn = document.getElementById('forecast-toggle-btn');
-  if (btn) btn.textContent = _showForecast ? '✦ Hide forecast' : '✦ Show forecast';
-  const labels = document.querySelectorAll('#report-month-labels div');
-  const bars = document.querySelectorAll('#report-monthly-chart > div');
-  const todayMo = todaySAST().slice(0,7);
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  bars.forEach((bar, i) => {
-    const label = labels[i];
-    if (!label) return;
-    const txt = label.textContent.replace(' ✦','').trim();
-    const parts = txt.split("'");
-    if (parts.length < 2) return;
-    const moIdx = months.indexOf(parts[0]);
-    const yr = '20' + parts[1];
-    const moStr = yr + '-' + String(moIdx+1).padStart(2,'0');
-    if (moStr > todayMo) {
-      bar.style.display = _showForecast ? '' : 'none';
-      label.style.display = _showForecast ? '' : 'none';
-    }
-  });
+let _includePipeline = true;
+function toggleIncludePipeline(el) {
+  _includePipeline = !_includePipeline;
+  el.classList.toggle('active', _includePipeline);
+  renderReports(window._reportMonths);
 }
 
 function setReportTimeframe(months, btn) {
@@ -8114,7 +8297,7 @@ function showChartTooltip(month, data) {
   const tooltipEl = document.getElementById('report-chart-tooltip');
   if (!tooltipEl) return;
   const pNames = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', manual:'Direct'};
-  const pColors = {airbnb:'#FF385C', booking:'#003580', lekkeslaap:'#FFC300', manual:'#c17f3c'};
+  const pColors = {airbnb:'#E14666', booking:'#1E4C85', lekkeslaap:'#F6C445', manual:'#A8702E'};
   const fmt = n => 'R' + Math.round(n).toLocaleString('en-ZA');
   const [y,mo] = month.split('-');
   const moName = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1];
@@ -8132,7 +8315,7 @@ function hideChartTooltip() {
 }
 async function renderCleanerEarningsReport() {
   const el=document.getElementById('cleaner-earnings'); if(!el)return;
-  const COLORS={Blessing:'#f59e0b',Fatima:'#8b5cf6',Patricia:'#10b981',Spiwe:'#3b82f6'};
+  const COLORS={Blessing:'#C9962E',Fatima:'#F0563B',Patricia:'#0FA898',Spiwe:'#2F6FED'};
   let data = domestics.filter(d=>d.status==='completed');
   if (db) { try { const res=await db.from('domestics').select('cleaner,date,amount_paid,property_id,status').eq('status','completed').order('date',{ascending:false}); if(res.data&&res.data.length>0)data=res.data; } catch(e){} }
   const earnings={};
@@ -8240,24 +8423,25 @@ function toast(msg,type='info'){
 // ── CONTACTS DATA ────────────────────────────────────────────
 const BUILTIN_CONTACTS = [
   // Management
-  {id:'c-nicole',  cat:'management', name:'Nicole Babczyk',    role:'Co-Owner / Admin',        phone:'+27 63 602 1847',   email:'sn_apt_management@outlook.com',  wa:'+27636021847',  note:'Co-founder S&N Apt Management. Manages bookings, finances & operations.', color:'var(--accent)',  initials:'N'},
-  {id:'c-silja',   cat:'management', name:'Silja Faltin',      role:'Co-Owner / Admin',        phone:'',                  email:'s.faltin@tischlerei-faltin.de',  wa:'',              note:'Co-founder. TV House owner liaison.', color:'#7c3aed', initials:'S'},
-  {id:'c-nina',    cat:'management', name:'Nina Williams',      role:'Host Expert',             phone:'+27 79 977 9455',   email:'vanwyk.nina@gmail.com',          wa:'+27636021847',  note:'On-ground host manager. Business WhatsApp for all guest contact.', color:'var(--green2)', initials:'NW'},
+  {id:'c-nicole',  cat:'management', name:'Nicole Babczyk',    role:'Co-Owner / Admin',        phone:'+27 63 602 1847',   email:'sn_apt_management@outlook.com',  wa:'+27636021847',  note:'Co-founder S&N Apt Management. Manages bookings, finances & operations.', initials:'N'},
+  {id:'c-silja',   cat:'management', name:'Silja Faltin',      role:'Co-Owner / Admin',        phone:'',                  email:'s.faltin@tischlerei-faltin.de',  wa:'',              note:'Co-founder. TV House owner liaison.', initials:'S'},
+  {id:'c-nina',    cat:'management', name:'Nina Williams',      role:'Host Expert',             phone:'+27 79 977 9455',   email:'vanwyk.nina@gmail.com',          wa:'+27636021847',  note:'On-ground host manager. Business WhatsApp for all guest contact.', initials:'NW'},
   // Domestic
-  {id:'c-blessing',cat:'domestic',   name:'Blessing',          role:'Cleaner — Speranta',      phone:'062 532 2932',      email:'',    wa:'27625322932', note:'Paid via ewallet directly. Rate: R350/clean.', color:'#f59e0b', initials:'BL'},
-  {id:'c-fatima',  cat:'domestic',   name:'Fatima',            role:'Cleaner — Both properties',phone:'063 175 8111',     email:'',    wa:'27631758111', note:'Covers both properties. R350 Speranta / R450 TV House.', color:'#8b5cf6', initials:'FA'},
-  {id:'c-patricia',cat:'domestic',   name:'Patricia Mutizwa',  role:'Cleaner — TV House',      phone:'063 735 3892',      email:'',    wa:'27637353892', note:'Primary TV House cleaner. EFT payment. R350 Speranta / R450 TV House.', color:'#10b981', initials:'PM'},
-  {id:'c-spiwe',   cat:'domestic',   name:'Spiwe Gwingwizna',  role:'Cleaner — Speranta',      phone:'084 915 0894',      email:'',    wa:'27849150894', note:'Speranta cleaner. Ewallet payment. R350/clean.', color:'#3b82f6', initials:'SP'},
-  {id:'c-tino',    cat:'domestic',   name:'Takudzwa Dumbura',  role:'Caretaker (Tino)',        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat with wife Keithy. Born 13 July 1996.', color:'#64748b', initials:'TI'},
-  {id:'c-keithy',  cat:'domestic',   name:'Keithy Ngwenya',    role:"Caretaker's Wife",        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat. Born 9 February 1997.', color:'#94a3b8', initials:'KE'},
+  {id:'c-blessing',cat:'domestic',   name:'Blessing',          role:'Cleaner — Speranta',      phone:'062 532 2932',      email:'',    wa:'27625322932', note:'Paid via ewallet directly. Rate: R350/clean.', initials:'BL'},
+  {id:'c-fatima',  cat:'domestic',   name:'Fatima',            role:'Cleaner — Both properties',phone:'063 175 8111',     email:'',    wa:'27631758111', note:'Covers both properties. R350 Speranta / R450 TV House.', initials:'FA'},
+  {id:'c-patricia',cat:'domestic',   name:'Patricia Mutizwa',  role:'Cleaner — TV House',      phone:'063 735 3892',      email:'',    wa:'27637353892', note:'Primary TV House cleaner. EFT payment. R350 Speranta / R450 TV House.', initials:'PM'},
+  {id:'c-spiwe',   cat:'domestic',   name:'Spiwe Gwingwizna',  role:'Cleaner — Speranta',      phone:'084 915 0894',      email:'',    wa:'27849150894', note:'Speranta cleaner. Ewallet payment. R350/clean.', initials:'SP'},
+  {id:'c-tino',    cat:'domestic',   name:'Takudzwa Dumbura',  role:'Caretaker (Tino)',        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat with wife Keithy. Born 13 July 1996.', initials:'TI'},
+  {id:'c-keithy',  cat:'domestic',   name:'Keithy Ngwenya',    role:"Caretaker's Wife",        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat. Born 9 February 1997.', initials:'KE'},
   // Maintenance
-  {id:'c-pool',    cat:'maintenance', name:'Pool Service',      role:'Swimming Pool Maintenance',phone:'',                 email:'',    wa:'',            note:'Contact details TBC. Add pool service provider here.', color:'#0ea5e9', initials:'🏊'},
+  {id:'c-pool',    cat:'maintenance', name:'Pool Service',      role:'Swimming Pool Maintenance',phone:'',                 email:'',    wa:'',            note:'Contact details TBC. Add pool service provider here.', initials:'🏊'},
   // Suppliers
-  {id:'c-weatherprofe', cat:'supplier', name:'WeatherProfe Paint Shop', role:'Paint Supplier', phone:'',                  email:'',    wa:'',            note:'Personal contact: Heather, front desk.', color:'#84cc16', initials:'WP',
+  {id:'c-weatherprofe', cat:'supplier', name:'WeatherProfe Paint Shop', role:'Paint Supplier', phone:'',                  email:'',    wa:'',            note:'Personal contact: Heather, front desk.', initials:'WP',
     contacts:[{name:'Heather', role:'Front Desk', phone:'083 445 6126', email:''}]},
-  {id:'c-dropalong', cat:'supplier',  name:'Drop Along Plumbing', role:'Plumbing Contractor',  phone:'',                  email:'',    wa:'',            note:'Trusted plumbing contractor.',          color:'#f97316', initials:'DA',
+  {id:'c-dropalong', cat:'supplier',  name:'Drop Along Plumbing', role:'Plumbing Contractor',  phone:'',                  email:'',    wa:'',            note:'Trusted plumbing contractor.',          initials:'DA',
     contacts:[{name:'Francois van Wyk', role:'Personal Contact', phone:'084 075 4684', email:'francois@ldrop.co.za', wa:'27840754684'}]},
 ];
+const CAT_COLORS = {management:'var(--accent)', domestic:'var(--teal)', maintenance:'var(--coral)', supplier:'var(--muted)', other:'var(--muted)'};
 
 let _customContacts = JSON.parse(localStorage.getItem('hep_contacts')||'[]');
 let _contactFilter  = 'all';
@@ -8320,7 +8504,6 @@ function saveNewContact() {
     email:   document.getElementById('nc-email').value,
     wa:      document.getElementById('nc-wa').value,
     note:    document.getElementById('nc-notes').value,
-    color:   '#64748b',
     initials: name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
     contacts: contactName ? [{name:contactName, phone:contactPhone, email:contactEmail}] : [],
   };
@@ -8381,49 +8564,42 @@ function renderTeam() {
 function contactCard(c) {
   const isCustom = c.id.startsWith('cc-');
   const subContacts = (c.contacts||[]).filter(x=>x.name||x.phone);
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;border-top:3px solid ${c.color};transition:box-shadow .15s"
-    onmouseover="this.style.boxShadow='0 4px 20px rgba(0,0,0,.08)'" onmouseout="this.style.boxShadow='none'">
-    <!-- Header -->
-    <div style="display:flex;align-items:flex-start;gap:11px;margin-bottom:11px">
-      <div style="width:38px;height:38px;border-radius:10px;background:${c.color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:${c.initials.length>2?'.9rem':'.82rem'};font-weight:700;flex-shrink:0">${c.initials}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:.9rem;color:var(--ink)">${c.name}</div>
-        <div style="font-size:.74rem;color:var(--muted);margin-top:1px">${c.role||''}</div>
-      </div>
-      ${isCustom?`<button onclick="deleteContact('${c.id}')" title="Delete" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.9rem;padding:2px;flex-shrink:0">✕</button>`:''}
-    </div>
-    <!-- Contact info -->
-    <div style="font-size:.8rem;display:flex;flex-direction:column;gap:4px;margin-bottom:${subContacts.length||c.note?'10px':'0'}">
-      ${c.phone?`<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-        <span style="color:var(--muted)">📱 ${c.phone}</span>
-        <div style="display:flex;gap:4px">
-          <a href="tel:${c.phone}" style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:.7rem;text-decoration:none;color:var(--ink)">Call</a>
-          ${c.wa?`<a href="https://wa.me/${c.wa}" target="_blank" style="background:#25D366;color:#fff;border-radius:6px;padding:2px 7px;font-size:.7rem;text-decoration:none">WA</a>`:''}
+  const col = CAT_COLORS[c.cat] || 'var(--muted)';
+  return `<div class="contact-badge">
+    <div class="contact-band" style="background:${col}"></div>
+    ${isCustom?`<button class="contact-del" onclick="deleteContact('${c.id}')" title="Delete">✕</button>`:''}
+    <div class="contact-avatar" style="font-size:${c.initials.length>2?'.72rem':'.8rem'}">${c.initials}</div>
+    <div class="contact-info">
+      <div class="contact-name">${c.name}</div>
+      <div class="contact-role">${c.role||''}</div>
+      ${c.phone?`<div class="contact-row">
+        <span class="lbl">📱 ${c.phone}</span>
+        <div class="contact-actions">
+          ${c.wa?`<a class="wa" href="#" onclick="event.preventDefault();deliverWhatsAppMessage('${c.wa.replace(/^\+/,'')}','')">Message</a>`:`<a href="tel:${c.phone}">Call</a>`}
         </div>
       </div>`:''}
-      ${c.email?`<div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-        <span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">✉️ ${c.email}</span>
-        <a href="mailto:${c.email}" style="background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:.7rem;text-decoration:none;color:var(--ink);flex-shrink:0">Email</a>
+      ${c.email?`<div class="contact-row">
+        <span class="lbl">✉️ ${c.email}</span>
+        <a href="mailto:${c.email}">Email</a>
       </div>`:''}
+      <!-- Personal contacts (sub-contacts) -->
+      ${subContacts.map(sc=>`
+        <div class="contact-sub">
+          <div style="font-size:.76rem;font-weight:600;color:var(--ink);margin-bottom:3px">${sc.name}${sc.role?` <span style="font-weight:400;color:var(--muted)">· ${sc.role}</span>`:''}</div>
+          ${sc.phone?`<div class="contact-row" style="margin-top:0;font-size:.74rem">
+            <span class="lbl">📱 ${sc.phone}</span>
+            <div class="contact-actions">
+              ${sc.wa?`<a class="wa" href="#" onclick="event.preventDefault();deliverWhatsAppMessage('${sc.wa.replace(/^\+/,'')}','')">Message</a>`:`<a href="tel:${sc.phone}">Call</a>`}
+            </div>
+          </div>`:''}
+          ${sc.email?`<div class="contact-row" style="margin-top:2px;font-size:.74rem">
+            <span class="lbl">✉️ ${sc.email}</span>
+            <a href="mailto:${sc.email}">Email</a>
+          </div>`:''}
+        </div>`).join('')}
+      <!-- Notes -->
+      ${c.note?`<div class="contact-note">${c.note}</div>`:''}
     </div>
-    <!-- Personal contacts (sub-contacts) -->
-    ${subContacts.map(sc=>`
-      <div style="background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:2px solid ${c.color}">
-        <div style="font-size:.76rem;font-weight:600;color:var(--ink);margin-bottom:3px">${sc.name}${sc.role?` <span style="font-weight:400;color:var(--muted)">· ${sc.role}</span>`:''}  </div>
-        ${sc.phone?`<div style="font-size:.74rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between">
-          <span>📱 ${sc.phone}</span>
-          <div style="display:flex;gap:3px">
-            <a href="tel:${sc.phone}" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:.68rem;text-decoration:none;color:var(--ink)">Call</a>
-            ${sc.wa?`<a href="https://wa.me/${sc.wa}" target="_blank" style="background:#25D366;color:#fff;border-radius:5px;padding:1px 6px;font-size:.68rem;text-decoration:none">WA</a>`:''}
-          </div>
-        </div>`:''}
-        ${sc.email?`<div style="font-size:.74rem;color:var(--muted);display:flex;align-items:center;justify-content:space-between;margin-top:2px">
-          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">✉️ ${sc.email}</span>
-          <a href="mailto:${sc.email}" style="background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:.68rem;text-decoration:none;color:var(--ink);flex-shrink:0;margin-left:4px">Email</a>
-        </div>`:''}
-      </div>`).join('')}
-    <!-- Notes -->
-    ${c.note?`<div style="font-size:.75rem;color:var(--muted);font-style:italic;margin-top:${subContacts.length?'4px':'0'};line-height:1.4">${c.note}</div>`:''}
   </div>`;
 }
 
