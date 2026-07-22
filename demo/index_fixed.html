@@ -158,7 +158,9 @@ h2,h3{font-family:"DM Serif Display",serif}
 .contact-badge:hover{box-shadow:0 4px 20px rgba(0,0,0,.08)}
 .contact-band{height:48px}
 .contact-avatar{position:absolute;top:29px;left:14px;width:38px;height:38px;border-radius:50%;background:var(--surface);border:3px solid var(--surface);display:flex;align-items:center;justify-content:center;font-family:"DM Serif Display",serif;font-size:.8rem;box-shadow:0 2px 6px rgba(0,0,0,.15);color:var(--ink)}
-.contact-del{position:absolute;top:8px;right:8px;background:rgba(255,255,255,.3);border:none;border-radius:6px;width:22px;height:22px;cursor:pointer;color:#fff;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+.contact-actions-top{position:absolute;top:8px;right:8px;display:flex;gap:6px}
+.contact-del,.contact-edit{background:rgba(255,255,255,.3);border:none;border-radius:6px;width:22px;height:22px;cursor:pointer;color:#fff;font-size:.8rem;display:flex;align-items:center;justify-content:center}
+.contact-del:hover,.contact-edit:hover{background:rgba(255,255,255,.5)}
 .contact-info{padding:25px 14px 14px}
 .contact-name{font-weight:700;font-size:.9rem;color:var(--ink)}
 .contact-role{font-family:var(--font-mono);font-size:.65rem;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.03em}
@@ -904,7 +906,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
       <div class="tab-pane" id="tab-team">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
           <div>
-            <h2 style="font-size:1.1rem;margin-bottom:2px;font-family:'DM Serif Display',serif">Contacts & Team</h2>
+            <h2 style="font-size:1.1rem;margin-bottom:2px;font-family:'DM Serif Display',serif">Contacts</h2>
             <div class="text-muted" style="font-size:.78rem">Staff, cleaners, suppliers & maintenance contacts</div>
           </div>
           <button class="btn btn-primary btn-sm" onclick="openAddContact()">+ Add Contact</button>
@@ -1798,7 +1800,7 @@ let calMode     = 'bookings'; // 'bookings' | 'domestic'
 let domCalYear = new Date().getFullYear(), domCalMonth = new Date().getMonth();
 let calProp = 'all';
 let showCancelledOnCal = false;
-let bookings = [], tasks = [], domestics = [], kbArticles = [];
+let bookings = [], tasks = [], domestics = [], kbArticles = [], contacts = [];
 let messages = [
   {id:'m1',from:'Nicole',   role:'admin',text:'Speranta: Joe Ladlow arrives 17 Apr. Welcome pack ready?',       time:'09:14'},
   {id:'m2',from:'Nina Williams',role:'host', text:'On it! Blessing confirmed cleaning after Hedda on the 17th.',time:'09:32'},
@@ -2381,7 +2383,7 @@ const NAV = [
   {id:'messages', label:'Messages',     icon:'💬',roles:['owner','admin','host']},
   {id:'knowledge',label:'Property Manual',icon:'📖',roles:['owner','admin','host']},
   {id:'kb',       label:'Knowledge Base',icon:'📚',roles:['owner','admin','host']},
-  {id:'team',     label:'Team',         icon:'👥',roles:['owner','admin']},
+  {id:'team',     label:'Contacts',     icon:'👥',roles:['owner','admin']},
   {id:'invoices', label:'Invoices',     icon:'🧾',roles:['owner','admin']},
   {id:'roadmap',  label:'Roadmap',      icon:'🗺️',roles:['owner']},
   {id:'reports',  label:'Reports',      icon:'📊',roles:['owner','admin']},
@@ -2832,15 +2834,17 @@ async function loadData() {
   tasks = SAMPLE_TASKS.map(nt);
   domestics = SAMPLE_DOMESTICS.map(nd);
   kbArticles = SAMPLE_KB;
+  contacts = BUILTIN_CONTACTS.map(c=>({...c}));
   renderTab(currentTab);
   if (!db) return;
   try {
-    const [bRes, tRes, dRes, kRes, invRes] = await Promise.all([
+    const [bRes, tRes, dRes, kRes, invRes, cRes] = await Promise.all([
       db.from('bookings').select('*').order('check_in_date',{ascending:false}).limit(500),
       db.from('tasks').select('*').order('created_at',{ascending:false}),
       db.from('domestics').select('*').order('date',{ascending:false}),
       db.from('kb_articles').select('*').order('created_at',{ascending:false}),
       db.from('inventory_reports').select('*').order('submitted_at',{ascending:false}).limit(100),
+      db.from('team_contacts').select('*').order('cat',{ascending:true}).order('sort_order',{ascending:true}),
     ]);
     let connected = false;
     if (bRes.data && bRes.data.length > 0) {
@@ -2854,6 +2858,7 @@ async function loadData() {
     if (dRes.data && dRes.data.length > 0) domestics = dRes.data.map(nd);
     if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
     if (invRes && invRes.data) inventoryReports = invRes.data;
+    if (cRes && cRes.data && cRes.data.length > 0) contacts = cRes.data.map(nc);
 
     // Load cleaner availability
     const avRes = await db.from('cleaner_availability').select('*').gte('date', today);
@@ -8484,13 +8489,31 @@ const BUILTIN_CONTACTS = [
   {id:'c-dropalong', cat:'supplier',  name:'Drop Along Plumbing', role:'Plumbing Contractor',  phone:'',                  email:'',    wa:'',            note:'Trusted plumbing contractor.',          initials:'DA',
     contacts:[{name:'Francois van Wyk', role:'Personal Contact', phone:'084 075 4684', email:'francois@ldrop.co.za', wa:'27840754684'}]},
 ];
-const CAT_COLORS = {management:'var(--accent)', domestic:'var(--teal)', maintenance:'var(--coral)', supplier:'var(--muted)', other:'var(--muted)'};
+const CAT_COLORS = {management:'var(--accent)', domestic:'var(--teal)', maintenance:'var(--coral)', security:'#7c3aed', supplier:'var(--muted)', other:'var(--muted)'};
 
-let _customContacts = JSON.parse(localStorage.getItem('hep_contacts')||'[]');
 let _contactFilter  = 'all';
+let _contactExpanded = new Set(); // sensitive contacts the admin has clicked to reveal, this session
+
+// Normalizes a public.team_contacts row (520_team_contacts.sql) into the
+// shape the UI already used for BUILTIN_CONTACTS.
+function nc(c) {
+  return {
+    id: c.id,
+    cat: c.cat,
+    name: c.name,
+    role: c.role || '',
+    phone: c.phone || '',
+    email: c.email || '',
+    wa: c.wa || '',
+    note: c.note || '',
+    initials: c.initials || (c.name||'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
+    contacts: c.sub_contacts || [],
+    sensitive: !!c.sensitive,
+  };
+}
 
 function allContacts() {
-  return [...BUILTIN_CONTACTS, ..._customContacts];
+  return contacts;
 }
 
 function setContactFilter(cat, btn) {
@@ -8502,44 +8525,89 @@ function setContactFilter(cat, btn) {
   renderTeam();
 }
 
-function openAddContact() {
-  document.getElementById('day-modal-title').textContent = 'Add Contact';
+function openAddContact() { openContactModal(null); }
+function openEditContact(id) { openContactModal(id); }
+
+let _scSeq = 0;
+
+function openContactModal(id) {
+  const existing = id ? allContacts().find(c=>c.id===id) : null;
+  const startRows = (existing && existing.contacts && existing.contacts.length) ? existing.contacts : [{}];
+  document.getElementById('day-modal-title').textContent = existing ? 'Edit Contact' : 'Add Contact';
   document.getElementById('day-modal-body').innerHTML = `
     <div class="form-grid" style="gap:10px">
-      <div class="form-field span-full"><label>Name *</label><input id="nc-name" placeholder="Company or person name"/></div>
+      <div class="form-field span-full"><label>Name *</label><input id="nc-name" placeholder="Company or person name" value="${escAttr(existing?existing.name:'')}"/></div>
       <div class="form-field"><label>Category</label>
         <select id="nc-cat">
-          <option value="management">Management</option>
-          <option value="domestic">Domestic</option>
-          <option value="maintenance" selected>Maintenance</option>
-          <option value="supplier">Supplier</option>
-          <option value="other">Other</option>
+          <option value="management" ${ctSel(existing,'management')}>Management</option>
+          <option value="domestic" ${ctSel(existing,'domestic')}>Domestic</option>
+          <option value="maintenance" ${ctSel(existing,'maintenance',true)}>Maintenance</option>
+          <option value="security" ${ctSel(existing,'security')}>Security</option>
+          <option value="supplier" ${ctSel(existing,'supplier')}>Supplier</option>
+          <option value="other" ${ctSel(existing,'other')}>Other</option>
         </select>
       </div>
-      <div class="form-field"><label>Role / Service</label><input id="nc-role" placeholder="e.g. Electrician"/></div>
-      <div class="form-field"><label>Phone</label><input id="nc-phone" placeholder="+27 ..."/></div>
-      <div class="form-field"><label>Email</label><input id="nc-email" placeholder="email@domain.co.za" type="email"/></div>
-      <div class="form-field"><label>WhatsApp number</label><input id="nc-wa" placeholder="27821234567 (no + or spaces)"/></div>
-      <div class="form-field span-full"><label>Personal contact name</label><input id="nc-contact-name" placeholder="e.g. Francois van Wyk"/></div>
-      <div class="form-field"><label>Personal contact phone</label><input id="nc-contact-phone" placeholder="082 ..."/></div>
-      <div class="form-field"><label>Personal contact email</label><input id="nc-contact-email" placeholder="person@company.co.za"/></div>
-      <div class="form-field span-full"><label>Notes</label><textarea id="nc-notes" rows="2" placeholder="Any useful notes…"></textarea></div>
+      <div class="form-field"><label>Role / Service</label><input id="nc-role" placeholder="e.g. Electrician" value="${escAttr(existing?existing.role:'')}"/></div>
+      <div class="form-field"><label>Phone</label><input id="nc-phone" placeholder="+27 ..." value="${escAttr(existing?existing.phone:'')}"/></div>
+      <div class="form-field"><label>Email</label><input id="nc-email" placeholder="email@domain.co.za" type="email" value="${escAttr(existing?existing.email:'')}"/></div>
+      <div class="form-field"><label>WhatsApp number</label><input id="nc-wa" placeholder="27821234567 (no + or spaces)" value="${escAttr(existing?existing.wa:'')}"/></div>
+      <div class="form-field span-full">
+        <label style="display:flex;align-items:center;gap:6px;font-weight:400">
+          <input type="checkbox" id="nc-sensitive" ${existing&&existing.sensitive?'checked':''} style="width:auto"/>
+          🔒 Sensitive — hide details by default (e.g. banking info)
+        </label>
+      </div>
+      <div class="form-field span-full">
+        <label>Personal contacts <span style="font-weight:400;color:var(--muted)">(e.g. the different people at an agency)</span></label>
+        <div id="nc-subcontacts-list"></div>
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="addSubContactRow()">+ Add another contact</button>
+      </div>
+      <div class="form-field span-full"><label>Notes</label><textarea id="nc-notes" rows="2" placeholder="Any useful notes…">${existing?existing.note:''}</textarea></div>
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
-      <button class="btn btn-primary" onclick="saveNewContact()">Save Contact</button>
+      <button class="btn btn-primary" onclick="saveContact(${existing?`'${existing.id}'`:'null'})">Save Contact</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
     </div>`;
+  const listEl = document.getElementById('nc-subcontacts-list');
+  listEl.innerHTML = '';
+  startRows.forEach(sc => listEl.insertAdjacentHTML('beforeend', scRowHtml(sc)));
   openModal('day-modal');
 }
+function ctSel(existing, cat, defaultWhenNew) {
+  if (existing) return existing.cat===cat ? 'selected' : '';
+  return (!existing && defaultWhenNew) ? 'selected' : '';
+}
+function escAttr(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
 
-function saveNewContact() {
+function scRowHtml(sc) {
+  sc = sc || {};
+  const rowId = 'sc'+(_scSeq++);
+  return `<div class="nc-sc-row" data-row-id="${rowId}" style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:6px;position:relative">
+    <button type="button" class="btn btn-ghost btn-sm" title="Remove" style="position:absolute;top:4px;right:4px;width:22px;height:22px;padding:0" onclick="this.closest('.nc-sc-row').remove()">✕</button>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;padding-right:26px">
+      <input class="nc-sc-name" placeholder="Name" value="${escAttr(sc.name)}"/>
+      <input class="nc-sc-role" placeholder="Role" value="${escAttr(sc.role)}"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+      <input class="nc-sc-phone" placeholder="Phone" value="${escAttr(sc.phone)}"/>
+      <input class="nc-sc-email" placeholder="Email" value="${escAttr(sc.email)}"/>
+    </div>
+  </div>`;
+}
+function addSubContactRow() {
+  document.getElementById('nc-subcontacts-list').insertAdjacentHTML('beforeend', scRowHtml({}));
+}
+
+async function saveContact(id) {
   const name = document.getElementById('nc-name').value.trim();
   if (!name) { toast('Name is required','error'); return; }
-  const contactName  = document.getElementById('nc-contact-name').value.trim();
-  const contactPhone = document.getElementById('nc-contact-phone').value.trim();
-  const contactEmail = document.getElementById('nc-contact-email').value.trim();
-  const contact = {
-    id:      'cc-'+Date.now(),
+  const subContacts = Array.from(document.querySelectorAll('#nc-subcontacts-list .nc-sc-row')).map(row => ({
+    name:  row.querySelector('.nc-sc-name').value.trim(),
+    role:  row.querySelector('.nc-sc-role').value.trim(),
+    phone: row.querySelector('.nc-sc-phone').value.trim(),
+    email: row.querySelector('.nc-sc-email').value.trim(),
+  })).filter(sc => sc.name || sc.phone || sc.email);
+  const row = {
     cat:     document.getElementById('nc-cat').value,
     name,
     role:    document.getElementById('nc-role').value,
@@ -8548,19 +8616,33 @@ function saveNewContact() {
     wa:      document.getElementById('nc-wa').value,
     note:    document.getElementById('nc-notes').value,
     initials: name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
-    contacts: contactName ? [{name:contactName, phone:contactPhone, email:contactEmail}] : [],
+    sensitive: document.getElementById('nc-sensitive').checked,
+    sub_contacts: subContacts,
   };
-  _customContacts.push(contact);
-  localStorage.setItem('hep_contacts', JSON.stringify(_customContacts));
+  if (!db) { toast('Not connected — changes need a live connection to save','error'); return; }
+  if (id) {
+    const { data, error } = await db.from('team_contacts').update(row).eq('id', id).select().single();
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+    const idx = contacts.findIndex(c=>c.id===id);
+    if (idx>-1) contacts[idx] = nc(data);
+  } else {
+    row.org_id = getOrgId();
+    const { data, error } = await db.from('team_contacts').insert([row]).select().single();
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+    contacts.push(nc(data));
+  }
   toast('Contact saved ✓','success');
   closeModal('day-modal');
   renderTeam();
 }
 
 function deleteContact(id) {
-  confirmAction('Delete this contact?', () => {
-    _customContacts = _customContacts.filter(c=>c.id!==id);
-    localStorage.setItem('hep_contacts', JSON.stringify(_customContacts));
+  confirmAction('Delete this contact?', async () => {
+    if (db) {
+      const { error } = await db.from('team_contacts').delete().eq('id', id);
+      if (error) { toast('Delete error: '+error.message,'error'); return; }
+    }
+    contacts = contacts.filter(c=>c.id!==id);
     toast('Contact deleted','info');
     renderTeam();
   }, 'Delete');
@@ -8571,8 +8653,8 @@ function renderTeam() {
   const el = document.getElementById('team-content');
   if (!el) return;
   const q = (document.getElementById('contact-search')?.value||'').toLowerCase();
-  const CAT_LABELS = {management:'👥 Management',domestic:'🧹 Domestic Staff',maintenance:'🔧 Maintenance',supplier:'🏪 Suppliers',other:'📂 Other'};
-  const CAT_ORDER  = ['management','domestic','maintenance','supplier','other'];
+  const CAT_LABELS = {management:'👥 Management',domestic:'🧹 Domestic Staff',maintenance:'🔧 Maintenance',security:'🛡️ Security',supplier:'🏪 Suppliers',other:'📂 Other'};
+  const CAT_ORDER  = ['management','domestic','maintenance','security','supplier','other'];
 
   let contacts = allContacts().filter(c => {
     if (_contactFilter!=='all' && c.cat!==_contactFilter) return false;
@@ -8605,15 +8687,35 @@ function renderTeam() {
 }
 
 function contactCard(c) {
-  const isCustom = c.id.startsWith('cc-');
   const subContacts = (c.contacts||[]).filter(x=>x.name||x.phone);
   const col = CAT_COLORS[c.cat] || 'var(--muted)';
+  const isHidden = c.sensitive && !_contactExpanded.has(c.id);
+
+  if (isHidden) {
+    return `<div class="contact-badge contact-badge-compact">
+      <div class="contact-band" style="background:${col}"></div>
+      <div class="contact-actions-top">
+        <button class="contact-edit" onclick="openEditContact('${c.id}')" title="Edit">✎</button>
+        <button class="contact-del" onclick="deleteContact('${c.id}')" title="Delete">✕</button>
+      </div>
+      <div class="contact-avatar" style="font-size:${c.initials.length>2?'.72rem':'.8rem'}">${c.initials}</div>
+      <div class="contact-info">
+        <div class="contact-name">🔒 ${c.name}</div>
+        <div class="contact-role">${c.role||''}</div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="toggleContactSensitive('${c.id}')">Show details</button>
+      </div>
+    </div>`;
+  }
+
   return `<div class="contact-badge">
     <div class="contact-band" style="background:${col}"></div>
-    ${isCustom?`<button class="contact-del" onclick="deleteContact('${c.id}')" title="Delete">✕</button>`:''}
+    <div class="contact-actions-top">
+      <button class="contact-edit" onclick="openEditContact('${c.id}')" title="Edit">✎</button>
+      <button class="contact-del" onclick="deleteContact('${c.id}')" title="Delete">✕</button>
+    </div>
     <div class="contact-avatar" style="font-size:${c.initials.length>2?'.72rem':'.8rem'}">${c.initials}</div>
     <div class="contact-info">
-      <div class="contact-name">${c.name}</div>
+      <div class="contact-name">${c.sensitive?'🔒 ':''}${c.name}</div>
       <div class="contact-role">${c.role||''}</div>
       ${c.phone?`<div class="contact-row">
         <span class="lbl">📱 ${c.phone}</span>
@@ -8642,8 +8744,14 @@ function contactCard(c) {
         </div>`).join('')}
       <!-- Notes -->
       ${c.note?`<div class="contact-note">${c.note}</div>`:''}
+      ${c.sensitive?`<button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="toggleContactSensitive('${c.id}')">Hide details</button>`:''}
     </div>
   </div>`;
+}
+
+function toggleContactSensitive(id) {
+  if (_contactExpanded.has(id)) _contactExpanded.delete(id); else _contactExpanded.add(id);
+  renderTeam();
 }
 
 
