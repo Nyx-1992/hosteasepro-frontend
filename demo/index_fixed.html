@@ -926,6 +926,18 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div id="team-content"></div>
       </div>
 
+      <!-- BUSINESS VAULT (admin only, admin-only RLS too — banking/legal/insurance) -->
+      <div class="tab-pane" id="tab-vault">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px">
+          <div>
+            <h2 style="font-size:1.1rem;margin-bottom:2px;font-family:'DM Serif Display',serif">🔐 Business Info</h2>
+            <div class="text-muted" style="font-size:.78rem">Banking, legal, insurance & tax — admin eyes only</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openAddVaultEntry()">+ Add Entry</button>
+        </div>
+        <div id="vault-content"></div>
+      </div>
+
       <!-- REPORTS (admin only) -->
       <div class="tab-pane" id="tab-finance">
         <div class="section-head">
@@ -1800,7 +1812,7 @@ let calMode     = 'bookings'; // 'bookings' | 'domestic'
 let domCalYear = new Date().getFullYear(), domCalMonth = new Date().getMonth();
 let calProp = 'all';
 let showCancelledOnCal = false;
-let bookings = [], tasks = [], domestics = [], kbArticles = [], contacts = [];
+let bookings = [], tasks = [], domestics = [], kbArticles = [], contacts = [], vault = [];
 let messages = [
   {id:'m1',from:'Nicole',   role:'admin',text:'Speranta: Joe Ladlow arrives 17 Apr. Welcome pack ready?',       time:'09:14'},
   {id:'m2',from:'Nina Williams',role:'host', text:'On it! Blessing confirmed cleaning after Hedda on the 17th.',time:'09:32'},
@@ -2384,6 +2396,7 @@ const NAV = [
   {id:'knowledge',label:'Property Manual',icon:'📖',roles:['owner','admin','host']},
   {id:'kb',       label:'Knowledge Base',icon:'📚',roles:['owner','admin','host']},
   {id:'team',     label:'Contacts',     icon:'👥',roles:['owner','admin']},
+  {id:'vault',    label:'Business Info',icon:'🔐',roles:['owner','admin']},
   {id:'invoices', label:'Invoices',     icon:'🧾',roles:['owner','admin']},
   {id:'roadmap',  label:'Roadmap',      icon:'🗺️',roles:['owner']},
   {id:'reports',  label:'Reports',      icon:'📊',roles:['owner','admin']},
@@ -2806,6 +2819,7 @@ function renderTab(id) {
   else if (id==='knowledge') { renderKnowledgeManual(); }
   else if (id==='kb')        { renderKB(); }
   else if (id==='team')      renderTeam();
+  else if (id==='vault')     renderVault();
   else if (id==='finance')   renderFinance();
   else if (id==='reports')   {
     renderReports(); renderReportInspections(); renderReportInventory();
@@ -2838,13 +2852,14 @@ async function loadData() {
   renderTab(currentTab);
   if (!db) return;
   try {
-    const [bRes, tRes, dRes, kRes, invRes, cRes] = await Promise.all([
+    const [bRes, tRes, dRes, kRes, invRes, cRes, vRes] = await Promise.all([
       db.from('bookings').select('*').order('check_in_date',{ascending:false}).limit(500),
       db.from('tasks').select('*').order('created_at',{ascending:false}),
       db.from('domestics').select('*').order('date',{ascending:false}),
       db.from('kb_articles').select('*').order('created_at',{ascending:false}),
       db.from('inventory_reports').select('*').order('submitted_at',{ascending:false}).limit(100),
       db.from('team_contacts').select('*').order('cat',{ascending:true}).order('sort_order',{ascending:true}),
+      db.from('business_vault').select('*').order('created_at',{ascending:true}),
     ]);
     let connected = false;
     if (bRes.data && bRes.data.length > 0) {
@@ -2859,6 +2874,7 @@ async function loadData() {
     if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
     if (invRes && invRes.data) inventoryReports = invRes.data;
     if (cRes && cRes.data && cRes.data.length > 0) contacts = cRes.data.map(nc);
+    if (vRes && vRes.data) vault = vRes.data;
 
     // Load cleaner availability
     const avRes = await db.from('cleaner_availability').select('*').gte('date', today);
@@ -8752,6 +8768,133 @@ function contactCard(c) {
 function toggleContactSensitive(id) {
   if (_contactExpanded.has(id)) _contactExpanded.delete(id); else _contactExpanded.add(id);
   renderTeam();
+}
+
+// ── BUSINESS VAULT (admin-only banking/legal/insurance/tax notes) ────────────
+const VAULT_CAT_LABELS = {banking:'🏦 Banking',legal:'⚖️ Legal',insurance:'🛡️ Insurance',tax:'🧮 Tax',other:'📂 Other'};
+const VAULT_CAT_ORDER  = ['banking','legal','insurance','tax','other'];
+let _vaultExpanded = new Set(); // entries the admin has clicked to reveal, this session
+
+function renderVault() {
+  if (!currentUser) return;
+  const el = document.getElementById('vault-content');
+  if (!el) return;
+
+  if (!vault.length) {
+    el.innerHTML = emptyState('🔐', 'No business info saved yet',
+      `<button class="btn btn-sm btn-primary" onclick="openAddVaultEntry()">+ Add Entry</button>`);
+    return;
+  }
+
+  const grouped = {};
+  VAULT_CAT_ORDER.forEach(cat => { grouped[cat] = vault.filter(v=>v.cat===cat); });
+
+  el.innerHTML = VAULT_CAT_ORDER.filter(cat=>grouped[cat].length).map(cat => {
+    const items = grouped[cat];
+    return `
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;margin-top:20px;padding-bottom:6px;border-bottom:1px solid var(--border)">${VAULT_CAT_LABELS[cat]||cat}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:8px">
+        ${items.map(v => vaultCard(v)).join('')}
+      </div>`;
+  }).join('');
+}
+
+function vaultCard(v) {
+  const isHidden = !_vaultExpanded.has(v.id);
+  if (isHidden) {
+    return `<div class="contact-badge contact-badge-compact">
+      <div class="contact-band" style="background:var(--accent)"></div>
+      <div class="contact-actions-top">
+        <button class="contact-edit" onclick="openEditVaultEntry('${v.id}')" title="Edit">✎</button>
+        <button class="contact-del" onclick="deleteVaultEntry('${v.id}')" title="Delete">✕</button>
+      </div>
+      <div class="contact-info" style="padding-top:16px">
+        <div class="contact-name">🔒 ${v.title}</div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="toggleVaultExpand('${v.id}')">Show details</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="contact-badge">
+    <div class="contact-band" style="background:var(--accent)"></div>
+    <div class="contact-actions-top">
+      <button class="contact-edit" onclick="openEditVaultEntry('${v.id}')" title="Edit">✎</button>
+      <button class="contact-del" onclick="deleteVaultEntry('${v.id}')" title="Delete">✕</button>
+    </div>
+    <div class="contact-info" style="padding-top:16px">
+      <div class="contact-name">🔒 ${v.title}</div>
+      <div class="contact-note" style="white-space:pre-wrap">${v.content||''}</div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="toggleVaultExpand('${v.id}')">Hide details</button>
+    </div>
+  </div>`;
+}
+
+function toggleVaultExpand(id) {
+  if (_vaultExpanded.has(id)) _vaultExpanded.delete(id); else _vaultExpanded.add(id);
+  renderVault();
+}
+
+function openAddVaultEntry() { openVaultModal(null); }
+function openEditVaultEntry(id) { openVaultModal(id); }
+
+function openVaultModal(id) {
+  const existing = id ? vault.find(v=>v.id===id) : null;
+  document.getElementById('day-modal-title').textContent = existing ? 'Edit Business Info' : 'Add Business Info';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field span-full"><label>Title *</label><input id="nv-title" placeholder="e.g. FNB Business Account" value="${escAttr(existing?existing.title:'')}"/></div>
+      <div class="form-field span-full"><label>Category</label>
+        <select id="nv-cat">
+          <option value="banking" ${existing?(existing.cat==='banking'?'selected':''):'selected'}>Banking</option>
+          <option value="legal" ${existing&&existing.cat==='legal'?'selected':''}>Legal</option>
+          <option value="insurance" ${existing&&existing.cat==='insurance'?'selected':''}>Insurance</option>
+          <option value="tax" ${existing&&existing.cat==='tax'?'selected':''}>Tax</option>
+          <option value="other" ${existing&&existing.cat==='other'?'selected':''}>Other</option>
+        </select>
+      </div>
+      <div class="form-field span-full"><label>Details</label><textarea id="nv-content" rows="6" placeholder="Account number, branch code, IBAN, policy number, whatever's relevant…">${existing?existing.content:''}</textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" onclick="saveVaultEntry(${existing?`'${existing.id}'`:'null'})">Save</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+    </div>`;
+  openModal('day-modal');
+}
+
+async function saveVaultEntry(id) {
+  const title = document.getElementById('nv-title').value.trim();
+  if (!title) { toast('Title is required','error'); return; }
+  const row = {
+    cat:     document.getElementById('nv-cat').value,
+    title,
+    content: document.getElementById('nv-content').value,
+  };
+  if (!db) { toast('Not connected — changes need a live connection to save','error'); return; }
+  if (id) {
+    const { data, error } = await db.from('business_vault').update(row).eq('id', id).select().single();
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+    const idx = vault.findIndex(v=>v.id===id);
+    if (idx>-1) vault[idx] = data;
+  } else {
+    row.org_id = getOrgId();
+    const { data, error } = await db.from('business_vault').insert([row]).select().single();
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+    vault.push(data);
+  }
+  toast('Saved ✓','success');
+  closeModal('day-modal');
+  renderVault();
+}
+
+function deleteVaultEntry(id) {
+  confirmAction('Delete this entry?', async () => {
+    if (db) {
+      const { error } = await db.from('business_vault').delete().eq('id', id);
+      if (error) { toast('Delete error: '+error.message,'error'); return; }
+    }
+    vault = vault.filter(v=>v.id!==id);
+    toast('Deleted','info');
+    renderVault();
+  }, 'Delete');
 }
 
 
