@@ -191,6 +191,28 @@ h2,h3{font-family:"DM Serif Display",serif}
 .lane-nsub{font-size:.75rem;color:var(--muted);margin-top:2px}
 .lane-item{border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;margin-left:-14px;transition:box-shadow .15s}
 .lane-item:hover{box-shadow:0 4px 16px rgba(0,0,0,.1)}
+/* Ring card — Task Management guest checklist, segmented progress ring */
+.ring-card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);overflow:hidden;box-shadow:var(--sh)}
+.ring-card.now{border-color:var(--blue)}
+.ring-card.past{opacity:.85}
+.ring-hd{padding:13px 15px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:6px}
+.ring-name{font-weight:700;font-size:.88rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ring-sub{font-size:.72rem;color:var(--muted);margin-top:1px}
+.ring-pill{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:8px;flex-shrink:0;white-space:nowrap}
+.ring-body{padding:16px 15px 8px;display:flex;flex-direction:column;align-items:center}
+.ring-wrap{position:relative;width:104px;height:104px}
+.ring-seg{cursor:pointer}
+.ring-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:76px;height:76px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.ring-txt .n{font-family:"DM Serif Display",serif;font-size:1.35rem;color:var(--ink)}
+.ring-txt .d{font-family:var(--font-mono);font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.ring-toggle{margin-top:6px;font-family:var(--font-mono);font-size:.64rem;color:var(--muted);background:none;border:none;cursor:pointer;padding:4px 6px}
+.ring-toggle:hover{color:var(--ink)}
+.ring-checklist{padding:2px 15px 4px}
+.ring-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.ring-row:last-child{border-bottom:none}
+.ring-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;transition:all .15s}
+.ring-check.done{border-color:#16a34a;background:#d1fae5}
+.ring-note{padding:10px 15px 12px}
 .tab-pane{width:100%}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .mb-4{margin-bottom:14px}.mb-6{margin-bottom:22px}
@@ -6567,6 +6589,42 @@ function toggleGuestCompleted(el) {
   renderGuestManagement();
 }
 
+let ringExpanded = {};
+function toggleRingExpand(bid) {
+  ringExpanded[bid] = !ringExpanded[bid];
+  renderGuestManagement();
+}
+
+// Segmented progress ring: each task is its own arc (done=green, next=gold, later=grey),
+// with a wide invisible hit-stroke laid over each arc so it's independently clickable.
+function ringSVG(tasks, size) {
+  size = size || 104;
+  const strokeW = 9, gap = 6, hitW = 26;
+  const cx = size/2, cy = size/2;
+  const r = cx - strokeW/2 - 4;
+  const C = 2*Math.PI*r;
+  const perSeg = C/tasks.length;
+  const segLen = perSeg - gap;
+  let nextAssigned = false;
+  const arcs = tasks.map((t,i) => {
+    const offset = (-(i*perSeg)).toFixed(1);
+    let color;
+    if (t.done) color = '#16a34a';
+    else if (!nextAssigned) { color = 'var(--accent)'; nextAssigned = true; }
+    else color = 'var(--border)';
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-linecap="round" stroke-dasharray="${segLen.toFixed(1)} ${(C-segLen).toFixed(1)}" stroke-dashoffset="${offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+  }).join('');
+  const hits = tasks.map((t,i) => {
+    const offset = (-(i*perSeg)).toFixed(1);
+    return `<circle class="ring-seg" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="transparent" stroke-width="${hitW}" stroke-dasharray="${segLen.toFixed(1)} ${(C-segLen).toFixed(1)}" stroke-dashoffset="${offset}" transform="rotate(-90 ${cx} ${cy})" onclick="${t.onclick}"><title>${t.label}${t.done?' ✓ done':''}</title></circle>`;
+  }).join('');
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="${strokeW}" opacity=".35"/>
+    ${arcs}
+    ${hits}
+  </svg>`;
+}
+
 function renderGuestManagement() {
   const today = todaySAST();
   const gridEl = document.getElementById('guest-booking-grid');
@@ -6613,54 +6671,56 @@ function renderGuestManagement() {
       const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
       const isNow  = b.check_in<=today && b.check_out>=today;
       const daysUntil = Math.ceil((new Date(b.check_in)-new Date())/86400000);
-      const col = PLAT_COLORS[b.platform]||'#A8702E';
 
-      // Progress bar colour
-      const pct = Math.round(doneCount/totalCount*100);
-      const barCol = pct===100?'#16a34a':pct>=60?'var(--accent)':'#f59e0b';
+      const tasksWithClick = tasks.map(t => {
+        const done = t.done !== undefined ? t.done : !!prog[t.key];
+        const isClean = t.key==='book_domestic';
+        const onclick = isClean
+          ? (done ? '' : `bookCleaningForGuest('${b.property_id}','${b.check_out?.slice(0,10)}','${bid}')`)
+          : `toggleNinaTask('${bid}','${t.key}')`;
+        return {...t, done, onclick};
+      });
 
-      return `<div style="background:var(--card-bg);border-radius:16px;border:1.5px solid var(--border);overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05);${isNow?'border-color:#0369a1':isPast?'opacity:.85':''}">
+      const expanded = !!ringExpanded[bid];
+
+      return `<div class="ring-card ${isNow?'now':isPast?'past':''}">
         <!-- Card header -->
-        <div style="padding:13px 15px 10px;border-bottom:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:6px">
-            <div style="min-width:0">
-              <div style="font-weight:700;font-size:.88rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.display_name}</div>
-              <div style="font-size:.72rem;color:var(--muted);margin-top:1px">${propName(b.property_id)} · ${nights}n · ${fmtDate(b.check_in)}→${fmtDate(b.check_out)}</div>
-            </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
-              <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform==='direct'?'🌐':b.platform}</span>
-              ${isNow?'<span style="background:#dbeafe;color:#1e40af;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:8px">Staying</span>':isPast?'<span style="background:var(--sand);color:var(--muted);font-size:.62rem;padding:2px 6px;border-radius:8px">Past</span>':'<span style="background:#fef3c7;color:#92400e;font-size:.62rem;font-weight:700;padding:2px 6px;border-radius:8px">In '+daysUntil+'d</span>'}
-            </div>
+        <div class="ring-hd">
+          <div style="min-width:0">
+            <div class="ring-name">${b.display_name}</div>
+            <div class="ring-sub">${propName(b.property_id)} · ${nights}n · ${fmtDate(b.check_in)}→${fmtDate(b.check_out)}</div>
           </div>
-          <!-- Progress bar -->
-          <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden">
-            <div style="height:3px;background:${barCol};border-radius:2px;width:${pct}%;transition:width .4s"></div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
+            <span class="badge badge-${b.platform}" style="font-size:.65rem">${b.platform==='direct'?'🌐':b.platform}</span>
+            ${isNow?'<span class="ring-pill" style="background:#dbeafe;color:#1e40af">Staying</span>':isPast?'<span class="ring-pill" style="background:var(--sand);color:var(--muted)">Past</span>':'<span class="ring-pill" style="background:#fef3c7;color:#92400e">In '+daysUntil+'d</span>'}
           </div>
-          <div style="font-size:.63rem;color:var(--muted);margin-top:3px">${doneCount}/${totalCount} tasks complete</div>
         </div>
 
-        <!-- Task checklist -->
-        <div style="padding:10px 15px">
-          ${tasks.map(t => {
-            const done = t.done !== undefined ? t.done : !!prog[t.key];
-            const isClean = t.key==='book_domestic';
-            return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);cursor:pointer"
-              onclick="${isClean
-                ? (done ? '' : `bookCleaningForGuest('${b.property_id}','${b.check_out?.slice(0,10)}','${bid}')`)
-                : `toggleNinaTask('${bid}','${t.key}')`}">
-              <div style="width:20px;height:20px;border-radius:6px;border:2px solid ${done?'#16a34a':'var(--border)'};background:${done?'#d1fae5':'transparent'};display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;transition:all .15s">
-                ${done?'✓':''}
-              </div>
-              <span style="font-size:.73rem;${done?'color:var(--muted);text-decoration:line-through':'color:var(--ink)'}">
+        <!-- Segmented progress ring -->
+        <div class="ring-body">
+          <div class="ring-wrap">
+            ${ringSVG(tasksWithClick)}
+            <div class="ring-txt" onclick="toggleRingExpand('${bid}')" title="Click to see the full checklist">
+              <div class="n tab-num">${doneCount}/${totalCount}</div>
+              <div class="d">tasks</div>
+            </div>
+          </div>
+          <button class="ring-toggle" onclick="toggleRingExpand('${bid}')">${expanded?'Hide checklist ▴':'View checklist ▾'}</button>
+        </div>
+
+        <!-- Fallback checklist (expand on demand) -->
+        ${expanded ? `<div class="ring-checklist">
+          ${tasksWithClick.map(t => `<div class="ring-row" onclick="${t.onclick}">
+              <div class="ring-check ${t.done?'done':''}">${t.done?'✓':''}</div>
+              <span style="font-size:.73rem;${t.done?'color:var(--muted);text-decoration:line-through':'color:var(--ink)'}">
                 ${t.icon} ${t.label}
               </span>
-              ${t.key==='checkin_msg'&&!done?`<span style="margin-left:auto;font-size:.6rem;background:#fef3c7;color:#92400e;padding:2px 5px;border-radius:5px;flex-shrink:0">28h reminder</span>`:''}
-            </div>`;
-          }).join('')}
-        </div>
+              ${t.key==='checkin_msg'&&!t.done?`<span style="margin-left:auto;font-size:.6rem;background:#fef3c7;color:#92400e;padding:2px 5px;border-radius:5px;flex-shrink:0">28h reminder</span>`:''}
+            </div>`).join('')}
+        </div>` : ''}
 
         <!-- Note field -->
-        <div style="padding:8px 15px 12px">
+        <div class="ring-note">
           <input placeholder="Add a note…" value="${(ninaBTaskProgress[bid]||{})._note||''}"
             onchange="saveGuestNote('${bid}',this.value)"
             style="width:100%;padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.76rem;outline:none;background:var(--sand);box-sizing:border-box;transition:border .15s"
