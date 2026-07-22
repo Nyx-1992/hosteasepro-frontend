@@ -213,6 +213,31 @@ h2,h3{font-family:"DM Serif Display",serif}
 .ring-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;transition:all .15s}
 .ring-check.done{border-color:#16a34a;background:#d1fae5}
 .ring-note{padding:10px 15px 12px}
+/* Inspection card — room grid overview, expand for photos/issues/notes */
+.insp-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;border-left:4px solid var(--cond)}
+.insp-hd{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.insp-prop{font-weight:700;font-size:.92rem;color:var(--ink)}
+.insp-sub{font-size:.75rem;color:var(--muted);margin-top:2px}
+.insp-tag{font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:20px}
+.insp-del{background:var(--red-light);color:var(--red);border:none;border-radius:6px;padding:3px 8px;font-size:.72rem;cursor:pointer}
+.insp-rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(78px,1fr));gap:7px}
+.insp-room{position:relative;border-radius:10px;padding:9px 4px;text-align:center;cursor:pointer;transition:transform .15s}
+.insp-room:hover{transform:scale(1.05)}
+.insp-room.pass{background:var(--green-light,#dcfce7)}
+.insp-room.fail{background:var(--red-light)}
+.insp-room .ic{font-size:1.05rem}
+.insp-room .lbl{font-size:.58rem;font-weight:700;margin-top:4px;line-height:1.2;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.insp-room-badge{position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--red)}
+.insp-toggle{margin-top:10px;font-family:var(--font-mono);font-size:.66rem;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 0}
+.insp-toggle:hover{color:var(--ink)}
+.insp-detail{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.insp-detail-photos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.insp-detail-photos img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer}
+.insp-detail-issues{margin-bottom:8px}
+.insp-detail-issues .lbl{font-size:.72rem;font-weight:700;color:var(--red);margin-bottom:4px}
+.insp-issue-row{font-size:.78rem;color:var(--ink);padding:3px 0}
+.insp-detail-note{font-size:.8rem;color:var(--muted);background:var(--surface-2);border-radius:8px;padding:8px 10px;font-style:italic}
+.insp-detail-empty{font-size:.78rem;color:var(--muted)}
 .tab-pane{width:100%}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 .mb-4{margin-bottom:14px}.mb-6{margin-bottom:22px}
@@ -2479,6 +2504,26 @@ function getInspChecklist(propShortKey) {
   return (saved && saved.length) ? saved : INSP_CHECKLIST;
 }
 
+// Room-grid icon + short label per known checklist key — falls back to a
+// generic icon and the full label for custom per-property checklist items.
+const INSP_ROOM_ICON = {
+  entrance:'🚪', living:'🛋️', kitchen:'🍳', bathroom:'🛁', bedrooms:'🛏️', balcony:'🌿',
+  geyser:'🚿', electrical:'💡', wifi:'📶', inventory:'📦', maintenance:'🔧', cleanliness:'✨',
+};
+const INSP_ROOM_SHORT = {
+  entrance:'Entrance', living:'Living', kitchen:'Kitchen', bathroom:'Bathroom', bedrooms:'Bedrooms', balcony:'Balcony',
+  geyser:'Geyser', electrical:'Electrical', wifi:'WiFi & TV', inventory:'Inventory', maintenance:'Maintenance', cleanliness:'Cleanliness',
+};
+function inspRoomIcon(key) { return INSP_ROOM_ICON[key] || '📋'; }
+function inspRoomLabel(item) { return INSP_ROOM_SHORT[item.key] || item.label; }
+
+let inspExpanded = {};
+function toggleInspExpand(id) {
+  inspExpanded[id] = !inspExpanded[id];
+  renderInspectionHistory();
+  renderReportInspections();
+}
+
 const INSP_CONDITION_LABELS = {
   excellent: {text:'Excellent', color:'#16a34a', bg:'#dcfce7'},
   good:      {text:'Good',      color:'#2563eb', bg:'#dbeafe'},
@@ -2601,49 +2646,47 @@ function renderInspectionHistory() {
 
 function renderInspectionCard(r, compact) {
   const cond = INSP_CONDITION_LABELS[r.condition] || INSP_CONDITION_LABELS.good;
-  const passCount = r.passCount ?? Object.values(r.checklist||{}).filter(Boolean).length;
-  const total = r.totalCount ?? INSP_CHECKLIST.length;
-  const pct = total ? Math.round(passCount/total*100) : 0;
-  const barCol = pct>=90?'#16a34a':pct>=70?'#f59e0b':'#dc2626';
+  const checklist = getInspChecklist(r.property_id);
+  const failedKeys = Object.entries(r.checklist||{}).filter(([k,v])=>!v).map(([k])=>k);
+  const expanded = !!inspExpanded[r.id];
 
-  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:12px;border-left:4px solid ${cond.color}">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+  const rooms = checklist.map(item => {
+    const tracked = r.checklist && Object.prototype.hasOwnProperty.call(r.checklist, item.key);
+    const failed = tracked && !r.checklist[item.key];
+    return `<div class="insp-room ${failed?'fail':'pass'}" onclick="toggleInspExpand('${r.id}')" title="${item.label}">
+      ${failed?'<div class="insp-room-badge"></div>':''}
+      <div class="ic">${inspRoomIcon(item.key)}</div>
+      <div class="lbl">${inspRoomLabel(item)}</div>
+    </div>`;
+  }).join('');
+
+  const hasDetail = r.photos?.length || failedKeys.length || r.notes;
+  const detail = expanded ? `<div class="insp-detail">
+      ${r.photos?.length ? `<div class="insp-detail-photos">
+        ${r.photos.map((p,i) => `<img src="${p}" onclick="event.stopPropagation();openPhotoModal('${r.id}',${i})" title="Click to enlarge"/>`).join('')}
+      </div>` : ''}
+      ${failedKeys.length ? `<div class="insp-detail-issues">
+        <div class="lbl">Issues flagged</div>
+        ${failedKeys.map(k => { const item = checklist.find(i=>i.key===k); return `<div class="insp-issue-row">⚠️ ${item?.label||k}</div>`; }).join('')}
+      </div>` : ''}
+      ${r.notes ? `<div class="insp-detail-note">"${r.notes}"</div>` : ''}
+      ${!hasDetail ? `<div class="insp-detail-empty">No photos or notes for this report.</div>` : ''}
+    </div>` : '';
+
+  return `<div class="insp-card" style="--cond:${cond.color}">
+    <div class="insp-hd">
       <div>
-        <div style="font-weight:700;font-size:.92rem;color:var(--ink)">${propName(r.property_id)} — ${fmtDate(r.date)}</div>
-        <div style="font-size:.75rem;color:var(--muted);margin-top:2px">Inspector: ${r.inspector} · ${new Date(r.created_at).toLocaleDateString('en-ZA')}</div>
+        <div class="insp-prop">${propName(r.property_id)} — ${fmtDate(r.date)}</div>
+        <div class="insp-sub">Inspector: ${r.inspector} · ${new Date(r.created_at).toLocaleDateString('en-ZA')}</div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <span style="background:${cond.bg};color:${cond.color};font-size:.75rem;font-weight:700;padding:4px 10px;border-radius:20px">${cond.text}</span>
-        <button onclick="deleteInspection('${r.id}')"
-          style="background:var(--red-light);color:var(--red);border:none;border-radius:6px;padding:3px 8px;font-size:.72rem;cursor:pointer">✕</button>
+        <span class="insp-tag" style="background:${cond.bg};color:${cond.color}">${cond.text}</span>
+        <button class="insp-del" onclick="deleteInspection('${r.id}')">✕</button>
       </div>
     </div>
-    <!-- Score bar -->
-    <div style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;font-size:.74rem;color:var(--muted);margin-bottom:4px">
-        <span>Checklist score</span><span style="font-weight:700;color:${barCol}">${passCount}/${total} passed</span>
-      </div>
-      <div style="height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden">
-        <div style="height:6px;background:${barCol};border-radius:3px;width:${pct}%;transition:width .4s"></div>
-      </div>
-    </div>
-    <!-- Failed items -->
-    ${Object.entries(r.checklist||{}).filter(([k,v])=>!v).length > 0 ? `
-    <div style="margin-bottom:10px">
-      <div style="font-size:.72rem;font-weight:600;color:var(--red);margin-bottom:4px">Issues flagged:</div>
-      <div style="display:flex;flex-wrap:wrap;gap:5px">
-        ${Object.entries(r.checklist||{}).filter(([k,v])=>!v).map(([k]) => {
-          const item = INSP_CHECKLIST.find(i=>i.key===k);
-          return `<span style="background:var(--red-light);color:var(--red);font-size:.72rem;padding:2px 8px;border-radius:6px">${item?.label||k}</span>`;
-        }).join('')}
-      </div>
-    </div>` : ''}
-    ${r.notes ? `<div style="font-size:.8rem;color:var(--muted);background:var(--surface-2);border-radius:8px;padding:8px 10px;margin-bottom:10px;font-style:italic">"${r.notes}"</div>` : ''}
-    ${r.photos?.length ? `
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${r.photos.map((p,i) => `<img src="${p}" onclick="openPhotoModal('${r.id}',${i})"
-        style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer" title="Click to enlarge"/>`).join('')}
-    </div>` : ''}
+    <div class="insp-rooms">${rooms}</div>
+    <button class="insp-toggle" onclick="toggleInspExpand('${r.id}')">${expanded?'Hide details ▴':'View details ▾'}</button>
+    ${detail}
   </div>`;
 }
 
@@ -6804,17 +6847,23 @@ function renderKanban() {
         <div style="font-size:.78rem;font-weight:700;color:${col.color};text-transform:uppercase;letter-spacing:.06em">${col.label}</div>
         <span style="background:${col.color}22;color:${col.color};font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:10px">${colTasks.length}</span>
       </div>
-      ${colTasks.map(t => `
+      ${colTasks.map(t => {
+        const prioLevel = {low:1,medium:2,high:3}[t.priority||'medium'] || 2;
+        const prioColor = {low:'#16a34a',medium:'#d97706',high:'#dc2626'}[t.priority||'medium'] || '#d97706';
+        return `
         <div style="background:white;border-radius:10px;padding:11px 13px;margin-bottom:8px;border:1px solid ${col.color}33;box-shadow:0 1px 4px rgba(0,0,0,.06);cursor:pointer" onclick="openTaskDrawer('${t.id}')">
           <div style="font-weight:600;font-size:.83rem;color:var(--ink);margin-bottom:5px">${t.title}</div>
           ${t.notes||t.description?`<div style="font-size:.74rem;color:var(--muted);margin-bottom:6px">${t.notes||t.description}</div>`:''}
+          <div style="display:flex;border-radius:6px;overflow:hidden;height:5px;margin-bottom:7px">
+            ${[1,2,3].map(i=>`<div style="flex:1;background:${i<=prioLevel?prioColor:'var(--border)'};${i<3?'border-right:1px solid #fff':''}"></div>`).join('')}
+          </div>
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:8px">
             <span style="font-size:.68rem;color:var(--muted)">📍 ${propName(t.property_id||'all')}</span>
             <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:3px">
               ${(t.assigned||'').split(',').filter(s=>s.trim()&&s.trim()!=='Unassigned').map(a=>{const c=assigneeColor(a.trim());const s=a.trim()==='Nina Williams'?'Nina':a.trim();return `<span style="background:${c.bg};color:${c.text};font-size:.62rem;font-weight:600;padding:1px 7px;border-radius:10px">${s}</span>`;}).join('') || '<span style="font-size:.62rem;color:var(--muted)">Unassigned</span>'}
             </div>
-            <div style="display:flex;gap:4px;align-items:center">
-              <span style="font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;background:${t.priority==='high'?'#fee2e2':t.priority==='medium'?'#fef3c7':'#dcfce7'};color:${t.priority==='high'?'#dc2626':t.priority==='medium'?'#d97706':'#16a34a'}">${t.priority||'medium'}</span>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span style="font-size:.66rem;font-weight:700;color:${prioColor}">${t.priority||'medium'}</span>
               ${t.due?`<span style="font-size:.68rem;color:var(--muted)">📅 ${fmtDate(t.due||t.task_date)}</span>`:''}
             </div>
           </div>
@@ -6828,7 +6877,8 @@ function renderKanban() {
             <button onclick="deleteTask('${t.id}')"
               style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:3px 7px;font-size:.67rem;cursor:pointer;margin-left:auto">✕</button>
           </div>
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
       <!-- Add card button -->
       <button onclick="openTaskModalForKanban('${col.id}')"
         style="width:100%;background:transparent;border:1.5px dashed ${col.color}66;border-radius:10px;padding:8px;font-size:.78rem;color:${col.color};cursor:pointer;margin-top:4px;font-weight:600">
