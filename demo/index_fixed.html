@@ -953,7 +953,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
               <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(12,this)">12 months</button>
               <button class="btn btn-sm btn-ghost" onclick="setReportTimeframe(0,this)">All time</button>
             </div>
-            <div class="pipe-toggle active" id="pipe-toggle" onclick="togglePipelineStat(this)"><span class="pipe-switch"></span>Include pipeline</div>
+            <div class="pipe-toggle active" id="pipe-toggle" onclick="toggleIncludePipeline(this)" title="Controls pipeline &amp; forecast across every chart, stat and insight on this page"><span class="pipe-switch"></span>Include pipeline</div>
           </div>
         </div>
         <!-- Stat cards -->
@@ -962,7 +962,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div class="card mb-6">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
             <div class="card-title" style="margin:0">📊 Monthly Revenue by Platform</div>
-            <button id="forecast-toggle-btn" onclick="toggleForecast()" style="padding:5px 12px;font-size:.75rem;font-weight:600;border:1.5px solid var(--border);border-radius:20px;background:var(--sand);cursor:pointer;color:var(--muted)">✦ Hide forecast</button>>
             <div style="display:flex;gap:14px;flex-wrap:wrap" id="report-legend"></div>
           </div>
           <div style="overflow-x:auto">
@@ -7682,7 +7681,8 @@ async function renderReports(monthsBack) {
   }
 
 const spAll  = allBookings.filter(b => b.property_id==='speranta' && b.status!=='cancelled');
-  const spPaid = spAll.filter(b => (b.revenue||0) > 0 && (!cutoff || b.check_in >= cutoff));
+  const spPaidAll = spAll.filter(b => (b.revenue||0) > 0 && (!cutoff || b.check_in >= cutoff));
+  const spPaid = _includePipeline ? spPaidAll : spPaidAll.filter(b => b.check_in <= today);
 const platOrder = ['airbnb','booking','lekkeslaap','manual'];
 
   // ── Aggregates ──
@@ -7708,7 +7708,7 @@ const platOrder = ['airbnb','booking','lekkeslaap','manual'];
     sCard('Speranta Revenue', fmt(totalRev), spPaid.length+' paid bookings · '+totalNights+' nights', 'var(--green2)') +
     sCard('Avg Per Night', fmt(avgNight), 'all platforms combined', 'var(--accent)') +
     sCard('Best Platform', fmt(airbnbAvg)+'/night', 'Airbnb · R'+(airbnbAvg-lsAvg)+' more than LekkeSlaap', '#E14666') +
-    `<div id="report-stat-pipeline" style="${_showPipeline?'':'display:none'}">${sCard('Pipeline', upcoming.length+' bookings', upcomingNights+' upcoming nights', 'var(--blue)')}</div>`;
+    (_includePipeline ? sCard('Pipeline', upcoming.length+' bookings', upcomingNights+' upcoming nights', 'var(--blue)') : '');
 
   // ── MONTHLY DATA ──
   const monthlyData = {};
@@ -8193,37 +8193,11 @@ async function generateOwnerStatementPDF() {
   }
 }
 
-let _showPipeline = true;
-function togglePipelineStat(el) {
-  _showPipeline = !_showPipeline;
-  el.classList.toggle('active', _showPipeline);
-  const card = document.getElementById('report-stat-pipeline');
-  if (card) card.style.display = _showPipeline ? '' : 'none';
-}
-
-let _showForecast = true;
-function toggleForecast() {
-  _showForecast = !_showForecast;
-  const btn = document.getElementById('forecast-toggle-btn');
-  if (btn) btn.textContent = _showForecast ? '✦ Hide forecast' : '✦ Show forecast';
-  const labels = document.querySelectorAll('#report-month-labels div');
-  const bars = document.querySelectorAll('#report-monthly-chart > div');
-  const todayMo = todaySAST().slice(0,7);
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  bars.forEach((bar, i) => {
-    const label = labels[i];
-    if (!label) return;
-    const txt = label.textContent.replace(' ✦','').trim();
-    const parts = txt.split("'");
-    if (parts.length < 2) return;
-    const moIdx = months.indexOf(parts[0]);
-    const yr = '20' + parts[1];
-    const moStr = yr + '-' + String(moIdx+1).padStart(2,'0');
-    if (moStr > todayMo) {
-      bar.style.display = _showForecast ? '' : 'none';
-      label.style.display = _showForecast ? '' : 'none';
-    }
-  });
+let _includePipeline = true;
+function toggleIncludePipeline(el) {
+  _includePipeline = !_includePipeline;
+  el.classList.toggle('active', _includePipeline);
+  renderReports(window._reportMonths);
 }
 
 function setReportTimeframe(months, btn) {
