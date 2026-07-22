@@ -2755,7 +2755,7 @@ function renderTab(id) {
   else if (id==='bookings')  renderBookings();
   else if (id==='calendar')  { renderCalendar(); if(showCleaningOverlay) renderDomesticEarnings(); }
   else if (id==='domestic')  switchTab('calendar'); // redirect — domestic merged into calendar
-  else if (id==='tasks')     renderTasks();
+  else if (id==='tasks')     setTaskSubTab(window._taskSubTab || 'guest');
   else if (id==='messages')  renderMessages();
   else if (id==='knowledge') { renderKnowledgeManual(); }
   else if (id==='kb')        { renderKB(); }
@@ -6547,6 +6547,8 @@ function setTaskSubTab(tab) {
       <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:2px">Priority</span>
       ${prioBtns}
     </div>`;
+  } else if (tab === 'guest') {
+    filtersEl.innerHTML = `<div class="pipe-toggle${guestMgmtShowCompleted?' active':''}" id="guest-completed-toggle" onclick="toggleGuestCompleted(this)"><span class="pipe-switch"></span>Show completed past guests</div>`;
   } else {
     filtersEl.innerHTML = '';
   }
@@ -6558,6 +6560,13 @@ function setTaskSubTab(tab) {
 }
 
 // ── GUEST MANAGEMENT ──────────────────────────────────────────
+let guestMgmtShowCompleted = false;
+function toggleGuestCompleted(el) {
+  guestMgmtShowCompleted = !guestMgmtShowCompleted;
+  el.classList.toggle('active', guestMgmtShowCompleted);
+  renderGuestManagement();
+}
+
 function renderGuestManagement() {
   const today = todaySAST();
   const gridEl = document.getElementById('guest-booking-grid');
@@ -6570,41 +6579,41 @@ function renderGuestManagement() {
     const daysUntil  = Math.ceil((new Date(b.check_in)-new Date())/86400000);
     const daysSinceOut = Math.round((new Date()-new Date(b.check_out))/86400000);
     return propMatch && daysUntil <= 14 && daysSinceOut <= 7;
-  }).sort((a,b) => a.check_in.localeCompare(b.check_in));
+  }).map(b => {
+    const bid = String(b.id);
+    if (!ninaBTaskProgress[bid]) ninaBTaskProgress[bid] = {};
+    const prog = ninaBTaskProgress[bid];
+    const isPast = b.check_out<today;
+    const cleanOk = domestics.some(d =>
+      d.property_id===b.property_id && d.status!=='cancelled' &&
+      Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10))) <= 2*86400000
+    );
+    const tasks = [
+      {key:'checkin_msg',   icon:'💬', label:'Check-in message sent'},
+      {key:'checked_in',    icon:'🛬', label:'Guests checked in'},
+      {key:'checked_out',   icon:'🛫', label:'Checkout completed'},
+      {key:'followup_msg',  icon:'📩', label:'Follow-up msg sent'},
+      {key:'book_domestic', icon:'🧹', label:'Cleaning booked', done: cleanOk},
+    ];
+    const doneCount = tasks.filter(t => t.done !== undefined ? t.done : prog[t.key]).length;
+    return {b, bid, prog, isPast, tasks, doneCount, totalCount: tasks.length};
+  }).filter(x => guestMgmtShowCompleted || !(x.isPast && x.doneCount === x.totalCount))
+    .sort((x,y) => x.b.check_in.localeCompare(y.b.check_in));
 
   if (!relevant.length) {
     gridEl.innerHTML = `<div style="text-align:center;padding:48px;color:var(--muted)">
       <div style="font-size:2.5rem;margin-bottom:12px">🏠</div>
-      <div style="font-size:.9rem">No bookings in the active window (next 14 days / last 7 days)</div>
+      <div style="font-size:.9rem">${guestMgmtShowCompleted ? 'No bookings in the active window (next 14 days / last 7 days)' : 'No guests need attention right now — try "Show completed past guests" to see finished ones'}</div>
     </div>`;
     return;
   }
 
   gridEl.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px">
-    ${relevant.map(b => {
-      const bid = String(b.id);
-      if (!ninaBTaskProgress[bid]) ninaBTaskProgress[bid] = {};
-      const prog = ninaBTaskProgress[bid];
+    ${relevant.map(({b, bid, prog, isPast, tasks, doneCount, totalCount}) => {
       const nights = Math.round((new Date(b.check_out)-new Date(b.check_in))/86400000);
       const isNow  = b.check_in<=today && b.check_out>=today;
-      const isPast = b.check_out<today;
       const daysUntil = Math.ceil((new Date(b.check_in)-new Date())/86400000);
       const col = PLAT_COLORS[b.platform]||'#A8702E';
-      const cleanOk = domestics.some(d =>
-        d.property_id===b.property_id && d.status!=='cancelled' &&
-        Math.abs(new Date(d.date)-new Date(b.check_out?.slice(0,10))) <= 2*86400000
-      );
-
-      const tasks = [
-        {key:'checkin_msg',   icon:'💬', label:'Check-in message sent'},
-        {key:'checked_in',    icon:'🛬', label:'Guests checked in'},
-        {key:'checked_out',   icon:'🛫', label:'Checkout completed'},
-        {key:'followup_msg',  icon:'📩', label:'Follow-up msg sent'},
-        {key:'book_domestic', icon:'🧹', label:'Cleaning booked', done: cleanOk},
-      ];
-
-      const doneCount = tasks.filter(t => t.done !== undefined ? t.done : prog[t.key]).length;
-      const totalCount = tasks.length;
 
       // Progress bar colour
       const pct = Math.round(doneCount/totalCount*100);
