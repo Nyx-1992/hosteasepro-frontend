@@ -1718,7 +1718,7 @@ let UUID_MAP = {
 };
 let PROPS = {
   speranta: {name:'Speranta Flat', short:'Speranta', address:'35 Athens Road, Blouberg',    uuid:'e9737638-d83a-4947-940a-8746789e4d9f', cleaningFee:400},
-  tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5', cleaningFee:550},
+  tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5', cleaningFee:450},
 };
 
 async function loadProperties() {
@@ -3551,7 +3551,14 @@ function invSeasonForDate(dateStr, propKey) {
 }
 
 function invPropCleaningFee() {
-  return invPropKey() === 'tvhouse' ? 550 : 400;
+  // Reads from PROPS (loadProperties()'s live DB values when available,
+  // hardcoded defaults otherwise) instead of a second, separate hardcoded
+  // number — this duplicated PROPS.tvhouse.cleaningFee with a stale value
+  // (550) that never picked up either the real default or any live
+  // override.
+  const key = invPropKey();
+  const fee = PROPS[key] && PROPS[key].cleaningFee;
+  return fee || (key === 'tvhouse' ? 450 : 400);
 }
 
 function invUpdateAutoLines() {
