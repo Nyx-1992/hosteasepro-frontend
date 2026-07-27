@@ -1271,9 +1271,9 @@ function _buildMobileNavStub(){/* replaced by main script */}
                 <div><label class="form-label">Promotion / Discount %</label><input type="number" class="form-input" id="inv-discount-pct" placeholder="0" min="0" max="100" oninput="invRender()"></div>
                 <div>
                   <label class="form-label" style="display:flex;align-items:center;gap:6px;font-weight:400">
-                    <input type="checkbox" id="inv-deposit-enabled" style="width:auto" onchange="invToggleDeposit()"> Require a deposit
+                    <input type="checkbox" id="inv-deposit-enabled" style="width:auto" onchange="invToggleDeposit()"> Refundable deposit / breakage fee
                   </label>
-                  <input type="number" class="form-input" id="inv-deposit-pct" placeholder="Deposit %" value="50" min="1" max="99" style="margin-top:6px;display:none" oninput="invRender()">
+                  <input type="number" class="form-input" id="inv-deposit-amt" placeholder="R amount, e.g. 1500" min="0" style="margin-top:6px;display:none" oninput="invRender()">
                 </div>
               </div>
 
@@ -3886,8 +3886,8 @@ function invAddLine() { invLines.push({desc:'',amount:0}); invRenderLines(); inv
 
 function invToggleDeposit() {
   const on  = document.getElementById('inv-deposit-enabled').checked;
-  const pct = document.getElementById('inv-deposit-pct');
-  if (pct) pct.style.display = on ? 'block' : 'none';
+  const amt = document.getElementById('inv-deposit-amt');
+  if (amt) amt.style.display = on ? 'block' : 'none';
   invRender();
 }
 
@@ -3912,9 +3912,8 @@ function invRender() {
   const discountAmt = subtotal * discountPct/100;
   const total       = subtotal - discountAmt;
   const depositOn   = !!document.getElementById('inv-deposit-enabled')?.checked;
-  const depositPct  = Math.max(1, Math.min(99, parseFloat(invV('inv-deposit-pct'))||50));
-  const depositAmt  = total * depositPct/100;
-  const balanceAmt  = total - depositAmt;
+  const depositAmt  = Math.max(0, parseFloat(invV('inv-deposit-amt'))||0);
+  const payBeforeCheckin = total + (depositOn ? depositAmt : 0);
   const bk         = INV_COMPANY.bank;
   preview.innerHTML =
     '<div style="background:#F5EFE6;padding:22px 28px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #B8962E">'+
@@ -3972,11 +3971,18 @@ function invRender() {
           '<span style="font-size:14px;font-weight:700;color:#B8962E">'+invFmt(total)+'</span>'+
         '</div>'+
       '</div>'+
+      '<div style="text-align:right;padding:6px 28px 0;font-size:10.5px;color:#8b5e2a;font-style:italic">Payable in full before check-in</div>'+
       (depositOn ?
-        '<div style="display:flex;justify-content:flex-end;padding:10px 28px 14px">'+
+        '<div style="display:flex;justify-content:flex-end;padding:10px 28px 0">'+
           '<div style="text-align:right;font-size:11px;color:#333;line-height:1.7">'+
-            '<div><strong style="color:#1A2340">Deposit due now ('+depositPct+'%):</strong> '+invFmt(depositAmt)+'</div>'+
-            '<div><strong style="color:#1A2340">Balance due before arrival:</strong> '+invFmt(balanceAmt)+'</div>'+
+            '<div><strong style="color:#1A2340">Refundable deposit / breakage fee:</strong> '+invFmt(depositAmt)+'</div>'+
+            '<div style="font-size:10px;color:#777">Also due before check-in — refunded after checkout, subject to a damage/breakage inspection.</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:flex-end;padding:10px 28px 14px">'+
+          '<div style="background:#F5EFE6;border:1px solid #B8962E;border-radius:4px;padding:6px 14px;text-align:right">'+
+            '<span style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.03em">TOTAL PAYABLE BEFORE CHECK-IN: </span>'+
+            '<span style="font-size:12px;font-weight:700;color:#1A2340">'+invFmt(payBeforeCheckin)+'</span>'+
           '</div>'+
         '</div>'
       : '<div style="padding-bottom:14px"></div>')+
