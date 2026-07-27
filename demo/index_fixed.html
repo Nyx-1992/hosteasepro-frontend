@@ -3827,7 +3827,8 @@ async function invLoadBookings() {
     // ever invoice.
     const realBookings = data.filter(b => b.status!=='blocked' && !isCaretaker(b) && !isOwnerStay(b));
     sel.innerHTML = '<option value="">— select to auto-fill —</option>' + realBookings.map(b => {
-      const propInfo = PROPS[UUID_MAP[b.property_id] || b.property_id];
+      const propKey  = UUID_MAP[b.property_id] || b.property_id || 'speranta';
+      const propInfo = PROPS[propKey];
       const prop = propInfo ? (propInfo.name + (propInfo.address ? ' — '+propInfo.address : '')) : (b.property_id || '—');
       const nights = b.nights||1;
       const rev    = parseFloat(b.revenue)||0;
@@ -3835,6 +3836,7 @@ async function invLoadBookings() {
     return '<option value="'+b.id+'"'+
         ' data-name="'+(b.guest_name||'').replace(/"/g,'')+'"'+
         ' data-prop="'+prop+'"'+
+        ' data-propkey="'+propKey+'"'+
         ' data-dates="'+invFmtDate(b.check_in)+' – '+invFmtDate(b.check_out)+' ('+nights+' nights)"'+
         ' data-ci="'+(b.check_in||'').slice(0,10)+'"'+
         ' data-co="'+(b.check_out||'').slice(0,10)+'"'+
@@ -3858,13 +3860,24 @@ function invPullBooking() {
   document.getElementById('inv-checkout').value= opt.dataset.co||'';
   invSyncDisplayFromHidden();
   const propEl = document.getElementById('inv-prop');
-  for(let i=0;i<propEl.options.length;i++){ if(propEl.options[i].text===opt.dataset.prop){propEl.selectedIndex=i;break;} }
+  // Match by property KEY (tvhouse/speranta), not the option's full display
+  // text — TV House's data-prop includes its address ("TV House — 110
+  // Athens Road, Tableview") but the <option> itself just reads "TV House",
+  // so an exact-text match silently failed and always left the dropdown on
+  // Speranta (index 0). Uses the same loose text.includes('TV House') rule
+  // invPropKey() reads back later, so both directions stay consistent.
+  const wantKey = opt.dataset.propkey || 'speranta';
+  for(let i=0;i<propEl.options.length;i++){
+    const optKey = propEl.options[i].text.includes('TV House') ? 'tvhouse' : 'speranta';
+    if (optKey===wantKey) { propEl.selectedIndex=i; break; }
+  }
   const platEl = document.getElementById('inv-platform');
   const plat = opt.dataset.platform||'Direct Booking';
   for(let i=0;i<platEl.options.length;i++){ if(platEl.options[i].text===plat){platEl.selectedIndex=i;break;} }
   const nights = parseInt(opt.dataset.nights)||1;
   const rate   = parseInt(opt.dataset.rate)||1000;
   invLines[0] = {desc:'Accommodation — '+nights+' night'+(nights>1?'s':'')+' @ R'+rate.toLocaleString()+'/night', amount:nights*rate};
+  invLines[1] = {desc:'Cleaning fee', amount: invPropCleaningFee()};
   invRefManual = false;
   invRenderLines();
   invRender();
