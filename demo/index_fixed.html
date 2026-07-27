@@ -1267,6 +1267,16 @@ function _buildMobileNavStub(){/* replaced by main script */}
                 <button onclick="invAddLine()" style="font-size:.78rem;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--muted);margin-top:4px">+ Add line item</button>
               </div>
 
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;margin-top:12px">
+                <div><label class="form-label">Promotion / Discount %</label><input type="number" class="form-input" id="inv-discount-pct" placeholder="0" min="0" max="100" oninput="invRender()"></div>
+                <div>
+                  <label class="form-label" style="display:flex;align-items:center;gap:6px;font-weight:400">
+                    <input type="checkbox" id="inv-deposit-enabled" style="width:auto" onchange="invToggleDeposit()"> Refundable deposit / breakage fee
+                  </label>
+                  <input type="number" class="form-input" id="inv-deposit-amt" placeholder="R amount, e.g. 1500" min="0" style="margin-top:6px;display:none" oninput="invRender()">
+                </div>
+              </div>
+
               <div style="margin-bottom:16px;margin-top:12px">
                 <label class="form-label">Notes <span style="font-size:.7rem;color:var(--muted);font-weight:400">(one per line)</span></label>
                 <textarea class="form-input" id="inv-notes" rows="3" style="resize:vertical" oninput="invRender()"></textarea>
@@ -1708,7 +1718,7 @@ let UUID_MAP = {
 };
 let PROPS = {
   speranta: {name:'Speranta Flat', short:'Speranta', address:'35 Athens Road, Blouberg',    uuid:'e9737638-d83a-4947-940a-8746789e4d9f', cleaningFee:400},
-  tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5', cleaningFee:550},
+  tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5', cleaningFee:450},
 };
 
 async function loadProperties() {
@@ -3541,7 +3551,14 @@ function invSeasonForDate(dateStr, propKey) {
 }
 
 function invPropCleaningFee() {
-  return invPropKey() === 'tvhouse' ? 550 : 400;
+  // Reads from PROPS (loadProperties()'s live DB values when available,
+  // hardcoded defaults otherwise) instead of a second, separate hardcoded
+  // number — this duplicated PROPS.tvhouse.cleaningFee with a stale value
+  // (550) that never picked up either the real default or any live
+  // override.
+  const key = invPropKey();
+  const fee = PROPS[key] && PROPS[key].cleaningFee;
+  return fee || (key === 'tvhouse' ? 450 : 400);
 }
 
 function invUpdateAutoLines() {
@@ -3802,14 +3819,23 @@ async function invLoadBookings() {
   try {
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-90);
     const {data} = await db.from('bookings')
-      .select('id,guest_name,property_id,check_in,check_out,nights,revenue,platform,status')
+      .select('id,guest_name,property_id,check_in,check_out,nights,revenue,platform,status,notes,created_at')
       .gte('check_in', cutoff.toISOString().split('T')[0])
       .not('status','eq','cancelled')
-      .order('check_in',{ascending:false})
+      .not('status','eq','blocked')
+      .order('created_at',{ascending:false})
       .limit(60);
     if(!data) return;
-    sel.innerHTML = '<option value="">— select to auto-fill —</option>' + data.map(b => {
-      const propInfo = PROPS[UUID_MAP[b.property_id] || b.property_id];
+    // Blocked-date placeholders are excluded by the query above too, but
+    // re-checked here client-side (same defense-in-depth every other
+    // real-guest-only list in this app uses, e.g. renderDashboard) in case
+    // a synced status ever slips through. The caretaker's own booking and
+    // owner stays are real 'confirmed' rows that still aren't guests you'd
+    // ever invoice.
+    const realBookings = data.filter(b => b.status!=='blocked' && !isCaretaker(b) && !isOwnerStay(b));
+    sel.innerHTML = '<option value="">— select to auto-fill —</option>' + realBookings.map(b => {
+      const propKey  = UUID_MAP[b.property_id] || b.property_id || 'speranta';
+      const propInfo = PROPS[propKey];
       const prop = propInfo ? (propInfo.name + (propInfo.address ? ' — '+propInfo.address : '')) : (b.property_id || '—');
       const nights = b.nights||1;
       const rev    = parseFloat(b.revenue)||0;
@@ -3817,6 +3843,7 @@ async function invLoadBookings() {
     return '<option value="'+b.id+'"'+
         ' data-name="'+(b.guest_name||'').replace(/"/g,'')+'"'+
         ' data-prop="'+prop+'"'+
+        ' data-propkey="'+propKey+'"'+
         ' data-dates="'+invFmtDate(b.check_in)+' – '+invFmtDate(b.check_out)+' ('+nights+' nights)"'+
         ' data-ci="'+(b.check_in||'').slice(0,10)+'"'+
         ' data-co="'+(b.check_out||'').slice(0,10)+'"'+
@@ -3840,13 +3867,24 @@ function invPullBooking() {
   document.getElementById('inv-checkout').value= opt.dataset.co||'';
   invSyncDisplayFromHidden();
   const propEl = document.getElementById('inv-prop');
-  for(let i=0;i<propEl.options.length;i++){ if(propEl.options[i].text===opt.dataset.prop){propEl.selectedIndex=i;break;} }
+  // Match by property KEY (tvhouse/speranta), not the option's full display
+  // text — TV House's data-prop includes its address ("TV House — 110
+  // Athens Road, Tableview") but the <option> itself just reads "TV House",
+  // so an exact-text match silently failed and always left the dropdown on
+  // Speranta (index 0). Uses the same loose text.includes('TV House') rule
+  // invPropKey() reads back later, so both directions stay consistent.
+  const wantKey = opt.dataset.propkey || 'speranta';
+  for(let i=0;i<propEl.options.length;i++){
+    const optKey = propEl.options[i].text.includes('TV House') ? 'tvhouse' : 'speranta';
+    if (optKey===wantKey) { propEl.selectedIndex=i; break; }
+  }
   const platEl = document.getElementById('inv-platform');
   const plat = opt.dataset.platform||'Direct Booking';
   for(let i=0;i<platEl.options.length;i++){ if(platEl.options[i].text===plat){platEl.selectedIndex=i;break;} }
   const nights = parseInt(opt.dataset.nights)||1;
   const rate   = parseInt(opt.dataset.rate)||1000;
   invLines[0] = {desc:'Accommodation — '+nights+' night'+(nights>1?'s':'')+' @ R'+rate.toLocaleString()+'/night', amount:nights*rate};
+  invLines[1] = {desc:'Cleaning fee', amount: invPropCleaningFee()};
   invRefManual = false;
   invRenderLines();
   invRender();
@@ -3866,6 +3904,13 @@ function invRenderLines() {
 
 function invAddLine() { invLines.push({desc:'',amount:0}); invRenderLines(); invRender(); }
 
+function invToggleDeposit() {
+  const on  = document.getElementById('inv-deposit-enabled').checked;
+  const amt = document.getElementById('inv-deposit-amt');
+  if (amt) amt.style.display = on ? 'block' : 'none';
+  invRender();
+}
+
 function invRender() {
   const preview = document.getElementById('inv-preview');
   if(!preview) return;
@@ -3881,8 +3926,14 @@ function invRender() {
   const prop       = invV('inv-prop');
   const dates      = invV('inv-dates');
   const platform   = invV('inv-platform');
-  const notes      = (invV('inv-notes')||'').split('\n').filter(n=>n.trim());
-  const total      = invLines.reduce((s,l)=>s+Number(l.amount),0);
+  const notes       = (invV('inv-notes')||'').split('\n').filter(n=>n.trim());
+  const subtotal    = invLines.reduce((s,l)=>s+Number(l.amount),0);
+  const discountPct = Math.max(0, Math.min(100, parseFloat(invV('inv-discount-pct'))||0));
+  const discountAmt = subtotal * discountPct/100;
+  const total       = subtotal - discountAmt;
+  const depositOn   = !!document.getElementById('inv-deposit-enabled')?.checked;
+  const depositAmt  = Math.max(0, parseFloat(invV('inv-deposit-amt'))||0);
+  const payBeforeCheckin = total + (depositOn ? depositAmt : 0);
   const bk         = INV_COMPANY.bank;
   preview.innerHTML =
     '<div style="background:#F5EFE6;padding:22px 28px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #B8962E">'+
@@ -3928,12 +3979,33 @@ function invRender() {
       invLines.map(function(l){
         return '<div style="display:flex;justify-content:space-between;padding:9px 28px;border-bottom:1px solid #f0f0f0"><span style="font-size:12px;color:#222">'+(l.desc||'—')+'</span><span style="font-size:12px;color:#222;font-weight:500">'+invFmt(l.amount)+'</span></div>';
       }).join('')+
-      '<div style="display:flex;justify-content:flex-end;padding:14px 28px">'+
+      '<div style="padding:12px 28px 0">'+
+        (discountAmt>0 ?
+          '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11.5px;color:#555"><span>Subtotal</span><span>'+invFmt(subtotal)+'</span></div>'+
+          '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11.5px;color:#B8962E"><span>Promotion / Discount ('+discountPct+'%)</span><span>−'+invFmt(discountAmt)+'</span></div>'
+        : '')+
+      '</div>'+
+      '<div style="display:flex;justify-content:flex-end;padding:14px 28px 0">'+
         '<div style="background:#1A2340;color:#F5EFE6;padding:8px 18px;border-radius:4px;display:flex;gap:20px;align-items:center">'+
           '<span style="font-size:11px;font-weight:700;letter-spacing:.04em">TOTAL AMOUNT</span>'+
           '<span style="font-size:14px;font-weight:700;color:#B8962E">'+invFmt(total)+'</span>'+
         '</div>'+
       '</div>'+
+      '<div style="text-align:right;padding:6px 28px 0;font-size:10.5px;color:#8b5e2a;font-style:italic">Payable in full before check-in</div>'+
+      (depositOn ?
+        '<div style="display:flex;justify-content:flex-end;padding:10px 28px 0">'+
+          '<div style="text-align:right;font-size:11px;color:#333;line-height:1.7">'+
+            '<div><strong style="color:#1A2340">Refundable deposit / breakage fee:</strong> '+invFmt(depositAmt)+'</div>'+
+            '<div style="font-size:10px;color:#777">Also due before check-in — refunded after checkout, subject to a damage/breakage inspection.</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:flex-end;padding:10px 28px 14px">'+
+          '<div style="background:#F5EFE6;border:1px solid #B8962E;border-radius:4px;padding:6px 14px;text-align:right">'+
+            '<span style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.03em">TOTAL PAYABLE BEFORE CHECK-IN: </span>'+
+            '<span style="font-size:12px;font-weight:700;color:#1A2340">'+invFmt(payBeforeCheckin)+'</span>'+
+          '</div>'+
+        '</div>'
+      : '<div style="padding-bottom:14px"></div>')+
     '</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;padding:16px 28px;gap:10px;border-top:1px solid #E8E4DE;border-bottom:1px solid #E8E4DE">'+
       [['Account name',bk.name],['Acc type',bk.type],['Payment due',dateValid||'On confirmation'],['Bank',bk.bank],['Branch code',bk.branch],['Proof of pmt',bk.ref_email],['Acc number',bk.acc],['Reference',ref]].map(function(kv){
@@ -4088,8 +4160,10 @@ async function generateInvoicePDF() {
       lineItems:  invLines.map(l => ({desc: l.desc, amount: Number(l.amount)})),
       notes:      (invV('inv-notes')||'').split('\n').filter(n=>n.trim()),
     };
-    const invTotal = invLines.reduce((s,l)=>s+Number(l.amount),0);
-    saveInvoiceRecord(payload, invTotal);
+    const invSubtotal   = invLines.reduce((s,l)=>s+Number(l.amount),0);
+    const invDiscountPct= Math.max(0, Math.min(100, parseFloat(invV('inv-discount-pct'))||0));
+    const invTotal = invSubtotal - (invSubtotal * invDiscountPct/100);
+    await saveInvoiceRecord(payload, invTotal);
 
     const original = document.getElementById('inv-preview');
     const guest = (invV('inv-guest')||'Guest').split(' ').pop().toUpperCase();
@@ -4131,6 +4205,12 @@ async function generateInvoicePDF() {
     pdf.save(filename);
 
     toast('PDF downloaded ✓','success');
+    // Advance the number for the NEXT document now that this one is saved —
+    // otherwise the field just sits on the same number (or the user has to
+    // toggle Quotation/Invoice to force a refresh) and the next save would
+    // silently overwrite this record (saveInvoiceRecord upserts on number).
+    invNumberManual = false;
+    await invRefreshNumber();
   } catch(err) {
     console.warn('PDF generation failed:', err);
     toast('PDF generation failed — check console','error');
@@ -4157,6 +4237,7 @@ function renderInvoicesTab() {
   invRender();
   invLoadBookings();
   loadInvHistory();
+  invRefreshNumber();
 }
 
 
