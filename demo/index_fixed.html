@@ -4137,7 +4137,7 @@ async function generateInvoicePDF() {
     const invSubtotal   = invLines.reduce((s,l)=>s+Number(l.amount),0);
     const invDiscountPct= Math.max(0, Math.min(100, parseFloat(invV('inv-discount-pct'))||0));
     const invTotal = invSubtotal - (invSubtotal * invDiscountPct/100);
-    saveInvoiceRecord(payload, invTotal);
+    await saveInvoiceRecord(payload, invTotal);
 
     const original = document.getElementById('inv-preview');
     const guest = (invV('inv-guest')||'Guest').split(' ').pop().toUpperCase();
@@ -4179,6 +4179,12 @@ async function generateInvoicePDF() {
     pdf.save(filename);
 
     toast('PDF downloaded ✓','success');
+    // Advance the number for the NEXT document now that this one is saved —
+    // otherwise the field just sits on the same number (or the user has to
+    // toggle Quotation/Invoice to force a refresh) and the next save would
+    // silently overwrite this record (saveInvoiceRecord upserts on number).
+    invNumberManual = false;
+    await invRefreshNumber();
   } catch(err) {
     console.warn('PDF generation failed:', err);
     toast('PDF generation failed — check console','error');
@@ -4205,6 +4211,7 @@ function renderInvoicesTab() {
   invRender();
   invLoadBookings();
   loadInvHistory();
+  invRefreshNumber();
 }
 
 
