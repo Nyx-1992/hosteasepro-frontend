@@ -4313,7 +4313,8 @@ const ROADMAP = [
   {k:'p1-3',t:'Self-serve staff invitations (coordinator / cleaner)',n:'Invite link + Supabase Auth self-registration',c:'Architecture'},
   {k:'p1-4',t:'Per-org commission rates from org_settings',n:'DONE via a different mechanism — platform_fee_config table (Task 5\'s rate calculator), not org_settings itself, but functionally the same ask: per-org, per-platform commission rates, editable in the UI instead of hardcoded in JS',c:'Architecture'},
   {k:'p1-5',t:'Migrate S&N as first tenant — zero regression',n:'All existing data preserved and re-scoped',c:'Architecture'},
-  {k:'p1-6',t:'Confirm VAT status with accountant',n:'DONE — not VAT registered, not planning to register',c:'Legal'}]},
+  {k:'p1-6',t:'Confirm VAT status with accountant',n:'DONE — not VAT registered, not planning to register',c:'Legal'},
+  {k:'p1-7',t:'Face ID / Touch ID quick login (WebAuthn passkeys)',n:'Not started — scoped, not yet built. Each admin (Nicole, Silja) would register their own device once (still needs an initial email/password setup, this is an additional unlock method, not a replacement for the account itself); future logins on that device use Face ID/Touch ID instead of typing a password. Registration is per-device — Silja registering her phone doesn\'t cover Nicole\'s. Safari on iOS supports this well (the same underlying tech real "sign in with Face ID" buttons on other sites use). Touches auth/security, so scoping it here rather than building it unprompted',c:'Security'}]},
  {id:'p2',lbl:'Phase 2 — Design partner',meta:'Weeks 16–28',col:'#1D9E75',tasks:[
   {k:'p2-1',t:'Recruit 1–2 Cape Town design partners',n:'Free access for structured feedback, 1+ month active use',c:'GTM'},
   {k:'p2-2',t:'Stripe subscription billing — one tier',n:'First mechanism to actually charge a customer',c:'Business'},
