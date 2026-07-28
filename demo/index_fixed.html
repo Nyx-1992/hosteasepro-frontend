@@ -3504,11 +3504,12 @@ async function invGenerateNextNumber(type) {
   let next = 1;
   if (db) {
     try {
-      const {data} = await db.from('invoices')
+      const {data, error} = await db.from('invoices')
         .select('number')
         .ilike('number', prefix+'%')
         .order('number', {ascending:false})
         .limit(1);
+      if (error) console.warn('invGenerateNextNumber query failed (falls back to 001):', error.message);
       if (data && data.length) {
         const lastNum = parseInt(data[0].number.slice(prefix.length), 10);
         if (!isNaN(lastNum)) next = lastNum + 1;
@@ -4116,7 +4117,13 @@ async function loadInvHistory() {
 async function saveInvoiceRecord(payload, total){
   try {
     const num = payload.number || 'SNQ-0000';
-    await db.from('invoices').upsert({
+    // Supabase-js resolves with {data,error} and does NOT throw on
+    // database-level failures (RLS denial, missing unique constraint for
+    // onConflict, etc.) — only on network errors. Previously this result
+    // was never checked, so a failed save (and therefore an invoice number
+    // that never actually advances, since invGenerateNextNumber() has
+    // nothing new to count) failed completely silently.
+    const { error } = await db.from('invoices').upsert({
       org_id:      getOrgId(),
       doc_type:    payload.docType,
       number:      num,
@@ -4134,8 +4141,13 @@ async function saveInvoiceRecord(payload, total){
       date_valid:  invV('inv-valid') || null,
       created_by:  (window.currentUser && currentUser.name) || 'unknown'
     }, {onConflict:'number'});
+    if (error) {
+      console.warn('saveInvoiceRecord failed:', error.message);
+      toast('Document generated, but saving its record failed: '+error.message,'error');
+      return;
+    }
     loadInvHistory();
-  } catch(e){ console.warn('saveInvoiceRecord failed (table may not exist yet):', e.message); }
+  } catch(e){ console.warn('saveInvoiceRecord failed (table may not exist yet):', e.message); toast('Document generated, but saving its record failed: '+e.message,'error'); }
 }
 
 async function generateInvoicePDF() {
