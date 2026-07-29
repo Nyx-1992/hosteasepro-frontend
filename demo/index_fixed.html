@@ -1172,6 +1172,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
             </div>
             <div id="ownstmt-preview" style="background:#F5EFE6;border-radius:10px;padding:16px;border:1px solid var(--border)"></div>
           </div>
+          <div class="card mb-6">
+            <div class="card-title">📜 Management Invoice History</div>
+            <div id="ownstmt-history"><div class="text-muted text-sm">Management invoice history will appear here once generated documents are saved.</div></div>
+          </div>
         </div><!-- end rsub-owner -->
 
 
@@ -1381,8 +1385,19 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div id="settings-properties-list"></div>
         </div>
 
-        <!-- iCal Feed URLs -->
-        <div class="card" style="margin-bottom:18px">
+        <!-- Organizations (HEP team only — internal onboarding tool) -->
+        <div class="card" id="settings-org-card" style="margin-bottom:18px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="font-weight:700;font-size:1rem">🏢 Organizations</div>
+            <button class="btn btn-sm btn-primary" onclick="openAddOrg()">+ New Organization</button>
+          </div>
+          <div style="font-size:.82rem;color:var(--muted)">Internal tool — spins up a brand-new customer organization plus its first owner login in one step. Not visible to customer orgs.</div>
+        </div>
+
+        <!-- iCal Feed URLs — hardcoded to S&N's two properties (Roadmap
+             p1-1: outbound feeds aren't generated per-org yet), so this
+             must not show to any other org's Settings page. -->
+        <div class="card" id="settings-sn-ical-card" style="margin-bottom:18px;display:none">
           <div style="font-weight:700;font-size:1rem;margin-bottom:4px">📡 Outbound iCal Feeds</div>
           <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px">Paste these into Airbnb, Booking.com and LekkeSlaap to automatically block dates when you add bookings in HEP.</div>
           <div style="margin-bottom:14px">
@@ -1896,6 +1911,64 @@ async function savePropertyRecord(id) {
   await loadIcalFeeds();
 }
 
+// ── Organizations (HEP team internal tool — onboard a new customer) ──
+// Calls the server-side api/create-org endpoint (service-role key never
+// touches the browser) which provisions the org + first owner login in
+// one atomic-ish step, rolling back on partial failure.
+function openAddOrg() {
+  document.getElementById('day-modal-title').textContent = 'New Organization';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field span-full"><label>Organization Name *</label><input id="org-name" placeholder="e.g. Blue Horizon Rentals"/></div>
+      <div class="form-field span-full"><label>Owner Name *</label><input id="org-owner-name" placeholder="Full name"/></div>
+      <div class="form-field span-full"><label>Owner Email *</label><input id="org-owner-email" type="email" placeholder="owner@example.com"/></div>
+      <div class="form-field span-full"><label>Owner Password *</label><input id="org-owner-password" type="password" placeholder="At least 8 characters"/></div>
+    </div>
+    <div id="org-create-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:10px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" id="org-create-btn" onclick="saveNewOrg()">Create Organization</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+    </div>`;
+  openModal('day-modal');
+}
+
+async function saveNewOrg() {
+  const errEl = document.getElementById('org-create-error');
+  const btn = document.getElementById('org-create-btn');
+  errEl.style.display = 'none';
+  const orgName = document.getElementById('org-name').value.trim();
+  const ownerName = document.getElementById('org-owner-name').value.trim();
+  const ownerEmail = document.getElementById('org-owner-email').value.trim();
+  const ownerPassword = document.getElementById('org-owner-password').value;
+  if (!orgName || !ownerName || !ownerEmail || !ownerPassword) {
+    errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return;
+  }
+  if (!db) { errEl.textContent = 'Not connected — changes need a live connection to save.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const { data: sessionData } = await db.auth.getSession();
+    const token = sessionData && sessionData.session && sessionData.session.access_token;
+    if (!token) { errEl.textContent = 'Your session has expired — please sign in again.'; errEl.style.display = 'block'; return; }
+    const res = await fetch('/api/create-org', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ orgName, ownerName, ownerEmail, ownerPassword }),
+    });
+    const result = await res.json();
+    if (!res.ok) {
+      let msg = result.error || 'Could not create organization.';
+      if (result.debug) msg += ' [debug: host=' + result.debug.supabaseHost + ' status=' + result.debug.upstreamStatus + ' body=' + result.debug.upstreamBody + ']';
+      errEl.textContent = msg; errEl.style.display = 'block'; return;
+    }
+    closeModal('day-modal');
+    toast('Organization created ✓ — ' + ownerEmail + ' can now log in and add their own properties.', 'success');
+  } catch (e) {
+    errEl.textContent = 'Something went wrong: ' + e.message; errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Organization';
+  }
+}
+
 // ── Domestic staff ──
 const CLEANERS = [
   {name:'Blessing', phone:'062 532 2932', payment:'ewallet', properties:['speranta'],           rate:350,                      birthday:'1988-03-14', note:'Speranta cleaner. Paid directly via ewallet to herself.'},
@@ -2054,6 +2127,11 @@ function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
   renderPropertiesSettings();
+  const isSNOrg = getOrgId() === SN_OWNER_ORG_ID;
+  const orgCard = document.getElementById('settings-org-card');
+  if (orgCard) orgCard.style.display = isSNOrg ? '' : 'none';
+  const icalCard = document.getElementById('settings-sn-ical-card');
+  if (icalCard) icalCard.style.display = isSNOrg ? '' : 'none';
 }
 
 // ── Per-platform rate calculator (Task 5) ──
@@ -3007,19 +3085,23 @@ async function loadData() {
       db.from('team_contacts').select('*').order('cat',{ascending:true}).order('sort_order',{ascending:true}),
       db.from('business_vault').select('*').order('created_at',{ascending:true}),
     ]);
-    let connected = false;
-    if (bRes.data && bRes.data.length > 0) {
+    // Replace the sample/demo data seeded above whenever a fetch actually
+    // succeeded (bRes.data is an array, possibly empty) — not only when it
+    // returned rows. A brand-new org with zero real bookings/domestics/etc.
+    // is a legitimate, correct state, and must not be left showing S&N's
+    // hardcoded sample data (which uses real staff names) forever just
+    // because "empty" and "still loading" were previously treated the same.
+    if (bRes.data) {
         const raw = dedupeBookings(bRes.data.map(nb));
         // Filter out soft-deleted bookings
         bookings = raw.filter(b => b.is_active !== false);
-        connected = true;
-        toast('Live data loaded ✓', 'success');
+        if (bookings.length > 0) toast('Live data loaded ✓', 'success');
       }
-    if (tRes.data && tRes.data.length > 0) tasks = tRes.data.map(nt);
-    if (dRes.data && dRes.data.length > 0) domestics = dRes.data.map(nd);
-    if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
+    if (tRes.data) tasks = tRes.data.map(nt);
+    if (dRes.data) domestics = dRes.data.map(nd);
+    if (kRes.data) kbArticles = kRes.data;
     if (invRes && invRes.data) inventoryReports = invRes.data;
-    if (cRes && cRes.data && cRes.data.length > 0) contacts = cRes.data.map(nc);
+    if (cRes && cRes.data) contacts = cRes.data.map(nc);
     if (vRes && vRes.data) vault = vRes.data;
 
     // Load cleaner availability
@@ -4219,6 +4301,7 @@ async function loadInvHistory() {
   try {
     let q = db.from('invoices')
       .select('id,doc_type,number,reference,guest_name,company,total,date_issued,status,created_at')
+      .neq('platform','management')
       .order('created_at',{ascending:false})
       .limit(100);
     if(filter !== 'all') q = q.eq('doc_type', filter);
@@ -8423,6 +8506,75 @@ function renderOwnerStatementTab() {
     `<option value="${k}" ${k===ownerStmtProp?'selected':''}>${PROPS[k].name}</option>`).join('');
   document.getElementById('ownstmt-month').value = ownerStmtMonth;
   loadOrgSettings().then(() => onOwnerStmtChange());
+  loadOwnerStmtHistory();
+}
+
+// Same table/backing store as the guest Invoices tab (public.invoices),
+// distinguished by platform='management' — this generator previously only
+// rendered a PDF client-side and never saved anything, so there was no
+// record of a management invoice ever having been issued. doc_type has to
+// stay 'INVOICE' (not a new 'MANAGEMENT' value): the table has a CHECK
+// constraint (invoices_doc_type_check) only allowing the existing
+// QUOTATION/INVOICE values, confirmed by a real failed save in production.
+async function saveOwnerStatementRecord(invNum, propLabel, monthLabel, owners, totalDue) {
+  if (!db) return;
+  try {
+    const { error } = await db.from('invoices').upsert({
+      org_id:      getOrgId(),
+      doc_type:    'INVOICE',
+      number:      invNum,
+      reference:   monthLabel,
+      guest_name:  owners,
+      property:    propLabel,
+      dates:       monthLabel,
+      platform:    'management',
+      line_items:  ownerStmtCosts,
+      total:       totalDue,
+      notes:       null,
+      date_issued: todaySAST(),
+      created_by:  (window.currentUser && currentUser.name) || 'unknown'
+    }, {onConflict:'number'});
+    if (error) {
+      console.warn('saveOwnerStatementRecord failed:', error.message);
+      toast('PDF downloaded, but saving its record failed: '+error.message,'error');
+      return;
+    }
+    loadOwnerStmtHistory();
+  } catch(e) { console.warn('saveOwnerStatementRecord failed:', e.message); toast('PDF downloaded, but saving its record failed: '+e.message,'error'); }
+}
+
+async function loadOwnerStmtHistory() {
+  const el = document.getElementById('ownstmt-history');
+  if (!el || !db) return;
+  el.innerHTML = skeletonRows(4);
+  try {
+    const {data,error} = await db.from('invoices')
+      .select('id,number,property,dates,guest_name,total,date_issued,status,created_at')
+      .eq('platform','management')
+      .order('created_at',{ascending:false})
+      .limit(100);
+    if (error) throw error;
+    if (!data || !data.length) {
+      el.innerHTML = emptyState('🧾', 'No management invoices yet — generate one above and it\'ll be saved here');
+      return;
+    }
+    el.innerHTML = '<div class="table-wrap"><table>'+
+      '<thead><tr><th>Number</th><th>Property</th><th>Period</th><th>Owner(s)</th><th>Date</th><th style="text-align:right">Total</th><th>Status</th></tr></thead>'+
+      '<tbody>'+ data.map((r,i)=>{
+        const stColor = {draft:'var(--muted)',sent:'#2E75B6',paid:'var(--green2)',cancelled:'var(--red)'}[r.status]||'var(--muted)';
+        return '<tr style="'+(i%2?'background:var(--surface-2)':'')+'">'+
+          '<td style="font-size:.8rem;font-weight:600">'+(r.number||'—')+'</td>'+
+          '<td style="font-size:.8rem">'+(r.property||'—')+'</td>'+
+          '<td style="font-size:.78rem;color:var(--muted)">'+(r.dates||'—')+'</td>'+
+          '<td style="font-size:.8rem">'+(r.guest_name||'—')+'</td>'+
+          '<td style="font-size:.78rem;white-space:nowrap">'+(r.date_issued||(r.created_at||'').slice(0,10))+'</td>'+
+          '<td style="text-align:right;font-size:.8rem;font-weight:600">R'+Number(r.total||0).toLocaleString('en-ZA',{minimumFractionDigits:2})+'</td>'+
+          '<td style="font-size:.72rem;color:'+stColor+';text-transform:capitalize">'+(r.status||'draft')+'</td>'+
+        '</tr>';
+      }).join('')+'</tbody></table></div>';
+  } catch(e) {
+    el.innerHTML = '<div class="text-muted text-sm" style="color:var(--red)">Could not load history: '+e.message+'</div>';
+  }
 }
 
 function onOwnerStmtChange() {
@@ -8592,6 +8744,18 @@ async function generateOwnerStatementPDF() {
     const original = document.getElementById('ownstmt-preview');
     const propShort = (PROPS[ownerStmtProp]||{}).short || ownerStmtProp;
     const filename = 'Management-Invoice-'+propShort.replace(/\s+/g,'')+'-'+ownerStmtMonth+'.pdf';
+
+    // Same MGMT-{PROPERTY}-{YYYY-MM} number used in the preview/filename —
+    // naturally unique per property per month, so regenerating the same
+    // month's invoice updates its existing record via upsert rather than
+    // erroring or creating a duplicate.
+    const propLabel = (PROPS[ownerStmtProp]||{}).name || ownerStmtProp;
+    const owners = document.getElementById('ownstmt-owners')?.value || 'Property Owner';
+    const [sy,sm] = ownerStmtMonth.split('-').map(Number);
+    const monthLabel = new Date(sy, sm-1, 1).toLocaleDateString('en-ZA', {month:'long', year:'numeric'});
+    const invNum = 'MGMT-'+propLabel.replace(/\s+/g,'').toUpperCase()+'-'+ownerStmtMonth;
+    const totalDue = ownerStmtCosts.reduce((s,c)=>s+(Number(c.amount)||0),0);
+    await saveOwnerStatementRecord(invNum, propLabel, monthLabel, owners, totalDue);
 
     const printWidth = 700;
     clone = original.cloneNode(true);
