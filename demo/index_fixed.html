@@ -1394,8 +1394,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div style="font-size:.82rem;color:var(--muted)">Internal tool — spins up a brand-new customer organization plus its first owner login in one step. Not visible to customer orgs.</div>
         </div>
 
-        <!-- iCal Feed URLs -->
-        <div class="card" style="margin-bottom:18px">
+        <!-- iCal Feed URLs — hardcoded to S&N's two properties (Roadmap
+             p1-1: outbound feeds aren't generated per-org yet), so this
+             must not show to any other org's Settings page. -->
+        <div class="card" id="settings-sn-ical-card" style="margin-bottom:18px;display:none">
           <div style="font-weight:700;font-size:1rem;margin-bottom:4px">📡 Outbound iCal Feeds</div>
           <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px">Paste these into Airbnb, Booking.com and LekkeSlaap to automatically block dates when you add bookings in HEP.</div>
           <div style="margin-bottom:14px">
@@ -2125,8 +2127,11 @@ function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
   renderPropertiesSettings();
+  const isSNOrg = getOrgId() === SN_OWNER_ORG_ID;
   const orgCard = document.getElementById('settings-org-card');
-  if (orgCard) orgCard.style.display = (getOrgId() === SN_OWNER_ORG_ID) ? '' : 'none';
+  if (orgCard) orgCard.style.display = isSNOrg ? '' : 'none';
+  const icalCard = document.getElementById('settings-sn-ical-card');
+  if (icalCard) icalCard.style.display = isSNOrg ? '' : 'none';
 }
 
 // ── Per-platform rate calculator (Task 5) ──
@@ -4292,6 +4297,7 @@ async function loadInvHistory() {
   try {
     let q = db.from('invoices')
       .select('id,doc_type,number,reference,guest_name,company,total,date_issued,status,created_at')
+      .neq('platform','management')
       .order('created_at',{ascending:false})
       .limit(100);
     if(filter !== 'all') q = q.eq('doc_type', filter);
@@ -8499,15 +8505,18 @@ function renderOwnerStatementTab() {
 }
 
 // Same table/backing store as the guest Invoices tab (public.invoices),
-// distinguished by doc_type='MANAGEMENT' — this generator previously only
+// distinguished by platform='management' — this generator previously only
 // rendered a PDF client-side and never saved anything, so there was no
-// record of a management invoice ever having been issued.
+// record of a management invoice ever having been issued. doc_type has to
+// stay 'INVOICE' (not a new 'MANAGEMENT' value): the table has a CHECK
+// constraint (invoices_doc_type_check) only allowing the existing
+// QUOTATION/INVOICE values, confirmed by a real failed save in production.
 async function saveOwnerStatementRecord(invNum, propLabel, monthLabel, owners, totalDue) {
   if (!db) return;
   try {
     const { error } = await db.from('invoices').upsert({
       org_id:      getOrgId(),
-      doc_type:    'MANAGEMENT',
+      doc_type:    'INVOICE',
       number:      invNum,
       reference:   monthLabel,
       guest_name:  owners,
@@ -8536,7 +8545,7 @@ async function loadOwnerStmtHistory() {
   try {
     const {data,error} = await db.from('invoices')
       .select('id,number,property,dates,guest_name,total,date_issued,status,created_at')
-      .eq('doc_type','MANAGEMENT')
+      .eq('platform','management')
       .order('created_at',{ascending:false})
       .limit(100);
     if (error) throw error;
