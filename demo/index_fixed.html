@@ -599,261 +599,225 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div id="booking-lane-view" style="display:grid;gap:18px;margin-bottom:20px"></div>
       </div>
 
-      <!-- CALENDAR -->
+      <!-- CALENDAR (bookings only — cleaning schedule moved to its own tab) -->
       <div class="tab-pane" id="tab-calendar">
-
-        <!-- ── Mode switch: Bookings vs Domestic ── -->
-        <div style="display:flex;gap:4px;margin-bottom:12px">
-          <button id="calmode-bookings-btn" onclick="setCalMode('bookings')"
-            style="padding:6px 16px;border-radius:20px;border:1.5px solid var(--ocean);background:var(--ocean);color:#fff;font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s">
-            📅 Bookings
-          </button>
-          <button id="calmode-domestic-btn" onclick="setCalMode('domestic')"
-            style="padding:6px 16px;border-radius:20px;border:1.5px solid var(--border);background:var(--sand);color:var(--muted);font-size:.78rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s">
-            🧹 Domestic
-          </button>
-        </div>
-
-        <!-- ══ BOOKINGS CALENDAR VIEW ══ -->
-        <div id="calview-bookings">
-          <!-- ── Calendar toolbar: underline tabs ── -->
-          <div style="margin-bottom:14px">
-            <div class="cal-utabs" id="cal-prop-toggle">
-              <button class="cal-utab active" onclick="setCalProp('all',this)">All Properties</button>
-              <button class="cal-utab" onclick="setCalProp('speranta',this)">Speranta Flat</button>
-              <button class="cal-utab" onclick="setCalProp('tvhouse',this)">TV House</button>
-            </div>
-            <div class="cal-usub">
-              <div class="cal-umini">
-                <button id="calview-month-btn" class="cal-umini-btn active" onclick="setCalView('month')">Month</button>
-                <button id="calview-week-btn" class="cal-umini-btn" onclick="setCalView('week')">Week</button>
-                <button id="calview-day-btn" class="cal-umini-btn" onclick="setCalView('day')">Day</button>
-              </div>
-              <span class="cal-udiv"></span>
-              <div class="cal-umini">
-                <button id="cleaning-toggle-btn" class="cal-umini-btn" onclick="toggleCleaningOverlay(this)">🧹 Cleaning</button>
-                <button id="cancelled-toggle-btn" class="cal-umini-btn" onclick="toggleCancelledOnCal(this)">❌ Cancelled</button>
-              </div>
-              <span style="margin-left:auto;display:flex;gap:6px">
-                <button onclick="openModal('domestic-modal')" class="btn btn-sm" style="background:var(--green);color:#fff">+ Clean</button>
-                <button onclick="exportDomestics()" class="btn btn-sm btn-ghost">⬇</button>
-              </span>
-            </div>
-          </div>
-
-          <!-- KPI + Alert -->
-          <div id="cleaning-kpi-panel" style="display:none;margin-bottom:16px"></div>
-          <div id="cleaning-coverage-alert" style="display:none;margin-bottom:12px"></div>
-
-          <!-- Calendar wrapper -->
-          <div class="cal-wrap">
-            <div class="cal-header" id="cal-header">
-              <div class="cal-month" id="cal-month-label"></div>
-              <div class="cal-nav">
-                <button onclick="calNav(-1)">← Prev</button>
-                <button onclick="calNav(0)">Today</button>
-                <button onclick="calNav(1)">Next →</button>
-              </div>
-            </div>
-            <!-- Monthly grid -->
-            <div id="calview-month-panel">
-              <div class="cal-grid" id="cal-grid"></div>
-            </div>
-            <!-- Weekly view -->
-            <div id="calview-week-panel" style="display:none">
-              <div id="cal-week-grid"></div>
-            </div>
-            <!-- Daily view -->
-            <div id="calview-day-panel" style="display:none">
-              <div id="cal-day-detail"></div>
-            </div>
-          </div>
-
-          <!-- Legend -->
-          <div class="strip-label" style="margin-top:16px">Legend</div>
-          <div class="legend-panels">
-            <div class="legend-panel">
-              <div class="legend-ptitle">Platforms</div>
-              <div class="legend-chips">
-                <span class="legend-chip" style="background:#E1466618;color:#E14666"><span class="legend-cdot" style="background:#E14666"></span>Airbnb</span>
-                <span class="legend-chip" style="background:#1E4C8518;color:#1E4C85"><span class="legend-cdot" style="background:#1E4C85"></span>Booking.com</span>
-                <span class="legend-chip" style="background:#F6C44530;color:#8a6a10"><span class="legend-cdot" style="background:#F6C445"></span>LekkeSlaap</span>
-                <span class="legend-chip" style="background:#A8702E18;color:#A8702E"><span class="legend-cdot" style="background:#A8702E"></span>Direct/Manual</span>
-                <span class="legend-chip" style="background:#64748b18;color:#64748b"><span class="legend-cdot" style="background:#64748b"></span>Owner Stay</span>
-              </div>
-            </div>
-            <div class="legend-panel">
-              <div class="legend-ptitle">Status</div>
-              <div class="legend-chips">
-                <span class="legend-chip" style="background:#06b6d418;color:#0891b2"><span class="legend-cdot" style="background:#06b6d4"></span>🧹 Cleaning</span>
-                <span class="legend-chip" style="background:#94a3b818;color:#64748b"><span class="legend-cdot" style="background:#94a3b8"></span>🔒 Blocked</span>
-                <span class="legend-chip" style="background:#e5e7eb90;color:#64748b;text-decoration:line-through;opacity:.75"><span class="legend-cdot" style="background:#e5e7eb"></span>❌ Cancelled</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ══ DOMESTIC CALENDAR VIEW ══ -->
-        <div id="calview-domestic" style="display:none">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
-            <div style="display:flex;gap:6px;align-items:center">
-              <button onclick="domCalNav(-1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.82rem">← Prev</button>
-              <span id="dom-month-label" style="font-weight:600;font-size:.92rem"></span>
-              <button onclick="domCalNav(0)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.82rem">📅 Today</button>
-              <button onclick="domCalNav(1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.82rem">Next →</button>
-            </div>
-            <div style="display:flex;gap:6px">
-              <button id="kpi-toggle-btn" class="btn btn-sm btn-ghost" onclick="toggleKPIPanel()">📊 KPIs</button>
-              <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
-              <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ CSV</button>
-            </div>
-          </div>
-
-          <!-- Domestic KPI panel -->
-          <div id="cleaning-kpi-panel-dom" style="margin-bottom:14px"></div>
-
-          <!-- Domestic calendar grid -->
-          <div class="card" style="padding:16px;margin-bottom:14px">
-            <div id="dom-cal-grid"></div>
-          </div>
-
-          <!-- Cleaner earnings -->
-          <div class="card" style="margin-bottom:14px">
-            <div class="card-title">💰 Monthly Cleaning Earnings</div>
-            <div id="dom-earnings-summary"></div>
-          </div>
-
-          <!-- All cleaning sessions -->
-          <div class="card">
-            <div class="card-title">📋 Cleaning Sessions</div>
-            <div class="dom-grid" id="dom-grid"></div>
-          </div>
-
-          <!-- Cleaner Availability -->
-          <div class="card" style="margin-top:16px">
-            <div class="card-title" style="margin-bottom:12px">📅 Cleaner Availability</div>
-            <div id="dom-availability"><div style="color:var(--muted);font-size:.82rem;text-align:center;padding:16px">No availability data yet</div></div>
-          </div>
-
-          <!-- Inventory Reports from cleaners -->
-          <div class="card" style="margin-top:16px">
-            <div class="card-title" style="margin-bottom:12px">🔍 Inventory Reports</div>
-            <div id="dom-inv-reports"><div style="color:var(--muted);font-size:.82rem;text-align:center;padding:16px">No reports yet</div></div>
-          </div>
-        </div>
-
-      </div>
-
-
-      <!-- TASKS (Nina-facing: per-booking checklist + general tasks) -->
-      <div class="tab-pane" id="tab-tasks">
-        <!-- Sub-tab bar — mobile-first -->
+        <!-- ── Calendar toolbar: underline tabs ── -->
         <div style="margin-bottom:14px">
-          <!-- Row 1: Sub-tabs + New Task button -->
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
-            <div style="display:flex;gap:3px;background:var(--surface-3);border-radius:10px;padding:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;flex:1;border:1px solid var(--border)">
-              <button id="subtab-guest-btn" onclick="setTaskSubTab('guest')"
-                style="padding:6px 12px;border-radius:7px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s;white-space:nowrap;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,.12)">
-                🏠 Guests
-              </button>
-              <button id="subtab-project-btn" onclick="setTaskSubTab('project')"
-                style="padding:6px 12px;border-radius:7px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap;flex-shrink:0">
-                📋 Projects
-              </button>
-              <button id="subtab-inspection-btn" onclick="setTaskSubTab('inspection')"
-                style="padding:6px 12px;border-radius:7px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap;flex-shrink:0">
-                🔍 Inspection
-              </button>
-            </div>
-            <button class="btn btn-primary btn-sm" id="task-add-btn" onclick="openModal('task-modal')" style="flex-shrink:0;white-space:nowrap">+ New</button>
+          <div class="cal-utabs" id="cal-prop-toggle">
+            <button class="cal-utab active" onclick="setCalProp('all',this)">All Properties</button>
+            <button class="cal-utab" onclick="setCalProp('speranta',this)">Speranta Flat</button>
+            <button class="cal-utab" onclick="setCalProp('tvhouse',this)">TV House</button>
           </div>
-          <!-- Row 2: Filters (only shown for project tab) -->
-          <div id="task-filters" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+          <div class="cal-usub">
+            <div class="cal-umini">
+              <button id="calview-month-btn" class="cal-umini-btn active" onclick="setCalView('month')">Month</button>
+              <button id="calview-week-btn" class="cal-umini-btn" onclick="setCalView('week')">Week</button>
+              <button id="calview-day-btn" class="cal-umini-btn" onclick="setCalView('day')">Day</button>
+            </div>
+            <span class="cal-udiv"></span>
+            <div class="cal-umini">
+              <button id="cleaning-toggle-btn" class="cal-umini-btn" onclick="toggleCleaningOverlay(this)">🧹 Cleaning</button>
+              <button id="cancelled-toggle-btn" class="cal-umini-btn" onclick="toggleCancelledOnCal(this)">❌ Cancelled</button>
+            </div>
+            <span style="margin-left:auto;display:flex;gap:6px">
+              <button onclick="openModal('domestic-modal')" class="btn btn-sm" style="background:var(--green);color:#fff">+ Clean</button>
+              <button onclick="exportDomestics()" class="btn btn-sm btn-ghost">⬇</button>
+            </span>
+          </div>
         </div>
 
-        <!-- Guest Management sub-tab -->
-        <div id="subtab-guest">
-          <div id="guest-booking-grid"></div>
-        </div>
+        <!-- KPI + Alert -->
+        <div id="cleaning-kpi-panel" style="display:none;margin-bottom:16px"></div>
+        <div id="cleaning-coverage-alert" style="display:none;margin-bottom:12px"></div>
 
-        <!-- Project Management sub-tab (Kanban) -->
-        <div id="subtab-project" style="display:none">
-          <div id="kanban-filter-label" style="font-size:.74rem;color:var(--muted);margin-bottom:10px;min-height:18px"></div>
-        <div id="kanban-board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px"></div>
-        </div>
-
-        <!-- Monthly Inspection sub-tab -->
-        <div id="subtab-inspection" style="display:none">
-          <!-- New inspection form -->
-          <div class="card" style="margin-bottom:18px">
-            <div class="card-title">🔍 Log New Inspection</div>
-            <div class="form-grid">
-              <div class="form-field">
-                <label>Property *</label>
-                <select id="insp-prop" onchange="renderInspectionChecklist()">
-                  <option value="speranta">Speranța Flat</option>
-                  <option value="tvhouse">TV House</option>
-                </select>
-              </div>
-              <div class="form-field">
-                <label>Inspection Date *</label>
-                <input type="date" id="insp-date"/>
-              </div>
-              <div class="form-field">
-                <label>Inspector</label>
-                <input id="insp-inspector" value="Nina" placeholder="Name"/>
-              </div>
-              <div class="form-field">
-                <label>Overall Condition</label>
-                <select id="insp-condition">
-                  <option value="excellent">✅ Excellent</option>
-                  <option value="good">👍 Good</option>
-                  <option value="fair">⚠️ Fair — minor issues</option>
-                  <option value="poor">🔴 Poor — action needed</option>
-                </select>
-              </div>
-            </div>
-            <!-- Checklist -->
-            <div style="margin:16px 0 12px;font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Inspection Checklist</div>
-            <div id="insp-checklist-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin-bottom:14px"></div>
-            <!-- Notes -->
-            <div class="form-field" style="margin-bottom:14px">
-              <label>Notes & Issues Found</label>
-              <textarea id="insp-notes" rows="3" placeholder="Describe any issues, maintenance needed, or observations…"></textarea>
-            </div>
-            <!-- Photo upload -->
-            <div class="form-field" style="margin-bottom:16px">
-              <label>Photos (optional)</label>
-              <input type="file" id="insp-photos" multiple accept="image/*" onchange="handleInspPhotos(this)"
-                style="padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:var(--surface-2);cursor:pointer;font-size:.82rem"/>
-              <div id="insp-photo-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
-            </div>
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-primary" onclick="saveInspection()">Save Inspection Report</button>
-              <button class="btn btn-ghost btn-sm" onclick="clearInspectionForm()">Clear</button>
+        <!-- Calendar wrapper -->
+        <div class="cal-wrap">
+          <div class="cal-header" id="cal-header">
+            <div class="cal-month" id="cal-month-label"></div>
+            <div class="cal-nav">
+              <button onclick="calNav(-1)">← Prev</button>
+              <button onclick="calNav(0)">Today</button>
+              <button onclick="calNav(1)">Next →</button>
             </div>
           </div>
-          <!-- Past inspections -->
-          <div id="inspection-history"></div>
+          <!-- Monthly grid -->
+          <div id="calview-month-panel">
+            <div class="cal-grid" id="cal-grid"></div>
+          </div>
+          <!-- Weekly view -->
+          <div id="calview-week-panel" style="display:none">
+            <div id="cal-week-grid"></div>
+          </div>
+          <!-- Daily view -->
+          <div id="calview-day-panel" style="display:none">
+            <div id="cal-day-detail"></div>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="strip-label" style="margin-top:16px">Legend</div>
+        <div class="legend-panels">
+          <div class="legend-panel">
+            <div class="legend-ptitle">Platforms</div>
+            <div class="legend-chips">
+              <span class="legend-chip" style="background:#E1466618;color:#E14666"><span class="legend-cdot" style="background:#E14666"></span>Airbnb</span>
+              <span class="legend-chip" style="background:#1E4C8518;color:#1E4C85"><span class="legend-cdot" style="background:#1E4C85"></span>Booking.com</span>
+              <span class="legend-chip" style="background:#F6C44530;color:#8a6a10"><span class="legend-cdot" style="background:#F6C445"></span>LekkeSlaap</span>
+              <span class="legend-chip" style="background:#A8702E18;color:#A8702E"><span class="legend-cdot" style="background:#A8702E"></span>Direct/Manual</span>
+              <span class="legend-chip" style="background:#64748b18;color:#64748b"><span class="legend-cdot" style="background:#64748b"></span>Owner Stay</span>
+            </div>
+          </div>
+          <div class="legend-panel">
+            <div class="legend-ptitle">Status</div>
+            <div class="legend-chips">
+              <span class="legend-chip" style="background:#06b6d418;color:#0891b2"><span class="legend-cdot" style="background:#06b6d4"></span>🧹 Cleaning</span>
+              <span class="legend-chip" style="background:#94a3b818;color:#64748b"><span class="legend-cdot" style="background:#94a3b8"></span>🔒 Blocked</span>
+              <span class="legend-chip" style="background:#e5e7eb90;color:#64748b;text-decoration:line-through;opacity:.75"><span class="legend-cdot" style="background:#e5e7eb"></span>❌ Cancelled</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- MESSAGES -->
+      <!-- CLEANING (pulled out of Calendar's old Domestic mode — it's a
+           staffing/ops schedule, not a booking-calendar concern) -->
+      <div class="tab-pane" id="tab-cleaning">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+          <div style="display:flex;gap:6px;align-items:center">
+            <button onclick="domCalNav(-1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.82rem">← Prev</button>
+            <span id="dom-month-label" style="font-weight:600;font-size:.92rem"></span>
+            <button onclick="domCalNav(0)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.82rem">📅 Today</button>
+            <button onclick="domCalNav(1)" style="background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:5px 12px;cursor:pointer;font-size:.82rem">Next →</button>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button id="kpi-toggle-btn" class="btn btn-sm btn-ghost" onclick="toggleKPIPanel()">📊 KPIs</button>
+            <button class="btn btn-green btn-sm" onclick="openModal('domestic-modal')">+ Schedule Clean</button>
+            <button class="btn btn-ghost btn-sm" onclick="exportDomestics()">⬇ CSV</button>
+          </div>
+        </div>
+
+        <!-- Domestic KPI panel -->
+        <div id="cleaning-kpi-panel-dom" style="margin-bottom:14px"></div>
+
+        <!-- Domestic calendar grid -->
+        <div class="card" style="padding:16px;margin-bottom:14px">
+          <div id="dom-cal-grid"></div>
+        </div>
+
+        <!-- Cleaner earnings -->
+        <div class="card" style="margin-bottom:14px">
+          <div class="card-title">💰 Monthly Cleaning Earnings</div>
+          <div id="dom-earnings-summary"></div>
+        </div>
+
+        <!-- All cleaning sessions -->
+        <div class="card">
+          <div class="card-title">📋 Cleaning Sessions</div>
+          <div class="dom-grid" id="dom-grid"></div>
+        </div>
+
+        <!-- Cleaner Availability -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-title" style="margin-bottom:12px">📅 Cleaner Availability</div>
+          <div id="dom-availability"><div style="color:var(--muted);font-size:.82rem;text-align:center;padding:16px">No availability data yet</div></div>
+        </div>
+
+        <!-- Inventory Reports from cleaners -->
+        <div class="card" style="margin-top:16px">
+          <div class="card-title" style="margin-bottom:12px">🔍 Inventory Reports</div>
+          <div id="dom-inv-reports"><div style="color:var(--muted);font-size:.82rem;text-align:center;padding:16px">No reports yet</div></div>
+        </div>
+      </div>
+
+
+      <!-- TASKS (Kanban project/maintenance board — guest-lifecycle tasks
+           live in Guest Journey now, see tab-messages) -->
+      <div class="tab-pane" id="tab-tasks">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+          <div id="task-filters" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+          <button class="btn btn-primary btn-sm" id="task-add-btn" onclick="openModal('task-modal')" style="flex-shrink:0;white-space:nowrap">+ New Task</button>
+        </div>
+        <div id="kanban-filter-label" style="font-size:.74rem;color:var(--muted);margin-bottom:10px;min-height:18px"></div>
+        <div id="kanban-board" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px"></div>
+      </div>
+
+      <!-- INSPECTIONS — pulled out of Task Management into its own space
+           under the Property nav group, since it's property-condition data,
+           not a task-list concern. -->
+      <div class="tab-pane" id="tab-inspections">
+        <!-- New inspection form -->
+        <div class="card" style="margin-bottom:18px">
+          <div class="card-title">🔍 Log New Inspection</div>
+          <div class="form-grid">
+            <div class="form-field">
+              <label>Property *</label>
+              <select id="insp-prop" onchange="renderInspectionChecklist()">
+                <option value="speranta">Speranța Flat</option>
+                <option value="tvhouse">TV House</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>Inspection Date *</label>
+              <input type="date" id="insp-date"/>
+            </div>
+            <div class="form-field">
+              <label>Inspector</label>
+              <input id="insp-inspector" value="Nina" placeholder="Name"/>
+            </div>
+            <div class="form-field">
+              <label>Overall Condition</label>
+              <select id="insp-condition">
+                <option value="excellent">✅ Excellent</option>
+                <option value="good">👍 Good</option>
+                <option value="fair">⚠️ Fair — minor issues</option>
+                <option value="poor">🔴 Poor — action needed</option>
+              </select>
+            </div>
+          </div>
+          <!-- Checklist -->
+          <div style="margin:16px 0 12px;font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Inspection Checklist</div>
+          <div id="insp-checklist-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin-bottom:14px"></div>
+          <!-- Notes -->
+          <div class="form-field" style="margin-bottom:14px">
+            <label>Notes & Issues Found</label>
+            <textarea id="insp-notes" rows="3" placeholder="Describe any issues, maintenance needed, or observations…"></textarea>
+          </div>
+          <!-- Photo upload -->
+          <div class="form-field" style="margin-bottom:16px">
+            <label>Photos (optional)</label>
+            <input type="file" id="insp-photos" multiple accept="image/*" onchange="handleInspPhotos(this)"
+              style="padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:var(--surface-2);cursor:pointer;font-size:.82rem"/>
+            <div id="insp-photo-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-primary" onclick="saveInspection()">Save Inspection Report</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearInspectionForm()">Clear</button>
+          </div>
+        </div>
+        <!-- Past inspections -->
+        <div id="inspection-history"></div>
+      </div>
+
+      <!-- GUEST JOURNEY (per-guest/per-booking lifecycle: pipeline checklist,
+           WhatsApp timeline, and the team's own chat) -->
       <div class="tab-pane" id="tab-messages">
         <!-- Sub-tab bar -->
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
-          <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:10px;padding:3px">
+          <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:10px;padding:3px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none">
+            <button id="msg-subtab-pipeline-btn" onclick="setMsgSubTab('pipeline')"
+              style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s;white-space:nowrap">
+              🏠 Pipeline
+            </button>
             <button id="msg-subtab-wa-btn" onclick="setMsgSubTab('wa')"
-              style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--ocean);color:#fff;transition:all .2s">
+              style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap">
               💬 Guest Timeline
             </button>
             <button id="msg-subtab-team-btn" onclick="setMsgSubTab('team')"
-              style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s">
+              style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;white-space:nowrap">
               👥 Team Chat
             </button>
           </div>
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-            <div style="display:flex;align-items:center;gap:6px">
+            <div id="msg-lang-wrap" style="display:none;align-items:center;gap:6px">
               <label for="msg-language-select" style="font-size:.78rem;color:var(--muted);font-weight:600">🌐 Message language</label>
               <select id="msg-language-select" onchange="saveUserSetting('language', this.value); renderGuestTimeline();" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;background:#fff"></select>
             </div>
@@ -864,8 +828,15 @@ function _buildMobileNavStub(){/* replaced by main script */}
           </div>
         </div>
 
+        <!-- Guest pipeline sub-tab (moved out of Task Management — this is a
+             per-guest checklist, not a project-board concern) -->
+        <div id="msg-subtab-pipeline">
+          <div id="guest-filters" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px"></div>
+          <div id="guest-booking-grid"></div>
+        </div>
+
         <!-- WhatsApp sub-tab -->
-        <div id="msg-subtab-wa">
+        <div id="msg-subtab-wa" style="display:none">
           <!-- Guest Timeline: per-booking stage cards, replacing the old generic
                template-link list — each guest gets their own due-now touchpoint
                instead of picking blind from a list of canned messages. -->
@@ -895,16 +866,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div style="display:flex;gap:4px;background:var(--surface-2);border-radius:10px;padding:3px;margin-bottom:12px;width:fit-content" id="km-prop-tabs"></div>
         <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap" id="km-section-tabs"></div>
         <div id="km-content"></div>
-      </div>
-
-      <!-- KNOWLEDGE BASE (General Notes) — split out from Property Manual so it's its own destination, not a scroll-down afterthought -->
-      <div class="tab-pane" id="tab-kb">
-        <div class="section-head">
-          <div><h2 style="font-size:1.25rem;margin-bottom:3px">Knowledge Base</h2><div class="text-muted">Reference notes — tag one property or leave as Both; filtered by the property switcher above</div></div>
-          <button class="btn btn-primary btn-sm" onclick="openModal('kb-modal')">+ Add Note</button>
-        </div>
-        <div class="mb-6"><input style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:#fff" placeholder="🔍 Search…" oninput="renderKB(this.value)"/></div>
-        <div id="kb-content"></div>
       </div>
 
       <!-- TEAM (admin only) -->
@@ -943,44 +904,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div id="vault-content"></div>
       </div>
 
-      <!-- REPORTS (admin only) -->
-      <div class="tab-pane" id="tab-finance">
-        <div class="section-head">
-          <div><h2 style="font-size:1.2rem;margin-bottom:3px">Finance</h2><div class="text-muted">P&L from Nedbank statements Sep 2024 – Dec 2025</div>
-          <div style="background:#fef3c7;border-radius:8px;padding:8px 14px;font-size:.78rem;margin-top:8px;color:#92400e">
-            ⚠️ <strong>Note:</strong> Only Speranta levies are our expense. TV House levies paid by owners. Feb 2025 spike = delayed Airbnb payouts (document verification). <strong>Speranta rental income confirmed: R387,383 across 78 bookings (Sep 2024–Apr 2026).</strong>
-          </div></div>
-        </div>
-        <div class="stat-grid" id="finance-stats"></div>
-        <div class="card mb-6">
-          <div class="card-title">📊 Monthly Income vs Expenses</div>
-          <div style="overflow-x:auto"><div id="finance-chart" style="display:flex;align-items:flex-end;gap:3px;height:140px;padding:4px 0;min-width:600px"></div></div>
-          <div style="display:flex;gap:16px;margin-top:10px;font-size:.76rem">
-            <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:var(--green2);border-radius:2px;display:inline-block"></span>Income</span>
-            <span style="display:flex;align-items:center;gap:5px"><span style="width:12px;height:12px;background:#f87171;border-radius:2px;display:inline-block"></span>Expenses</span>
-          </div>
-        </div>
-        <div class="grid-2 mb-6">
-          <div class="card">
-            <div class="card-title">💳 Income by Platform</div>
-            <div id="finance-platform"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">📤 Expense Breakdown</div>
-            <div id="finance-expenses"></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-title">📋 Monthly Detail</div>
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>Month</th><th>Income</th><th>Expenses</th><th>Net</th><th>Airbnb</th><th>Booking</th><th>LekkeSlaap</th><th>TV Mgmt Fee</th><th>Cleaning</th><th>Nina</th></tr></thead>
-              <tbody id="finance-table"></tbody>
-              <tfoot><tr id="finance-totals"></tr></tfoot>
-            </table>
-          </div>
-        </div>
-      </div>
 
      <div class="tab-pane" id="tab-reports">
         <!-- Sub-tab nav -->
@@ -992,10 +915,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <button id="rsub-property-btn" onclick="switchReportSub('property')"
             style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
             🏠 Property
-          </button>
-          <button id="rsub-owner-btn" onclick="switchReportSub('owner')"
-            style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
-            🧾 Management Invoice
           </button>
         </div>
 
@@ -1134,49 +1053,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
      <div id="report-inv-list"></div>
         </div>
         </div><!-- end rsub-property -->
-
-        <!-- OWNER STATEMENTS SUB-TAB -->
-        <div id="rsub-owner" style="display:none">
-          <div class="card mb-6" style="background:#fef3c7;border:1px solid #f59e0b">
-            <div style="font-size:.84rem;color:#92400e;line-height:1.6">
-              🧾 For pass-through ownership properties — rental income belongs to the owners, not S&amp;N. This is separate from the Finance tab, which only reports S&amp;N's own income (Speranta).
-            </div>
-          </div>
-          <div class="card mb-6">
-            <div class="form-grid">
-              <div class="form-field">
-                <label>Property</label>
-                <select id="ownstmt-prop" onchange="onOwnerStmtChange()"></select>
-              </div>
-              <div class="form-field">
-                <label>Month</label>
-                <input type="month" id="ownstmt-month" onchange="onOwnerStmtChange()"/>
-              </div>
-              <div class="form-field">
-                <label>Owner name(s)</label>
-                <input id="ownstmt-owners" placeholder="e.g. Mirka & Antonin" onchange="renderOwnerStatementPreview()"/>
-              </div>
-            </div>
-            <div style="margin:16px 0 10px;font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Deductible costs</div>
-            <div id="ownstmt-costs"></div>
-            <button onclick="ownStmtAddCost()" style="margin-top:6px;text-align:left;background:transparent;border:1.5px dashed var(--border);border-radius:8px;padding:8px 10px;font-size:.8rem;color:var(--muted);cursor:pointer;width:100%">+ Add cost line</button>
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
-              <div style="font-size:.85rem;color:var(--muted)">Total due from owner(s)</div>
-              <div id="ownstmt-net" style="font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--ink)"></div>
-            </div>
-          </div>
-          <div class="card mb-6">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-              <div class="card-title" style="margin:0">Preview</div>
-              <button class="btn btn-primary btn-sm" onclick="generateOwnerStatementPDF()">⬇ Download PDF</button>
-            </div>
-            <div id="ownstmt-preview" style="background:#F5EFE6;border-radius:10px;padding:16px;border:1px solid var(--border)"></div>
-          </div>
-          <div class="card mb-6">
-            <div class="card-title">📜 Management Invoice History</div>
-            <div id="ownstmt-history"><div class="text-muted text-sm">Management invoice history will appear here once generated documents are saved.</div></div>
-          </div>
-        </div><!-- end rsub-owner -->
 
 
 
@@ -1318,16 +1194,54 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <!-- ── OUTGOING ──────────────────────────────────────────── -->
         <div id="isub-outgoing" style="display:none">
           <div class="card mb-6">
-            <div class="card-title">📤 Outgoing — Management Fee Invoices</div>
-            <div style="font-size:.83rem;color:var(--muted);margin-bottom:16px">Monthly R6,000 management fee billed to Mirka &amp; Antonin (TV House owners). Future clients will appear here once added.</div>
+            <div class="card-title">📤 Outgoing — Management Fee Payments Received</div>
+            <div style="font-size:.83rem;color:var(--muted);margin-bottom:16px">Monthly R6,000 management fee billed to Mirka &amp; Antonin (TV House owners), reconciled against actual bank statement entries. Future clients will appear here once added.</div>
             <div id="inv-outgoing-list"><div class="text-muted">Loading…</div></div>
           </div>
-          <div class="card">
-            <div class="card-title" style="margin-bottom:6px">Generate a management fee invoice</div>
-            <div style="font-size:.83rem;color:var(--muted);margin-bottom:14px">Management fee invoices are now generated from the Management Invoice creator, so numbering, branding and banking details always match — no separate form to keep in sync here.</div>
-            <button onclick="switchTab('reports');switchReportSub('owner')" style="padding:10px 22px;border-radius:8px;border:none;background:#1A2340;color:#F5EFE6;font-size:.85rem;font-weight:700;cursor:pointer">
-              🧾 Open Management Invoice creator
-            </button>
+
+          <!-- Management Invoice generator (moved here from Reports — an
+               invoicing/document feature belongs with Invoices, not
+               analytics). Element IDs unchanged, so every JS function
+               (renderOwnerStatementTab, onOwnerStmtChange, etc.) needed no
+               changes at all — this is a pure relocation. -->
+          <div class="card mb-6" style="background:#fef3c7;border:1px solid #f59e0b">
+            <div style="font-size:.84rem;color:#92400e;line-height:1.6">
+              🧾 For pass-through ownership properties — rental income belongs to the owners, not S&amp;N. This bills the owner for cleaning + management costs; it's separate from Reports, which only reports S&amp;N's own income (Speranta).
+            </div>
+          </div>
+          <div class="card mb-6">
+            <div class="form-grid">
+              <div class="form-field">
+                <label>Property</label>
+                <select id="ownstmt-prop" onchange="onOwnerStmtChange()"></select>
+              </div>
+              <div class="form-field">
+                <label>Month</label>
+                <input type="month" id="ownstmt-month" onchange="onOwnerStmtChange()"/>
+              </div>
+              <div class="form-field">
+                <label>Owner name(s)</label>
+                <input id="ownstmt-owners" placeholder="e.g. Mirka & Antonin" onchange="renderOwnerStatementPreview()"/>
+              </div>
+            </div>
+            <div style="margin:16px 0 10px;font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Deductible costs</div>
+            <div id="ownstmt-costs"></div>
+            <button onclick="ownStmtAddCost()" style="margin-top:6px;text-align:left;background:transparent;border:1.5px dashed var(--border);border-radius:8px;padding:8px 10px;font-size:.8rem;color:var(--muted);cursor:pointer;width:100%">+ Add cost line</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+              <div style="font-size:.85rem;color:var(--muted)">Total due from owner(s)</div>
+              <div id="ownstmt-net" style="font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--ink)"></div>
+            </div>
+          </div>
+          <div class="card mb-6">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div class="card-title" style="margin:0">Preview</div>
+              <button class="btn btn-primary btn-sm" onclick="generateOwnerStatementPDF()">⬇ Download PDF</button>
+            </div>
+            <div id="ownstmt-preview" style="background:#F5EFE6;border-radius:10px;padding:16px;border:1px solid var(--border)"></div>
+          </div>
+          <div class="card mb-6">
+            <div class="card-title">📜 Management Invoice History</div>
+            <div id="ownstmt-history"><div class="text-muted text-sm">Management invoice history will appear here once generated documents are saved.</div></div>
           </div>
         </div>
 
@@ -2093,7 +2007,6 @@ let taskPriorityFilter = 'all';  // 'all' | 'high' | 'medium' | 'low'
 let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
 let calViewMode = 'month'; // 'month' | 'week' | 'day'
 let _calMobileDefaultSet = false;
-let calMode     = 'bookings'; // 'bookings' | 'domestic'
 let domCalYear = new Date().getFullYear(), domCalMonth = new Date().getMonth();
 let calProp = 'all';
 let showCancelledOnCal = false;
@@ -2684,10 +2597,11 @@ const NAV = [
   {id:'dashboard',label:'Dashboard',    icon:'🏠',roles:['owner','admin','host']},
   {id:'bookings', label:'Bookings',     icon:'📋',roles:['owner','admin','host']},
   {id:'calendar', label:'Calendar',     icon:'📅',roles:['owner','admin','host']},
-  {id:'tasks',    label:'Task Management',        icon:'✅',roles:['owner','admin','host']},
-  {id:'messages', label:'Messages',     icon:'💬',roles:['owner','admin','host']},
+  {id:'cleaning', label:'Cleaning',     icon:'🧹',roles:['owner','admin','host']},
+  {id:'tasks',    label:'Tasks',        icon:'✅',roles:['owner','admin','host']},
+  {id:'messages', label:'Guest Journey',     icon:'🧭',roles:['owner','admin','host']},
   {id:'knowledge',label:'Property Manual',icon:'📖',roles:['owner','admin','host']},
-  {id:'kb',       label:'Knowledge Base',icon:'📚',roles:['owner','admin','host']},
+  {id:'inspections',label:'Inspections', icon:'🔍',roles:['owner','admin','host']},
   {id:'team',     label:'Contacts',     icon:'👥',roles:['owner','admin']},
   {id:'vault',    label:'Business Info',icon:'🔐',roles:['owner','admin']},
   {id:'invoices', label:'Invoices',     icon:'🧾',roles:['owner','admin']},
@@ -3077,7 +2991,7 @@ function renderReportInspections() {
   if (!el) return;
   const filtered = _inspFilter==='all' ? inspections : inspections.filter(r=>r.property_id===_inspFilter);
   if (!filtered.length) {
-    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:24px;font-size:.85rem">No inspection reports yet. Go to Task Management → Monthly Inspection to add one.</div>';
+    el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:24px;font-size:.85rem">No inspection reports yet. Go to Inspections to add one.</div>';
     return;
   }
   // Group by property
@@ -3106,14 +3020,15 @@ function renderTab(id) {
     }
     renderCalendar(); if(showCleaningOverlay) renderDomesticEarnings();
   }
-  else if (id==='domestic')  switchTab('calendar'); // redirect — domestic merged into calendar
-  else if (id==='tasks')     setTaskSubTab(window._taskSubTab || 'guest');
+  else if (id==='domestic')  switchTab('cleaning'); // redirect — domestic mode is now its own tab
+  else if (id==='cleaning')  renderDomesticCalView();
+  else if (id==='tasks')     renderTasks();
+  else if (id==='inspections') { renderInspectionChecklist(); renderInspectionHistory(); }
   else if (id==='messages')  renderMessages();
   else if (id==='knowledge') { renderKnowledgeManual(); }
-  else if (id==='kb')        { renderKB(); }
+  else if (id==='kb')        switchTab('knowledge'); // redirect — Knowledge Base merged into Property Manual as a section
   else if (id==='team')      renderTeam();
   else if (id==='vault')     renderVault();
-  else if (id==='finance')   renderFinance();
   else if (id==='reports')   {
     renderReports(); renderReportInspections(); renderReportInventory();
     if (feeConfigLoaded) { renderFeeInputs(); renderRateCalcResults(); }
@@ -4032,7 +3947,7 @@ function switchInvoiceSub(sub) {
     const inactive = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px';
     btn.style.cssText = s===sub ? active : inactive;
   });
-  if(sub==='outgoing') loadOutgoing();
+  if(sub==='outgoing') { loadOutgoing(); renderOwnerStatementTab(); }
   if(sub==='incoming') loadIncoming();
   if(sub==='guest')    { invLoadBookings(); loadInvHistory(); }
 }
@@ -5002,7 +4917,7 @@ function renderDashboard() {
       urgentItems.push({
         icon:'💬', label:'Send check-in msg', color:'#0369a1', textColor:'#1e40af',
         detail: b.display_name+' · arrives '+fmtDate(b.check_in)+' ('+Math.round(hoursUntil)+'h)',
-        action: `switchTab('tasks');setTaskSubTab('guest')`,
+        action: `switchTab('messages');setMsgSubTab('pipeline')`,
         priority: 2,
       });
     }
@@ -5042,7 +4957,7 @@ function renderDashboard() {
     urgentItems.push({
       icon:'⚡', label:t.title, color:'#dc2626', textColor:'#991b1b',
       detail:(t.assigned||'Unassigned')+' · '+propName(t.property_id||'all')+(t.due?' · due '+fmtDate(t.due):''),
-      action:`switchTab('tasks');setTaskSubTab('project')`,
+      action:`switchTab('tasks')`,
       priority: 3,
     });
   });
@@ -6145,19 +6060,6 @@ function renderCoverageAlert() {
   }
 }
 
-// ── Calendar mode: Bookings vs Domestic ──────────────────────
-function setCalMode(mode) {
-  calMode = mode;
-  document.getElementById('calview-bookings').style.display = mode==='bookings' ? 'block' : 'none';
-  document.getElementById('calview-domestic').style.display = mode==='domestic' ? 'block' : 'none';
-  const bb = document.getElementById('calmode-bookings-btn');
-  const db = document.getElementById('calmode-domestic-btn');
-  if (bb) { bb.style.background = mode==='bookings' ? 'var(--ocean)' : 'transparent'; bb.style.color = mode==='bookings' ? '#fff' : 'var(--muted)'; }
-  if (db) { db.style.background = mode==='domestic' ? 'var(--ocean)' : 'transparent'; db.style.color = mode==='domestic' ? '#fff' : 'var(--muted)'; }
-  if (mode==='domestic') renderDomesticCalView();
-  else renderCalendar();
-}
-
 // ── Calendar view: Month / Week / Day ────────────────────────
 // Month/Week/Day each need this kept in sync with calViewMode — pulled out
 // so the mobile-default logic (renderTab's 'calendar' case) can apply it
@@ -6486,7 +6388,6 @@ function domCalNav(dir) {
 }
 
 function renderCalendar() {
-  if (calMode === 'domestic') { renderDomesticCalView(); return; }
   const fb = calProp==='all' ? bookings : bookings.filter(b=>b.property_id===calProp);
 const fd = showCleaningOverlay
     ? (calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp))
@@ -6663,8 +6564,7 @@ function openDomesticCard(id) {
     domCalYear = dt.getFullYear();
     domCalMonth = dt.getMonth();
   }
-  switchTab('calendar');
-  setCalMode('domestic');
+  switchTab('cleaning');
   setTimeout(() => {
     const el = document.getElementById('dom-card-'+id);
     if (!el) return;
@@ -6962,7 +6862,7 @@ async function saveDomestic(sendOpts) {
     renderCalendar();
     renderBookings();
     renderDashboard();
-    if (calMode==='domestic') renderDomesticCalView();
+    if (currentTab==='cleaning') renderDomesticCalView();
     if (typeof renderDomestic==='function') renderDomestic();
     if (typeof renderDomEarnings==='function') renderDomEarnings();
   } finally {
@@ -7042,70 +6942,45 @@ function exportDomestics() {
   toast('Export downloaded ✓','success');
 }
 
-// ── TASKS + NINA BOOKING CHECKLIST ───────────────────────────
+// ── TASKS (Kanban project/maintenance board) ──────────────────
 function renderTasks() {
-  if (window._taskSubTab === 'project') {
-    renderKanban();
-  } else {
-    renderGuestManagement();
-  }
+  renderKanban();
+  renderTaskFilterBar();
 }
 
-let _taskSubTab = 'guest';
-function setTaskSubTab(tab) {
-  window._taskSubTab = tab;
-  document.getElementById('subtab-guest').style.display      = tab==='guest'      ? 'block' : 'none';
-  document.getElementById('subtab-project').style.display    = tab==='project'    ? 'block' : 'none';
-  document.getElementById('subtab-inspection').style.display = tab==='inspection' ? 'block' : 'none';
-  const btns = {
-    guest:      document.getElementById('subtab-guest-btn'),
-    project:    document.getElementById('subtab-project-btn'),
-    inspection: document.getElementById('subtab-inspection-btn'),
-  };
-  Object.entries(btns).forEach(([id, btn]) => {
-    if (!btn) return;
-    btn.style.background = tab===id ? 'var(--ocean)' : 'transparent';
-    btn.style.color      = tab===id ? '#fff'         : 'var(--muted)';
-  });
-  const addBtn = document.getElementById('task-add-btn');
-  if (addBtn) addBtn.textContent = tab==='project' ? '+ New Task' : '';
-  // Render assignee filter buttons for project tab
+function renderTaskFilterBar() {
   const filtersEl = document.getElementById('task-filters');
-  if (tab === 'project') {
-    const personBtns = ['all','Nicole','Silja','Nina Williams'].map(person => {
-      const label = person === 'all' ? 'All' : person === 'Nina Williams' ? 'Nina' : person;
-      const active = taskAssigneeFilter === person;
-      return `<button onclick="setTaskAssigneeFilter('${person}')" 
-        style="padding:3px 9px;border-radius:12px;border:1.5px solid ${active?'var(--ocean)':'var(--border)'};background:${active?'var(--ocean)':'transparent'};color:${active?'#fff':'var(--muted)'};font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap">
-        ${label}
-      </button>`;
-    }).join('');
-    const prioBtns = ['all','high','medium','low'].map(p => {
-      const active = taskPriorityFilter === p;
-      const label = p==='all'?'All':p==='high'?'🔴':p==='medium'?'🟡':'🟢';
-      const col = p==='high'?'#dc2626':p==='medium'?'#d97706':p==='low'?'#16a34a':'var(--muted)';
-      return `<button onclick="setTaskPriorityFilter('${p}')" title="${p}"
-        style="padding:3px 9px;border-radius:12px;border:1.5px solid ${active?col:'var(--border)'};background:${active?col:'transparent'};color:${active?'#fff':'var(--muted)'};font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap">
-        ${label}${p!=='all'?(' '+p.charAt(0).toUpperCase()+p.slice(1)):''}
-      </button>`;
-    }).join('');
-    filtersEl.innerHTML = `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding:6px 10px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)">
-      <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:2px">Who</span>
-      ${personBtns}
-      <span style="width:1px;height:16px;background:var(--border-strong);display:inline-block;margin:0 4px;flex-shrink:0"></span>
-      <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:2px">Priority</span>
-      ${prioBtns}
-    </div>`;
-  } else if (tab === 'guest') {
-    filtersEl.innerHTML = `<div class="pipe-toggle${guestMgmtShowCompleted?' active':''}" id="guest-completed-toggle" onclick="toggleGuestCompleted(this)"><span class="pipe-switch"></span>Show completed past guests</div>`;
-  } else {
-    filtersEl.innerHTML = '';
-  }
-  if (tab==='inspection') {
-    renderInspectionChecklist();
-    renderInspectionHistory();
-  }
-  renderTasks();
+  if (!filtersEl) return;
+  const personBtns = ['all','Nicole','Silja','Nina Williams'].map(person => {
+    const label = person === 'all' ? 'All' : person === 'Nina Williams' ? 'Nina' : person;
+    const active = taskAssigneeFilter === person;
+    return `<button onclick="setTaskAssigneeFilter('${person}')"
+      style="padding:3px 9px;border-radius:12px;border:1.5px solid ${active?'var(--ocean)':'var(--border)'};background:${active?'var(--ocean)':'transparent'};color:${active?'#fff':'var(--muted)'};font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap">
+      ${label}
+    </button>`;
+  }).join('');
+  const prioBtns = ['all','high','medium','low'].map(p => {
+    const active = taskPriorityFilter === p;
+    const label = p==='all'?'All':p==='high'?'🔴':p==='medium'?'🟡':'🟢';
+    const col = p==='high'?'#dc2626':p==='medium'?'#d97706':p==='low'?'#16a34a':'var(--muted)';
+    return `<button onclick="setTaskPriorityFilter('${p}')" title="${p}"
+      style="padding:3px 9px;border-radius:12px;border:1.5px solid ${active?col:'var(--border)'};background:${active?col:'transparent'};color:${active?'#fff':'var(--muted)'};font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap">
+      ${label}${p!=='all'?(' '+p.charAt(0).toUpperCase()+p.slice(1)):''}
+    </button>`;
+  }).join('');
+  filtersEl.innerHTML = `<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;padding:6px 10px;background:var(--surface-2);border-radius:8px;border:1px solid var(--border)">
+    <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:2px">Who</span>
+    ${personBtns}
+    <span style="width:1px;height:16px;background:var(--border-strong);display:inline-block;margin:0 4px;flex-shrink:0"></span>
+    <span style="font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-right:2px">Priority</span>
+    ${prioBtns}
+  </div>`;
+}
+
+function renderGuestFilterBar() {
+  const filtersEl = document.getElementById('guest-filters');
+  if (!filtersEl) return;
+  filtersEl.innerHTML = `<div class="pipe-toggle${guestMgmtShowCompleted?' active':''}" id="guest-completed-toggle" onclick="toggleGuestCompleted(this)"><span class="pipe-switch"></span>Show completed past guests</div>`;
 }
 
 // ── GUEST MANAGEMENT ──────────────────────────────────────────
@@ -7437,9 +7312,8 @@ function copyUrl(elId, btn) {
     setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 2000);
   }).catch(() => toast('Copy failed — select the text manually','error'));
 }
-function setTaskAssigneeFilter(person) { taskAssigneeFilter=person; setTaskSubTab('project'); }
-function setTaskPriorityFilter(p) { taskPriorityFilter=p; setTaskSubTab('project'); }
-window._taskSubTab = 'guest';
+function setTaskAssigneeFilter(person) { taskAssigneeFilter=person; renderTasks(); }
+function setTaskPriorityFilter(p) { taskPriorityFilter=p; renderTasks(); }
 async function toggleTask(id) {
   const t=tasks.find(x=>x.id==id); if(!t)return;
   t.status=t.status==='done'?'open':'done';
@@ -7454,14 +7328,13 @@ async function saveTask() {
   const pid=document.getElementById('t-prop').value;
   const propUuidModal = pid !== 'all' ? ((PROPS[pid] || {}).uuid || null) : null;
   const _pri = document.getElementById('t-priority').value;
-  const _typ = window._taskSubTab==='project' ? 'project' : 'task';
   const row={
     title,
     description: document.getElementById('t-notes').value,
     priority:    toDbPriority(_pri),
     status:      'pending',
     kanban_status: window._kanbanCol || 'todo',
-    type:        toDbType(_typ),
+    type:        toDbType('project'),
     due_at:      document.getElementById('t-due').value || null,
     task_date:   document.getElementById('t-due').value || null,
     property_id: propUuidModal,
@@ -7480,25 +7353,29 @@ async function saveTask() {
     }
     toast('Task created ✓','success');
     closeModal('task-modal');
-    // Switch to project tab so user can see the new task on the board
-    if(window._taskSubTab !== 'project') setTaskSubTab('project');
     renderTasks();
   } finally {
     _savingTask = false;
   }
 }
 
-// ── MESSAGES ─────────────────────────────────────────────────
-let _msgSubTab = 'wa';
+// ── GUEST JOURNEY (pipeline checklist + WhatsApp timeline + team chat) ──
+let _msgSubTab = 'pipeline';
 
 function setMsgSubTab(tab) {
   _msgSubTab = tab;
+  document.getElementById('msg-subtab-pipeline').style.display = tab==='pipeline' ? 'block' : 'none';
   document.getElementById('msg-subtab-wa').style.display   = tab==='wa'   ? 'block' : 'none';
   document.getElementById('msg-subtab-team').style.display = tab==='team' ? 'block' : 'none';
+  const langWrap = document.getElementById('msg-lang-wrap');
+  if (langWrap) langWrap.style.display = tab==='wa' ? 'flex' : 'none';
+  const pb = document.getElementById('msg-subtab-pipeline-btn');
   const wb = document.getElementById('msg-subtab-wa-btn');
   const tb = document.getElementById('msg-subtab-team-btn');
+  if (pb) { pb.style.background = tab==='pipeline' ? 'var(--ocean)' : 'transparent'; pb.style.color = tab==='pipeline' ? '#fff' : 'var(--muted)'; }
   if (wb) { wb.style.background = tab==='wa'   ? 'var(--ocean)' : 'transparent'; wb.style.color = tab==='wa'   ? '#fff' : 'var(--muted)'; }
   if (tb) { tb.style.background = tab==='team' ? 'var(--ocean)' : 'transparent'; tb.style.color = tab==='team' ? '#fff' : 'var(--muted)'; }
+  if (tab==='pipeline') { renderGuestFilterBar(); renderGuestManagement(); }
   if (tab==='wa') renderGuestTimeline();
   if (tab==='team') renderTeamChat();
 }
@@ -7942,7 +7819,8 @@ function renderTeamChat() {
 }
 
 function renderMessages() {
-  if (_msgSubTab==='wa') renderGuestTimeline();
+  if (_msgSubTab==='pipeline') { renderGuestFilterBar(); renderGuestManagement(); }
+  else if (_msgSubTab==='wa') renderGuestTimeline();
   else renderTeamChat();
 }
 function sendMessage() {
@@ -7990,6 +7868,7 @@ let kmSection = 'checklist';
 const KM_SECTIONS = [
   {key:'checklist', label:'🧹 Inventory & Checklist'},
   {key:'faq',        label:'💬 Guest FAQ'},
+  {key:'notes',      label:'📚 General Notes'},
 ];
 
 function renderKnowledgeManual() {
@@ -8017,6 +7896,7 @@ function setKmSection(section) { kmSection = section; renderKnowledgeManual(); }
 function renderKmSectionContent() {
   if (kmSection === 'checklist') renderKmChecklist();
   else if (kmSection === 'faq') renderKmFaq();
+  else if (kmSection === 'notes') renderKmNotes();
 }
 
 function kmPropUuid() { return (PROPS[kmProp] || {}).uuid || kmProp; }
@@ -8192,15 +8072,21 @@ const KB_CAT_STYLE = {
 };
 function kbCatStyle(cat) { return KB_CAT_STYLE[cat] || {color:'#71717a', icon:'📚'}; }
 
-function renderKB(search='') {
+// General Notes — merged into Property Manual as its 3rd section (was a
+// separate top-level "Knowledge Base" nav tab). Filters by kmProp (the
+// Property Manual page's own property switcher) instead of the global
+// currentProp switcher, for consistency with the Inventory & Checklist /
+// Guest FAQ sections it now sits alongside.
+function renderKmNotes(search='') {
+  const el = document.getElementById('km-content');
   const q=(search||'').toLowerCase();
   const filtered=kbArticles.filter(a =>
     a.category !== 'Finance' &&
-    (currentProp==='all' || (a.property_id||'all')===currentProp || (a.property_id||'all')==='all') &&
+    (kmProp==='all' || (a.property_id||'all')===kmProp || (a.property_id||'all')==='all') &&
     (!q||a.title.toLowerCase().includes(q)||a.content.toLowerCase().includes(q)||a.category.toLowerCase().includes(q))
   );
   const cats=[...new Set(filtered.map(a=>a.category))];
-  document.getElementById('kb-content').innerHTML=cats.map(cat=>{
+  const cardsHtml = cats.map(cat=>{
     const arts=filtered.filter(a=>a.category===cat);
     const st = kbCatStyle(cat);
     return`<div class="mb-6">
@@ -8214,6 +8100,15 @@ function renderKB(search='') {
       </div>`;}).join('')}</div>
     </div>`;
   }).join('')||'<div class="empty-state"><div class="empty-icon">📚</div>No articles found</div>';
+
+  el.innerHTML = `
+    <div class="section-head" style="margin-bottom:12px">
+      <div><h3 style="font-size:1rem;margin-bottom:2px">General Notes</h3><div class="text-muted" style="font-size:.78rem">Reference notes — tag one property or leave as Both; filtered by the property switcher above</div></div>
+      <button class="btn btn-primary btn-sm" onclick="openModal('kb-modal')">+ Add Note</button>
+    </div>
+    <div class="mb-6"><input style="width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.88rem;outline:none;background:#fff" placeholder="🔍 Search…" oninput="renderKmNotes(this.value)"/></div>
+    <div>${cardsHtml}</div>
+  `;
 }
 function showKB(id) {
   const a=kbArticles.find(x=>x.id==id); if(!a)return;
@@ -8244,11 +8139,11 @@ async function saveKB() {
     if(db){const{data,error}=await db.from('kb_articles').update(row).eq('id',editId).select().single();if(error){toast('Save error: '+error.message,'error');return;}const idx=kbArticles.findIndex(x=>x.id==editId);if(idx>-1)kbArticles[idx]=data;}
     else{const idx=kbArticles.findIndex(x=>x.id==editId);if(idx>-1)kbArticles[idx]={...kbArticles[idx],...row};}
     window._editKbId = null;
-    toast('Article updated ✓','success'); closeModal('kb-modal'); renderKB(); return;
+    toast('Article updated ✓','success'); closeModal('kb-modal'); renderKmNotes(); return;
   }
   if(db){const{data,error}=await db.from('kb_articles').insert([row]).select().single();if(error){toast('Save error: '+error.message,'error');return;}kbArticles.unshift(data);}
   else{kbArticles.unshift({...row,id:'k'+Date.now()});}
-  toast('Article published ✓','success');closeModal('kb-modal');renderKB();
+  toast('Article published ✓','success');closeModal('kb-modal');renderKmNotes();
 }
 
 // ── REPORTS ───────────────────────────────────────────────────
@@ -8547,18 +8442,15 @@ const isPast = m < todayMo;
   function switchReportSub(sub) {
   document.getElementById('rsub-revenue').style.display = sub === 'revenue' ? '' : 'none';
   document.getElementById('rsub-property').style.display = sub === 'property' ? '' : 'none';
-  document.getElementById('rsub-owner').style.display = sub === 'owner' ? '' : 'none';
   if (sub === 'property') {
     renderReportInspections();
     renderReportInventory();
     renderReports(window._reportMonths ?? 3);
   }
-  if (sub === 'owner') { renderOwnerStatementTab(); }
   const activeStyle = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px';
   const inactiveStyle = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px';
   document.getElementById('rsub-revenue-btn').style.cssText = sub === 'revenue' ? activeStyle : inactiveStyle;
   document.getElementById('rsub-property-btn').style.cssText = sub === 'property' ? activeStyle : inactiveStyle;
-  document.getElementById('rsub-owner-btn').style.cssText = sub === 'owner' ? activeStyle : inactiveStyle;
 }
 
 // ── OWNER STATEMENTS (B2) ────────────────────────────────────────
@@ -9673,7 +9565,7 @@ async function markReviewed(reportId) {
   r.reviewed = true;
   if(db) await db.from('inventory_reports').update({reviewed:true}).eq('id',reportId);
   toast('Marked as reviewed ✓','success');
-  if(calMode==='domestic') renderDomesticCalView();
+  if(currentTab==='cleaning') renderDomesticCalView();
   renderDashboard();
 }
 
@@ -9704,14 +9596,13 @@ async function createTaskFromFlag(reportId) {
     r.task_created=true; r.reviewed=true;
   }
   toast('Task created ✓','success');
-  if(calMode==='domestic') renderDomesticCalView();
+  if(currentTab==='cleaning') renderDomesticCalView();
   if(typeof renderReportInventory==='function') renderReportInventory();
   renderDashboard(); renderTasks();
 }
 
 function showInventoryReport(reportId) {
-  setCalMode('domestic');
-  switchTab('calendar');
+  switchTab('cleaning');
   setTimeout(()=>{ const el=document.getElementById('dom-inv-reports'); if(el) el.scrollIntoView({behavior:'smooth'}); },400);
 }
 
