@@ -7685,19 +7685,22 @@ function guestFaqEntries(propertyId) {
 // (e.g. re-open pre-arrival after it's marked sent) without that click
 // mutating sent/not-sent state.
 let _selectedMsgStage = {};
+// bid -> whether that card's message viewer is expanded. Kept in JS (not a
+// DOM dataset) so it survives renderGuestTimeline()'s full re-render —
+// previously every click rebuilt the DOM from scratch and silently
+// re-collapsed the preview, so viewing a message after selecting a stage
+// always took two clicks (select, then expand) even though it looked like
+// clicking the stage icon should be enough.
+let _msgPreviewExpanded = {};
 function selectMsgStage(bid, key) {
   _selectedMsgStage[bid] = key;
+  _msgPreviewExpanded[bid] = true; // clicking a stage icon shows its message immediately
   renderGuestTimeline();
 }
 
-function toggleMsgPreview(key) {
-  const el = document.getElementById('msgprev-'+key);
-  if (!el) return;
-  const expanded = el.dataset.expanded === 'true';
-  el.dataset.expanded = expanded ? 'false' : 'true';
-  el.style.maxHeight = expanded ? '36px' : 'none';
-  const toggle = document.getElementById('msgtoggle-'+key);
-  if (toggle) toggle.textContent = expanded ? '▼ Expand' : '▲ Collapse';
+function toggleMsgPreview(bid) {
+  _msgPreviewExpanded[bid] = !_msgPreviewExpanded[bid];
+  renderGuestTimeline();
 }
 
 function sendGuestTouchpoint(bookingId, stageKey) {
@@ -7767,27 +7770,35 @@ function renderGuestTimeline() {
         </div>
       </div>
 
-      <!-- Stage row: pre-arrival -> [mid-stay] -> post-stay, as equal-width
-           segments (platform now reads from the left-edge stripe + subtitle
-           instead of its own chip/row). Clicking a segment just selects it
-           for preview below — it no longer toggles sent/not-sent, so an
-           accidental click can't strand a stage with no way to view or
-           resend its message. -->
-      <div style="display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:10px">
-        ${stages.map((s,i) => `
+      <!-- Stage row: pre-arrival -> [mid-stay] -> post-stay. Each stage is
+           its own icon inside a status ring (green=sent, red=due now &
+           unsent, grey=not due yet) instead of a small ✓/●/○ glyph, so
+           done/not-done reads at a glance. Clicking a stage — any stage,
+           done or not — just selects it for the viewer below; it never
+           toggles sent/not-sent itself, so an accidental click can't strand
+           a stage with no way to view or resend its message (that's still
+           the explicit Mark sent/not sent button only). -->
+      <div style="display:flex;gap:4px;margin-bottom:10px">
+        ${stages.map(s => {
+          const ringColor = s.done ? 'var(--green)' : s.dueNow ? '#dc2626' : 'var(--border-strong)';
+          const isActive = s.key===activeKey;
+          return `
           <div title="${s.windowLabel||''}" onclick="selectMsgStage('${bid}','${s.key}')"
-            style="flex:1;text-align:center;padding:7px 6px;cursor:pointer;${i<stages.length-1?'border-right:1px solid var(--border)':''};background:${s.key===activeKey?'var(--surface-2)':'transparent'}">
+            style="flex:1;text-align:center;padding:6px 4px;cursor:pointer;border-radius:8px;background:${isActive?'var(--surface-2)':'transparent'}">
+            <div style="width:32px;height:32px;margin:0 auto 4px;border-radius:50%;border:2.5px solid ${ringColor};display:flex;align-items:center;justify-content:center;font-size:.92rem;background:var(--surface);position:relative">
+              ${s.icon}${s.done?`<span style="position:absolute;bottom:-3px;right:-3px;background:var(--green);color:#fff;border-radius:50%;width:13px;height:13px;font-size:.55rem;line-height:13px;text-align:center">✓</span>`:''}
+            </div>
             <div style="font-family:var(--font-mono);font-size:.56rem;text-transform:uppercase;letter-spacing:.02em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.label}</div>
-            <div style="font-size:.82rem;margin-top:3px;color:${s.done?'var(--green)':s.dueNow?'var(--amber)':'var(--muted)'}">${s.done?'✓':s.dueNow?'●':'○'}</div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
 
       <div style="background:${activeStage.done?'var(--green-light)':'var(--amber-light)'};border-radius:8px;padding:8px 10px;margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px" onclick="toggleMsgPreview('${bid}-${activeStage.key}')">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px" onclick="toggleMsgPreview('${bid}')">
           <div style="font-size:.68rem;font-weight:700;color:${activeStage.done?'#065f46':'#92400e'}">${activeStage.icon} ${activeStage.label}${activeStage.done?' — sent':activeStage.dueNow?' — due now':''}</div>
-          <span id="msgtoggle-${bid}-${activeStage.key}" style="font-size:.64rem;font-weight:600;color:${activeStage.done?'#065f46':'#92400e'};white-space:nowrap">▼ Expand</span>
+          <span style="font-size:.64rem;font-weight:600;color:${activeStage.done?'#065f46':'#92400e'};white-space:nowrap">${_msgPreviewExpanded[bid]?'▲ Hide message':'👁 View message'}</span>
         </div>
-        <div id="msgprev-${bid}-${activeStage.key}" data-expanded="false" style="font-size:.7rem;color:${activeStage.done?'#065f46':'#78350f'};white-space:pre-wrap;max-height:36px;overflow:hidden;cursor:pointer" onclick="toggleMsgPreview('${bid}-${activeStage.key}')">${activeStage.message}</div>
+        ${_msgPreviewExpanded[bid] ? `<div style="font-size:.7rem;color:${activeStage.done?'#065f46':'#78350f'};white-space:pre-wrap;cursor:pointer" onclick="toggleMsgPreview('${bid}')">${activeStage.message}</div>` : ''}
       </div>
 
       ${guestFaqEntries(b.property_id).length ? `
