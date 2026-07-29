@@ -4884,7 +4884,7 @@ function renderDashboard() {
     urgentItems.push({
       icon:'🚫', label:'Booking cancelled — inform '+d.cleaner, color:'#dc2626', textColor:'#991b1b',
       detail: propName(d.property_id)+' · '+d.cleaner+' scheduled '+fmtDate(d.date),
-      action: `switchTab('domestic')`,
+      action: `editCleaning('${d.id}')`,
       dismissAction: `acknowledgeCancelledClean('${d.id}')`,
       priority: 1,
     });
@@ -4900,7 +4900,12 @@ function renderDashboard() {
     urgentItems.push({
       icon:'🚨', label:'Never completed — '+d.cleaner, color:'#dc2626', textColor:'#991b1b',
       detail: propName(d.property_id)+' · was due '+fmtDate(d.date),
-      action: `switchTab('domestic')`,
+      // Was just switchTab('domestic') — a dead redirect to the generic
+      // Calendar tab with no indication of which cleaning to actually look
+      // at. Opens the specific cleaning record's own edit modal instead, so
+      // clicking straight through from the Dashboard shows exactly what
+      // needs marking done (or deleting) to close the alert.
+      action: `editCleaning('${d.id}')`,
       priority: 1,
     });
   });
