@@ -31,13 +31,14 @@ export default async function handler(req, res) {
     if (!callerRes.ok) return res.status(401).json({ error: 'Invalid session' });
     const caller = await callerRes.json();
 
-    // 2. Check the caller is actually an 'owner' — only owners can create new orgs/users
+    // 2. Check the caller is actually an 'owner' — only owners can create new users
     const profileRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${caller.id}&select=role`,
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${caller.id}&select=role,org_id`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
     );
     const profileData = await profileRes.json();
-    if (!Array.isArray(profileData) || !profileData.length || profileData[0].role !== 'owner') {
+    const callerProfile = Array.isArray(profileData) && profileData[0];
+    if (!callerProfile || callerProfile.role !== 'owner') {
       return res.status(403).json({ error: 'Only an owner can create new users' });
     }
 
@@ -45,6 +46,13 @@ export default async function handler(req, res) {
     const { email, password, name, role, org_id, initials } = req.body || {};
     if (!email || !password || !name || !role || !org_id) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+    // An owner may only create users inside their OWN org — without this,
+    // any owner (of any org) could pass an arbitrary org_id (e.g. a
+    // hardcoded UUID visible in the shipped client JS) and create
+    // themselves a login inside a different org entirely.
+    if (org_id !== callerProfile.org_id) {
+      return res.status(403).json({ error: 'Cannot create a user in a different organization' });
     }
     if (!['owner', 'admin', 'host'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });

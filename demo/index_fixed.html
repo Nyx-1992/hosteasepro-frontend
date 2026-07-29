@@ -490,11 +490,6 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   }
 }
 
-/* Mobile sidebar drawer */
-.mob-sidebar{display:none;position:fixed;inset:0;z-index:500}
-.mob-sidebar.open{display:block}
-.mob-sidebar-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5)}
-.mob-sidebar-drawer{position:absolute;left:0;top:0;bottom:0;width:260px;background:var(--ink);overflow-y:auto;box-shadow:4px 0 20px rgba(0,0,0,.4);display:flex;flex-direction:column}
 </style>
 
 
@@ -504,7 +499,6 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 // Safe stubs — overridden when main script loads
 function openDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d)d.classList.add('open');if(o)o.classList.add('open');}
 function closeDrawer(){const d=document.getElementById('mob-drawer');const o=document.getElementById('mob-overlay');if(d)d.classList.remove('open');if(o)o.classList.remove('open');}
-function toggleMobSidebar(){openDrawer();}
 function _buildMobileNavStub(){/* replaced by main script */}
 </script>
 
@@ -628,8 +622,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
           </div>
         </div>
 
-        <!-- KPI + Alert -->
-        <div id="cleaning-kpi-panel" style="display:none;margin-bottom:16px"></div>
+        <!-- Alert -->
         <div id="cleaning-coverage-alert" style="display:none;margin-bottom:12px"></div>
 
         <!-- Calendar wrapper -->
@@ -1608,33 +1601,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
   </div>
 </div>
 
-<!-- MOBILE SIDEBAR DRAWER -->
-<div class="mob-sidebar" id="mob-sidebar">
-  <div class="mob-sidebar-overlay" onclick="toggleMobSidebar()"></div>
-  <div class="mob-sidebar-drawer">
-    <div class="s-logo" style="padding:24px 20px 16px">
-      <span class="s-logo-text">HostEase Pro</span>
-      <small>Property Management</small>
-    </div>
-    <div class="s-prop" style="padding:10px 14px">
-      <select id="mob-sidebar-prop-select" onchange="switchProperty(this.value);toggleMobSidebar()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none">
-        <option value="all">All Properties</option>
-        <option value="speranta">Speranta Flat</option>
-        <option value="tvhouse">TV House</option>
-      </select>
-    </div>
-    <nav id="mob-sidebar-nav" style="padding:10px 0;flex:1"></nav>
-    <div class="s-user" style="padding:14px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:9px">
-      <div class="avatar" id="mob-user-avatar"></div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:.8rem;font-weight:600;color:#fff" id="mob-user-name"></div>
-        <div style="font-size:.7rem;color:rgba(255,255,255,.35)" id="mob-user-role"></div>
-      </div>
-      <button style="background:none;border:none;color:rgba(255,255,255,.4);cursor:pointer;font-size:1rem" onclick="doLogout()">⏏</button>
-    </div>
-  </div>
-</div>
-
 <div class="toast-wrap" id="toast-wrap"></div>
 <script>
 // ════════════════════════════════════════════════════════════════
@@ -1725,7 +1691,7 @@ function propSelectOptionsHtml() {
   return html;
 }
 function refreshPropSelects() {
-  ['prop-select', 'mob-prop-select', 'mob-sidebar-prop-select'].forEach(id => {
+  ['prop-select', 'mob-prop-select'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     const cur = el.value;
@@ -1995,7 +1961,7 @@ function getOrgId() {
   return CURRENT_ORG_ID || SN_OWNER_ORG_ID;
 }
 restoreSession();
-let taskFilter = 'open', bookingFilter = 'upcoming';
+let bookingFilter = 'upcoming';
 // Tracks the Urgent Actions count across renders so the "all clear"
 // celebration only fires on the actual transition to zero, not on every
 // re-render of an already-empty dashboard.
@@ -2567,6 +2533,9 @@ async function _afterLogin(user) {
   document.getElementById('user-avatar').textContent = user.initials;
   document.getElementById('user-name').textContent = user.name;
   document.getElementById('user-role').textContent = user.role;
+  document.getElementById('mob-avatar').textContent = user.initials;
+  document.getElementById('mob-name').textContent = user.name;
+  document.getElementById('mob-role').textContent = user.role;
   buildNav(); buildMobileNav(); loadData(); scheduleICalSync(); applyRoleUI();
 }
 async function restoreSession() {
@@ -4718,22 +4687,6 @@ function rmRender(){
 async function renderRoadmapTab(){ await rmLoad(); rmRender(); }
 
 // ── FILTERS ───────────────────────────────────────────────────
-function filteredBookings() {
-  const today = todaySAST();
-  let b = currentProp==='all' ? bookings : bookings.filter(x=>x.property_id===currentProp);
-  // Always exclude raw blocked events from booking lists (they show on calendar only)
-  b = b.filter(x=>x.status!=='blocked');
-  if (bookingFilter==='upcoming')   b = b.filter(x=>x.check_in>=today && x.status!=='cancelled');
-  else if (bookingFilter==='past')  b = b.filter(x=>x.check_out<today && x.status!=='cancelled');
-  else if (bookingFilter==='cancelled') b = b.filter(x=>x.status==='cancelled');
-  else if (bookingFilter!=='all')   b = b.filter(x=>x.status===bookingFilter);
-  return b.sort((a,z)=> bookingFilter==='upcoming' ? a.check_in.localeCompare(z.check_in) : z.check_in.localeCompare(a.check_in));
-}
-function filteredTasks() {
-  let t = currentProp==='all' ? tasks : tasks.filter(x=>x.property_id===currentProp||x.property_id==='all');
-  if (taskFilter!=='all') t = t.filter(x=>x.status===taskFilter);
-  return t.sort((a,z)=>({high:0,medium:1,low:2}[a.priority]||1)-({high:0,medium:1,low:2}[z.priority]||1));
-}
 function filteredDomestics() {
   return (currentProp==='all' ? domestics : domestics.filter(x=>x.property_id===currentProp)).sort((a,z)=>z.date.localeCompare(a.date));
 }
@@ -5944,8 +5897,6 @@ function toggleCleaningOverlay(btn) {
   showCleaningOverlay = !showCleaningOverlay;
   btn.textContent = showCleaningOverlay ? '🧹 Hide Cleaning' : '🧹 Cleaning';
   btn.classList.toggle('active', showCleaningOverlay);
-  const panel = document.getElementById('domestic-sessions-panel');
-  if (panel) panel.style.display = showCleaningOverlay ? 'block' : 'none';
   // Deferred to the next frame so the button's own active-state paints
   // immediately instead of waiting behind the (data-size-dependent)
   // calendar re-render — this is what was showing up as an INP warning
@@ -5971,7 +5922,7 @@ function toggleKPIPanel() {
 }
 
 function renderKPIPanel() {
-  const el = document.getElementById('cleaning-kpi-panel');
+  const el = document.getElementById('cleaning-kpi-panel-dom');
   if (!el) return;
   if (!showKPIPanel) { el.style.display = 'none'; return; }
   el.style.display = 'block';
@@ -7323,7 +7274,6 @@ async function toggleNinaTask(bookingId, taskKey) {
   if (document.getElementById('booking-lane-view')?.style.display !== 'none') renderLaneView();
   if (document.getElementById('todays-checkouts-section')) renderTodaysCheckouts();
 }
-function setTaskFilter(f) { taskFilter=f; renderTasks(); }
 function copyUrl(elId, btn) {
   const text = document.getElementById(elId)?.textContent?.trim();
   if (!text) return;
@@ -8256,7 +8206,6 @@ const amt = b.revenue || b.total_amount || 0;
   const todayMo = todaySAST().slice(0,7);
   const months = Object.keys(monthlyData).sort();
   window._chartData = monthlyData;
-  console.log('monthlyData:', JSON.stringify(monthlyData));
   const maxMonthTotal = Math.max(1, ...months.map(m => monthlyData[m].total));
   const moLabel = m => {
     const[y,mo] = m.split('-');
@@ -9498,15 +9447,6 @@ function toDbStatus(appStatus) {
   return map[appStatus] || 'pending';
 }
 // Map DB status back to app kanban status
-function fromDbStatus(dbStatus) {
-  const map = {
-    'pending':     'todo',
-    'in_progress': 'inprogress',
-    'completed':   'done',
-    'cancelled':   'cancelled',
-  };
-  return map[dbStatus] || 'todo';
-}
 // Map app priority to DB-allowed values
 // DB constraint: low | normal | high | urgent
 function toDbPriority(appPriority) {
