@@ -1784,21 +1784,46 @@ function renderPropertiesSettings() {
     el.innerHTML = emptyState('🏠', 'No properties yet', `<button class="btn btn-sm btn-primary" onclick="openAddProperty()">+ Add Property</button>`);
     return;
   }
-  el.innerHTML = _propertiesRaw.map(p => `
+  el.innerHTML = _propertiesRaw.map(p => {
+    const feedCount = (typeof ICAL_FEEDS!=='undefined' ? ICAL_FEEDS : []).filter(f=>f.property_id===p.id).length;
+    return `
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-weight:600;font-size:.88rem">${p.name}</div>
-        <div style="font-size:.76rem;color:var(--muted)">${[p.address_line1,p.city].filter(Boolean).join(', ')||'No address set'} · Cleaning fee R${p.cleaning_fee||0}</div>
+        <div style="font-size:.76rem;color:var(--muted)">${[p.address_line1,p.city].filter(Boolean).join(', ')||'No address set'} · Cleaning fee R${p.cleaning_fee||0} · ${feedCount?feedCount+' iCal feed'+(feedCount>1?'s':''):'No iCal feeds'}</div>
       </div>
       <button class="btn btn-sm btn-ghost" onclick="openEditProperty('${p.id}')">Edit</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function openAddProperty() { openPropertyModal(null); }
 function openEditProperty(id) { openPropertyModal(id); }
 
+let _icalFeedSeq = 0;
+const ICAL_PLATFORM_LABELS_PR = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', other:'Other'};
+
+function icalFeedRowHtml(feed) {
+  feed = feed || {};
+  const rowId = 'if'+(_icalFeedSeq++);
+  const platform = feed.platform || 'airbnb';
+  return `<div class="pr-feed-row" data-row-id="${rowId}" style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:6px;position:relative">
+    <button type="button" class="btn btn-ghost btn-sm" title="Remove" style="position:absolute;top:4px;right:4px;width:22px;height:22px;padding:0" onclick="this.closest('.pr-feed-row').remove()">✕</button>
+    <div style="display:grid;grid-template-columns:130px 1fr;gap:6px;padding-right:26px">
+      <select class="pr-feed-platform">
+        ${Object.keys(ICAL_PLATFORM_LABELS_PR).map(k=>`<option value="${k}" ${k===platform?'selected':''}>${ICAL_PLATFORM_LABELS_PR[k]}</option>`).join('')}
+      </select>
+      <input class="pr-feed-url" placeholder="https://... iCal sync URL" value="${escAttr(feed.url||feed.feed_url||'')}"/>
+    </div>
+  </div>`;
+}
+function addIcalFeedRow() {
+  document.getElementById('pr-feeds-list').insertAdjacentHTML('beforeend', icalFeedRowHtml({}));
+}
+
 function openPropertyModal(id) {
   const existing = id ? _propertiesRaw.find(p=>p.id===id) : null;
+  const existingFeeds = existing ? ICAL_FEEDS.filter(f=>f.property_id===existing.id) : [];
   document.getElementById('day-modal-title').textContent = existing ? 'Edit Property' : 'Add Property';
   document.getElementById('day-modal-body').innerHTML = `
     <div class="form-grid" style="gap:10px">
@@ -1807,11 +1832,19 @@ function openPropertyModal(id) {
       <div class="form-field"><label>Cleaning Fee (R)</label><input id="pr-fee" type="number" placeholder="0" value="${existing&&existing.cleaning_fee?existing.cleaning_fee:''}"/></div>
       <div class="form-field span-full"><label>Address</label><input id="pr-addr1" placeholder="Street address" value="${escAttr(existing?existing.address_line1:'')}"/></div>
       <div class="form-field span-full"><label>City</label><input id="pr-city" placeholder="City" value="${escAttr(existing?existing.city:'')}"/></div>
+      <div class="form-field span-full">
+        <label>iCal Feeds <span style="font-weight:400;color:var(--muted)">(paste the sync URL from each platform this property is listed on)</span></label>
+        <div id="pr-feeds-list"></div>
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="addIcalFeedRow()">+ Add feed</button>
+      </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn btn-primary" onclick="savePropertyRecord(${existing?`'${existing.id}'`:'null'})">Save Property</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
     </div>`;
+  const feedsListEl = document.getElementById('pr-feeds-list');
+  feedsListEl.innerHTML = '';
+  (existingFeeds.length ? existingFeeds : [{}]).forEach(f => feedsListEl.insertAdjacentHTML('beforeend', icalFeedRowHtml(f)));
   openModal('day-modal');
 }
 
@@ -1826,17 +1859,36 @@ async function savePropertyRecord(id) {
     city: document.getElementById('pr-city').value.trim() || null,
     cleaning_fee: parseFloat(document.getElementById('pr-fee').value) || 0,
   };
+  let propertyId = id;
   let error;
   if (id) {
     ({ error } = await db.from('properties').update(row).eq('id', id));
   } else {
     row.org_id = getOrgId();
-    ({ error } = await db.from('properties').insert([row]));
+    const res = await db.from('properties').insert([row]).select().single();
+    error = res.error;
+    propertyId = res.data && res.data.id;
   }
   if (error) { toast('Save error: '+error.message,'error'); return; }
+
+  // iCal feeds — one row per platform this property syncs from, upserted
+  // into the same public.ical_feeds table the background sync already
+  // reads per-org (loadIcalFeeds()). Previously the only way to populate
+  // this table was the Supabase SQL editor directly.
+  const feedRows = Array.from(document.querySelectorAll('#pr-feeds-list .pr-feed-row')).map(r => ({
+    platform: r.querySelector('.pr-feed-platform').value,
+    feed_url: r.querySelector('.pr-feed-url').value.trim(),
+  })).filter(f => f.feed_url);
+  if (propertyId && feedRows.length) {
+    const feedUpserts = feedRows.map(f => ({ org_id: getOrgId(), property_id: propertyId, platform: f.platform, feed_url: f.feed_url, is_active: true }));
+    const { error: feedError } = await db.from('ical_feeds').upsert(feedUpserts, { onConflict: 'org_id,property_id,platform' });
+    if (feedError) { toast('Property saved, but feed save failed: '+feedError.message,'error'); }
+  }
+
   toast('Property saved ✓','success');
   closeModal('day-modal');
   await loadProperties();
+  await loadIcalFeeds();
 }
 
 // ── Domestic staff ──
