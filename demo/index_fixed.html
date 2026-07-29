@@ -3023,7 +3023,7 @@ function renderTab(id) {
       _calMobileDefaultSet = true;
       if (window.innerWidth <= 768) { calViewMode = 'day'; syncCalViewPanels(); }
     }
-    renderCalendar(); if(showCleaningOverlay) renderDomesticEarnings();
+    renderCalendar();
   }
   else if (id==='domestic')  switchTab('cleaning'); // redirect — domestic mode is now its own tab
   else if (id==='cleaning')  renderDomesticCalView();
@@ -3045,15 +3045,6 @@ function renderTab(id) {
   else if (id==='settings')  renderSettingsPrefs();
 }
 
-function renderDomesticEarnings() {
-  // Render earnings summary and sessions list in the calendar tab panel
-  const earnEl = document.getElementById('dom-earnings-summary');
-  const gridEl = document.getElementById('dom-grid');
-  if (!earnEl || !gridEl) return;
-  // reuse existing domestic render functions
-  if (typeof renderDomEarnings === 'function') renderDomEarnings();
-  if (typeof renderDomestic   === 'function') renderDomestic();
-}
 
 // ── DATA LOAD ─────────────────────────────────────────────────
 async function loadData() {
@@ -5917,7 +5908,6 @@ function toggleCleaningOverlay(btn) {
   // on the clicked button with a real-sized bookings/domestics dataset.
   requestAnimationFrame(() => {
     renderCalendar();
-    if (showCleaningOverlay) renderDomesticEarnings();
   });
 }
 
@@ -6213,7 +6203,7 @@ function renderDomesticCalView() {
     const today = todaySAST();
     const monthStr = String(year)+'-'+String(month+1).padStart(2,'0');
     const monthDoms = domestics.filter(d=>d.date&&d.date.startsWith(monthStr));
-    const COLORS = {Blessing:'#C9962E',Fatima:'#F0563B',Patricia:'#0FA898',Spiwe:'#2F6FED'};
+    const COLORS = getCleanerColors();
 
     let g = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;text-align:center;font-size:.7rem;margin-bottom:8px">';
     ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d => {
@@ -6252,11 +6242,10 @@ function renderDomesticCalView() {
       nextDays.push(d.toISOString().slice(0,10));
     }
     const heatmapCleaners = getDomesticStaff().map(c=>c.name);
-    // Rotating 6-swatch palette (was a fixed 4-name map) so a cleaner added
-    // via the Staff tab gets a color without a code change — "refined
-    // heatmap" direction from the design review.
-    const PALETTE = ['#C9962E','#F0563B','#0FA898','#2F6FED','#A855F7','#EAB308'];
-    const COLORS = {}; heatmapCleaners.forEach((name,i)=>{COLORS[name]=PALETTE[i%PALETTE.length];});
+    // "Refined heatmap" direction from the design review — shared color
+    // map (getCleanerColors()) so a cleaner added via the Staff tab gets
+    // a color without a code change.
+    const COLORS = getCleanerColors();
     const colCount = nextDays.length;
     availEl.innerHTML = '<div style="overflow-x:auto"><div style="border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden;min-width:600px">'
       + '<div style="display:grid;grid-template-columns:130px repeat('+colCount+',1fr);border-bottom:1px solid var(--border)">'
@@ -6540,13 +6529,6 @@ function bookCleaningForGuest(pid, checkoutDate, bookingId) {
 // session — its row's own "✓ Mark Complete" button in the Domestic cal
 // view — rather than editCleaning()'s scheduling-detail modal (property/
 // date/cleaner/link), which has no way to mark a clean done at all.
-//
-// (Found while wiring this up: renderDomestic()'s richer checklist-card
-// version of this list is actually dead code — its only trigger,
-// toggleCleaningOverlay(), targets a #domestic-sessions-panel element that
-// no longer exists in the HTML, so it can never actually show. The live
-// view is renderDomesticCalView()'s simpler list, which had Edit/Delete
-// but no complete action at all until now.)
 function openDomesticCard(id) {
   const d = domestics.find(x=>String(x.id)===String(id));
   if (d && d.date) {
@@ -6610,7 +6592,7 @@ function deleteCleaning(id) {
     closeModal('day-modal');
     renderCalendar();
     renderBookings();
-    if (typeof renderDomestic==='function') renderDomestic();
+    if (currentTab==='cleaning') renderDomesticCalView();
   }, 'Delete');
 }
 
@@ -6689,7 +6671,7 @@ function renderDomEarnings() {
   const el = document.getElementById('dom-earnings-summary'); if (!el) return;
   const monthStr = String(domCalYear)+'-'+String(domCalMonth+1).padStart(2,'0');
   const md = domestics.filter(d=>d.date&&d.date.startsWith(monthStr));
-  const COLORS = {Blessing:'#C9962E',Fatima:'#F0563B',Patricia:'#0FA898',Spiwe:'#2F6FED'};
+  const COLORS = getCleanerColors();
   const summary = {};
   md.forEach(d=>{
     if (!d.cleaner) return;
@@ -6714,38 +6696,20 @@ function renderDomEarnings() {
   </div>`;
 }
 
-// ── DOMESTIC CARDS ────────────────────────────────────────────
-function renderDomestic() {
-  const fd = filteredDomestics();
-  document.getElementById('dom-grid').innerHTML = fd.length ? fd.map(d=>{
-    const cl = d.checklist||{};
-    const keys = ['kitchen','bathrooms','bedrooms','living','laundry'];
-    const done = keys.filter(k=>cl[k]).length;
-    const rateVal = d.amount_paid || getCleanerRate(d.cleaner, d.property_id);
-    return `<div class="dom-card" id="dom-card-${d.id}" style="border-top-color:${d.status==='completed'?'var(--green2)':'var(--accent)'}">
-      <div class="dom-card-head">
-        <div><div class="dom-name">${d.cleaner}</div><div class="dom-prop">${propName(d.property_id)} · ${d.type}</div></div>
-        <span class="badge badge-${d.status}">${d.status}</span>
-      </div>
-      <div class="dom-detail">📅 ${d.date} at ${d.time||'—'}${d.notes?`<br><em>"${d.notes}"</em>`:''}</div>
-      <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Checklist (${done}/${keys.length}) · <span style="color:var(--green)">R${rateVal}</span></div>
-      ${keys.map(k=>`<div class="checklist-row"><input type="checkbox" ${cl[k]?'checked':''} ${d.status==='completed'?'disabled':''} onchange="toggleCheck('${d.id}','${k}')"/><span class="${cl[k]?'done-text':''}">${k.charAt(0).toUpperCase()+k.slice(1)}</span></div>`).join('')}
-      ${d.status!=='completed'?`<button class="btn btn-green btn-sm" style="width:100%;margin-top:10px;justify-content:center" onclick="markDone('${d.id}')">✓ Mark Complete</button>`:''}
-    </div>`;
-  }).join('') : '<div class="empty-state"><div class="empty-icon">🧹</div>No sessions found</div>';
-}
-function toggleCheck(id, key) {
-  const d = domestics.find(x=>x.id==id); if(!d)return;
-  d.checklist[key]=!d.checklist[key];
-  if(db) db.from('domestics').update({checklist:d.checklist}).eq('id',id);
-  renderDomestic();
-}
+// renderDomestic()/toggleCheck() (a second, checklist-card renderer into
+// #dom-grid) removed here — they were a real live bug, not the "self-
+// heals" dead code an earlier pass judged them to be. markDone(), called
+// from the row-list's own "Mark Complete" button below, called
+// renderDomestic() unconditionally, which overwrote the visible Cleaning
+// tab's session list with a different card layout until the user left
+// and re-entered the tab (confirmed by reproducing it directly). Only
+// renderDomesticCalView() owns #dom-grid now.
 async function markDone(id) {
   const allDone={kitchen:true,bathrooms:true,bedrooms:true,living:true,laundry:true};
   const d=domestics.find(x=>x.id==id); if(!d)return;
   d.status='completed'; d.checklist=allDone;
   if(db) await db.from('domestics').update({status:'completed',checklist:allDone}).eq('id',id);
-  toast('Cleaning marked complete ✓','success'); renderDomestic(); renderDomCal(); renderDomEarnings();
+  toast('Cleaning marked complete ✓','success'); renderDomesticCalView(); renderDomCal(); renderDomEarnings();
 }
 let _savingDomestic = false;
 // sendOpts: { sendWhatsApp: true, waWin } — set only by the dedicated
@@ -6853,8 +6817,6 @@ async function saveDomestic(sendOpts) {
     renderBookings();
     renderDashboard();
     if (currentTab==='cleaning') renderDomesticCalView();
-    if (typeof renderDomestic==='function') renderDomestic();
-    if (typeof renderDomEarnings==='function') renderDomEarnings();
   } finally {
     _savingDomestic = false;
   }
@@ -8991,6 +8953,16 @@ function getDomesticStaff() {
 function getDomesticBirthdays() {
   return contacts.filter(c => c.cat === 'domestic' && c.birthday)
     .map(c => ({ name: (c.name || '').split(' ')[0], birthday: c.birthday }));
+}
+// Single {name: color} map shared by every cleaner-color swatch (mini
+// calendar, availability heatmap, earnings summary) — was 3 separate
+// hardcoded 4-name maps that would all need editing by hand for a 5th
+// cleaner; a rotating palette over live staff needs none.
+function getCleanerColors() {
+  const PALETTE = ['#C9962E','#F0563B','#0FA898','#2F6FED','#A855F7','#EAB308'];
+  const COLORS = {};
+  getDomesticStaff().forEach((c,i) => { COLORS[c.name] = PALETTE[i%PALETTE.length]; });
+  return COLORS;
 }
 // Rebuilds the Schedule Cleaning modal's cleaner <select> from live staff
 // data (instead of a hardcoded option list), so a cleaner added via the

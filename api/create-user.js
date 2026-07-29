@@ -96,7 +96,8 @@ export default async function handler(req, res) {
         headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` },
       });
       const errText = await profileInsertRes.text();
-      return res.status(400).json({ error: 'Profile creation failed: ' + errText });
+      console.error('create-user: profile insert failed:', errText);
+      return res.status(400).json({ error: 'Profile creation failed. Check server logs for details.' });
     }
 
     return res.status(200).json({ success: true, userId: newUser.id });

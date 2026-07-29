@@ -83,8 +83,12 @@ export default async function handler(req, res) {
     });
     const orgData = await orgRes.json();
     if (!orgRes.ok || !Array.isArray(orgData) || !orgData[0]) {
-      const errText = typeof orgData === 'string' ? orgData : JSON.stringify(orgData);
-      return res.status(400).json({ error: 'Could not create organization: ' + errText });
+      // Logged server-side (Vercel function logs) rather than returned to
+      // the client — raw Postgres/PostgREST error text can include schema
+      // details (column/constraint names) that don't belong in an API
+      // response even for this internal-tool-only endpoint.
+      console.error('create-org: organization insert failed:', orgData);
+      return res.status(400).json({ error: 'Could not create organization. Check server logs for details.' });
     }
     newOrgId = orgData[0].id;
 
@@ -123,7 +127,8 @@ export default async function handler(req, res) {
       await rollbackUser(newUserId);
       await rollbackOrg(newOrgId);
       const errText = await profileInsertRes.text();
-      return res.status(400).json({ error: 'Profile creation failed: ' + errText });
+      console.error('create-org: profile insert failed:', errText);
+      return res.status(400).json({ error: 'Profile creation failed. Check server logs for details.' });
     }
 
     return res.status(200).json({ success: true, orgId: newOrgId, userId: newUserId });
