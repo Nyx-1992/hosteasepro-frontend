@@ -102,6 +102,8 @@ h2,h3{font-family:"DM Serif Display",serif}
 .nav-item:hover{color:#fff;background:rgba(255,255,255,.05)}
 .nav-item.active{color:#fff;background:rgba(201,150,46,.18);border-left-color:var(--accent)}
 .nav-icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0}
+.nav-group-label{padding:16px 22px 6px;font-size:.66rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.3)}
+.nav-group-label:first-child{padding-top:8px}
 .s-user{padding:14px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:9px}
 .avatar{width:33px;height:33px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0}
 .u-name{font-size:.8rem;font-weight:600}
@@ -2609,34 +2611,57 @@ const NAV = [
   {id:'reports',  label:'Reports',      icon:'📊',roles:['owner','admin']},
   {id:'settings',  label:'Settings',     icon:'⚙️', roles:['owner','admin']},
 ];
+// Grouped by real-world job function (Guesty/Hostaway/Hospitable-style
+// collapsible sidebar groups, not a flat list) — 'onclick' left blank per
+// group here since a group is a label, not a tab; ids not present for the
+// current role (see buildNav/buildMobileDrawerNav's role filter) are simply
+// skipped, so 'People' collapses to just Contacts for a host, for example.
+const NAV_GROUPS = [
+  {label:null,      items:['dashboard']},
+  {label:'Operate', items:['bookings','calendar','cleaning','tasks','messages']},
+  {label:'Property',items:['knowledge','inspections']},
+  {label:'Money',   items:['invoices','reports']},
+  {label:'People',  items:['team']},
+  {label:'Admin',   items:['vault','roadmap','settings']},
+];
+// Shared by both the desktop sidebar and the mobile drawer — one grouping
+// definition instead of two lists that could drift out of sync.
+function renderNavGroups(items, activeId, closeDrawerOnClick) {
+  const byId = {}; items.forEach(n => byId[n.id] = n);
+  const clickSuffix = closeDrawerOnClick ? ';closeDrawer()' : '';
+  return NAV_GROUPS.map(g => {
+    const groupItems = g.items.map(id => byId[id]).filter(Boolean);
+    if (!groupItems.length) return '';
+    const label = g.label ? `<div class="nav-group-label">${g.label}</div>` : '';
+    return label + groupItems.map(n =>
+      `<div class="nav-item ${n.id===activeId?'active':''}" data-nav-id="${n.id}" onclick="switchTab('${n.id}')${clickSuffix}"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
+    ).join('');
+  }).join('');
+}
 function buildNav() {
   const navEl = document.getElementById('sidebar-nav');
   const items = NAV.filter(n=>n.roles.includes(currentUser.role));
-  const existing = Array.from(navEl.children);
-  const sameSet = existing.length === items.length && existing.every((el,i) => el.dataset.navId === items[i].id);
-  if (sameSet) {
+  const itemIds = items.map(n=>n.id).join(',');
+  if (navEl.dataset.itemIds === itemIds) {
     // Same items as last render (the common case — role doesn't change
     // mid-session) — just flip .active instead of tearing down and
     // rebuilding all nodes on every single tab click (this was the main
     // contributor to the nav-item INP warning).
-    existing.forEach(el => el.classList.toggle('active', el.dataset.navId === currentTab));
+    navEl.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.navId === currentTab));
     return;
   }
-  navEl.innerHTML = items.map(n=>
-    `<div class="nav-item ${n.id===currentTab?'active':''}" data-nav-id="${n.id}" onclick="switchTab('${n.id}')"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
-  ).join('');
+  navEl.dataset.itemIds = itemIds;
+  navEl.innerHTML = renderNavGroups(items, currentTab, false);
 }
 // Full nav list inside the slide-out drawer (opened via the topbar hamburger
 // or the bottom nav's "More" icon) — the bottom nav only has room for 5-6
-// icons, so this is how the other tabs (Messages, Property Manual, Knowledge
-// Base, Team, Invoices, Roadmap, Settings) are reachable on mobile at all.
+// icons, so this is how the other tabs (Guest Journey, Property Manual,
+// Contacts, Invoices, Roadmap, Settings) are reachable on mobile at all.
 function buildMobileDrawerNav() {
   const listEl = document.getElementById('mob-nav-list');
   if (!listEl || !currentUser) return;
   const items = NAV.filter(n => n.roles.includes(currentUser.role));
-  listEl.innerHTML = items.map(n =>
-    `<div class="nav-item ${n.id===currentTab?'active':''}" data-nav-id="${n.id}" onclick="switchTab('${n.id}');closeDrawer()"><span class="nav-icon">${n.icon}</span>${n.label}</div>`
-  ).join('');
+  listEl.innerHTML = renderNavGroups(items, currentTab, true);
 }
 
 // Mobile nav is a single mechanism: the topbar hamburger opens a left-side
