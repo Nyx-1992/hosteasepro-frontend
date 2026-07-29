@@ -6818,6 +6818,7 @@ async function saveDomestic(sendOpts) {
     checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false},
     amount_paid: computedRate,
     cleaner_phone: cleanerPhone,
+    org_id: getOrgId(),
   };
   const editId = window._editCleanId;
   // Preserve an existing booking link on edit if the form fields came back empty

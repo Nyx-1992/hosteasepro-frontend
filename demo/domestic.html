@@ -1104,6 +1104,7 @@ async function saveAssignment(waWin) {
         linked_booking_id: bookingId || null,
         notes:notes||`${propShort}-DOM-${cleaner} ${date} | R${rate}`,
         checklist:{living:false,kitchen:false,laundry:false,bedrooms:false,bathrooms:false},
+        org_id: ORG_ID,
       }]).select().single();
       if(error) throw error;
       statusEl.className='nina-status-msg success';
@@ -1820,7 +1821,7 @@ async function saveAvailability() {
   for(let d=1;d<=daysCount;d++){
     const ds=monthStr+'-'+String(d).padStart(2,'0');
     if(ds<td) continue;
-    upserts.push({cleaner:currentCleaner.name,date:ds,available:availableDays.has(ds)});
+    upserts.push({cleaner:currentCleaner.name,date:ds,available:availableDays.has(ds),org_id:ORG_ID});
   }
   const{error}=await db.from('cleaner_availability').upsert(upserts,{onConflict:'cleaner,date'});
   if(error){toast('Save error: '+error.message,'err');return;}
