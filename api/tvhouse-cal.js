@@ -54,6 +54,15 @@ async function generateFeed(propertyId, propertyName, feedId) {
     for (const b of bookings) {
       if (!b.check_in_date || !b.check_out_date) continue;
 
+      // Caretaker residency placeholders (e.g. "Tino Caretaker") aren't
+      // guest bookings — the app's own isCaretaker() already excludes them
+      // from the Dashboard/invoice picker/occupancy views, but this feed
+      // is a separate serverless endpoint with no access to that client-
+      // side helper, so the check is duplicated here. Same match logic as
+      // isCaretaker() in demo/index_fixed.html.
+      const nameLower = (b.guest_name || b.notes || '').toLowerCase();
+      if (nameLower.includes('caretaker') || nameLower.includes('tino')) continue;
+
       // A single event spanning many months is virtually always bad data
       // (e.g. a malformed inbound iCal import) rather than a genuine
       // closure — publishing it would blank out the whole calendar on
