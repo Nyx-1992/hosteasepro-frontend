@@ -1385,6 +1385,28 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div id="settings-properties-list"></div>
         </div>
 
+        <!-- Share to Social (V0) — Facebook has a real zero-setup share
+             dialog; Instagram has no official way to pre-fill a post from
+             a website at all, so this copies the caption for the host to
+             paste after opening the app. Not a full posting/scheduling
+             integration — see Roadmap p2-10 for the bigger tiers. -->
+        <div class="card" style="margin-bottom:18px">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">📣 Share to Social</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Quickly prep a post for Facebook or Instagram. Facebook opens its share dialog directly; Instagram has no official way to pre-fill a post from a website, so this copies the caption for you to paste after opening the app.</div>
+          <div class="form-field" style="margin-bottom:12px">
+            <label>Property</label>
+            <select id="social-prop" onchange="renderSocialCaption()"></select>
+          </div>
+          <div class="form-field" style="margin-bottom:12px">
+            <label>Caption</label>
+            <textarea id="social-caption" rows="4" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:inherit;font-size:.85rem;resize:vertical"></textarea>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-primary" onclick="shareToFacebook()">📘 Share to Facebook</button>
+            <button class="btn btn-sm btn-ghost" id="social-ig-btn" onclick="copyCaptionForInstagram()">📋 Copy caption &amp; open Instagram</button>
+          </div>
+        </div>
+
         <!-- Organizations (HEP team only — internal onboarding tool) -->
         <div class="card" id="settings-org-card" style="margin-bottom:18px;display:none">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -1911,6 +1933,53 @@ async function savePropertyRecord(id) {
   await loadIcalFeeds();
 }
 
+// ── Share to Social (V0 — see Roadmap p2-10) ──────────────────────────────
+// Facebook's sharer.php is a real, zero-setup share dialog — no OAuth, no
+// Meta App Review, works today. Instagram has no equivalent: there is no
+// official way for a website to open Instagram with a pre-filled caption,
+// so the honest V0 here is "copy the caption, then open Instagram and
+// paste it yourself" rather than pretending it's a one-click share.
+function renderSocialShareSettings() {
+  const sel = document.getElementById('social-prop');
+  if (!sel) return;
+  const propKeys = Object.keys(PROPS);
+  sel.innerHTML = propKeys.map(k => `<option value="${k}">${PROPS[k].name}</option>`).join('');
+  renderSocialCaption();
+}
+
+function renderSocialCaption() {
+  const el = document.getElementById('social-caption');
+  const sel = document.getElementById('social-prop');
+  if (!el || !sel) return;
+  const p = PROPS[sel.value];
+  if (!p) return;
+  const cityLine = p.city ? ' 📍 '+p.city : '';
+  el.value = `✨ ${p.name} is open for bookings!${cityLine}\n\nBook directly with us for the best rate — no platform fees.\n🔗 ${CLIENT_BRAND.website}`;
+}
+
+function shareToFacebook() {
+  const caption = (document.getElementById('social-caption')||{}).value || '';
+  const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(CLIENT_BRAND.website)}&quote=${encodeURIComponent(caption)}`;
+  window.open(url, 'fb-share', 'width=600,height=500');
+}
+
+async function copyCaptionForInstagram() {
+  const caption = (document.getElementById('social-caption')||{}).value || '';
+  const btn = document.getElementById('social-ig-btn');
+  try {
+    await navigator.clipboard.writeText(caption);
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied — opening Instagram…';
+      setTimeout(() => { btn.textContent = orig; }, 2500);
+    }
+    toast('Caption copied — paste it after opening Instagram','success');
+  } catch(e) {
+    toast('Copy failed — select the caption text manually','error');
+  }
+  window.open('https://www.instagram.com/', 'ig-share');
+}
+
 // ── Organizations (HEP team internal tool — onboard a new customer) ──
 // Calls the server-side api/create-org endpoint (service-role key never
 // touches the browser) which provisions the org + first owner login in
@@ -2127,6 +2196,7 @@ function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
   renderPropertiesSettings();
+  renderSocialShareSettings();
   const isSNOrg = getOrgId() === SN_OWNER_ORG_ID;
   const orgCard = document.getElementById('settings-org-card');
   if (orgCard) orgCard.style.display = isSNOrg ? '' : 'none';
@@ -4545,7 +4615,12 @@ const ROADMAP = [
   {k:'p2-7',t:'Multi-room / guesthouse support (nice to have)',n:'11-room guesthouse test case — needs room-level bookings & calendars, not just property-level. Scope only after confirming his actual booking model (whole-property vs per-room)',c:'Architecture'},
   {k:'p2-8',t:'Fix service worker Cache errors (PATCH/POST unsupported)',n:'Console noise from domestic.html PWA caching API responses it shouldn\'t — queued for when we\'re next in that file',c:'HEP'},
   {k:'p2-9',t:'Booking site: cross-platform price comparison + real ratings/reviews',n:'Idea, not yet scoped — feasibility mixed. Goal: show guests the price difference across Airbnb/Booking.com/LekkeSlaap plus real star ratings (rotating, labeled by platform) and real guest feedback directly on our own booking page, to prove it\'s not a fake/marketing number. Price comparison has no official API path — Airbnb/Booking.com don\'t offer one to third-party sites, so the only route is scraping, which is fragile and against most of these platforms\' ToS; not something to build as a silent background job. Ratings/reviews are more feasible via a licensed review-aggregator widget (e.g. Trustindex/EmbedSocial/Elfsight) rather than scraping ourselves. Our existing iCal feeds only carry availability, not price or reviews, so this is a new integration surface either way',c:'Website'},
-  {k:'p2-10',t:'Marketing & social media integration — toward a true "one-stop" platform',n:'Idea flagged by the owner; now scoped into 3 tiers after researching Meta\'s actual requirements. TIER 0 (days, no OAuth/review needed): a "Share to Instagram/Facebook" button that hands off a pre-built caption+listing photo to the platform\'s own share sheet/composer for the host to post manually — quick real win. TIER 1 (1-2 weeks): pull engagement stats (likes/reach) back into Reports via instagram_manage_insights — needs per-org OAuth plus Meta App Review, but a narrower/less-scrutinized review than publishing. TIER 2 (2-4+ months incl. review cycles, the "real" version): actually publish/schedule posts to a host\'s Instagram/Facebook from inside HEP on their behalf. Requires the host\'s Instagram to be a Business/Creator account linked to a Facebook Page (personal accounts don\'t qualify), full per-customer-org OAuth token storage/refresh, Meta App Review with a screencast proving a human-initiated action (first-attempt rejection is common), AND Business Verification (legal-entity docs) before ANY customer besides our own test account can use it — plus ongoing maintenance as Meta deprecates API versions roughly yearly and a ~25-posts/24h rolling rate limit per account. Alternative to going direct-to-Meta for Tier 2: unified APIs like Ayrshare/Buffer already hold Meta\'s approval and expose one simpler call across platforms, trading the App Review/Business Verification burden for a subscription (Buffer ~R100-200/channel/mo, Ayrshare from ~R2,800/mo) — likely the pragmatic choice unless per-property costs get prohibitive at scale. Recommendation: ship Tier 0 as a near-term win, evaluate Ayrshare/Buffer before ever building Tier 2 in-house. Still needs a decision on which tier to prioritize before any building starts',c:'GTM'}]},
+  {k:'p2-10',t:'Marketing & social media integration — toward a true "one-stop" platform',n:'Idea flagged by the owner; now scoped into 3 tiers after researching Meta\'s actual requirements. TIER 0 (days, no OAuth/review needed): a "Share to Instagram/Facebook" button that hands off a pre-built caption+listing photo to the platform\'s own share sheet/composer for the host to post manually — quick real win. TIER 1 (1-2 weeks): pull engagement stats (likes/reach) back into Reports via instagram_manage_insights — needs per-org OAuth plus Meta App Review, but a narrower/less-scrutinized review than publishing. TIER 2 (2-4+ months incl. review cycles, the "real" version): actually publish/schedule posts to a host\'s Instagram/Facebook from inside HEP on their behalf. Requires the host\'s Instagram to be a Business/Creator account linked to a Facebook Page (personal accounts don\'t qualify), full per-customer-org OAuth token storage/refresh, Meta App Review with a screencast proving a human-initiated action (first-attempt rejection is common), AND Business Verification (legal-entity docs) before ANY customer besides our own test account can use it — plus ongoing maintenance as Meta deprecates API versions roughly yearly and a ~25-posts/24h rolling rate limit per account. Alternative to going direct-to-Meta for Tier 2: unified APIs like Ayrshare/Buffer already hold Meta\'s approval and expose one simpler call across platforms, trading the App Review/Business Verification burden for a subscription (Buffer ~R100-200/channel/mo, Ayrshare from ~R2,800/mo) — likely the pragmatic choice unless per-property costs get prohibitive at scale. Recommendation: ship Tier 0 as a near-term win, evaluate Ayrshare/Buffer before ever building Tier 2 in-house. TIER 0 DONE — Settings > Share to Social: property picker + auto-generated caption, one-click Facebook share dialog (real, zero setup), copy-caption-and-open-Instagram (honest about Instagram having no pre-fill API). See p2-11 to p2-14 for the real differentiator ideas — using data HEP already has (calendar, bookings, guest relationships) to make social smarter than a generic scheduler could ever be, rather than just being Buffer with extra steps',c:'GTM'},
+  {k:'p2-11',t:'Vacancy-triggered promo posts — surface the content idea where the gap already shows',n:'Owner-loved idea. Instead of a host having to remember to post something, HEP already knows the moment a gap opens (cancellation, unbooked week) — same detection the booking-cancellation workflow (p0-16) already does. Surface a prompt right where the vacancy already appears (Dashboard/Calendar): "Speranta has a gap Aug 15-20 — draft a promo post?" pre-filled with those dates and a suggested discount framing, feeding straight into the Share to Social caption (p2-10 Tier 0). Turns marketing from a chore into a reflex instead of a separate content-calendar habit to maintain. Not yet scoped in detail — needs a decision on where exactly the prompt surfaces and whether/how a discount percentage gets suggested',c:'GTM'},
+  {k:'p2-12',t:'Auto-drafted social proof captions from real booking data',n:'Owner-approved. "Speranta Flat is fully booked through September" / "TV House just crossed 50 stays this year" — captions generated from real bookings/domestics counts (occupancy %, total stays, repeat-guest rate), not something the host has to notice and write themselves. Trivial for a PMS since the data already exists; impossible for a generic scheduler with zero calendar visibility. Feeds into the same Share to Social flow as a second caption-template option alongside the current generic one. Not yet scoped — needs a decision on which milestones are worth surfacing (occupancy thresholds? review counts? anniversary of first booking?) so it doesn\'t become noise',c:'GTM'},
+  {k:'p2-13',t:'Turn the post-stay WhatsApp flow into a content pipeline',n:'Owner-loved idea. The Guest Timeline (p0-30) already sends a rebooking message after checkout with the RETURN10 code — add one soft, optional ask ("mind if we share your photo/review?") to that same message. A positive reply becomes ready-made testimonial content sourced from a guest there\'s already a relationship with, not cold outreach. Needs real scoping: where the guest\'s reply/photo actually lands (a new inbox view? manual copy-paste from WhatsApp for now?), consent/opt-out handling, and whether this stays a manual "coordinator reviews and reposts" step or becomes something more automated later. Deliberately starting manual-assisted rather than building guest-facing upload infrastructure up front',c:'GTM'},
+  {k:'p2-14',t:'Season-aware posting nudges',n:'Owner-approved. PROPERTY_SEASON_RATES already exists (drives the invoice/quote seasonal pricing) — reuse it to prompt "Peak season starts next month for Speranta, people are planning December trips now" right when it\'s actually useful, instead of a generic weekly reminder unconnected to real seasonality. Simplest of this batch to build once p2-11\'s prompt-surfacing mechanism exists, since it\'s the same UI pattern with a date-vs-season-table trigger instead of a vacancy trigger',c:'GTM'},
+  {k:'p2-15',t:'Bake the direct-booking pitch into every social caption',n:'Owner flagged this needs more thought before committing — not yet approved, just captured. Idea: default every auto-generated caption (p2-10 Tier 0, p2-11, p2-12) to include the RETURN10 code and "no platform fees, best rate guaranteed" framing already used in the post-stay WhatsApp message, so social becomes another channel reinforcing the same direct-booking economics (p2-3/p2-4) instead of a disconnected marketing side-project. Open question worth resolving before building: does a discount code belong in every single post, or does that undercut the "book direct because it\'s genuinely better" pitch by making it feel like a constant sale? Revisit once p2-11/p2-12 have real usage to look at',c:'GTM'}]},
  {id:'p3',lbl:'Phase 3 — Go-to-market',meta:'Weeks 28–48',col:'#7F77DD',tasks:[
   {k:'p3-1',t:'HEP marketing landing page + waitlist',n:'Value clear to a stranger in 10 seconds',c:'GTM'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
