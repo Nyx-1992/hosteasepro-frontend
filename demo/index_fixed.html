@@ -1381,6 +1381,15 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div id="settings-properties-list"></div>
         </div>
 
+        <!-- Organizations (HEP team only — internal onboarding tool) -->
+        <div class="card" id="settings-org-card" style="margin-bottom:18px;display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="font-weight:700;font-size:1rem">🏢 Organizations</div>
+            <button class="btn btn-sm btn-primary" onclick="openAddOrg()">+ New Organization</button>
+          </div>
+          <div style="font-size:.82rem;color:var(--muted)">Internal tool — spins up a brand-new customer organization plus its first owner login in one step. Not visible to customer orgs.</div>
+        </div>
+
         <!-- iCal Feed URLs -->
         <div class="card" style="margin-bottom:18px">
           <div style="font-weight:700;font-size:1rem;margin-bottom:4px">📡 Outbound iCal Feeds</div>
@@ -1896,6 +1905,60 @@ async function savePropertyRecord(id) {
   await loadIcalFeeds();
 }
 
+// ── Organizations (HEP team internal tool — onboard a new customer) ──
+// Calls the server-side api/create-org endpoint (service-role key never
+// touches the browser) which provisions the org + first owner login in
+// one atomic-ish step, rolling back on partial failure.
+function openAddOrg() {
+  document.getElementById('day-modal-title').textContent = 'New Organization';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field span-full"><label>Organization Name *</label><input id="org-name" placeholder="e.g. Blue Horizon Rentals"/></div>
+      <div class="form-field span-full"><label>Owner Name *</label><input id="org-owner-name" placeholder="Full name"/></div>
+      <div class="form-field span-full"><label>Owner Email *</label><input id="org-owner-email" type="email" placeholder="owner@example.com"/></div>
+      <div class="form-field span-full"><label>Owner Password *</label><input id="org-owner-password" type="password" placeholder="At least 8 characters"/></div>
+    </div>
+    <div id="org-create-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:10px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" id="org-create-btn" onclick="saveNewOrg()">Create Organization</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+    </div>`;
+  openModal('day-modal');
+}
+
+async function saveNewOrg() {
+  const errEl = document.getElementById('org-create-error');
+  const btn = document.getElementById('org-create-btn');
+  errEl.style.display = 'none';
+  const orgName = document.getElementById('org-name').value.trim();
+  const ownerName = document.getElementById('org-owner-name').value.trim();
+  const ownerEmail = document.getElementById('org-owner-email').value.trim();
+  const ownerPassword = document.getElementById('org-owner-password').value;
+  if (!orgName || !ownerName || !ownerEmail || !ownerPassword) {
+    errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return;
+  }
+  if (!db) { errEl.textContent = 'Not connected — changes need a live connection to save.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const { data: sessionData } = await db.auth.getSession();
+    const token = sessionData && sessionData.session && sessionData.session.access_token;
+    if (!token) { errEl.textContent = 'Your session has expired — please sign in again.'; errEl.style.display = 'block'; return; }
+    const res = await fetch('/api/create-org', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ orgName, ownerName, ownerEmail, ownerPassword }),
+    });
+    const result = await res.json();
+    if (!res.ok) { errEl.textContent = result.error || 'Could not create organization.'; errEl.style.display = 'block'; return; }
+    closeModal('day-modal');
+    toast('Organization created ✓ — ' + ownerEmail + ' can now log in and add their own properties.', 'success');
+  } catch (e) {
+    errEl.textContent = 'Something went wrong: ' + e.message; errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Organization';
+  }
+}
+
 // ── Domestic staff ──
 const CLEANERS = [
   {name:'Blessing', phone:'062 532 2932', payment:'ewallet', properties:['speranta'],           rate:350,                      birthday:'1988-03-14', note:'Speranta cleaner. Paid directly via ewallet to herself.'},
@@ -2054,6 +2117,8 @@ function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
   renderPropertiesSettings();
+  const orgCard = document.getElementById('settings-org-card');
+  if (orgCard) orgCard.style.display = (getOrgId() === SN_OWNER_ORG_ID) ? '' : 'none';
 }
 
 // ── Per-platform rate calculator (Task 5) ──
