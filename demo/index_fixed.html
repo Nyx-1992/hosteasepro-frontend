@@ -3085,19 +3085,23 @@ async function loadData() {
       db.from('team_contacts').select('*').order('cat',{ascending:true}).order('sort_order',{ascending:true}),
       db.from('business_vault').select('*').order('created_at',{ascending:true}),
     ]);
-    let connected = false;
-    if (bRes.data && bRes.data.length > 0) {
+    // Replace the sample/demo data seeded above whenever a fetch actually
+    // succeeded (bRes.data is an array, possibly empty) — not only when it
+    // returned rows. A brand-new org with zero real bookings/domestics/etc.
+    // is a legitimate, correct state, and must not be left showing S&N's
+    // hardcoded sample data (which uses real staff names) forever just
+    // because "empty" and "still loading" were previously treated the same.
+    if (bRes.data) {
         const raw = dedupeBookings(bRes.data.map(nb));
         // Filter out soft-deleted bookings
         bookings = raw.filter(b => b.is_active !== false);
-        connected = true;
-        toast('Live data loaded ✓', 'success');
+        if (bookings.length > 0) toast('Live data loaded ✓', 'success');
       }
-    if (tRes.data && tRes.data.length > 0) tasks = tRes.data.map(nt);
-    if (dRes.data && dRes.data.length > 0) domestics = dRes.data.map(nd);
-    if (kRes.data && kRes.data.length > 0) kbArticles = kRes.data;
+    if (tRes.data) tasks = tRes.data.map(nt);
+    if (dRes.data) domestics = dRes.data.map(nd);
+    if (kRes.data) kbArticles = kRes.data;
     if (invRes && invRes.data) inventoryReports = invRes.data;
-    if (cRes && cRes.data && cRes.data.length > 0) contacts = cRes.data.map(nc);
+    if (cRes && cRes.data) contacts = cRes.data.map(nc);
     if (vRes && vRes.data) vault = vRes.data;
 
     // Load cleaner availability
