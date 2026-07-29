@@ -899,6 +899,21 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div id="vault-content"></div>
       </div>
 
+      <!-- STAFF (admin only) — domestic staff (cleaners & caretakers), DB-backed on team_contacts -->
+      <div class="tab-pane" id="tab-staff">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
+          <div>
+            <h2 style="font-size:1.1rem;margin-bottom:2px;font-family:'DM Serif Display',serif">🧑‍🔧 Staff</h2>
+            <div class="text-muted" style="font-size:.78rem">Cleaners & caretakers — rate, payment, assigned properties</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="openInviteStaffModal()">+ Invite Login</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddStaff()">+ Add Staff</button>
+          </div>
+        </div>
+        <div id="staff-content"></div>
+      </div>
+
 
      <div class="tab-pane" id="tab-reports">
         <!-- Sub-tab nav -->
@@ -1456,7 +1471,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
         </div>
         <div class="form-field span-full"><label>Cleaner</label>
           <select id="d-cleaner" onchange="onCleanerSelectChange()">
-            <option>Blessing</option><option>Fatima</option><option>Patricia</option><option>Spiwe</option>
             <option value="__other__">Other (outside cleaner)</option>
           </select>
         </div>
@@ -1616,7 +1630,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
 //  1. Replace SUPABASE_URL + SUPABASE_KEY with their DB
 //  2. Replace PROPS with their property names/addresses/UUIDs
 //  3. Replace UUID_MAP with their property UUIDs
-//  4. Replace CLEANERS with their staff
+//  4. Domestic staff now come from public.team_contacts (Staff tab) — no code change needed per client
 //  5. Team logins now come from Supabase Auth + profiles table — no code change needed per client
 //  6. Replace CLIENT_BRAND with their company name/colours
 //  7. Replace ICAL_FEEDS with their iCal URLs
@@ -1918,13 +1932,10 @@ async function saveNewOrg() {
   }
 }
 
-// ── Domestic staff ──
-const CLEANERS = [
-  {name:'Blessing', phone:'062 532 2932', payment:'ewallet', properties:['speranta'],           rate:350,                      birthday:'1988-03-14', note:'Speranta cleaner. Paid directly via ewallet to herself.'},
-  {name:'Fatima',   phone:'063 175 8111', payment:'ewallet', properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450},birthday:'1992-07-22', note:'Covers both properties.'},
-  {name:'Patricia', phone:'063 735 3892', payment:'eft',     properties:['speranta','tvhouse'], rate:{speranta:350,tvhouse:450},birthday:'1985-11-05', note:'Patricia Mutizwa. Primary TV House cleaner.'},
-  {name:'Spiwe',    phone:'084 915 0894', payment:'ewallet', properties:['speranta'],           rate:350,                      birthday:'1990-09-18', note:'Spiwe Gwingwizna.'},
-];
+// ── Domestic staff now live in public.team_contacts (cat='domestic'),
+// extended with cleaner_rate/cleaner_payment/cleaner_properties/birthday
+// (620_team_contacts_staff_fields.sql) — see getDomesticStaff() /
+// getDomesticBirthdays() below `contacts`. Editable via the Staff tab.
 
 // ── Team logins now live in Supabase Auth + the `profiles` table ──
 
@@ -2340,7 +2351,7 @@ function skeletonRows(n=3) {
 function isOwnerStay(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return b.status==='owner'||n.includes('owner')||n.includes('mirka')||n.includes('nicole & silja')||n.includes('antonin'); }
 function isCaretaker(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return n.includes('caretaker')||n.includes('tino'); }
 function getCleanerRate(cleaner, propId) {
-  const c = CLEANERS.find(x=>x.name===cleaner);
+  const c = getDomesticStaff().find(x=>x.name===cleaner);
   if (!c) return 350;
   return typeof c.rate === 'object' ? (c.rate[propId] || 350) : c.rate;
 }
@@ -2351,9 +2362,10 @@ function onCleanerSelectChange() {
   if (wrap) wrap.style.display = document.getElementById('d-cleaner').value === '__other__' ? '' : 'none';
 }
 // Pre-fills the cleaner field for edit; falls back to "Other" + the free-text
-// name when the saved cleaner isn't one of our four regulars.
+// name when the saved cleaner isn't one of our regular staff.
 function setCleanerFieldValue(name, phone) {
-  const known = CLEANERS.map(c=>c.name);
+  renderCleanerOptions();
+  const known = getDomesticStaff().map(c=>c.name);
   const sel = document.getElementById('d-cleaner');
   if (name && !known.includes(name)) {
     sel.value = '__other__';
@@ -2572,6 +2584,7 @@ const NAV = [
   {id:'knowledge',label:'Property Manual',icon:'📖',roles:['owner','admin','host']},
   {id:'inspections',label:'Inspections', icon:'🔍',roles:['owner','admin','host']},
   {id:'team',     label:'Contacts',     icon:'👥',roles:['owner','admin']},
+  {id:'staff',    label:'Staff',        icon:'🧑‍🔧',roles:['owner','admin']},
   {id:'vault',    label:'Business Info',icon:'🔐',roles:['owner','admin']},
   {id:'invoices', label:'Invoices',     icon:'🧾',roles:['owner','admin']},
   {id:'roadmap',  label:'Roadmap',      icon:'🗺️',roles:['owner']},
@@ -2589,7 +2602,7 @@ const NAV_GROUPS = [
   {label:'Property',items:['knowledge','inspections']},
   {label:'Money',   items:['invoices','reports']},
   {label:'People',  items:['team']},
-  {label:'Admin',   items:['vault','roadmap','settings']},
+  {label:'Admin',   items:['vault','staff','roadmap','settings']},
 ];
 // Shared by both the desktop sidebar and the mobile drawer — one grouping
 // definition instead of two lists that could drift out of sync.
@@ -3020,6 +3033,7 @@ function renderTab(id) {
   else if (id==='knowledge') { renderKnowledgeManual(); }
   else if (id==='kb')        switchTab('knowledge'); // redirect — Knowledge Base merged into Property Manual as a section
   else if (id==='team')      renderTeam();
+  else if (id==='staff')     renderStaffTab();
   else if (id==='vault')     renderVault();
   else if (id==='reports')   {
     renderReports(); renderReportInspections(); renderReportInventory();
@@ -5699,7 +5713,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
   const weeks = Math.ceil((firstDay+dim)/7);
   const showProp = bkgs.filter(x=>!isCaretaker(x)&&x.property_id==='speranta').length>0 &&
                    bkgs.filter(x=>!isCaretaker(x)&&x.property_id==='tvhouse').length>0;
-  const birthdays = CLEANERS.map(c=>{const b=c.birthday?.slice(5);return b?{date:String(year)+'-'+b,name:c.name}:null;}).filter(Boolean);
+  const birthdays = getDomesticBirthdays().map(c=>{const b=c.birthday?.slice(5);return b?{date:String(year)+'-'+b,name:c.name}:null;}).filter(Boolean);
 
   // Assign each booking a fixed lane (0,1,2) for the whole month
   // Key fix: bookings that start BEFORE this month also need a lane assigned on day 1
@@ -6237,19 +6251,21 @@ function renderDomesticCalView() {
       const d = new Date(); d.setDate(d.getDate()+i);
       nextDays.push(d.toISOString().slice(0,10));
     }
-    const CLEANERS = ['Blessing','Fatima','Patricia','Spiwe'];
-    // Same 4-swatch palette used for Team roles / KB categories elsewhere —
-    // "refined heatmap" direction from the design review.
-    const COLORS = {'Blessing':'#C9962E','Fatima':'#F0563B','Patricia':'#0FA898','Spiwe':'#2F6FED'};
+    const heatmapCleaners = getDomesticStaff().map(c=>c.name);
+    // Rotating 6-swatch palette (was a fixed 4-name map) so a cleaner added
+    // via the Staff tab gets a color without a code change — "refined
+    // heatmap" direction from the design review.
+    const PALETTE = ['#C9962E','#F0563B','#0FA898','#2F6FED','#A855F7','#EAB308'];
+    const COLORS = {}; heatmapCleaners.forEach((name,i)=>{COLORS[name]=PALETTE[i%PALETTE.length];});
     const colCount = nextDays.length;
     availEl.innerHTML = '<div style="overflow-x:auto"><div style="border:1px solid var(--border);border-radius:var(--r-lg);background:var(--surface);box-shadow:var(--sh);overflow:hidden;min-width:600px">'
       + '<div style="display:grid;grid-template-columns:130px repeat('+colCount+',1fr);border-bottom:1px solid var(--border)">'
       + '<div style="padding:9px 14px;font-family:var(--font-mono);font-size:.62rem;color:var(--muted);text-transform:uppercase">Cleaner</div>'
       + nextDays.map(d=>'<div style="padding:9px 4px;text-align:center;font-family:var(--font-mono);font-size:.6rem;color:var(--muted);text-transform:uppercase">'+['Su','Mo','Tu','We','Th','Fr','Sa'][new Date(d).getDay()]+'<br><span class="tab-num">'+parseInt(d.slice(8))+'</span></div>').join('')
       + '</div>'
-      + CLEANERS.map((name,i) => {
+      + heatmapCleaners.map((name,i) => {
         const c = COLORS[name]||'var(--muted)';
-        return '<div style="display:grid;grid-template-columns:130px repeat('+colCount+',1fr);align-items:center;'+(i<CLEANERS.length-1?'border-bottom:1px solid var(--border)':'')+'">'
+        return '<div style="display:grid;grid-template-columns:130px repeat('+colCount+',1fr);align-items:center;'+(i<heatmapCleaners.length-1?'border-bottom:1px solid var(--border)':'')+'">'
           + '<div style="padding:8px 14px;font-weight:700;font-size:.82rem;display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:'+c+';flex-shrink:0"></span>'+name+'</div>'
           + nextDays.map(d => {
             const rec = cleanerAvailability.find(r=>r.cleaner===name&&r.date===d);
@@ -6390,7 +6406,7 @@ function showDay(ds) {
   const fd = calProp==='all' ? domestics : domestics.filter(d=>d.property_id===calProp);
   const bEvts = fb.filter(b=>b.check_in<=ds&&b.check_out>ds&&b.status!=='cancelled'&&!isCaretaker(b));
   const dEvts = fd.filter(d=>d.date===ds);
-  const bdayCleaners = CLEANERS.filter(c=>c.birthday&&c.birthday.slice(5)===ds.slice(5));
+  const bdayCleaners = getDomesticBirthdays().filter(c=>c.birthday&&c.birthday.slice(5)===ds.slice(5));
   document.getElementById('day-modal-title').textContent = fmtDate(ds);
   let h = '';
 
@@ -8901,12 +8917,18 @@ const BUILTIN_CONTACTS = [
   {id:'c-silja',   cat:'management', name:'Silja Faltin',      role:'Co-Owner / Admin',        phone:'',                  email:'s.faltin@tischlerei-faltin.de',  wa:'',              note:'Co-founder. TV House owner liaison.', initials:'S'},
   {id:'c-nina',    cat:'management', name:'Nina Williams',      role:'Host Expert',             phone:'+27 79 977 9455',   email:'vanwyk.nina@gmail.com',          wa:'+27636021847',  note:'On-ground host manager. Business WhatsApp for all guest contact.', initials:'NW'},
   // Domestic
-  {id:'c-blessing',cat:'domestic',   name:'Blessing',          role:'Cleaner — Speranta',      phone:'062 532 2932',      email:'',    wa:'27625322932', note:'Paid via ewallet directly. Rate: R350/clean.', initials:'BL'},
-  {id:'c-fatima',  cat:'domestic',   name:'Fatima',            role:'Cleaner — Both properties',phone:'063 175 8111',     email:'',    wa:'27631758111', note:'Covers both properties. R350 Speranta / R450 TV House.', initials:'FA'},
-  {id:'c-patricia',cat:'domestic',   name:'Patricia Mutizwa',  role:'Cleaner — TV House',      phone:'063 735 3892',      email:'',    wa:'27637353892', note:'Primary TV House cleaner. EFT payment. R350 Speranta / R450 TV House.', initials:'PM'},
-  {id:'c-spiwe',   cat:'domestic',   name:'Spiwe Gwingwizna',  role:'Cleaner — Speranta',      phone:'084 915 0894',      email:'',    wa:'27849150894', note:'Speranta cleaner. Ewallet payment. R350/clean.', initials:'SP'},
-  {id:'c-tino',    cat:'domestic',   name:'Takudzwa Dumbura',  role:'Caretaker (Tino)',        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat with wife Keithy. Born 13 July 1996.', initials:'TI'},
-  {id:'c-keithy',  cat:'domestic',   name:'Keithy Ngwenya',    role:"Caretaker's Wife",        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat. Born 9 February 1997.', initials:'KE'},
+  {id:'c-blessing',cat:'domestic',   name:'Blessing',          role:'Cleaner — Speranta',      phone:'062 532 2932',      email:'',    wa:'27625322932', note:'Paid via ewallet directly. Rate: R350/clean.', initials:'BL',
+    cleaner_rate:350, cleaner_payment:'ewallet', cleaner_properties:['speranta'], birthday:'1988-03-14'},
+  {id:'c-fatima',  cat:'domestic',   name:'Fatima',            role:'Cleaner — Both properties',phone:'063 175 8111',     email:'',    wa:'27631758111', note:'Covers both properties. R350 Speranta / R450 TV House.', initials:'FA',
+    cleaner_rate:{speranta:350,tvhouse:450}, cleaner_payment:'ewallet', cleaner_properties:['speranta','tvhouse'], birthday:'1992-07-22'},
+  {id:'c-patricia',cat:'domestic',   name:'Patricia Mutizwa',  role:'Cleaner — TV House',      phone:'063 735 3892',      email:'',    wa:'27637353892', note:'Primary TV House cleaner. EFT payment. R350 Speranta / R450 TV House.', initials:'PM',
+    cleaner_rate:{speranta:350,tvhouse:450}, cleaner_payment:'eft', cleaner_properties:['speranta','tvhouse'], birthday:'1985-11-05'},
+  {id:'c-spiwe',   cat:'domestic',   name:'Spiwe Gwingwizna',  role:'Cleaner — Speranta',      phone:'084 915 0894',      email:'',    wa:'27849150894', note:'Speranta cleaner. Ewallet payment. R350/clean.', initials:'SP',
+    cleaner_rate:350, cleaner_payment:'ewallet', cleaner_properties:['speranta'], birthday:'1990-09-18'},
+  {id:'c-tino',    cat:'domestic',   name:'Takudzwa Dumbura',  role:'Caretaker (Tino)',        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat with wife Keithy. Born 13 July 1996.', initials:'TI',
+    cleaner_rate:null, cleaner_payment:'', cleaner_properties:[], birthday:'1996-07-13'},
+  {id:'c-keithy',  cat:'domestic',   name:'Keithy Ngwenya',    role:"Caretaker's Wife",        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat. Born 9 February 1997.', initials:'KE',
+    cleaner_rate:null, cleaner_payment:'', cleaner_properties:[], birthday:'1997-02-09'},
   // Maintenance
   {id:'c-pool',    cat:'maintenance', name:'Pool Service',      role:'Swimming Pool Maintenance',phone:'',                 email:'',    wa:'',            note:'Contact details TBC. Add pool service provider here.', initials:'🏊'},
   // Suppliers
@@ -8935,11 +8957,51 @@ function nc(c) {
     initials: c.initials || (c.name||'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
     contacts: c.sub_contacts || [],
     sensitive: !!c.sensitive,
+    cleaner_rate: c.cleaner_rate ?? null,
+    cleaner_payment: c.cleaner_payment || '',
+    cleaner_properties: c.cleaner_properties || [],
+    birthday: c.birthday || '',
   };
 }
 
 function allContacts() {
   return contacts;
+}
+
+// Single source of truth for "assignable cleaners" — domestic-category
+// team_contacts with a cleaner_rate set (620_team_contacts_staff_fields.sql).
+// Tino/Keithy (caretakers, cleaner_rate NULL) are domestic-category but not
+// assignable cleaners, so they're excluded here. `name` is the first-name
+// short form so it keeps matching domestics.cleaner values saved before
+// team_contacts held full names (e.g. "Patricia Mutizwa").
+function getDomesticStaff() {
+  return contacts.filter(c => c.cat === 'domestic' && c.cleaner_rate != null).map(c => ({
+    id: c.id,
+    name: (c.name || '').split(' ')[0],
+    fullName: c.name,
+    phone: c.phone,
+    payment: c.cleaner_payment,
+    properties: c.cleaner_properties || [],
+    rate: c.cleaner_rate,
+    birthday: c.birthday,
+  }));
+}
+// All domestic-category contacts with a birthday set, cleaners and
+// caretakers alike — used by the calendar's birthday widget.
+function getDomesticBirthdays() {
+  return contacts.filter(c => c.cat === 'domestic' && c.birthday)
+    .map(c => ({ name: (c.name || '').split(' ')[0], birthday: c.birthday }));
+}
+// Rebuilds the Schedule Cleaning modal's cleaner <select> from live staff
+// data (instead of a hardcoded option list), so a cleaner added via the
+// Staff tab is immediately assignable without a code change.
+function renderCleanerOptions() {
+  const sel = document.getElementById('d-cleaner');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = getDomesticStaff().map(c => `<option>${c.name}</option>`).join('')
+    + '<option value="__other__">Other (outside cleaner)</option>';
+  if ([...sel.options].some(o => o.value === current)) sel.value = current;
 }
 
 function setContactFilter(cat, btn) {
@@ -9072,6 +9134,227 @@ function deleteContact(id) {
     toast('Contact deleted','info');
     renderTeam();
   }, 'Delete');
+}
+
+// ── STAFF (Admin) ── domestic-category team_contacts, extended with
+// cleaner_rate/cleaner_payment/cleaner_properties/birthday
+// (620_team_contacts_staff_fields.sql). Same underlying table + row shape
+// as Contacts' 'domestic' filter — this is a specialized editor over it,
+// not a second data source.
+function fmtCleanerRate(c) {
+  if (c.cleaner_rate == null) return '—';
+  if (typeof c.cleaner_rate === 'object') {
+    return Object.entries(c.cleaner_rate).map(([k,v]) => (PROPS[k]?PROPS[k].short:k)+': R'+v).join(' · ');
+  }
+  return 'R' + c.cleaner_rate + '/clean';
+}
+function fmtBirthday(b) {
+  if (!b) return '—';
+  const d = new Date(b+'T00:00:00');
+  return d.toLocaleDateString('en-ZA', {day:'numeric', month:'short'});
+}
+function staffCard(c) {
+  const isCleaner = c.cleaner_rate != null;
+  return `<div class="contact-badge">
+    <div class="contact-band" style="background:${isCleaner?'var(--teal)':'var(--muted)'}"></div>
+    <div class="contact-actions-top">
+      <button class="contact-edit" onclick="openEditStaff('${c.id}')" title="Edit">✎</button>
+      <button class="contact-del" onclick="deleteStaffEntry('${c.id}')" title="Delete">✕</button>
+    </div>
+    <div class="contact-info" style="padding-top:16px">
+      <div class="contact-name">${c.name}</div>
+      <div class="text-muted" style="font-size:.78rem;margin-bottom:6px">${c.role||(isCleaner?'Cleaner':'Domestic staff')}</div>
+      ${c.phone?`<div style="font-size:.8rem;margin-bottom:2px">📞 ${c.phone}</div>`:''}
+      ${isCleaner?`<div style="font-size:.8rem;margin-bottom:2px">💰 ${fmtCleanerRate(c)}${c.cleaner_payment?' · '+c.cleaner_payment:''}</div>`:''}
+      ${c.cleaner_properties&&c.cleaner_properties.length?`<div style="font-size:.8rem;margin-bottom:2px">🏠 ${c.cleaner_properties.map(k=>PROPS[k]?PROPS[k].short:k).join(', ')}</div>`:''}
+      ${c.birthday?`<div style="font-size:.8rem;margin-bottom:2px">🎂 ${fmtBirthday(c.birthday)}</div>`:''}
+      ${c.note?`<div class="contact-note">${c.note}</div>`:''}
+    </div>
+  </div>`;
+}
+function renderStaffTab() {
+  if (!currentUser) return;
+  const el = document.getElementById('staff-content');
+  if (!el) return;
+  const staff = contacts.filter(c=>c.cat==='domestic');
+  if (!staff.length) {
+    el.innerHTML = emptyState('🧑‍🔧', 'No staff added yet',
+      `<button class="btn btn-sm btn-primary" onclick="openAddStaff()">+ Add Staff</button>`);
+    return;
+  }
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+    ${staff.map(staffCard).join('')}
+  </div>`;
+}
+
+function openAddStaff() { openStaffModal(null); }
+function openEditStaff(id) { openStaffModal(id); }
+
+function openStaffModal(id) {
+  const existing = id ? contacts.find(c=>c.id===id) : null;
+  const existingProps = existing ? (existing.cleaner_properties||[]) : [];
+  const existingRateFor = (k) => {
+    if (!existing || existing.cleaner_rate == null) return '';
+    return typeof existing.cleaner_rate === 'object' ? (existing.cleaner_rate[k] ?? '') : existing.cleaner_rate;
+  };
+  document.getElementById('day-modal-title').textContent = existing ? 'Edit Staff' : 'Add Staff';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field span-full"><label>Name *</label><input id="st-name" placeholder="Full name" value="${escAttr(existing?existing.name:'')}"/></div>
+      <div class="form-field"><label>Role</label><input id="st-role" placeholder="e.g. Cleaner — Speranta" value="${escAttr(existing?existing.role:'')}"/></div>
+      <div class="form-field"><label>Payment method</label>
+        <select id="st-payment">
+          <option value="" ${!existing||!existing.cleaner_payment?'selected':''}>—</option>
+          <option value="ewallet" ${existing&&existing.cleaner_payment==='ewallet'?'selected':''}>Ewallet</option>
+          <option value="eft" ${existing&&existing.cleaner_payment==='eft'?'selected':''}>EFT</option>
+          <option value="cash" ${existing&&existing.cleaner_payment==='cash'?'selected':''}>Cash</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Phone</label><input id="st-phone" placeholder="+27 ..." value="${escAttr(existing?existing.phone:'')}"/></div>
+      <div class="form-field"><label>WhatsApp number</label><input id="st-wa" placeholder="27821234567 (no + or spaces)" value="${escAttr(existing?existing.wa:'')}"/></div>
+      <div class="form-field"><label>Birthday</label><input type="date" id="st-birthday" value="${existing&&existing.birthday?existing.birthday:''}"/></div>
+      <div class="form-field span-full"><label>Properties &amp; rate (R per clean)</label>
+        <div id="staff-prop-rates">
+          ${Object.keys(PROPS).map(k => `
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+              <label style="display:flex;align-items:center;gap:5px;font-weight:400;min-width:110px">
+                <input type="checkbox" class="staff-prop-chk" value="${k}" ${existingProps.includes(k)?'checked':''} style="width:auto"/>
+                ${PROPS[k].short}
+              </label>
+              <input type="number" class="staff-prop-rate" data-prop="${k}" placeholder="Rate" value="${existingRateFor(k)}" style="width:90px"/>
+            </div>`).join('')}
+        </div>
+        <div class="text-muted" style="font-size:.72rem;margin-top:2px">Leave unchecked if this person isn't an assignable cleaner (e.g. a caretaker) — they'll still show in Staff, just not in the cleaner picker.</div>
+      </div>
+      <div class="form-field span-full"><label>Notes</label><textarea id="st-note" rows="2">${existing?existing.note:''}</textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" onclick="saveStaff(${existing?`'${existing.id}'`:'null'})">Save</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+    </div>`;
+  openModal('day-modal');
+}
+
+async function saveStaff(id) {
+  const name = document.getElementById('st-name').value.trim();
+  if (!name) { toast('Name is required','error'); return; }
+  const propRows = Array.from(document.querySelectorAll('#staff-prop-rates > div'));
+  const properties = [];
+  const rateMap = {};
+  propRows.forEach(row => {
+    const chk = row.querySelector('.staff-prop-chk');
+    const rateInput = row.querySelector('.staff-prop-rate');
+    if (chk.checked) {
+      properties.push(chk.value);
+      rateMap[chk.value] = Number(rateInput.value) || 0;
+    }
+  });
+  const rateValues = Object.values(rateMap);
+  const cleaner_rate = properties.length === 0 ? null
+    : (rateValues.every(r => r === rateValues[0]) ? rateValues[0] : rateMap);
+  const name0 = name;
+  const row = {
+    cat: 'domestic',
+    name: name0,
+    role: document.getElementById('st-role').value.trim(),
+    phone: document.getElementById('st-phone').value.trim(),
+    wa: document.getElementById('st-wa').value.trim(),
+    note: document.getElementById('st-note').value,
+    initials: name0.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
+    cleaner_payment: document.getElementById('st-payment').value,
+    cleaner_properties: properties,
+    cleaner_rate,
+    birthday: document.getElementById('st-birthday').value || null,
+  };
+  if (!db) { toast('Not connected — changes need a live connection to save','error'); return; }
+  if (id) {
+    const { data, error } = await db.from('team_contacts').update(row).eq('id', id).select().single();
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+    const idx = contacts.findIndex(c=>c.id===id);
+    if (idx>-1) contacts[idx] = nc(data);
+  } else {
+    row.org_id = getOrgId();
+    row.sub_contacts = [];
+    const { data, error } = await db.from('team_contacts').insert([row]).select().single();
+    if (error) { toast('Save error: '+error.message,'error'); return; }
+    contacts.push(nc(data));
+  }
+  toast('Staff saved ✓','success');
+  closeModal('day-modal');
+  renderStaffTab();
+}
+
+function deleteStaffEntry(id) {
+  confirmAction('Remove this staff member?', async () => {
+    if (db) {
+      const { error } = await db.from('team_contacts').delete().eq('id', id);
+      if (error) { toast('Delete error: '+error.message,'error'); return; }
+    }
+    contacts = contacts.filter(c=>c.id!==id);
+    toast('Staff removed','info');
+    renderStaffTab();
+  }, 'Remove');
+}
+
+// ── Invite Staff Login — calls the server-side api/invite-staff endpoint
+// (service-role key never touches the browser), scoped server-side to the
+// caller's own org (see api/invite-staff.js — do not repeat create-user.js's
+// original missing-org_id-check mistake).
+function openInviteStaffModal() {
+  document.getElementById('day-modal-title').textContent = 'Invite Staff Login';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field span-full"><label>Full Name *</label><input id="inv-name" placeholder="Full name"/></div>
+      <div class="form-field span-full"><label>Email *</label><input id="inv-email" type="email" placeholder="name@example.com"/></div>
+      <div class="form-field span-full"><label>Temporary Password *</label><input id="inv-password" type="password" placeholder="At least 8 characters"/></div>
+      <div class="form-field span-full"><label>Role</label>
+        <select id="inv-role">
+          <option value="host" selected>Host</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+    </div>
+    <div id="inv-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:10px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" id="inv-btn" onclick="submitInviteStaff()">Send Invite</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+    </div>`;
+  openModal('day-modal');
+}
+
+async function submitInviteStaff() {
+  const errEl = document.getElementById('inv-error');
+  const btn = document.getElementById('inv-btn');
+  errEl.style.display = 'none';
+  const name = document.getElementById('inv-name').value.trim();
+  const email = document.getElementById('inv-email').value.trim();
+  const password = document.getElementById('inv-password').value;
+  const role = document.getElementById('inv-role').value;
+  if (!name || !email || !password) {
+    errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return;
+  }
+  if (!db) { errEl.textContent = 'Not connected — changes need a live connection to save.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const { data: sessionData } = await db.auth.getSession();
+    const token = sessionData && sessionData.session && sessionData.session.access_token;
+    if (!token) { errEl.textContent = 'Your session has expired — please sign in again.'; errEl.style.display = 'block'; return; }
+    const res = await fetch('/api/invite-staff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ name, email, password, role }),
+    });
+    const result = await res.json();
+    if (!res.ok) {
+      errEl.textContent = result.error || 'Could not create login.'; errEl.style.display = 'block'; return;
+    }
+    closeModal('day-modal');
+    toast('Login created ✓ — ' + email + ' can now sign in.', 'success');
+  } catch (e) {
+    errEl.textContent = 'Something went wrong: ' + e.message; errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send Invite';
+  }
 }
 
 function renderTeam() {
