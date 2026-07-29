@@ -1385,6 +1385,28 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div id="settings-properties-list"></div>
         </div>
 
+        <!-- Share to Social (V0) — Facebook has a real zero-setup share
+             dialog; Instagram has no official way to pre-fill a post from
+             a website at all, so this copies the caption for the host to
+             paste after opening the app. Not a full posting/scheduling
+             integration — see Roadmap p2-10 for the bigger tiers. -->
+        <div class="card" style="margin-bottom:18px">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">📣 Share to Social</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Quickly prep a post for Facebook or Instagram. Facebook opens its share dialog directly; Instagram has no official way to pre-fill a post from a website, so this copies the caption for you to paste after opening the app.</div>
+          <div class="form-field" style="margin-bottom:12px">
+            <label>Property</label>
+            <select id="social-prop" onchange="renderSocialCaption()"></select>
+          </div>
+          <div class="form-field" style="margin-bottom:12px">
+            <label>Caption</label>
+            <textarea id="social-caption" rows="4" style="width:100%;border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-family:inherit;font-size:.85rem;resize:vertical"></textarea>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-primary" onclick="shareToFacebook()">📘 Share to Facebook</button>
+            <button class="btn btn-sm btn-ghost" id="social-ig-btn" onclick="copyCaptionForInstagram()">📋 Copy caption &amp; open Instagram</button>
+          </div>
+        </div>
+
         <!-- Organizations (HEP team only — internal onboarding tool) -->
         <div class="card" id="settings-org-card" style="margin-bottom:18px;display:none">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -1911,6 +1933,53 @@ async function savePropertyRecord(id) {
   await loadIcalFeeds();
 }
 
+// ── Share to Social (V0 — see Roadmap p2-10) ──────────────────────────────
+// Facebook's sharer.php is a real, zero-setup share dialog — no OAuth, no
+// Meta App Review, works today. Instagram has no equivalent: there is no
+// official way for a website to open Instagram with a pre-filled caption,
+// so the honest V0 here is "copy the caption, then open Instagram and
+// paste it yourself" rather than pretending it's a one-click share.
+function renderSocialShareSettings() {
+  const sel = document.getElementById('social-prop');
+  if (!sel) return;
+  const propKeys = Object.keys(PROPS);
+  sel.innerHTML = propKeys.map(k => `<option value="${k}">${PROPS[k].name}</option>`).join('');
+  renderSocialCaption();
+}
+
+function renderSocialCaption() {
+  const el = document.getElementById('social-caption');
+  const sel = document.getElementById('social-prop');
+  if (!el || !sel) return;
+  const p = PROPS[sel.value];
+  if (!p) return;
+  const cityLine = p.city ? ' 📍 '+p.city : '';
+  el.value = `✨ ${p.name} is open for bookings!${cityLine}\n\nBook directly with us for the best rate — no platform fees.\n🔗 ${CLIENT_BRAND.website}`;
+}
+
+function shareToFacebook() {
+  const caption = (document.getElementById('social-caption')||{}).value || '';
+  const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(CLIENT_BRAND.website)}&quote=${encodeURIComponent(caption)}`;
+  window.open(url, 'fb-share', 'width=600,height=500');
+}
+
+async function copyCaptionForInstagram() {
+  const caption = (document.getElementById('social-caption')||{}).value || '';
+  const btn = document.getElementById('social-ig-btn');
+  try {
+    await navigator.clipboard.writeText(caption);
+    if (btn) {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied — opening Instagram…';
+      setTimeout(() => { btn.textContent = orig; }, 2500);
+    }
+    toast('Caption copied — paste it after opening Instagram','success');
+  } catch(e) {
+    toast('Copy failed — select the caption text manually','error');
+  }
+  window.open('https://www.instagram.com/', 'ig-share');
+}
+
 // ── Organizations (HEP team internal tool — onboard a new customer) ──
 // Calls the server-side api/create-org endpoint (service-role key never
 // touches the browser) which provisions the org + first owner login in
@@ -2127,6 +2196,7 @@ function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
   renderPropertiesSettings();
+  renderSocialShareSettings();
   const isSNOrg = getOrgId() === SN_OWNER_ORG_ID;
   const orgCard = document.getElementById('settings-org-card');
   if (orgCard) orgCard.style.display = isSNOrg ? '' : 'none';
