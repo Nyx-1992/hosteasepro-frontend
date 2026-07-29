@@ -46,18 +46,7 @@ export default async function handler(req, res) {
       headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${callerToken}` },
     });
     if (!callerRes.ok) {
-      // Temporary diagnostics (2026-07-29) — SUPABASE_URL's host isn't a
-      // secret (it's already public in demo/config.js shipped to the
-      // browser), so surfacing it plus the upstream status/body here is
-      // safe and lets us tell instantly whether this deployment's env
-      // vars point at the wrong Supabase project. Remove once resolved.
-      const upstreamBody = await callerRes.text().catch(() => '');
-      let host = 'unparseable';
-      try { host = new URL(SUPABASE_URL).host; } catch (e) {}
-      return res.status(401).json({
-        error: 'Invalid session',
-        debug: { supabaseHost: host, upstreamStatus: callerRes.status, upstreamBody: upstreamBody.slice(0, 300) },
-      });
+      return res.status(401).json({ error: 'Invalid session' });
     }
     const caller = await callerRes.json();
 
