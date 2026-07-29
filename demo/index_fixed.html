@@ -419,6 +419,11 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .skeleton-row{height:14px;background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface-3) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:skeleton-shimmer 1.4s ease infinite;border-radius:6px;margin:8px 0}
 @keyframes skeleton-shimmer{0%{background-position:100% 50%}100%{background-position:0 50%}}
 @media (prefers-reduced-motion: reduce){.skeleton-row{animation:none;opacity:.6}}
+/* Brief highlight when a Dashboard alert scrolls straight to the specific
+   card it's about, so it's obvious which one to act on among several. */
+.flash-highlight{animation:flash-highlight-pulse 2s ease}
+@keyframes flash-highlight-pulse{0%,100%{box-shadow:none}20%{box-shadow:0 0 0 3px var(--accent)}}
+@media (prefers-reduced-motion: reduce){.flash-highlight{animation:none;box-shadow:0 0 0 3px var(--accent)}}
 .divider{height:1px;background:var(--border);margin:14px 0}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
 /* Mobile nav — single mechanism: topbar hamburger opens a left drawer with every tab */
@@ -1366,6 +1371,16 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;font-weight:700">Settings &amp; Links</div>
         </div>
 
+        <!-- Properties -->
+        <div class="card" style="margin-bottom:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="font-weight:700;font-size:1rem">🏠 Properties</div>
+            <button class="btn btn-sm btn-primary" onclick="openAddProperty()">+ Add Property</button>
+          </div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Every property bookings, cleaning and invoices can be scoped to. New properties don't yet get an outbound iCal feed automatically (see Roadmap p1-1) — everything else (Calendar, Bookings, Invoices, cleaning fee) works immediately.</div>
+          <div id="settings-properties-list"></div>
+        </div>
+
         <!-- iCal Feed URLs -->
         <div class="card" style="margin-bottom:18px">
           <div style="font-weight:700;font-size:1rem;margin-bottom:4px">📡 Outbound iCal Feeds</div>
@@ -1721,11 +1736,16 @@ let PROPS = {
   tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5', cleaningFee:450},
 };
 
+let _propertiesRaw = [];
+
 async function loadProperties() {
   if (!db) return;
   try {
     const { data, error } = await db.from('properties').select('*').eq('org_id', getOrgId());
-    if (error || !data || !data.length) return; // keep hardcoded fallback above
+    if (error) { console.warn('loadProperties:', error); return; }
+    _propertiesRaw = data || [];
+    renderPropertiesSettings();
+    if (!data || !data.length) return; // keep hardcoded PROPS/UUID_MAP fallback above — a brand-new org legitimately has zero properties until added via Settings
     const newProps = {}, newUuidMap = {};
     data.forEach(p => {
       const n = (p.name||'').toLowerCase();
@@ -1759,6 +1779,121 @@ function refreshPropSelects() {
     el.innerHTML = propSelectOptionsHtml();
     el.value = PROPS[cur] ? cur : 'all';
   });
+}
+
+// ── Properties management (Settings tab) ──────────────────────────────────
+function renderPropertiesSettings() {
+  const el = document.getElementById('settings-properties-list');
+  if (!el) return;
+  if (!_propertiesRaw.length) {
+    el.innerHTML = emptyState('🏠', 'No properties yet', `<button class="btn btn-sm btn-primary" onclick="openAddProperty()">+ Add Property</button>`);
+    return;
+  }
+  el.innerHTML = _propertiesRaw.map(p => {
+    const feedCount = (typeof ICAL_FEEDS!=='undefined' ? ICAL_FEEDS : []).filter(f=>f.property_id===p.id).length;
+    return `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;font-size:.88rem">${p.name}</div>
+        <div style="font-size:.76rem;color:var(--muted)">${[p.address_line1,p.city].filter(Boolean).join(', ')||'No address set'} · Cleaning fee R${p.cleaning_fee||0} · ${feedCount?feedCount+' iCal feed'+(feedCount>1?'s':''):'No iCal feeds'}</div>
+      </div>
+      <button class="btn btn-sm btn-ghost" onclick="openEditProperty('${p.id}')">Edit</button>
+    </div>`;
+  }).join('');
+}
+
+function openAddProperty() { openPropertyModal(null); }
+function openEditProperty(id) { openPropertyModal(id); }
+
+let _icalFeedSeq = 0;
+const ICAL_PLATFORM_LABELS_PR = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', other:'Other'};
+
+function icalFeedRowHtml(feed) {
+  feed = feed || {};
+  const rowId = 'if'+(_icalFeedSeq++);
+  const platform = feed.platform || 'airbnb';
+  return `<div class="pr-feed-row" data-row-id="${rowId}" style="border:1px solid var(--border);border-radius:8px;padding:8px;margin-top:6px;position:relative">
+    <button type="button" class="btn btn-ghost btn-sm" title="Remove" style="position:absolute;top:4px;right:4px;width:22px;height:22px;padding:0" onclick="this.closest('.pr-feed-row').remove()">✕</button>
+    <div style="display:grid;grid-template-columns:130px 1fr;gap:6px;padding-right:26px">
+      <select class="pr-feed-platform">
+        ${Object.keys(ICAL_PLATFORM_LABELS_PR).map(k=>`<option value="${k}" ${k===platform?'selected':''}>${ICAL_PLATFORM_LABELS_PR[k]}</option>`).join('')}
+      </select>
+      <input class="pr-feed-url" placeholder="https://... iCal sync URL" value="${escAttr(feed.url||feed.feed_url||'')}"/>
+    </div>
+  </div>`;
+}
+function addIcalFeedRow() {
+  document.getElementById('pr-feeds-list').insertAdjacentHTML('beforeend', icalFeedRowHtml({}));
+}
+
+function openPropertyModal(id) {
+  const existing = id ? _propertiesRaw.find(p=>p.id===id) : null;
+  const existingFeeds = existing ? ICAL_FEEDS.filter(f=>f.property_id===existing.id) : [];
+  document.getElementById('day-modal-title').textContent = existing ? 'Edit Property' : 'Add Property';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field span-full"><label>Property Name *</label><input id="pr-name" placeholder="e.g. Sunset Villa" value="${escAttr(existing?existing.name:'')}"/></div>
+      <div class="form-field"><label>Short code <span style="font-weight:400;color:var(--muted)">(optional)</span></label><input id="pr-code" placeholder="e.g. sunset" value="${escAttr(existing?existing.code:'')}"/></div>
+      <div class="form-field"><label>Cleaning Fee (R)</label><input id="pr-fee" type="number" placeholder="0" value="${existing&&existing.cleaning_fee?existing.cleaning_fee:''}"/></div>
+      <div class="form-field span-full"><label>Address</label><input id="pr-addr1" placeholder="Street address" value="${escAttr(existing?existing.address_line1:'')}"/></div>
+      <div class="form-field span-full"><label>City</label><input id="pr-city" placeholder="City" value="${escAttr(existing?existing.city:'')}"/></div>
+      <div class="form-field span-full">
+        <label>iCal Feeds <span style="font-weight:400;color:var(--muted)">(paste the sync URL from each platform this property is listed on)</span></label>
+        <div id="pr-feeds-list"></div>
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="addIcalFeedRow()">+ Add feed</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" onclick="savePropertyRecord(${existing?`'${existing.id}'`:'null'})">Save Property</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+    </div>`;
+  const feedsListEl = document.getElementById('pr-feeds-list');
+  feedsListEl.innerHTML = '';
+  (existingFeeds.length ? existingFeeds : [{}]).forEach(f => feedsListEl.insertAdjacentHTML('beforeend', icalFeedRowHtml(f)));
+  openModal('day-modal');
+}
+
+async function savePropertyRecord(id) {
+  const name = document.getElementById('pr-name').value.trim();
+  if (!name) { toast('Property name is required','error'); return; }
+  if (!db) { toast('Not connected — changes need a live connection to save','error'); return; }
+  const row = {
+    name,
+    code: document.getElementById('pr-code').value.trim() || null,
+    address_line1: document.getElementById('pr-addr1').value.trim() || null,
+    city: document.getElementById('pr-city').value.trim() || null,
+    cleaning_fee: parseFloat(document.getElementById('pr-fee').value) || 0,
+  };
+  let propertyId = id;
+  let error;
+  if (id) {
+    ({ error } = await db.from('properties').update(row).eq('id', id));
+  } else {
+    row.org_id = getOrgId();
+    const res = await db.from('properties').insert([row]).select().single();
+    error = res.error;
+    propertyId = res.data && res.data.id;
+  }
+  if (error) { toast('Save error: '+error.message,'error'); return; }
+
+  // iCal feeds — one row per platform this property syncs from, upserted
+  // into the same public.ical_feeds table the background sync already
+  // reads per-org (loadIcalFeeds()). Previously the only way to populate
+  // this table was the Supabase SQL editor directly.
+  const feedRows = Array.from(document.querySelectorAll('#pr-feeds-list .pr-feed-row')).map(r => ({
+    platform: r.querySelector('.pr-feed-platform').value,
+    feed_url: r.querySelector('.pr-feed-url').value.trim(),
+  })).filter(f => f.feed_url);
+  if (propertyId && feedRows.length) {
+    const feedUpserts = feedRows.map(f => ({ org_id: getOrgId(), property_id: propertyId, platform: f.platform, feed_url: f.feed_url, is_active: true }));
+    const { error: feedError } = await db.from('ical_feeds').upsert(feedUpserts, { onConflict: 'org_id,property_id,platform' });
+    if (feedError) { toast('Property saved, but feed save failed: '+feedError.message,'error'); }
+  }
+
+  toast('Property saved ✓','success');
+  closeModal('day-modal');
+  await loadProperties();
+  await loadIcalFeeds();
 }
 
 // ── Domestic staff ──
@@ -1918,6 +2053,7 @@ function saveUserSetting(key, val) {
 function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
+  renderPropertiesSettings();
 }
 
 // ── Per-platform rate calculator (Task 5) ──
@@ -4314,7 +4450,8 @@ const ROADMAP = [
   {k:'p1-4',t:'Per-org commission rates from org_settings',n:'DONE via a different mechanism — platform_fee_config table (Task 5\'s rate calculator), not org_settings itself, but functionally the same ask: per-org, per-platform commission rates, editable in the UI instead of hardcoded in JS',c:'Architecture'},
   {k:'p1-5',t:'Migrate S&N as first tenant — zero regression',n:'All existing data preserved and re-scoped',c:'Architecture'},
   {k:'p1-6',t:'Confirm VAT status with accountant',n:'DONE — not VAT registered, not planning to register',c:'Legal'},
-  {k:'p1-7',t:'Face ID / Touch ID quick login (WebAuthn passkeys)',n:'Not started — scoped, not yet built. Each admin (Nicole, Silja) would register their own device once (still needs an initial email/password setup, this is an additional unlock method, not a replacement for the account itself); future logins on that device use Face ID/Touch ID instead of typing a password. Registration is per-device — Silja registering her phone doesn\'t cover Nicole\'s. Safari on iOS supports this well (the same underlying tech real "sign in with Face ID" buttons on other sites use). Touches auth/security, so scoping it here rather than building it unprompted',c:'Security'}]},
+  {k:'p1-7',t:'Face ID / Touch ID quick login (WebAuthn passkeys)',n:'Not started — scoped, not yet built. Each admin (Nicole, Silja) would register their own device once (still needs an initial email/password setup, this is an additional unlock method, not a replacement for the account itself); future logins on that device use Face ID/Touch ID instead of typing a password. Registration is per-device — Silja registering her phone doesn\'t cover Nicole\'s. Safari on iOS supports this well (the same underlying tech real "sign in with Face ID" buttons on other sites use). Touches auth/security, so scoping it here rather than building it unprompted',c:'Security'},
+  {k:'p1-8',t:'Add Property management UI — biggest real gap found working toward p1-2',n:'DONE — there was no way to add a property to the app at all; S&N\'s two properties exist only because they were seeded directly via SQL. A brand-new customer\'s org would be created (once p1-2 exists) but immediately useless with zero properties. New "Properties" card in Settings: list + edit existing properties, "+ Add Property" modal (name, short code, address, city, cleaning fee) writing to public.properties — no schema change needed, properties_modify RLS policy already allows org admins to write. loadProperties() now renders this list from real DB state (including genuinely zero properties for a fresh org) while keeping its hardcoded PROPS/UUID_MAP fallback for the existing single-tenant app until real properties exist, so this doesn\'t touch S&N\'s current behavior. Known gap, flagged not solved: outbound iCal feed URLs are still hardcoded per-property serverless routes (api/speranta-cal.js, api/tvhouse-cal.js) — a newly-added property won\'t get one automatically; still needs p1-2 (org-creation flow) before this is actually reachable by a new customer',c:'Architecture'}]},
  {id:'p2',lbl:'Phase 2 — Design partner',meta:'Weeks 16–28',col:'#1D9E75',tasks:[
   {k:'p2-1',t:'Recruit 1–2 Cape Town design partners',n:'Free access for structured feedback, 1+ month active use',c:'GTM'},
   {k:'p2-2',t:'Stripe subscription billing — one tier',n:'First mechanism to actually charge a customer',c:'Business'},
@@ -4804,7 +4941,7 @@ function renderDashboard() {
     urgentItems.push({
       icon:'🚫', label:'Booking cancelled — inform '+d.cleaner, color:'#dc2626', textColor:'#991b1b',
       detail: propName(d.property_id)+' · '+d.cleaner+' scheduled '+fmtDate(d.date),
-      action: `switchTab('domestic')`,
+      action: `editCleaning('${d.id}')`,
       dismissAction: `acknowledgeCancelledClean('${d.id}')`,
       priority: 1,
     });
@@ -4820,7 +4957,12 @@ function renderDashboard() {
     urgentItems.push({
       icon:'🚨', label:'Never completed — '+d.cleaner, color:'#dc2626', textColor:'#991b1b',
       detail: propName(d.property_id)+' · was due '+fmtDate(d.date),
-      action: `switchTab('domestic')`,
+      // Was switchTab('domestic') (a dead redirect), then editCleaning()
+      // (opens scheduling details — property/date/cleaner/link — but not
+      // the actual action needed: the checklist + Mark Complete button).
+      // openDomesticCard() jumps straight to that specific card in the
+      // Domestic cal view and highlights it.
+      action: `openDomesticCard('${d.id}')`,
       priority: 1,
     });
   });
@@ -6143,7 +6285,7 @@ function renderDomesticCalView() {
       return;
     }
     domGrid.innerHTML = monthDoms.map(d => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
+      <div class="dom-session-row" id="dom-card-${d.id}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
         <div>
           <div style="font-weight:600;font-size:.88rem">${d.cleaner||'Unassigned'} — ${propName(d.property_id)}</div>
           <div style="font-size:.76rem;color:var(--muted);margin-top:2px">${fmtDate(d.date)} · ${d.time||'—'} · ${d.type||'turnover'}</div>
@@ -6151,6 +6293,7 @@ function renderDomesticCalView() {
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-weight:700;color:var(--green2)">R${d.amount_paid||0}</span>
           <span class="badge badge-${d.status||'scheduled'}">${d.status||'scheduled'}</span>
+          ${d.status!=='completed'?`<button onclick="markDone('${d.id}')" class="btn btn-sm btn-green" style="padding:4px 10px;font-size:.76rem">✓ Mark Complete</button>`:''}
           <button onclick="editCleaning('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.8rem">✏</button>
           <button onclick="deleteCleaning('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:.8rem">✕</button>
         </div>
@@ -6343,6 +6486,35 @@ function bookCleaningForGuest(pid, checkoutDate, bookingId) {
   openModal('domestic-modal');
 }
 
+// Jumps straight to the actual "resolve this" action for a cleaning
+// session — its row's own "✓ Mark Complete" button in the Domestic cal
+// view — rather than editCleaning()'s scheduling-detail modal (property/
+// date/cleaner/link), which has no way to mark a clean done at all.
+//
+// (Found while wiring this up: renderDomestic()'s richer checklist-card
+// version of this list is actually dead code — its only trigger,
+// toggleCleaningOverlay(), targets a #domestic-sessions-panel element that
+// no longer exists in the HTML, so it can never actually show. The live
+// view is renderDomesticCalView()'s simpler list, which had Edit/Delete
+// but no complete action at all until now.)
+function openDomesticCard(id) {
+  const d = domestics.find(x=>String(x.id)===String(id));
+  if (d && d.date) {
+    const dt = new Date(d.date+'T00:00:00');
+    domCalYear = dt.getFullYear();
+    domCalMonth = dt.getMonth();
+  }
+  switchTab('calendar');
+  setCalMode('domestic');
+  setTimeout(() => {
+    const el = document.getElementById('dom-card-'+id);
+    if (!el) return;
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.classList.add('flash-highlight');
+    setTimeout(() => el.classList.remove('flash-highlight'), 2000);
+  }, 200);
+}
+
 async function editCleaning(id) {
   const d = domestics.find(x=>x.id===id);
   if (!d) return;
@@ -6435,7 +6607,12 @@ async function toggleOwnerBlock(bookingId, checked) {
 // ── DOMESTIC CALENDAR ─────────────────────────────────────────
 function renderDomCal() {
   const fd = currentProp==='all' ? domestics : domestics.filter(d=>d.property_id===currentProp);
-  buildCalGrid(domCalYear, domCalMonth, [], fd, 'dom-cal-grid', 'dom-cal-month-label', 'showDomDay');
+  // labelId omitted — 'dom-cal-month-label' doesn't exist (only
+  // 'dom-month-label' does, already kept in sync by renderDomesticCalView()
+  // itself); passing it crashed markDone()'s render chain with "Cannot set
+  // properties of null" every time, since buildCalGrid()'s own guard only
+  // checks the id string is non-empty, not that the element actually exists.
+  buildCalGrid(domCalYear, domCalMonth, [], fd, 'dom-cal-grid', null, 'showDomDay');
 }
 // domCalNav duplicate removed — using the version above that calls renderDomesticCalView
 function showDomDay(ds) {
@@ -6496,7 +6673,7 @@ function renderDomestic() {
     const keys = ['kitchen','bathrooms','bedrooms','living','laundry'];
     const done = keys.filter(k=>cl[k]).length;
     const rateVal = d.amount_paid || getCleanerRate(d.cleaner, d.property_id);
-    return `<div class="dom-card" style="border-top-color:${d.status==='completed'?'var(--green2)':'var(--accent)'}">
+    return `<div class="dom-card" id="dom-card-${d.id}" style="border-top-color:${d.status==='completed'?'var(--green2)':'var(--accent)'}">
       <div class="dom-card-head">
         <div><div class="dom-name">${d.cleaner}</div><div class="dom-prop">${propName(d.property_id)} · ${d.type}</div></div>
         <span class="badge badge-${d.status}">${d.status}</span>
