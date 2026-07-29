@@ -22,8 +22,11 @@ export default async function handler(req) {
 
 async function generateFeed(propertyId, propertyName, feedId) {
   try {
-    // Fetch all active bookings for this property
-    const url = `${SUPABASE_URL}/rest/v1/bookings?property_id=eq.${propertyId}&is_active=eq.true&status=in.(confirmed,pending,checked-in,checked-out,owner,blocked)&select=id,guest_name,check_in_date,check_out_date,status,platform,notes&order=check_in_date.asc`;
+    // Fetch active, current-and-future bookings for this property. Past
+    // stays don't affect availability on other platforms, so they're
+    // excluded rather than exported as dead history.
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const url = `${SUPABASE_URL}/rest/v1/bookings?property_id=eq.${propertyId}&is_active=eq.true&status=in.(confirmed,pending,checked-in,checked-out,owner,blocked)&check_out_date=gte.${todayStr}&select=id,guest_name,check_in_date,check_out_date,status,platform,notes&order=check_in_date.asc`;
 
     const res = await fetch(url, {
       headers: {
@@ -47,13 +50,23 @@ async function generateFeed(propertyId, propertyName, feedId) {
       'X-WR-TIMEZONE:Africa/Johannesburg',
     ];
 
+    let emitted = 0;
     for (const b of bookings) {
       if (!b.check_in_date || !b.check_out_date) continue;
+
+      // A single event spanning many months is virtually always bad data
+      // (e.g. a malformed inbound iCal import) rather than a genuine
+      // closure — publishing it would blank out the whole calendar on
+      // every connected platform. Found in production 2026-07-29: a TV
+      // House 'blocked' row spanning 2026-02-01 to 2026-12-31 did exactly
+      // that on LekkeSlaap. Skip anything over ~4 months instead.
+      const nights = Math.round((new Date(b.check_out_date) - new Date(b.check_in_date)) / 86400000);
+      if (nights > 120) continue;
 
       // For iCal: DTSTART = check-in date, DTEND = check-out date (exclusive)
       const dtStart = b.check_in_date.replace(/-/g, '');
       const dtEnd   = b.check_out_date.replace(/-/g, '');
-      
+
       const summary = b.status === 'owner'   ? 'Owner Stay — Not Available' :
                       b.status === 'blocked'  ? 'Not Available' :
                       'Not Available'; // Never expose guest names to other platforms
@@ -68,10 +81,11 @@ async function generateFeed(propertyId, propertyName, feedId) {
       lines.push(`SUMMARY:${summary}`);
       lines.push(`STATUS:CONFIRMED`);
       lines.push('END:VEVENT');
+      emitted++;
     }
 
     // Some platforms reject empty feeds — add a placeholder if no events
-    if (bookings.filter(b => b.check_in_date).length === 0) {
+    if (emitted === 0) {
       const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
       lines.push('BEGIN:VEVENT');
       lines.push('UID:hep-speranta-placeholder@snapartments.co.za');
