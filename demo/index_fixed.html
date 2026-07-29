@@ -1172,6 +1172,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
             </div>
             <div id="ownstmt-preview" style="background:#F5EFE6;border-radius:10px;padding:16px;border:1px solid var(--border)"></div>
           </div>
+          <div class="card mb-6">
+            <div class="card-title">📜 Management Invoice History</div>
+            <div id="ownstmt-history"><div class="text-muted text-sm">Management invoice history will appear here once generated documents are saved.</div></div>
+          </div>
         </div><!-- end rsub-owner -->
 
 
@@ -8491,6 +8495,72 @@ function renderOwnerStatementTab() {
     `<option value="${k}" ${k===ownerStmtProp?'selected':''}>${PROPS[k].name}</option>`).join('');
   document.getElementById('ownstmt-month').value = ownerStmtMonth;
   loadOrgSettings().then(() => onOwnerStmtChange());
+  loadOwnerStmtHistory();
+}
+
+// Same table/backing store as the guest Invoices tab (public.invoices),
+// distinguished by doc_type='MANAGEMENT' — this generator previously only
+// rendered a PDF client-side and never saved anything, so there was no
+// record of a management invoice ever having been issued.
+async function saveOwnerStatementRecord(invNum, propLabel, monthLabel, owners, totalDue) {
+  if (!db) return;
+  try {
+    const { error } = await db.from('invoices').upsert({
+      org_id:      getOrgId(),
+      doc_type:    'MANAGEMENT',
+      number:      invNum,
+      reference:   monthLabel,
+      guest_name:  owners,
+      property:    propLabel,
+      dates:       monthLabel,
+      platform:    'management',
+      line_items:  ownerStmtCosts,
+      total:       totalDue,
+      notes:       null,
+      date_issued: todaySAST(),
+      created_by:  (window.currentUser && currentUser.name) || 'unknown'
+    }, {onConflict:'number'});
+    if (error) {
+      console.warn('saveOwnerStatementRecord failed:', error.message);
+      toast('PDF downloaded, but saving its record failed: '+error.message,'error');
+      return;
+    }
+    loadOwnerStmtHistory();
+  } catch(e) { console.warn('saveOwnerStatementRecord failed:', e.message); toast('PDF downloaded, but saving its record failed: '+e.message,'error'); }
+}
+
+async function loadOwnerStmtHistory() {
+  const el = document.getElementById('ownstmt-history');
+  if (!el || !db) return;
+  el.innerHTML = skeletonRows(4);
+  try {
+    const {data,error} = await db.from('invoices')
+      .select('id,number,property,dates,guest_name,total,date_issued,status,created_at')
+      .eq('doc_type','MANAGEMENT')
+      .order('created_at',{ascending:false})
+      .limit(100);
+    if (error) throw error;
+    if (!data || !data.length) {
+      el.innerHTML = emptyState('🧾', 'No management invoices yet — generate one above and it\'ll be saved here');
+      return;
+    }
+    el.innerHTML = '<div class="table-wrap"><table>'+
+      '<thead><tr><th>Number</th><th>Property</th><th>Period</th><th>Owner(s)</th><th>Date</th><th style="text-align:right">Total</th><th>Status</th></tr></thead>'+
+      '<tbody>'+ data.map((r,i)=>{
+        const stColor = {draft:'var(--muted)',sent:'#2E75B6',paid:'var(--green2)',cancelled:'var(--red)'}[r.status]||'var(--muted)';
+        return '<tr style="'+(i%2?'background:var(--surface-2)':'')+'">'+
+          '<td style="font-size:.8rem;font-weight:600">'+(r.number||'—')+'</td>'+
+          '<td style="font-size:.8rem">'+(r.property||'—')+'</td>'+
+          '<td style="font-size:.78rem;color:var(--muted)">'+(r.dates||'—')+'</td>'+
+          '<td style="font-size:.8rem">'+(r.guest_name||'—')+'</td>'+
+          '<td style="font-size:.78rem;white-space:nowrap">'+(r.date_issued||(r.created_at||'').slice(0,10))+'</td>'+
+          '<td style="text-align:right;font-size:.8rem;font-weight:600">R'+Number(r.total||0).toLocaleString('en-ZA',{minimumFractionDigits:2})+'</td>'+
+          '<td style="font-size:.72rem;color:'+stColor+';text-transform:capitalize">'+(r.status||'draft')+'</td>'+
+        '</tr>';
+      }).join('')+'</tbody></table></div>';
+  } catch(e) {
+    el.innerHTML = '<div class="text-muted text-sm" style="color:var(--red)">Could not load history: '+e.message+'</div>';
+  }
 }
 
 function onOwnerStmtChange() {
@@ -8660,6 +8730,18 @@ async function generateOwnerStatementPDF() {
     const original = document.getElementById('ownstmt-preview');
     const propShort = (PROPS[ownerStmtProp]||{}).short || ownerStmtProp;
     const filename = 'Management-Invoice-'+propShort.replace(/\s+/g,'')+'-'+ownerStmtMonth+'.pdf';
+
+    // Same MGMT-{PROPERTY}-{YYYY-MM} number used in the preview/filename —
+    // naturally unique per property per month, so regenerating the same
+    // month's invoice updates its existing record via upsert rather than
+    // erroring or creating a duplicate.
+    const propLabel = (PROPS[ownerStmtProp]||{}).name || ownerStmtProp;
+    const owners = document.getElementById('ownstmt-owners')?.value || 'Property Owner';
+    const [sy,sm] = ownerStmtMonth.split('-').map(Number);
+    const monthLabel = new Date(sy, sm-1, 1).toLocaleDateString('en-ZA', {month:'long', year:'numeric'});
+    const invNum = 'MGMT-'+propLabel.replace(/\s+/g,'').toUpperCase()+'-'+ownerStmtMonth;
+    const totalDue = ownerStmtCosts.reduce((s,c)=>s+(Number(c.amount)||0),0);
+    await saveOwnerStatementRecord(invNum, propLabel, monthLabel, owners, totalDue);
 
     const printWidth = 700;
     clone = original.cloneNode(true);
