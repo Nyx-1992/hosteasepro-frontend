@@ -1366,6 +1366,16 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;font-weight:700">Settings &amp; Links</div>
         </div>
 
+        <!-- Properties -->
+        <div class="card" style="margin-bottom:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <div style="font-weight:700;font-size:1rem">🏠 Properties</div>
+            <button class="btn btn-sm btn-primary" onclick="openAddProperty()">+ Add Property</button>
+          </div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">Every property bookings, cleaning and invoices can be scoped to. New properties don't yet get an outbound iCal feed automatically (see Roadmap p1-1) — everything else (Calendar, Bookings, Invoices, cleaning fee) works immediately.</div>
+          <div id="settings-properties-list"></div>
+        </div>
+
         <!-- iCal Feed URLs -->
         <div class="card" style="margin-bottom:18px">
           <div style="font-weight:700;font-size:1rem;margin-bottom:4px">📡 Outbound iCal Feeds</div>
@@ -1721,11 +1731,16 @@ let PROPS = {
   tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5', cleaningFee:450},
 };
 
+let _propertiesRaw = [];
+
 async function loadProperties() {
   if (!db) return;
   try {
     const { data, error } = await db.from('properties').select('*').eq('org_id', getOrgId());
-    if (error || !data || !data.length) return; // keep hardcoded fallback above
+    if (error) { console.warn('loadProperties:', error); return; }
+    _propertiesRaw = data || [];
+    renderPropertiesSettings();
+    if (!data || !data.length) return; // keep hardcoded PROPS/UUID_MAP fallback above — a brand-new org legitimately has zero properties until added via Settings
     const newProps = {}, newUuidMap = {};
     data.forEach(p => {
       const n = (p.name||'').toLowerCase();
@@ -1759,6 +1774,69 @@ function refreshPropSelects() {
     el.innerHTML = propSelectOptionsHtml();
     el.value = PROPS[cur] ? cur : 'all';
   });
+}
+
+// ── Properties management (Settings tab) ──────────────────────────────────
+function renderPropertiesSettings() {
+  const el = document.getElementById('settings-properties-list');
+  if (!el) return;
+  if (!_propertiesRaw.length) {
+    el.innerHTML = emptyState('🏠', 'No properties yet', `<button class="btn btn-sm btn-primary" onclick="openAddProperty()">+ Add Property</button>`);
+    return;
+  }
+  el.innerHTML = _propertiesRaw.map(p => `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;font-size:.88rem">${p.name}</div>
+        <div style="font-size:.76rem;color:var(--muted)">${[p.address_line1,p.city].filter(Boolean).join(', ')||'No address set'} · Cleaning fee R${p.cleaning_fee||0}</div>
+      </div>
+      <button class="btn btn-sm btn-ghost" onclick="openEditProperty('${p.id}')">Edit</button>
+    </div>`).join('');
+}
+
+function openAddProperty() { openPropertyModal(null); }
+function openEditProperty(id) { openPropertyModal(id); }
+
+function openPropertyModal(id) {
+  const existing = id ? _propertiesRaw.find(p=>p.id===id) : null;
+  document.getElementById('day-modal-title').textContent = existing ? 'Edit Property' : 'Add Property';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field span-full"><label>Property Name *</label><input id="pr-name" placeholder="e.g. Sunset Villa" value="${escAttr(existing?existing.name:'')}"/></div>
+      <div class="form-field"><label>Short code <span style="font-weight:400;color:var(--muted)">(optional)</span></label><input id="pr-code" placeholder="e.g. sunset" value="${escAttr(existing?existing.code:'')}"/></div>
+      <div class="form-field"><label>Cleaning Fee (R)</label><input id="pr-fee" type="number" placeholder="0" value="${existing&&existing.cleaning_fee?existing.cleaning_fee:''}"/></div>
+      <div class="form-field span-full"><label>Address</label><input id="pr-addr1" placeholder="Street address" value="${escAttr(existing?existing.address_line1:'')}"/></div>
+      <div class="form-field span-full"><label>City</label><input id="pr-city" placeholder="City" value="${escAttr(existing?existing.city:'')}"/></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" onclick="savePropertyRecord(${existing?`'${existing.id}'`:'null'})">Save Property</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+    </div>`;
+  openModal('day-modal');
+}
+
+async function savePropertyRecord(id) {
+  const name = document.getElementById('pr-name').value.trim();
+  if (!name) { toast('Property name is required','error'); return; }
+  if (!db) { toast('Not connected — changes need a live connection to save','error'); return; }
+  const row = {
+    name,
+    code: document.getElementById('pr-code').value.trim() || null,
+    address_line1: document.getElementById('pr-addr1').value.trim() || null,
+    city: document.getElementById('pr-city').value.trim() || null,
+    cleaning_fee: parseFloat(document.getElementById('pr-fee').value) || 0,
+  };
+  let error;
+  if (id) {
+    ({ error } = await db.from('properties').update(row).eq('id', id));
+  } else {
+    row.org_id = getOrgId();
+    ({ error } = await db.from('properties').insert([row]));
+  }
+  if (error) { toast('Save error: '+error.message,'error'); return; }
+  toast('Property saved ✓','success');
+  closeModal('day-modal');
+  await loadProperties();
 }
 
 // ── Domestic staff ──
@@ -1918,6 +1996,7 @@ function saveUserSetting(key, val) {
 function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
+  renderPropertiesSettings();
 }
 
 // ── Per-platform rate calculator (Task 5) ──
