@@ -46,18 +46,7 @@ export default async function handler(req, res) {
       headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${callerToken}` },
     });
     if (!callerRes.ok) {
-      // Temporary diagnostics (2026-07-29) — SUPABASE_URL's host isn't a
-      // secret (it's already public in demo/config.js shipped to the
-      // browser), so surfacing it plus the upstream status/body here is
-      // safe and lets us tell instantly whether this deployment's env
-      // vars point at the wrong Supabase project. Remove once resolved.
-      const upstreamBody = await callerRes.text().catch(() => '');
-      let host = 'unparseable';
-      try { host = new URL(SUPABASE_URL).host; } catch (e) {}
-      return res.status(401).json({
-        error: 'Invalid session',
-        debug: { supabaseHost: host, upstreamStatus: callerRes.status, upstreamBody: upstreamBody.slice(0, 300) },
-      });
+      return res.status(401).json({ error: 'Invalid session' });
     }
     const caller = await callerRes.json();
 
@@ -94,8 +83,12 @@ export default async function handler(req, res) {
     });
     const orgData = await orgRes.json();
     if (!orgRes.ok || !Array.isArray(orgData) || !orgData[0]) {
-      const errText = typeof orgData === 'string' ? orgData : JSON.stringify(orgData);
-      return res.status(400).json({ error: 'Could not create organization: ' + errText });
+      // Logged server-side (Vercel function logs) rather than returned to
+      // the client — raw Postgres/PostgREST error text can include schema
+      // details (column/constraint names) that don't belong in an API
+      // response even for this internal-tool-only endpoint.
+      console.error('create-org: organization insert failed:', orgData);
+      return res.status(400).json({ error: 'Could not create organization. Check server logs for details.' });
     }
     newOrgId = orgData[0].id;
 
@@ -134,7 +127,8 @@ export default async function handler(req, res) {
       await rollbackUser(newUserId);
       await rollbackOrg(newOrgId);
       const errText = await profileInsertRes.text();
-      return res.status(400).json({ error: 'Profile creation failed: ' + errText });
+      console.error('create-org: profile insert failed:', errText);
+      return res.status(400).json({ error: 'Profile creation failed. Check server logs for details.' });
     }
 
     return res.status(200).json({ success: true, orgId: newOrgId, userId: newUserId });
