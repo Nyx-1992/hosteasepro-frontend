@@ -1949,7 +1949,11 @@ async function saveNewOrg() {
       body: JSON.stringify({ orgName, ownerName, ownerEmail, ownerPassword }),
     });
     const result = await res.json();
-    if (!res.ok) { errEl.textContent = result.error || 'Could not create organization.'; errEl.style.display = 'block'; return; }
+    if (!res.ok) {
+      let msg = result.error || 'Could not create organization.';
+      if (result.debug) msg += ' [debug: host=' + result.debug.supabaseHost + ' status=' + result.debug.upstreamStatus + ' body=' + result.debug.upstreamBody + ']';
+      errEl.textContent = msg; errEl.style.display = 'block'; return;
+    }
     closeModal('day-modal');
     toast('Organization created ✓ — ' + ownerEmail + ' can now log in and add their own properties.', 'success');
   } catch (e) {
