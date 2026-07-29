@@ -3149,6 +3149,9 @@ async function loadData() {
           mid_stay_msg:  !!cl.mid_stay_msg_at,
           followup_msg:  !!cl.follow_up_sent_at,
           _note:         cl.notes || '',
+          // {stage_key:true} — "ticked off without sending" (migration 670),
+          // shown as a yellow ring in Guest Messages instead of green
+          _skipped:      cl.skipped_stages || {},
         };
       });
     }
@@ -4696,7 +4699,8 @@ const ROADMAP = [
   {k:'p2-12',t:'Auto-drafted social proof captions from real booking data',n:'Owner-approved. "Speranta Flat is fully booked through September" / "TV House just crossed 50 stays this year" — captions generated from real bookings/domestics counts (occupancy %, total stays, repeat-guest rate), not something the host has to notice and write themselves. Trivial for a PMS since the data already exists; impossible for a generic scheduler with zero calendar visibility. Feeds into the same Share to Social flow as a second caption-template option alongside the current generic one. Not yet scoped — needs a decision on which milestones are worth surfacing (occupancy thresholds? review counts? anniversary of first booking?) so it doesn\'t become noise',c:'GTM'},
   {k:'p2-13',t:'Turn the post-stay WhatsApp flow into a content pipeline',n:'Owner-loved idea. The Guest Timeline (p0-30) already sends a rebooking message after checkout with the RETURN10 code — add one soft, optional ask ("mind if we share your photo/review?") to that same message. A positive reply becomes ready-made testimonial content sourced from a guest there\'s already a relationship with, not cold outreach. Needs real scoping: where the guest\'s reply/photo actually lands (a new inbox view? manual copy-paste from WhatsApp for now?), consent/opt-out handling, and whether this stays a manual "coordinator reviews and reposts" step or becomes something more automated later. Deliberately starting manual-assisted rather than building guest-facing upload infrastructure up front',c:'GTM'},
   {k:'p2-14',t:'Season-aware posting nudges',n:'Owner-approved. PROPERTY_SEASON_RATES already exists (drives the invoice/quote seasonal pricing) — reuse it to prompt "Peak season starts next month for Speranta, people are planning December trips now" right when it\'s actually useful, instead of a generic weekly reminder unconnected to real seasonality. Simplest of this batch to build once p2-11\'s prompt-surfacing mechanism exists, since it\'s the same UI pattern with a date-vs-season-table trigger instead of a vacancy trigger',c:'GTM'},
-  {k:'p2-15',t:'Bake the direct-booking pitch into every social caption',n:'Owner flagged this needs more thought before committing — not yet approved, just captured. Idea: default every auto-generated caption (p2-10 Tier 0, p2-11, p2-12) to include the RETURN10 code and "no platform fees, best rate guaranteed" framing already used in the post-stay WhatsApp message, so social becomes another channel reinforcing the same direct-booking economics (p2-3/p2-4) instead of a disconnected marketing side-project. Open question worth resolving before building: does a discount code belong in every single post, or does that undercut the "book direct because it\'s genuinely better" pitch by making it feel like a constant sale? Revisit once p2-11/p2-12 have real usage to look at',c:'GTM'}]},
+  {k:'p2-15',t:'Bake the direct-booking pitch into every social caption',n:'Owner flagged this needs more thought before committing — not yet approved, just captured. Idea: default every auto-generated caption (p2-10 Tier 0, p2-11, p2-12) to include the RETURN10 code and "no platform fees, best rate guaranteed" framing already used in the post-stay WhatsApp message, so social becomes another channel reinforcing the same direct-booking economics (p2-3/p2-4) instead of a disconnected marketing side-project. Open question worth resolving before building: does a discount code belong in every single post, or does that undercut the "book direct because it\'s genuinely better" pitch by making it feel like a constant sale? Revisit once p2-11/p2-12 have real usage to look at',c:'GTM'},
+  {k:'p2-16',t:'Connect Outlook / Microsoft 365 — send email from inside HEP',n:'Owner asked for this alongside the WhatsApp/email login-share buttons ("can we connect our outlook too, still has to be done with all our emails"). What ships today is the honest near-term version: every email action (share login details, and any future guest email) opens a pre-filled draft in the user\'s OWN mail app via mailto — which IS Outlook on our machines, no setup, works for all our addresses. The real integration (HEP sending through the S&N mailboxes itself, with sent mail in the Outlook Sent folder) means Microsoft Graph: an Azure app registration, per-mailbox OAuth consent + refresh-token storage, and Microsoft\'s publisher verification for any org beyond our own tenant — same shape of per-customer-OAuth burden as the Meta Tier 2 work in p2-10, so scope them with the same eyes. Decide first whether the actual need is outbound sending (Graph sendMail — moderate) or also READING a shared inbox into HEP (much bigger; overlaps the p3-3 support-channel question)',c:'Architecture'}]},
  {id:'p3',lbl:'Phase 3 — Go-to-market',meta:'Weeks 28–48',col:'#7F77DD',tasks:[
   {k:'p3-1',t:'HEP marketing landing page + waitlist',n:'Value clear to a stranger in 10 seconds',c:'GTM'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
@@ -7376,6 +7380,12 @@ async function toggleNinaTask(bookingId, taskKey) {
   if (!ninaBTaskProgress[bookingId]) ninaBTaskProgress[bookingId]={};
   ninaBTaskProgress[bookingId][taskKey] = !ninaBTaskProgress[bookingId][taskKey];
   const val = ninaBTaskProgress[bookingId][taskKey];
+  // Any sent/not-sent change clears a leftover "ticked off without
+  // sending" flag (migration 670) — the two states are mutually
+  // exclusive: sent wins, and un-marking resets the stage completely.
+  const prog = ninaBTaskProgress[bookingId];
+  const hadSkip = !!(prog._skipped && prog._skipped[taskKey]);
+  if (hadSkip) delete prog._skipped[taskKey];
 
   // Map app key → DB column
   const COL_MAP = {
@@ -7393,6 +7403,7 @@ async function toggleNinaTask(bookingId, taskKey) {
     const propUuid = (PROPS[b?.property_id] || {}).uuid || b?.property_id;
 
     const update = { [dbCol]: val ? new Date().toISOString() : null };
+    if (hadSkip) update.skipped_stages = prog._skipped;
     // Try update first, then insert if not exists
     const { data: existing } = await db.from('booking_checklists')
       .select('booking_id').eq('booking_id', bookingId).single();
@@ -7415,6 +7426,40 @@ async function toggleNinaTask(bookingId, taskKey) {
   if (document.getElementById('guest-booking-grid')) renderGuestManagement();
   if (document.getElementById('booking-lane-view')?.style.display !== 'none') renderLaneView();
   if (document.getElementById('todays-checkouts-section')) renderTodaysCheckouts();
+}
+
+// "Ticked off without sending" — toggles the stage's flag in
+// booking_checklists.skipped_stages (migration 670). Deliberately separate
+// from toggleNinaTask: the sent timestamp must stay NULL, because the whole
+// point is a visible third state (yellow ring: handled, but NOT sent) that
+// stops the stage nagging as due without pretending it went out.
+async function skipNinaStage(bookingId, taskKey) {
+  if (!ninaBTaskProgress[bookingId]) ninaBTaskProgress[bookingId]={};
+  const prog = ninaBTaskProgress[bookingId];
+  prog._skipped = prog._skipped || {};
+  if (prog._skipped[taskKey]) delete prog._skipped[taskKey];
+  else prog._skipped[taskKey] = true;
+
+  if (db) {
+    const b = bookings.find(x => String(x.id) === String(bookingId));
+    const propUuid = (PROPS[b?.property_id] || {}).uuid || b?.property_id;
+    const update = { skipped_stages: prog._skipped };
+    // Try update first, then insert if not exists — same pattern as
+    // toggleNinaTask above
+    const { data: existing } = await db.from('booking_checklists')
+      .select('booking_id').eq('booking_id', bookingId).single();
+    if (existing) {
+      await db.from('booking_checklists').update(update).eq('booking_id', bookingId);
+    } else {
+      await db.from('booking_checklists').insert([{
+        booking_id:  bookingId,
+        org_id:      getOrgId(),
+        property_id: propUuid,
+        ...update,
+      }]);
+    }
+  }
+  renderGuestTimeline();
 }
 function copyUrl(elId, btn) {
   const text = document.getElementById(elId)?.textContent?.trim();
@@ -7716,7 +7761,11 @@ function getGuestTouchpoints(b) {
   const hoursUntilCI = (new Date(b.check_in) - new Date()) / 3600000;
 
   return GUEST_STAGE_DEFS.filter(def => !def.minNights || nights >= def.minNights).map(def => {
-    const done = !!prog[def.key];
+    const sent = !!prog[def.key];
+    // Ticked off without sending (yellow ring) — counts as handled for
+    // due-ness (stops the nag) but stays visibly distinct from sent.
+    const skipped = !sent && !!(prog._skipped && prog._skipped[def.key]);
+    const done = sent || skipped;
     let dueNow = false, windowLabel = '', dueSince = null;
     if (def.key === 'checkin_msg') {
       // 24h-before window for advance sends, but always due on the actual
@@ -7738,7 +7787,7 @@ function getGuestTouchpoints(b) {
       windowLabel = 'Send after checkout';
       dueSince = co;
     }
-    return { key: def.key, label: def.label, icon: def.icon, done, dueNow, windowLabel, dueSince, message: def.build(b) };
+    return { key: def.key, label: def.label, icon: def.icon, done, sent, skipped, dueNow, windowLabel, dueSince, message: def.build(b) };
   });
 }
 
@@ -7799,7 +7848,11 @@ function sendGuestTouchpoint(bookingId, stageKey) {
   const stage = getGuestTouchpoints(b).find(s => s.key === stageKey);
   if (!stage) return;
   deliverWhatsAppMessage(WA_NUMBER, stage.message);
-  if (!stage.done) toggleNinaTask(String(bookingId), stageKey); // marks sent; no-op if already done
+  // Marks sent unless already sent — a "ticked off (not sent)" stage that
+  // does get sent after all upgrades to properly sent (toggleNinaTask
+  // clears the yellow-state flag as part of the same write).
+  if (!stage.sent) toggleNinaTask(String(bookingId), stageKey);
+  renderGuestTimeline();
 }
 
 function renderGuestTimeline() {
@@ -7861,34 +7914,35 @@ function renderGuestTimeline() {
       </div>
 
       <!-- Stage row: pre-arrival -> [mid-stay] -> post-stay. Each stage is
-           its own icon inside a status ring (green=sent, red=due now &
-           unsent, grey=not due yet) instead of a small ✓/●/○ glyph, so
-           done/not-done reads at a glance. Clicking a stage — any stage,
-           done or not — just selects it for the viewer below; it never
-           toggles sent/not-sent itself, so an accidental click can't strand
-           a stage with no way to view or resend its message (that's still
-           the explicit Mark sent/not sent button only). -->
+           its own icon inside a status ring (green=sent, yellow=ticked off
+           without sending, red=due now & unhandled, grey=not due yet)
+           instead of a small ✓/●/○ glyph, so done/not-done reads at a
+           glance. Clicking a stage — any stage, done or not — just selects
+           it for the viewer below; it never toggles sent/not-sent itself,
+           so an accidental click can't strand a stage with no way to view
+           or resend its message (that's still the explicit Mark sent/not
+           sent button only). -->
       <div style="display:flex;gap:4px;margin-bottom:10px">
         ${stages.map(s => {
-          const ringColor = s.done ? 'var(--green)' : s.dueNow ? '#dc2626' : 'var(--border-strong)';
+          const ringColor = s.skipped ? '#eab308' : s.done ? 'var(--green)' : s.dueNow ? '#dc2626' : 'var(--border-strong)';
           const isActive = s.key===activeKey;
           return `
-          <div title="${s.windowLabel||''}" onclick="selectMsgStage('${bid}','${s.key}')"
+          <div title="${s.skipped?'Ticked off — not sent':(s.windowLabel||'')}" onclick="selectMsgStage('${bid}','${s.key}')"
             style="flex:1;text-align:center;padding:6px 4px;cursor:pointer;border-radius:8px;background:${isActive?'var(--surface-2)':'transparent'}">
             <div style="width:32px;height:32px;margin:0 auto 4px;border-radius:50%;border:2.5px solid ${ringColor};display:flex;align-items:center;justify-content:center;font-size:.92rem;background:var(--surface);position:relative">
-              ${s.icon}${s.done?`<span style="position:absolute;bottom:-3px;right:-3px;background:var(--green);color:#fff;border-radius:50%;width:13px;height:13px;font-size:.55rem;line-height:13px;text-align:center">✓</span>`:''}
+              ${s.icon}${s.done?`<span style="position:absolute;bottom:-3px;right:-3px;background:${s.skipped?'#eab308':'var(--green)'};color:#fff;border-radius:50%;width:13px;height:13px;font-size:.55rem;line-height:13px;text-align:center">✓</span>`:''}
             </div>
             <div style="font-family:var(--font-mono);font-size:.56rem;text-transform:uppercase;letter-spacing:.02em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.label}</div>
           </div>`;
         }).join('')}
       </div>
 
-      <div style="background:${activeStage.done?'var(--green-light)':'var(--amber-light)'};border-radius:8px;padding:8px 10px;margin-bottom:8px">
+      <div style="background:${activeStage.skipped?'#fef9c3':activeStage.done?'var(--green-light)':'var(--amber-light)'};border-radius:8px;padding:8px 10px;margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;margin-bottom:4px" onclick="toggleMsgPreview('${bid}')">
-          <div style="font-size:.68rem;font-weight:700;color:${activeStage.done?'#065f46':'#92400e'}">${activeStage.icon} ${activeStage.label}${activeStage.done?' — sent':activeStage.dueNow?' — due now':''}</div>
-          <span style="font-size:.64rem;font-weight:600;color:${activeStage.done?'#065f46':'#92400e'};white-space:nowrap">${_msgPreviewExpanded[bid]?'▲ Hide message':'👁 View message'}</span>
+          <div style="font-size:.68rem;font-weight:700;color:${activeStage.done&&!activeStage.skipped?'#065f46':'#92400e'}">${activeStage.icon} ${activeStage.label}${activeStage.skipped?' — ticked off (not sent)':activeStage.done?' — sent':activeStage.dueNow?' — due now':''}</div>
+          <span style="font-size:.64rem;font-weight:600;color:${activeStage.done&&!activeStage.skipped?'#065f46':'#92400e'};white-space:nowrap">${_msgPreviewExpanded[bid]?'▲ Hide message':'👁 View message'}</span>
         </div>
-        ${_msgPreviewExpanded[bid] ? `<div style="font-size:.7rem;color:${activeStage.done?'#065f46':'#78350f'};white-space:pre-wrap;cursor:pointer" onclick="toggleMsgPreview('${bid}')">${activeStage.message}</div>` : ''}
+        ${_msgPreviewExpanded[bid] ? `<div style="font-size:.7rem;color:${activeStage.done&&!activeStage.skipped?'#065f46':'#78350f'};white-space:pre-wrap;cursor:pointer" onclick="toggleMsgPreview('${bid}')">${activeStage.message}</div>` : ''}
       </div>
 
       ${guestFaqEntries(b.property_id).length ? `
@@ -7909,10 +7963,20 @@ function renderGuestTimeline() {
           style="display:inline-flex;align-items:center;gap:4px;background:#25D366;color:#fff;font-size:.74rem;font-weight:600;padding:5px 10px;border-radius:7px;border:none;cursor:pointer">
           💬 Send ${activeStage.label}
         </button>
+        ${activeStage.skipped ? `
+        <button onclick="skipNinaStage('${bid}','${activeStage.key}')"
+          style="display:inline-flex;align-items:center;gap:4px;background:#fef9c3;color:#92400e;font-size:.74rem;padding:5px 10px;border-radius:7px;border:1px solid #eab308;cursor:pointer">
+          ↺ Undo tick-off
+        </button>` : `
         <button onclick="toggleNinaTask('${bid}','${activeStage.key}');renderGuestTimeline()"
           style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);color:var(--ink);font-size:.74rem;padding:5px 10px;border-radius:7px;border:1px solid var(--border);cursor:pointer">
           ${activeStage.done?'↺ Mark not sent':'✓ Mark sent'}
-        </button>
+        </button>`}
+        ${!activeStage.done && activeStage.key==='mid_stay_msg' ? `
+        <button onclick="skipNinaStage('${bid}','${activeStage.key}')" title="Handled it another way (e.g. spoke to the guest) — tick it off without sending; shows a yellow ring instead of green"
+          style="display:inline-flex;align-items:center;gap:4px;background:#fef9c3;color:#92400e;font-size:.74rem;padding:5px 10px;border-radius:7px;border:1px solid #eab308;cursor:pointer">
+          ✓ Tick off — not sent
+        </button>` : ''}
         <a href="https://web.whatsapp.com" target="wa_chat_tab" rel="noopener"
           style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-2);color:var(--ink);font-size:.74rem;padding:5px 10px;border-radius:7px;text-decoration:none;border:1px solid var(--border)">
           Open chat ↗
@@ -9480,10 +9544,11 @@ function openInviteStaffModal() {
           <option value="admin">Admin</option>
         </select>
       </div>
+      <div class="form-field span-full"><label>WhatsApp number <span style="font-weight:400;color:var(--muted)">(optional — to share the login with them after)</span></label><input id="inv-phone" placeholder="e.g. 063 123 4567"/></div>
     </div>
     <div id="inv-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:10px"></div>
     <div style="display:flex;gap:8px;margin-top:16px">
-      <button class="btn btn-primary" id="inv-btn" onclick="submitInviteStaff()">Send Invite</button>
+      <button class="btn btn-primary" id="inv-btn" onclick="submitInviteStaff()">Create Login</button>
       <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
     </div>`;
   openModal('day-modal');
@@ -9497,8 +9562,9 @@ async function submitInviteStaff() {
   const email = document.getElementById('inv-email').value.trim();
   const password = document.getElementById('inv-password').value;
   const role = document.getElementById('inv-role').value;
+  const phone = document.getElementById('inv-phone').value.trim();
   if (!name || !email || !password) {
-    errEl.textContent = 'All fields are required.'; errEl.style.display = 'block'; return;
+    errEl.textContent = 'Name, email and password are required.'; errEl.style.display = 'block'; return;
   }
   if (!db) { errEl.textContent = 'Not connected — changes need a live connection to save.'; errEl.style.display = 'block'; return; }
   btn.disabled = true; btn.textContent = 'Sending…';
@@ -9515,13 +9581,84 @@ async function submitInviteStaff() {
     if (!res.ok) {
       errEl.textContent = result.error || 'Could not create login.'; errEl.style.display = 'block'; return;
     }
-    closeModal('day-modal');
     toast('Login created ✓ — ' + email + ' can now sign in.', 'success');
+    showInviteShareStep({ name, email, password, role, phone });
   } catch (e) {
     errEl.textContent = 'Something went wrong: ' + e.message; errEl.style.display = 'block';
   } finally {
-    btn.disabled = false; btn.textContent = 'Send Invite';
+    btn.disabled = false; btn.textContent = 'Create Login';
   }
+}
+
+// ── Share the just-created login via WhatsApp / email ──
+// The login itself still needs an email (it's the Supabase Auth
+// identifier), but the DETAILS can go out over whatever channel the staff
+// member actually reads — same wa.me/mailto handoff pattern as Guest
+// Messages. The password only lives in _lastInvite (JS memory) and the
+// message text, never in element attributes, so a quote/angle-bracket in
+// it can't break out of the HTML.
+let _lastInvite = null;
+
+function inviteShareText() {
+  const i = _lastInvite;
+  const first = (i.name || '').split(' ')[0] || 'there';
+  return `Hi ${first}! 👋\n\nYour HostEase Pro login is ready:\n\n` +
+    `🔗 ${location.origin}\n📧 Email: ${i.email}\n🔑 Temporary password: ${i.password}\n` +
+    (i.role === 'admin' ? `👤 Role: Admin\n` : '') +
+    `\nKeep these details safe and don't forward them to anyone else.`;
+}
+
+function showInviteShareStep(invite) {
+  _lastInvite = invite;
+  document.getElementById('day-modal-title').textContent = 'Login created ✓ — share the details';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div style="background:var(--surface-2);border-radius:8px;padding:10px 12px;font-size:.8rem;line-height:1.6">
+      <div><span style="color:var(--muted)">Login:</span> <strong id="inv-sum-email"></strong></div>
+      <div><span style="color:var(--muted)">Temporary password:</span> <strong id="inv-sum-pass" style="font-family:var(--font-mono)"></strong></div>
+      <div><span style="color:var(--muted)">Role:</span> <span id="inv-sum-role"></span></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn" style="background:#25D366;color:#fff;border:none" onclick="shareInviteWhatsApp()">💬 Share via WhatsApp</button>
+      <a class="btn btn-ghost" id="inv-share-mail" href="#">✉️ Share via Email</a>
+      <button class="btn btn-ghost" onclick="copyInviteDetails(this)">📋 Copy details</button>
+    </div>
+    <div style="font-size:.72rem;color:var(--muted);margin-top:10px">
+      Email opens pre-filled in your own mail app (e.g. Outlook) — you just press send.
+      WhatsApp opens the chat with the message ready${invite.phone ? '' : ' (no number given, so WhatsApp will ask you to pick the chat)'}.
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" onclick="closeModal('day-modal')">Done</button>
+    </div>`;
+  // Sensitive values go in via textContent, never innerHTML
+  document.getElementById('inv-sum-email').textContent = invite.email;
+  document.getElementById('inv-sum-pass').textContent = invite.password;
+  document.getElementById('inv-sum-role').textContent = invite.role === 'admin' ? 'Admin' : 'Host';
+  const mail = document.getElementById('inv-share-mail');
+  mail.href = 'mailto:' + encodeURIComponent(invite.email) +
+    '?subject=' + encodeURIComponent('Your HostEase Pro login') +
+    '&body=' + encodeURIComponent(inviteShareText());
+}
+
+function shareInviteWhatsApp() {
+  if (!_lastInvite) return;
+  const raw = (_lastInvite.phone || '').trim();
+  const text = encodeURIComponent(inviteShareText());
+  let digits = raw.replace(/\D/g, '');
+  // Respect an explicit international prefix (+49… / 0049…) — staff aren't
+  // all on ZA numbers; only bare local numbers go through normalizeZaPhone.
+  if (raw.startsWith('00')) digits = digits.slice(2);
+  else if (!raw.startsWith('+')) digits = normalizeZaPhone(raw);
+  if (digits) window.open(`https://web.whatsapp.com/send?phone=${digits}&text=${text}`, 'wa_chat_tab', 'noopener');
+  else window.open(`https://wa.me/?text=${text}`, 'wa_chat_tab', 'noopener');
+}
+
+function copyInviteDetails(btn) {
+  if (!_lastInvite) return;
+  navigator.clipboard.writeText(inviteShareText()).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  }).catch(() => toast('Copy failed — select the text manually', 'error'));
 }
 
 function renderTeam() {
