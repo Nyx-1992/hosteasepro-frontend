@@ -899,17 +899,27 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div id="vault-content"></div>
       </div>
 
-      <!-- STAFF (admin only) — domestic staff (cleaners & caretakers), DB-backed on team_contacts -->
+      <!-- STAFF (admin only) — all team_contacts categories, DB-backed. Domestic
+           entries additionally carry cleaner rate/payment/properties/birthday. -->
       <div class="tab-pane" id="tab-staff">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
           <div>
             <h2 style="font-size:1.1rem;margin-bottom:2px;font-family:'DM Serif Display',serif">🧑‍🔧 Staff</h2>
-            <div class="text-muted" style="font-size:.78rem">Cleaners & caretakers — rate, payment, assigned properties</div>
+            <div class="text-muted" style="font-size:.78rem">Everyone on the team — cleaners get rate/payment/properties, everyone else the usual contact fields</div>
           </div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-ghost btn-sm" onclick="openInviteStaffModal()">+ Invite Login</button>
             <button class="btn btn-primary btn-sm" onclick="openAddStaff()">+ Add Staff</button>
           </div>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:16px" id="staff-filter-btns">
+          <button class="btn btn-sm btn-primary" onclick="setStaffFilter('all',this)">All</button>
+          <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('management',this)">Management</button>
+          <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('domestic',this)">Domestic</button>
+          <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('maintenance',this)">Maintenance</button>
+          <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('security',this)">Security</button>
+          <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('supplier',this)">Suppliers</button>
+          <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('other',this)">Other</button>
         </div>
         <div id="staff-content"></div>
       </div>
@@ -1086,6 +1096,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <button id="isub-incoming-btn" onclick="switchInvoiceSub('incoming')"
             style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
             📥 Incoming
+          </button>
+          <button id="isub-documents-btn" onclick="switchInvoiceSub('documents')"
+            style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
+            📄 Documents
           </button>
         </div>
 
@@ -1283,6 +1297,40 @@ function _buildMobileNavStub(){/* replaced by main script */}
               <thead><tr><th>Date</th><th>Description</th><th>Category</th><th>Property</th><th style="text-align:right">Amount</th></tr></thead>
               <tbody id="inv-incoming-body"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px">Loading…</td></tr></tbody>
             </table></div>
+          </div>
+        </div>
+
+        <!-- ── DOCUMENTS ─────────────────────────────────────────── Store-
+             only for now (no OCR/extraction) — scanned invoices & booking-
+             platform statements, kept for the record. -->
+        <div id="isub-documents" style="display:none">
+          <div class="card mb-6">
+            <div class="card-title" style="margin-bottom:14px">📤 Upload document</div>
+            <div class="form-grid" style="gap:10px">
+              <div class="form-field span-full"><label>File *</label><input type="file" id="fd-file" accept="application/pdf,image/*"/></div>
+              <div class="form-field"><label>Type</label>
+                <select id="fd-type">
+                  <option value="invoice">Invoice</option>
+                  <option value="statement">Platform statement</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-field"><label>Property</label>
+                <select id="fd-prop">
+                  <option value="">— (not property-specific)</option>
+                  <option value="speranta">Speranta</option>
+                  <option value="tvhouse">TV House</option>
+                </select>
+              </div>
+              <div class="form-field"><label>Date</label><input type="date" id="fd-date"/></div>
+              <div class="form-field span-full"><label>Description</label><input id="fd-desc" placeholder="e.g. Airbnb payout statement — July 2026"/></div>
+            </div>
+            <div id="fd-upload-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:8px"></div>
+            <button class="btn btn-primary btn-sm" id="fd-upload-btn" style="margin-top:12px" onclick="uploadFinanceDocument()">⬆ Upload</button>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin-bottom:14px">📄 Uploaded documents</div>
+            <div id="fd-list"></div>
           </div>
         </div>
 
@@ -3937,7 +3985,7 @@ const CAT_LABELS = {
 };
 
 function switchInvoiceSub(sub) {
-  ['guest','outgoing','incoming'].forEach(s => {
+  ['guest','outgoing','incoming','documents'].forEach(s => {
     document.getElementById('isub-'+s).style.display = s===sub ? '' : 'none';
     const btn = document.getElementById('isub-'+s+'-btn');
     const active   = 'padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px';
@@ -3947,6 +3995,7 @@ function switchInvoiceSub(sub) {
   if(sub==='outgoing') { loadOutgoing(); renderOwnerStatementTab(); }
   if(sub==='incoming') loadIncoming();
   if(sub==='guest')    { invLoadBookings(); loadInvHistory(); }
+  if(sub==='documents') loadFinanceDocuments();
 }
 
 function setInvType(t, btn) {
@@ -4272,6 +4321,121 @@ async function loadIncoming() {
       return '<tr style="'+(i%2===1?'background:var(--surface-2)':'')+'"><td style="font-size:.8rem;white-space:nowrap">'+(r.date||'—')+'</td><td style="font-size:.8rem">'+(r.description||'—')+'</td><td><span style="font-size:.72rem;padding:2px 8px;border-radius:10px;background:var(--warm);color:var(--ink)">'+(CAT_LABELS[r.category]||r.category)+'</span></td><td style="font-size:.78rem;color:var(--muted)">'+propName(r.property_id||r.subcategory)+'</td><td style="text-align:right;font-size:.8rem;font-weight:600;color:var(--red)">R'+Number(r.amount).toLocaleString('en-ZA')+'</td></tr>';
     }).join('');
   } catch(e){ body.innerHTML='<tr><td colspan="5" style="color:var(--red);text-align:center;padding:16px">Error: '+e.message+'</td></tr>'; }
+}
+
+// ── FINANCE DOCUMENTS ── store-only upload for scanned invoices & booking-
+// platform statements (640_finance_documents.sql + the finance-documents
+// storage bucket, 650). Deliberately no data extraction yet — the owner
+// wants to scope that separately once she's provided real example files,
+// especially for platform statements.
+let financeDocuments = [];
+const FD_TYPE_LABELS = {invoice:'Invoice', statement:'Statement', other:'Other'};
+
+async function loadFinanceDocuments() {
+  const el = document.getElementById('fd-list');
+  if (!el) return;
+  if (!db) { el.innerHTML = '<div class="text-muted">Not connected.</div>'; return; }
+  el.innerHTML = skeletonRows(3);
+  try {
+    const { data, error } = await db.from('finance_documents').select('*').order('created_at',{ascending:false});
+    if (error) throw error;
+    financeDocuments = data || [];
+    renderFinanceDocuments();
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--red)">Error: '+e.message+'</div>';
+  }
+}
+
+function renderFinanceDocuments() {
+  const el = document.getElementById('fd-list');
+  if (!el) return;
+  if (!financeDocuments.length) {
+    el.innerHTML = emptyState('📄', 'No documents uploaded yet');
+    return;
+  }
+  el.innerHTML = financeDocuments.map(d => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
+      <div>
+        <div style="font-weight:600;font-size:.86rem">${d.description || d.file_name}</div>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:2px">
+          <span style="text-transform:capitalize">${FD_TYPE_LABELS[d.doc_type]||d.doc_type}</span>
+          ${d.property_id?' · '+propName(d.property_id):''}
+          ${d.doc_date?' · '+fmtDate(d.doc_date):''}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm btn-ghost" onclick="downloadFinanceDocument('${d.id}')">⬇ Download</button>
+        <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="deleteFinanceDocument('${d.id}')">✕ Delete</button>
+      </div>
+    </div>`).join('');
+}
+
+async function uploadFinanceDocument() {
+  const fileInput = document.getElementById('fd-file');
+  const errEl = document.getElementById('fd-upload-error');
+  const btn = document.getElementById('fd-upload-btn');
+  errEl.style.display = 'none';
+  const file = fileInput.files[0];
+  if (!file) { errEl.textContent = 'Choose a file first.'; errEl.style.display = 'block'; return; }
+  if (!db) { errEl.textContent = 'Not connected — changes need a live connection to save.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Uploading…';
+  try {
+    const orgId = getOrgId();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = orgId + '/' + Date.now() + '-' + safeName;
+    const { error: upErr } = await db.storage.from('finance-documents').upload(path, file);
+    if (upErr) throw upErr;
+    const { data: sessionData } = await db.auth.getSession();
+    const userId = sessionData?.session?.user?.id || null;
+    const row = {
+      org_id: orgId,
+      doc_type: document.getElementById('fd-type').value,
+      property_id: document.getElementById('fd-prop').value || null,
+      doc_date: document.getElementById('fd-date').value || null,
+      description: document.getElementById('fd-desc').value.trim(),
+      file_path: path,
+      file_name: file.name,
+      uploaded_by: userId,
+    };
+    const { error: insErr } = await db.from('finance_documents').insert([row]);
+    if (insErr) {
+      // Roll back the uploaded file so it doesn't become an orphaned, untracked object
+      await db.storage.from('finance-documents').remove([path]);
+      throw insErr;
+    }
+    toast('Document uploaded ✓','success');
+    fileInput.value = '';
+    document.getElementById('fd-desc').value = '';
+    document.getElementById('fd-date').value = '';
+    loadFinanceDocuments();
+  } catch (e) {
+    errEl.textContent = 'Upload failed: ' + e.message; errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false; btn.textContent = '⬆ Upload';
+  }
+}
+
+async function downloadFinanceDocument(id) {
+  const d = financeDocuments.find(x=>x.id===id);
+  if (!d || !db) return;
+  const { data, error } = await db.storage.from('finance-documents').createSignedUrl(d.file_path, 60);
+  if (error) { toast('Could not open document: '+error.message,'error'); return; }
+  window.open(data.signedUrl, '_blank');
+}
+
+function deleteFinanceDocument(id) {
+  const d = financeDocuments.find(x=>x.id===id);
+  if (!d) return;
+  confirmAction('Delete this document?', async () => {
+    if (db) {
+      await db.storage.from('finance-documents').remove([d.file_path]);
+      const { error } = await db.from('finance_documents').delete().eq('id', id);
+      if (error) { toast('Delete error: '+error.message,'error'); return; }
+    }
+    financeDocuments = financeDocuments.filter(x=>x.id!==id);
+    toast('Document deleted','info');
+    renderFinanceDocuments();
+  }, 'Delete');
 }
 
 async function loadInvHistory() {
@@ -9125,32 +9289,42 @@ function fmtBirthday(b) {
   const d = new Date(b+'T00:00:00');
   return d.toLocaleDateString('en-ZA', {day:'numeric', month:'short'});
 }
+const STAFF_CAT_LABELS = {management:'Management',domestic:'Domestic',maintenance:'Maintenance',security:'Security',supplier:'Supplier',other:'Other'};
 function staffCard(c) {
-  const isCleaner = c.cleaner_rate != null;
+  const isCleaner = c.cat==='domestic' && c.cleaner_rate != null;
+  const isDomestic = c.cat==='domestic';
   return `<div class="contact-badge">
-    <div class="contact-band" style="background:${isCleaner?'var(--teal)':'var(--muted)'}"></div>
+    <div class="contact-band" style="background:${isCleaner?'var(--teal)':'var(--accent)'}"></div>
     <div class="contact-actions-top">
       <button class="contact-edit" onclick="openEditStaff('${c.id}')" title="Edit">✎</button>
       <button class="contact-del" onclick="deleteStaffEntry('${c.id}')" title="Delete">✕</button>
     </div>
     <div class="contact-info" style="padding-top:16px">
       <div class="contact-name">${c.name}</div>
-      <div class="text-muted" style="font-size:.78rem;margin-bottom:6px">${c.role||(isCleaner?'Cleaner':'Domestic staff')}</div>
+      <div class="text-muted" style="font-size:.78rem;margin-bottom:6px">${c.role||(isCleaner?'Cleaner':STAFF_CAT_LABELS[c.cat]||c.cat)}</div>
       ${c.phone?`<div style="font-size:.8rem;margin-bottom:2px">📞 ${c.phone}</div>`:''}
-      ${isCleaner?`<div style="font-size:.8rem;margin-bottom:2px">💰 ${fmtCleanerRate(c)}${c.cleaner_payment?' · '+c.cleaner_payment:''}</div>`:''}
-      ${c.cleaner_properties&&c.cleaner_properties.length?`<div style="font-size:.8rem;margin-bottom:2px">🏠 ${c.cleaner_properties.map(k=>PROPS[k]?PROPS[k].short:k).join(', ')}</div>`:''}
-      ${c.birthday?`<div style="font-size:.8rem;margin-bottom:2px">🎂 ${fmtBirthday(c.birthday)}</div>`:''}
+      ${c.email?`<div style="font-size:.8rem;margin-bottom:2px">✉️ ${c.email}</div>`:''}
+      ${isDomestic&&isCleaner?`<div style="font-size:.8rem;margin-bottom:2px">💰 ${fmtCleanerRate(c)}${c.cleaner_payment?' · '+c.cleaner_payment:''}</div>`:''}
+      ${isDomestic&&c.cleaner_properties&&c.cleaner_properties.length?`<div style="font-size:.8rem;margin-bottom:2px">🏠 ${c.cleaner_properties.map(k=>PROPS[k]?PROPS[k].short:k).join(', ')}</div>`:''}
+      ${isDomestic&&c.birthday?`<div style="font-size:.8rem;margin-bottom:2px">🎂 ${fmtBirthday(c.birthday)}</div>`:''}
       ${c.note?`<div class="contact-note">${c.note}</div>`:''}
     </div>
   </div>`;
+}
+let _staffFilter = 'all';
+function setStaffFilter(cat, btn) {
+  _staffFilter = cat;
+  document.querySelectorAll('#staff-filter-btns .btn').forEach(b=>{ b.className='btn btn-sm btn-ghost'; });
+  if (btn) btn.className='btn btn-sm btn-primary';
+  renderStaffTab();
 }
 function renderStaffTab() {
   if (!currentUser) return;
   const el = document.getElementById('staff-content');
   if (!el) return;
-  const staff = contacts.filter(c=>c.cat==='domestic');
+  const staff = _staffFilter==='all' ? contacts : contacts.filter(c=>c.cat===_staffFilter);
   if (!staff.length) {
-    el.innerHTML = emptyState('🧑‍🔧', 'No staff added yet',
+    el.innerHTML = emptyState('🧑‍🔧', 'No staff' + (_staffFilter==='all'?' added yet':' in this category'),
       `<button class="btn btn-sm btn-primary" onclick="openAddStaff()">+ Add Staff</button>`);
     return;
   }
@@ -9161,6 +9335,13 @@ function renderStaffTab() {
 
 function openAddStaff() { openStaffModal(null); }
 function openEditStaff(id) { openStaffModal(id); }
+// Toggles the cleaner-only "Properties & rate" block based on the Category
+// select — same show/hide-on-select pattern as the Schedule Cleaning
+// modal's "Other cleaner" fields.
+function onStaffCatChange() {
+  const block = document.getElementById('staff-cleaner-fields');
+  if (block) block.style.display = document.getElementById('st-cat').value==='domestic' ? 'contents' : 'none';
+}
 
 function openStaffModal(id) {
   const existing = id ? contacts.find(c=>c.id===id) : null;
@@ -9169,34 +9350,43 @@ function openStaffModal(id) {
     if (!existing || existing.cleaner_rate == null) return '';
     return typeof existing.cleaner_rate === 'object' ? (existing.cleaner_rate[k] ?? '') : existing.cleaner_rate;
   };
+  const cat = existing ? existing.cat : (_staffFilter!=='all' ? _staffFilter : 'domestic');
   document.getElementById('day-modal-title').textContent = existing ? 'Edit Staff' : 'Add Staff';
   document.getElementById('day-modal-body').innerHTML = `
     <div class="form-grid" style="gap:10px">
       <div class="form-field span-full"><label>Name *</label><input id="st-name" placeholder="Full name" value="${escAttr(existing?existing.name:'')}"/></div>
-      <div class="form-field"><label>Role</label><input id="st-role" placeholder="e.g. Cleaner — Speranta" value="${escAttr(existing?existing.role:'')}"/></div>
-      <div class="form-field"><label>Payment method</label>
-        <select id="st-payment">
-          <option value="" ${!existing||!existing.cleaner_payment?'selected':''}>—</option>
-          <option value="ewallet" ${existing&&existing.cleaner_payment==='ewallet'?'selected':''}>Ewallet</option>
-          <option value="eft" ${existing&&existing.cleaner_payment==='eft'?'selected':''}>EFT</option>
-          <option value="cash" ${existing&&existing.cleaner_payment==='cash'?'selected':''}>Cash</option>
+      <div class="form-field"><label>Category</label>
+        <select id="st-cat" onchange="onStaffCatChange()">
+          ${Object.keys(STAFF_CAT_LABELS).map(k=>`<option value="${k}" ${cat===k?'selected':''}>${STAFF_CAT_LABELS[k]}</option>`).join('')}
         </select>
       </div>
+      <div class="form-field"><label>Role</label><input id="st-role" placeholder="e.g. Cleaner — Speranta" value="${escAttr(existing?existing.role:'')}"/></div>
       <div class="form-field"><label>Phone</label><input id="st-phone" placeholder="+27 ..." value="${escAttr(existing?existing.phone:'')}"/></div>
+      <div class="form-field"><label>Email</label><input id="st-email" type="email" placeholder="email@domain.co.za" value="${escAttr(existing?existing.email:'')}"/></div>
       <div class="form-field"><label>WhatsApp number</label><input id="st-wa" placeholder="27821234567 (no + or spaces)" value="${escAttr(existing?existing.wa:'')}"/></div>
-      <div class="form-field"><label>Birthday</label><input type="date" id="st-birthday" value="${existing&&existing.birthday?existing.birthday:''}"/></div>
-      <div class="form-field span-full"><label>Properties &amp; rate (R per clean)</label>
-        <div id="staff-prop-rates">
-          ${Object.keys(PROPS).map(k => `
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-              <label style="display:flex;align-items:center;gap:5px;font-weight:400;min-width:110px">
-                <input type="checkbox" class="staff-prop-chk" value="${k}" ${existingProps.includes(k)?'checked':''} style="width:auto"/>
-                ${PROPS[k].short}
-              </label>
-              <input type="number" class="staff-prop-rate" data-prop="${k}" placeholder="Rate" value="${existingRateFor(k)}" style="width:90px"/>
-            </div>`).join('')}
+      <div id="staff-cleaner-fields" style="display:${cat==='domestic'?'contents':'none'}">
+        <div class="form-field"><label>Payment method</label>
+          <select id="st-payment">
+            <option value="" ${!existing||!existing.cleaner_payment?'selected':''}>—</option>
+            <option value="ewallet" ${existing&&existing.cleaner_payment==='ewallet'?'selected':''}>Ewallet</option>
+            <option value="eft" ${existing&&existing.cleaner_payment==='eft'?'selected':''}>EFT</option>
+            <option value="cash" ${existing&&existing.cleaner_payment==='cash'?'selected':''}>Cash</option>
+          </select>
         </div>
-        <div class="text-muted" style="font-size:.72rem;margin-top:2px">Leave unchecked if this person isn't an assignable cleaner (e.g. a caretaker) — they'll still show in Staff, just not in the cleaner picker.</div>
+        <div class="form-field"><label>Birthday</label><input type="date" id="st-birthday" value="${existing&&existing.birthday?existing.birthday:''}"/></div>
+        <div class="form-field span-full"><label>Properties &amp; rate (R per clean)</label>
+          <div id="staff-prop-rates">
+            ${Object.keys(PROPS).map(k => `
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <label style="display:flex;align-items:center;gap:5px;font-weight:400;min-width:110px">
+                  <input type="checkbox" class="staff-prop-chk" value="${k}" ${existingProps.includes(k)?'checked':''} style="width:auto"/>
+                  ${PROPS[k].short}
+                </label>
+                <input type="number" class="staff-prop-rate" data-prop="${k}" placeholder="Rate" value="${existingRateFor(k)}" style="width:90px"/>
+              </div>`).join('')}
+          </div>
+          <div class="text-muted" style="font-size:.72rem;margin-top:2px">Leave unchecked if this person isn't an assignable cleaner (e.g. a caretaker) — they'll still show in Staff, just not in the cleaner picker.</div>
+        </div>
       </div>
       <div class="form-field span-full"><label>Notes</label><textarea id="st-note" rows="2">${existing?existing.note:''}</textarea></div>
     </div>
@@ -9210,33 +9400,38 @@ function openStaffModal(id) {
 async function saveStaff(id) {
   const name = document.getElementById('st-name').value.trim();
   if (!name) { toast('Name is required','error'); return; }
-  const propRows = Array.from(document.querySelectorAll('#staff-prop-rates > div'));
-  const properties = [];
-  const rateMap = {};
-  propRows.forEach(row => {
-    const chk = row.querySelector('.staff-prop-chk');
-    const rateInput = row.querySelector('.staff-prop-rate');
-    if (chk.checked) {
-      properties.push(chk.value);
-      rateMap[chk.value] = Number(rateInput.value) || 0;
-    }
-  });
-  const rateValues = Object.values(rateMap);
-  const cleaner_rate = properties.length === 0 ? null
-    : (rateValues.every(r => r === rateValues[0]) ? rateValues[0] : rateMap);
+  const cat = document.getElementById('st-cat').value;
+  let cleaner_rate = null, cleaner_payment = '', properties = [];
+  if (cat === 'domestic') {
+    const propRows = Array.from(document.querySelectorAll('#staff-prop-rates > div'));
+    const rateMap = {};
+    propRows.forEach(row => {
+      const chk = row.querySelector('.staff-prop-chk');
+      const rateInput = row.querySelector('.staff-prop-rate');
+      if (chk.checked) {
+        properties.push(chk.value);
+        rateMap[chk.value] = Number(rateInput.value) || 0;
+      }
+    });
+    const rateValues = Object.values(rateMap);
+    cleaner_rate = properties.length === 0 ? null
+      : (rateValues.every(r => r === rateValues[0]) ? rateValues[0] : rateMap);
+    cleaner_payment = document.getElementById('st-payment').value;
+  }
   const name0 = name;
   const row = {
-    cat: 'domestic',
+    cat,
     name: name0,
     role: document.getElementById('st-role').value.trim(),
     phone: document.getElementById('st-phone').value.trim(),
+    email: document.getElementById('st-email').value.trim(),
     wa: document.getElementById('st-wa').value.trim(),
     note: document.getElementById('st-note').value,
     initials: name0.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
-    cleaner_payment: document.getElementById('st-payment').value,
+    cleaner_payment,
     cleaner_properties: properties,
     cleaner_rate,
-    birthday: document.getElementById('st-birthday').value || null,
+    birthday: (cat==='domestic' && document.getElementById('st-birthday').value) ? document.getElementById('st-birthday').value : null,
   };
   if (!db) { toast('Not connected — changes need a live connection to save','error'); return; }
   if (id) {
