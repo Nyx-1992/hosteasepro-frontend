@@ -3146,7 +3146,7 @@ async function loadData() {
   renderTab(currentTab);
   if (!db) return;
   try {
-    const [bRes, tRes, dRes, kRes, invRes, cRes, vRes] = await Promise.all([
+    const [bRes, tRes, dRes, kRes, invRes, cRes, vRes, mRes] = await Promise.all([
       db.from('bookings').select('*').order('check_in_date',{ascending:false}).limit(500),
       db.from('tasks').select('*').order('created_at',{ascending:false}),
       db.from('domestics').select('*').order('date',{ascending:false}),
@@ -3154,6 +3154,7 @@ async function loadData() {
       db.from('inventory_reports').select('*').order('submitted_at',{ascending:false}).limit(100),
       db.from('team_contacts').select('*').order('cat',{ascending:true}).order('sort_order',{ascending:true}),
       db.from('business_vault').select('*').order('created_at',{ascending:true}),
+      db.from('messages').select('*').eq('org_id', getOrgId()).order('created_at',{ascending:true}).limit(200),
     ]);
     // Replace the sample/demo data seeded above whenever a fetch actually
     // succeeded (bRes.data is an array, possibly empty) — not only when it
@@ -3173,6 +3174,7 @@ async function loadData() {
     if (invRes && invRes.data) inventoryReports = invRes.data;
     if (cRes && cRes.data) contacts = cRes.data.map(nc);
     if (vRes && vRes.data) vault = vRes.data;
+    if (mRes && mRes.data) messages = mRes.data.map(nm);
 
     // Load cleaner availability
     const avRes = await db.from('cleaner_availability').select('*').gte('date', today);
@@ -7500,7 +7502,7 @@ function setMsgSubTab(tab) {
   if (wb) { wb.style.background = tab==='wa'   ? 'var(--ocean)' : 'transparent'; wb.style.color = tab==='wa'   ? '#fff' : 'var(--muted)'; }
   if (tb) { tb.style.background = tab==='team' ? 'var(--ocean)' : 'transparent'; tb.style.color = tab==='team' ? '#fff' : 'var(--muted)'; }
   if (tab==='wa') renderGuestTimeline();
-  if (tab==='team') renderTeamChat();
+  if (tab==='team') { renderTeamChat(); refreshMessages().then(renderTeamChat); }
 }
 
 // ── GUEST TIMELINE (B1) ─────────────────────────────────────────────
@@ -7919,6 +7921,30 @@ function renderGuestTimeline() {
   }).join('');
 }
 
+// Normalizes a public.messages row (610_team_messages.sql) into the shape
+// the UI already used for the hardcoded `messages` array.
+function nm(m) {
+  const d = new Date(m.created_at);
+  return {
+    id: m.id,
+    from: m.from_name,
+    role: m.role || '',
+    text: m.text,
+    time: d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0'),
+  };
+}
+
+// Re-fetches Team Chat from Supabase — messages sent from other devices
+// only show up here, not via loadData()'s one-time fetch on login.
+async function refreshMessages() {
+  if (!db) return;
+  try {
+    const { data, error } = await db.from('messages').select('*')
+      .eq('org_id', getOrgId()).order('created_at',{ascending:true}).limit(200);
+    if (!error && data) messages = data.map(nm);
+  } catch(e) { console.warn('refreshMessages:', e); }
+}
+
 function renderTeamChat() {
   const el = document.getElementById('chat-messages');
   if (!el) return;
@@ -7931,10 +7957,10 @@ function renderTeamChat() {
     const initials=m.from.split(' ').map(n=>n[0]).join('').slice(0,2);
     const color=(m.role==='admin'||m.role==='owner')?'var(--accent)':'var(--green2)';
     return`<div class="msg-row ${isMe?'me':''}">
-      <div class="msg-avatar" style="background:${color}">${initials}</div>
+      <div class="msg-avatar" style="background:${color}">${escHtml(initials)}</div>
       <div>
-        <div class="msg-meta" style="text-align:${isMe?'right':'left'}">${m.from} · ${m.time}</div>
-        <div class="msg-bubble ${isMe?'msg-mine':'msg-from'}">${m.text}</div>
+        <div class="msg-meta" style="text-align:${isMe?'right':'left'}">${escHtml(m.from)} · ${escHtml(m.time)}</div>
+        <div class="msg-bubble ${isMe?'msg-mine':'msg-from'}">${escHtml(m.text)}</div>
       </div>
     </div>`;
   }).join('');
@@ -7945,11 +7971,20 @@ function renderMessages() {
   if (_msgSubTab==='wa') renderGuestTimeline();
   else renderTeamChat();
 }
-function sendMessage() {
+async function sendMessage() {
   const input=document.getElementById('chat-input'); const text=input.value.trim(); if(!text)return;
+  input.value='';
   const now=new Date();
-  messages.push({id:'m'+Date.now(),from:currentUser.name,role:currentUser.role,text,time:now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')});
-  input.value=''; renderMessages();
+  const optimistic={id:'m'+Date.now(),from:currentUser.name,role:currentUser.role,text,time:now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')};
+  messages.push(optimistic); renderMessages();
+  if (!db) return;
+  const { data, error } = await db.from('messages')
+    .insert([{org_id:getOrgId(), from_name:currentUser.name, role:currentUser.role, text}])
+    .select().single();
+  if (error) { toast('Message not saved — '+error.message,'error'); return; }
+  const idx = messages.findIndex(m=>m.id===optimistic.id);
+  if (idx>-1) messages[idx] = nm(data);
+  renderMessages();
 }
 
 // ── PROPERTY MANUAL (B3) ────────────────────────────────────────
@@ -9129,6 +9164,7 @@ function ctSel(existing, cat, defaultWhenNew) {
   return (!existing && defaultWhenNew) ? 'selected' : '';
 }
 function escAttr(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function scRowHtml(sc) {
   sc = sc || {};
