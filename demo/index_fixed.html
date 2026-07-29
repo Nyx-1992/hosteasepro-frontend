@@ -419,6 +419,11 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
 .skeleton-row{height:14px;background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface-3) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:skeleton-shimmer 1.4s ease infinite;border-radius:6px;margin:8px 0}
 @keyframes skeleton-shimmer{0%{background-position:100% 50%}100%{background-position:0 50%}}
 @media (prefers-reduced-motion: reduce){.skeleton-row{animation:none;opacity:.6}}
+/* Brief highlight when a Dashboard alert scrolls straight to the specific
+   card it's about, so it's obvious which one to act on among several. */
+.flash-highlight{animation:flash-highlight-pulse 2s ease}
+@keyframes flash-highlight-pulse{0%,100%{box-shadow:none}20%{box-shadow:0 0 0 3px var(--accent)}}
+@media (prefers-reduced-motion: reduce){.flash-highlight{animation:none;box-shadow:0 0 0 3px var(--accent)}}
 .divider{height:1px;background:var(--border);margin:14px 0}
 .filter-row{display:flex;gap:7px;flex-wrap:wrap}
 /* Mobile nav — single mechanism: topbar hamburger opens a left drawer with every tab */
@@ -4952,12 +4957,12 @@ function renderDashboard() {
     urgentItems.push({
       icon:'🚨', label:'Never completed — '+d.cleaner, color:'#dc2626', textColor:'#991b1b',
       detail: propName(d.property_id)+' · was due '+fmtDate(d.date),
-      // Was just switchTab('domestic') — a dead redirect to the generic
-      // Calendar tab with no indication of which cleaning to actually look
-      // at. Opens the specific cleaning record's own edit modal instead, so
-      // clicking straight through from the Dashboard shows exactly what
-      // needs marking done (or deleting) to close the alert.
-      action: `editCleaning('${d.id}')`,
+      // Was switchTab('domestic') (a dead redirect), then editCleaning()
+      // (opens scheduling details — property/date/cleaner/link — but not
+      // the actual action needed: the checklist + Mark Complete button).
+      // openDomesticCard() jumps straight to that specific card in the
+      // Domestic cal view and highlights it.
+      action: `openDomesticCard('${d.id}')`,
       priority: 1,
     });
   });
@@ -6280,7 +6285,7 @@ function renderDomesticCalView() {
       return;
     }
     domGrid.innerHTML = monthDoms.map(d => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
+      <div class="dom-session-row" id="dom-card-${d.id}" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
         <div>
           <div style="font-weight:600;font-size:.88rem">${d.cleaner||'Unassigned'} — ${propName(d.property_id)}</div>
           <div style="font-size:.76rem;color:var(--muted);margin-top:2px">${fmtDate(d.date)} · ${d.time||'—'} · ${d.type||'turnover'}</div>
@@ -6288,6 +6293,7 @@ function renderDomesticCalView() {
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-weight:700;color:var(--green2)">R${d.amount_paid||0}</span>
           <span class="badge badge-${d.status||'scheduled'}">${d.status||'scheduled'}</span>
+          ${d.status!=='completed'?`<button onclick="markDone('${d.id}')" class="btn btn-sm btn-green" style="padding:4px 10px;font-size:.76rem">✓ Mark Complete</button>`:''}
           <button onclick="editCleaning('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:.8rem">✏</button>
           <button onclick="deleteCleaning('${d.id}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:.8rem">✕</button>
         </div>
@@ -6480,6 +6486,35 @@ function bookCleaningForGuest(pid, checkoutDate, bookingId) {
   openModal('domestic-modal');
 }
 
+// Jumps straight to the actual "resolve this" action for a cleaning
+// session — its row's own "✓ Mark Complete" button in the Domestic cal
+// view — rather than editCleaning()'s scheduling-detail modal (property/
+// date/cleaner/link), which has no way to mark a clean done at all.
+//
+// (Found while wiring this up: renderDomestic()'s richer checklist-card
+// version of this list is actually dead code — its only trigger,
+// toggleCleaningOverlay(), targets a #domestic-sessions-panel element that
+// no longer exists in the HTML, so it can never actually show. The live
+// view is renderDomesticCalView()'s simpler list, which had Edit/Delete
+// but no complete action at all until now.)
+function openDomesticCard(id) {
+  const d = domestics.find(x=>String(x.id)===String(id));
+  if (d && d.date) {
+    const dt = new Date(d.date+'T00:00:00');
+    domCalYear = dt.getFullYear();
+    domCalMonth = dt.getMonth();
+  }
+  switchTab('calendar');
+  setCalMode('domestic');
+  setTimeout(() => {
+    const el = document.getElementById('dom-card-'+id);
+    if (!el) return;
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.classList.add('flash-highlight');
+    setTimeout(() => el.classList.remove('flash-highlight'), 2000);
+  }, 200);
+}
+
 async function editCleaning(id) {
   const d = domestics.find(x=>x.id===id);
   if (!d) return;
@@ -6572,7 +6607,12 @@ async function toggleOwnerBlock(bookingId, checked) {
 // ── DOMESTIC CALENDAR ─────────────────────────────────────────
 function renderDomCal() {
   const fd = currentProp==='all' ? domestics : domestics.filter(d=>d.property_id===currentProp);
-  buildCalGrid(domCalYear, domCalMonth, [], fd, 'dom-cal-grid', 'dom-cal-month-label', 'showDomDay');
+  // labelId omitted — 'dom-cal-month-label' doesn't exist (only
+  // 'dom-month-label' does, already kept in sync by renderDomesticCalView()
+  // itself); passing it crashed markDone()'s render chain with "Cannot set
+  // properties of null" every time, since buildCalGrid()'s own guard only
+  // checks the id string is non-empty, not that the element actually exists.
+  buildCalGrid(domCalYear, domCalMonth, [], fd, 'dom-cal-grid', null, 'showDomDay');
 }
 // domCalNav duplicate removed — using the version above that calls renderDomesticCalView
 function showDomDay(ds) {
@@ -6633,7 +6673,7 @@ function renderDomestic() {
     const keys = ['kitchen','bathrooms','bedrooms','living','laundry'];
     const done = keys.filter(k=>cl[k]).length;
     const rateVal = d.amount_paid || getCleanerRate(d.cleaner, d.property_id);
-    return `<div class="dom-card" style="border-top-color:${d.status==='completed'?'var(--green2)':'var(--accent)'}">
+    return `<div class="dom-card" id="dom-card-${d.id}" style="border-top-color:${d.status==='completed'?'var(--green2)':'var(--accent)'}">
       <div class="dom-card-head">
         <div><div class="dom-name">${d.cleaner}</div><div class="dom-prop">${propName(d.property_id)} · ${d.type}</div></div>
         <span class="badge badge-${d.status}">${d.status}</span>
