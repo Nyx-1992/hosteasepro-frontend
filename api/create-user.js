@@ -33,11 +33,12 @@ export default async function handler(req, res) {
 
     // 2. Check the caller is actually an 'owner' — only owners can create new orgs/users
     const profileRes = await fetch(
-      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${caller.id}&select=role`,
+      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${caller.id}&select=role,org_id`,
       { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } }
     );
     const profileData = await profileRes.json();
-    if (!Array.isArray(profileData) || !profileData.length || profileData[0].role !== 'owner') {
+    const callerProfile = Array.isArray(profileData) && profileData[0];
+    if (!callerProfile || callerProfile.role !== 'owner') {
       return res.status(403).json({ error: 'Only an owner can create new users' });
     }
 
@@ -45,6 +46,12 @@ export default async function handler(req, res) {
     const { email, password, name, role, org_id, initials } = req.body || {};
     if (!email || !password || !name || !role || !org_id) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+    // An owner can only create users within their own org — org_id is
+    // client-supplied, so without this check any owner of any org could
+    // POST a different org's id and create themselves a login there.
+    if (org_id !== callerProfile.org_id) {
+      return res.status(403).json({ error: 'Cannot create users in a different organization' });
     }
     if (!['owner', 'admin', 'host'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
