@@ -585,10 +585,40 @@ const CLEANERS = [
    rate:{default:0}},
 ];
 
+// Fallback only — the live roster (who cleans, which properties, what
+// rate) comes from team_contacts via get_staff_portal_roster() (migration
+// 660), i.e. whatever the admin app's Staff tab says. These hardcoded
+// lists are used ONLY if that fetch fails, so the portal still works
+// offline-ish — but they can drift (they're why Blessing didn't show up
+// for TV House after being assigned it in the Staff tab).
 const NINA_CLEANERS_BY_PROP = {
   speranta: ['Blessing','Fatima','Patricia','Spiwe'],
   tvhouse:  ['Fatima','Patricia'], // caretakers are exceptions via 'Other…', never regulars
 };
+
+// [{name:'Blessing', properties:['speranta','tvhouse'], rate:350|{speranta:350,...}}]
+let STAFF_ROSTER = null;
+async function loadStaffRoster() {
+  if(!db) return;
+  try {
+    const {data,error}=await db.rpc('get_staff_portal_roster');
+    if(!error && data && data.length) STAFF_ROSTER=data;
+  } catch(e){ console.warn('staff roster:',e); }
+}
+function rosterCleanerNames() {
+  return STAFF_ROSTER ? STAFF_ROSTER.map(r=>r.name)
+                      : ['Blessing','Fatima','Patricia','Spiwe'];
+}
+// Cleaners assignable to one property (short key). Empty assignment lists
+// fall back to the full roster so the assign modal can never go blank —
+// 'Other…' plus zero regulars would leave Nina unable to schedule at all.
+function rosterCleanersFor(propKey) {
+  if(STAFF_ROSTER){
+    const assigned=STAFF_ROSTER.filter(r=>(r.properties||[]).includes(propKey)).map(r=>r.name);
+    return assigned.length ? assigned : rosterCleanerNames();
+  }
+  return NINA_CLEANERS_BY_PROP[propKey]||['Blessing','Fatima','Patricia','Spiwe'];
+}
 
 const NINA_CHECKLISTS = {
   speranta: {
@@ -666,6 +696,17 @@ function fmtDate(d) { if(!d)return''; const[y,m,day]=d.split('-'); return `${par
 function skeletonRows(n=3) { return `<div style="padding:6px 0">${Array.from({length:n}).map(()=>'<div class="skeleton-row"></div>').join('')}</div>`; }
 function fmtFull(d) { if(!d)return''; const[y,m,day]=d.split('-'); return `${parseInt(day)} ${MONTHS[parseInt(m)-1]} ${y}`; }
 function getRate(cl, propId) {
+  // Live rate from the Staff tab first (team_contacts.cleaner_rate is a
+  // flat number or {speranta:350,tvhouse:450} keyed by SHORT key), so a
+  // rate change in the admin app shows up here without a code edit.
+  const r = cl && STAFF_ROSTER && STAFF_ROSTER.find(x=>x.name===cl.name);
+  if(r && r.rate!=null){
+    if(typeof r.rate==='number') return r.rate;
+    const k=propKeyFromId(propId);
+    if(r.rate[k]!=null) return r.rate[k];
+    if(r.rate.default!=null) return r.rate.default;
+  }
+  // Hardcoded CLEANERS fallback (uuid-keyed) — roster fetch failed
   if(cl.rate && cl.rate[propId]) return cl.rate[propId];
   return (cl.rate && cl.rate.default) ? cl.rate.default : 350;
 }
@@ -978,7 +1019,7 @@ async function loadNinaAvailability() {
     if(error) throw error;
     const lookup={};
     (data||[]).forEach(r=>{lookup[`${r.cleaner}-${r.date}`]=r.available;});
-    const allCleaners=['Blessing','Fatima','Patricia','Spiwe']; // caretakers (Tino/Keithy) excluded — not cleaning staff
+    const allCleaners=rosterCleanerNames(); // live Staff-tab roster; caretakers (no cleaner_rate) excluded — not cleaning staff
     const shortDates=dates.map(d=>{
       const dt=new Date(d+'T00:00:00');
       return dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
@@ -1006,7 +1047,7 @@ function openAssignModal(propertyId, propertyKey, guestName, checkoutDate, booki
   document.getElementById('nina-assign-context').innerHTML=
     `<strong>${propNameFromKey(propertyKey)}</strong> · ${guestName}<br>Checkout: <strong>${fmtDate(checkoutDate)}</strong>`;
   const sel=document.getElementById('nina-assign-cleaner');
-  const cleanerList=NINA_CLEANERS_BY_PROP[propertyKey]||['Blessing','Fatima','Patricia','Spiwe'];
+  const cleanerList=rosterCleanersFor(propertyKey);
   sel.innerHTML=cleanerList.map(c=>`<option value="${c}">${c}</option>`).join('')+`<option value="__other__">Other…</option>`;
   document.getElementById('nina-other-row').style.display='none';
   document.getElementById('nina-other-phone-row').style.display='none';
@@ -1860,6 +1901,7 @@ function renderEarnings() {
 }
 
 buildAuth();
+loadStaffRoster(); // async — done long before Nina can reach the assign modal
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){
