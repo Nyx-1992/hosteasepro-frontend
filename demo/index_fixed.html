@@ -8,6 +8,10 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- pdf.js — reads text out of uploaded platform statements (Documents).
+     Parsing happens in the browser; statement PDFs are never sent anywhere
+     but our own Supabase storage. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 @font-face{font-family:"DM Serif Display";src:url(/demo/fonts/Tektur-Medium.ttf) format("truetype");font-weight:400 700;font-style:normal;font-display:swap}
 @font-face{font-family:"DM Sans";src:url(/demo/fonts/Jura-Light.ttf) format("truetype");font-weight:300 400;font-style:normal;font-display:swap}
@@ -954,6 +958,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
         </div>
         <!-- Stat cards -->
         <div class="dash-console" id="report-stats"></div>
+        <!-- Actual income from uploaded platform statements (700). Shown
+             above the booking-derived charts because these are the real
+             numbers; everything below is estimated from nightly rates. -->
+        <div id="report-actuals"></div>
         <!-- Monthly chart -->
         <div class="card mb-6">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
@@ -1299,12 +1307,16 @@ function _buildMobileNavStub(){/* replaced by main script */}
           </div>
         </div>
 
-        <!-- ── DOCUMENTS ─────────────────────────────────────────── Store-
-             only for now (no OCR/extraction) — scanned invoices & booking-
-             platform statements, kept for the record. -->
+        <!-- ── DOCUMENTS ─────────────────────────────────────────── Scanned
+             invoices & booking-platform statements. Statements uploaded as
+             PDFs additionally get their real earnings read out and, after
+             review, saved as actual income (migration 700). -->
         <div id="isub-documents" style="display:none">
           <div class="card mb-6">
-            <div class="card-title" style="margin-bottom:14px">📤 Upload document</div>
+            <div class="card-title" style="margin-bottom:6px">📤 Upload document</div>
+            <div class="text-muted" style="font-size:.76rem;margin-bottom:14px">
+              Upload an Airbnb or LekkeSlaap statement as a <strong>PDF</strong> and its real figures are read out for you to check — they then count as your actual income in Reports. Screenshots and scans can be stored, but their numbers can't be read.
+            </div>
             <div class="form-grid" style="gap:10px">
               <div class="form-field span-full"><label>File *</label><input type="file" id="fd-file" accept="application/pdf,image/*"/></div>
               <div class="form-field"><label>Type</label>
@@ -1737,6 +1749,9 @@ async function loadProperties() {
         address: [p.address_line1, p.city].filter(Boolean).join(', ') || old.address || '',
         uuid: p.id,
         cleaningFee: (p.cleaning_fee ?? old.cleaningFee) || 0,
+        // Carries listing_names — the platform listing titles that map to
+        // this property when reading uploaded statements (migration 700).
+        platformIntegrations: p.platform_integrations || {},
       };
       newUuidMap[p.id] = key;
     });
@@ -4325,11 +4340,201 @@ async function loadIncoming() {
   } catch(e){ body.innerHTML='<tr><td colspan="5" style="color:var(--red);text-align:center;padding:16px">Error: '+e.message+'</td></tr>'; }
 }
 
-// ── FINANCE DOCUMENTS ── store-only upload for scanned invoices & booking-
-// platform statements (640_finance_documents.sql + the finance-documents
-// storage bucket, 650). Deliberately no data extraction yet — the owner
-// wants to scope that separately once she's provided real example files,
-// especially for platform statements.
+// ── STATEMENT EXTRACTION ────────────────────────────────────────
+// Reads real earnings out of uploaded platform statements (migration
+// 700). These are the ACTUAL income numbers — everything else the app
+// shows about revenue is derived from bookings with estimated nightly
+// rates, i.e. averages and guidelines. What the platform actually paid
+// is what these produce.
+//
+// Parsing is pure text work over the PDF's own text layer, done in the
+// browser. Two consequences worth knowing: a scanned/photographed
+// statement has no text layer and will not parse (export the PDF from
+// the platform instead — no OCR here), and no statement is ever sent to
+// a third party for processing.
+
+// "1 344.00" / "-1 110.90" / "R 3,001.60 ZAR" -> Number. LekkeSlaap uses
+// a space as the thousands separator, Airbnb a comma.
+function parseMoney(raw) {
+  if (raw == null) return null;
+  const cleaned = String(raw).replace(/[R\s ]/g, '').replace(/,/g, '').replace(/ZAR/gi, '');
+  if (!/^-?\d*\.?\d+$/.test(cleaned)) return null;
+  return parseFloat(cleaned);
+}
+const STMT_MONTHS = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+// "15 Jun 2025" / "1 June 2026" -> "2025-06-15"
+function parseStatementDate(raw) {
+  const m = String(raw||'').trim().match(/^(\d{1,2})\s+([A-Za-z]+)\.?\s+(\d{4})$/);
+  if (!m) return null;
+  const mi = STMT_MONTHS.findIndex(x => x.startsWith(m[2].toLowerCase().slice(0,3)));
+  if (mi < 0) return null;
+  return `${m[3]}-${String(mi+1).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+}
+function round2(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
+
+function detectPlatform(text) {
+  const t = text.toLowerCase();
+  if (t.includes('lekkeslaap') || t.includes('tripco')) return 'lekkeslaap';
+  if (t.includes('airbnb')) return 'airbnb';
+  if (t.includes('booking.com')) return 'booking';
+  return null;
+}
+
+// LekkeSlaap description -> normalized line type. Order matters:
+// "Booking edit - commission increase" must classify as commission, and
+// "Payout offset" as payout.
+function lekkeLineType(desc) {
+  const d = desc.toLowerCase();
+  if (d.includes('commission')) return 'commission';
+  if (d.includes('handling fee') || d.includes('fee')) return 'fee';
+  if (d.includes('payout')) return 'payout';
+  if (d.includes('refund')) return 'refund';
+  if (d.includes('guest payment') || d.includes('payment received')) return 'guest_payment';
+  if (d.includes('balance')) return 'balance';
+  return 'other';
+}
+
+// LekkeSlaap statements are line-level: one row per commission / fee /
+// guest payment / payout, keyed by booking reference. Payout rows are
+// deliberately NOT income — see migration 700's accounting note.
+function parseLekkeSlaap(lines) {
+  const text = lines.join('\n');
+  const out = { platform:'lekkeslaap', lines:[], listings:[], warnings:[] };
+
+  const prop = text.match(/Property:\s*(.+)/);
+  const listingName = prop ? prop[1].trim() : '';
+
+  const period = text.match(/period\s+(\d{1,2}\s+\w+\s+\d{4})\s+to\s+(\d{1,2}\s+\w+\s+\d{4})/i);
+  if (period) { out.period_start = parseStatementDate(period[1]); out.period_end = parseStatementDate(period[2]); }
+
+  const opening = text.match(/Opening Balance as at[^\n]*?(-?[\d\s ,]+\.\d{2})/i);
+  const closing = text.match(/Closing Balance as at[^\n]*?(-?[\d\s ,]+\.\d{2})/i);
+  out.opening_balance = opening ? parseMoney(opening[1]) : null;
+  out.closing_balance = closing ? parseMoney(closing[1]) : null;
+
+  const rowRe = /^(\d{1,2}\s+\w{3,}\s+\d{4})\s+(LS-[A-Z0-9]+|-)\s+(.+?)\s+(-?[\d\s ,]+\.\d{2})\s+(-?[\d\s ,]+\.\d{2})\s*$/;
+  lines.forEach(raw => {
+    const line = raw.replace(/ /g,' ').trim();
+    const m = line.match(rowRe);
+    if (!m) return;
+    const amount = parseMoney(m[4]);
+    if (amount == null) return;
+    out.lines.push({
+      txn_date: parseStatementDate(m[1]),
+      booking_reference: m[2] === '-' ? null : m[2],
+      description: m[3].trim(),
+      line_type: lekkeLineType(m[3]),
+      amount,
+      balance: parseMoney(m[5]),
+    });
+  });
+
+  const sum = t => out.lines.filter(l => l.line_type === t).reduce((s,l) => s + l.amount, 0);
+  const gross = sum('guest_payment'), commission = Math.abs(sum('commission'));
+  const fees = Math.abs(sum('fee')), adjustments = sum('refund') + sum('adjustment');
+  out.listings.push({
+    listing_name: listingName,
+    gross_earnings: round2(gross), commission: round2(commission), fees: round2(fees),
+    adjustments: round2(adjustments), tax_withheld: 0,
+    net_earnings: round2(gross - commission - fees + adjustments),
+    payouts_total: round2(Math.abs(sum('payout'))),
+    closing_balance: out.closing_balance, nights_booked: null,
+  });
+  if (!out.lines.length) out.warnings.push('No transaction rows found — if this is a screenshot or scan rather than the PDF export, download the statement as a PDF from LekkeSlaap and upload that.');
+  return out;
+}
+
+// Airbnb's earnings report is summary-level only (no per-booking detail),
+// but it breaks earnings down per listing, which is what we need.
+function parseAirbnb(lines) {
+  const text = lines.join('\n');
+  const out = { platform:'airbnb', lines:[], listings:[], warnings:[] };
+
+  const period = text.match(/(\d{1,2}\s+\w+\s+\d{4})\s*[–—-]\s*(\d{1,2}\s+\w+\s+\d{4})/);
+  if (period) { out.period_start = parseStatementDate(period[1]); out.period_end = parseStatementDate(period[2]); }
+
+  const money = '(-?R?\\s?[\\d,\\s\\u00a0]+\\.\\d{2})\\s*ZAR';
+  const rowRe = new RegExp('^(.+?)\\s+' + [money,money,money,money,money].join('\\s+') + '\\s*$');
+  const nights = {};
+  lines.forEach(raw => {
+    const line = raw.replace(/ /g,' ').trim();
+    const nm = line.match(/^(.+?)\s+(\d+)\s+(\d+)$/);
+    if (nm && !/ZAR/.test(line)) nights[nm[1].trim()] = parseInt(nm[2], 10);
+    const m = line.match(rowRe);
+    if (!m) return;
+    const name = m[1].trim();
+    if (/^summary$/i.test(name) || /^home$/i.test(name)) return;
+    const gross = parseMoney(m[2]), adj = parseMoney(m[3]);
+    const fees = Math.abs(parseMoney(m[4])), tax = Math.abs(parseMoney(m[5])), total = parseMoney(m[6]);
+    if (gross == null || total == null) return;
+    const row = {
+      listing_name: name, gross_earnings: round2(gross), commission: 0, fees: round2(fees),
+      adjustments: round2(adj || 0), tax_withheld: round2(tax), net_earnings: round2(total),
+      payouts_total: 0, closing_balance: null, nights_booked: null,
+    };
+    if (/^earnings$/i.test(name)) out.summary = row; else out.listings.push(row);
+  });
+  out.listings.forEach(l => { if (nights[l.listing_name] != null) l.nights_booked = nights[l.listing_name]; });
+  if (!out.listings.length) out.warnings.push('No per-property earnings rows found — if this is a screenshot or scan rather than the PDF export, download the earnings report as a PDF from Airbnb and upload that.');
+  return out;
+}
+
+function parseStatementText(lines) {
+  const platform = detectPlatform(lines.join('\n'));
+  if (platform === 'lekkeslaap') return parseLekkeSlaap(lines);
+  if (platform === 'airbnb') return parseAirbnb(lines);
+  return { platform:null, lines:[], listings:[], warnings:['Could not tell which platform this statement is from — Airbnb and LekkeSlaap are supported so far.'] };
+}
+
+// PDF -> array of text lines. pdf.js hands back positioned text items,
+// not lines, so items are grouped by their y coordinate (rounded, since
+// glyphs on one visual line vary by a fraction) and then ordered by x —
+// that reconstruction is what makes a statement row like
+// "15 Jun 2025 | LS-5C3FM7 | Commission | -463.68" parseable as one line.
+async function pdfToLines(file) {
+  if (!window.pdfjsLib) throw new Error('PDF reader not loaded — check your connection and reload.');
+  const buf = await file.arrayBuffer();
+  const pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+  const lines = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const content = await (await pdf.getPage(p)).getTextContent();
+    const rows = {};
+    content.items.forEach(it => {
+      if (!it.str || !it.str.trim()) return;
+      const y = Math.round(it.transform[5]);
+      (rows[y] = rows[y] || []).push({ x: it.transform[4], s: it.str });
+    });
+    Object.keys(rows).map(Number).sort((a,b) => b - a).forEach(y => {
+      lines.push(rows[y].sort((a,b) => a.x - b.x).map(i => i.s).join(' ').replace(/\s+/g,' ').trim());
+    });
+  }
+  return lines;
+}
+
+// Maps a platform listing name to one of our properties, using the
+// listing_names stored on each property (migration 700) plus a loose
+// name/word match as a fallback suggestion. Returns a short property key
+// or '' when it genuinely can't tell — the review step then asks.
+function matchPropertyByListing(listingName) {
+  const name = (listingName||'').trim().toLowerCase();
+  if (!name) return '';
+  for (const key of Object.keys(PROPS)) {
+    const aliases = ((PROPS[key].platformIntegrations||{}).listing_names)||[];
+    if (aliases.some(a => String(a).trim().toLowerCase() === name)) return key;
+  }
+  for (const key of Object.keys(PROPS)) {
+    const p = PROPS[key];
+    if (name === String(p.name||'').toLowerCase() || name === String(p.short||'').toLowerCase()) return key;
+    const distinctive = String(p.short||p.name||'').toLowerCase().split(/\s+/).filter(w => w.length > 3);
+    if (distinctive.length && distinctive.every(w => name.includes(w))) return key;
+  }
+  return '';
+}
+
+// ── FINANCE DOCUMENTS ── upload for scanned invoices & booking-platform
+// statements (640_finance_documents.sql + the finance-documents storage
+// bucket, 650). Platform statements additionally get their real earnings
+// extracted into platform_earnings / platform_statement_lines (700).
 let financeDocuments = [];
 const FD_TYPE_LABELS = {invoice:'Invoice', statement:'Statement', other:'Other'};
 
@@ -4342,6 +4547,7 @@ async function loadFinanceDocuments() {
     const { data, error } = await db.from('finance_documents').select('*').order('created_at',{ascending:false});
     if (error) throw error;
     financeDocuments = data || [];
+    await loadPlatformEarnings();
     renderFinanceDocuments();
   } catch (e) {
     el.innerHTML = '<div style="color:var(--red)">Error: '+e.message+'</div>';
@@ -4355,21 +4561,45 @@ function renderFinanceDocuments() {
     el.innerHTML = emptyState('📄', 'No documents uploaded yet');
     return;
   }
-  el.innerHTML = financeDocuments.map(d => `
+  const money = n => 'R ' + Number(n||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
+  el.innerHTML = financeDocuments.map(d => {
+    const earned = platformEarnings.filter(e => e.document_id === d.id);
+    const isStatement = d.doc_type === 'statement';
+    return `
     <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);gap:10px;flex-wrap:wrap">
-      <div>
-        <div style="font-weight:600;font-size:.86rem">${d.description || d.file_name}</div>
+      <div style="min-width:0">
+        <div style="font-weight:600;font-size:.86rem">${escHtml(d.description || d.file_name)}</div>
         <div style="font-size:.76rem;color:var(--muted);margin-top:2px">
           <span style="text-transform:capitalize">${FD_TYPE_LABELS[d.doc_type]||d.doc_type}</span>
+          ${d.platform?' · '+(PLATFORM_LABELS[d.platform]||d.platform):''}
           ${d.property_id?' · '+propName(d.property_id):''}
-          ${d.doc_date?' · '+fmtDate(d.doc_date):''}
+          ${d.period_start?' · '+fmtDate(d.period_start)+' → '+fmtDate(d.period_end):(d.doc_date?' · '+fmtDate(d.doc_date):'')}
         </div>
+        ${earned.length ? `<div style="font-size:.76rem;margin-top:4px">
+          ${earned.map(e => `<span style="display:inline-block;background:var(--green-light);color:#065f46;border-radius:6px;padding:2px 7px;margin:2px 4px 0 0">
+            ${propName(e.property_id)}: <strong>${money(e.net_earnings)}</strong> actual
+          </span>`).join('')}
+        </div>` : (isStatement ? `<div style="font-size:.74rem;color:var(--muted);margin-top:4px">No figures read from this one yet</div>` : '')}
       </div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        ${isStatement ? `<button class="btn btn-sm btn-ghost" onclick="reextractDocument('${d.id}')" title="Read the figures out of this PDF">${earned.length?'↻ Re-read':'📊 Read figures'}</button>` : ''}
         <button class="btn btn-sm btn-ghost" onclick="downloadFinanceDocument('${d.id}')">⬇ Download</button>
         <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="deleteFinanceDocument('${d.id}')">✕ Delete</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+// Actual (platform-reported) earnings — migration 700. Loaded alongside
+// the documents they came from, and used by Reports in preference to the
+// booking-derived estimates wherever a statement covers the period.
+let platformEarnings = [];
+async function loadPlatformEarnings() {
+  if (!db) return;
+  try {
+    const { data, error } = await db.from('platform_earnings').select('*').order('period_start',{ascending:false});
+    if (!error) platformEarnings = data || [];
+  } catch (e) { console.warn('loadPlatformEarnings:', e); }
 }
 
 async function uploadFinanceDocument() {
@@ -4399,7 +4629,7 @@ async function uploadFinanceDocument() {
       file_name: file.name,
       uploaded_by: userId,
     };
-    const { error: insErr } = await db.from('finance_documents').insert([row]);
+    const { data: inserted, error: insErr } = await db.from('finance_documents').insert([row]).select().single();
     if (insErr) {
       // Roll back the uploaded file so it doesn't become an orphaned, untracked object
       await db.storage.from('finance-documents').remove([path]);
@@ -4409,11 +4639,194 @@ async function uploadFinanceDocument() {
     fileInput.value = '';
     document.getElementById('fd-desc').value = '';
     document.getElementById('fd-date').value = '';
-    loadFinanceDocuments();
+    await loadFinanceDocuments();
+    // Platform statements: read the real figures out of the PDF and offer
+    // them for review. Extraction failing must never look like the upload
+    // failing — the document is already safely stored either way.
+    if (row.doc_type === 'statement' && /\.pdf$/i.test(file.name)) {
+      try { await extractStatement(inserted, file); }
+      catch (e) {
+        console.warn('extractStatement:', e);
+        toast('Uploaded, but could not read the figures out of this PDF — you can still download it','info');
+      }
+    }
   } catch (e) {
     errEl.textContent = 'Upload failed: ' + e.message; errEl.style.display = 'block';
   } finally {
     btn.disabled = false; btn.textContent = '⬆ Upload';
+  }
+}
+
+// ── Extraction review ──────────────────────────────────────────
+// Nothing is saved as an actual income figure without being shown first:
+// these numbers feed Reports, so a silent mis-parse would quietly corrupt
+// the financial picture. The review step shows every figure, flags any
+// unmapped property, and runs a reconciliation check against the
+// statement's own closing balance.
+let _extractDraft = null;
+
+async function extractStatement(docRow, file) {
+  toast('Reading statement…','info');
+  const lines = await pdfToLines(file);
+  const parsed = parseStatementText(lines);
+  parsed.document_id = docRow.id;
+  parsed.file_name = docRow.file_name;
+  // Pre-map each listing to a property; the user confirms or corrects.
+  parsed.listings.forEach(l => { l.property_id = matchPropertyByListing(l.listing_name) || docRow.property_id || ''; });
+  _extractDraft = parsed;
+  openExtractReview();
+}
+
+function extractReconciliation(p) {
+  // Only LekkeSlaap statements carry balances to reconcile against.
+  if (p.platform !== 'lekkeslaap' || p.closing_balance == null) return null;
+  const l = p.listings[0]; if (!l) return null;
+  const expected = round2((p.opening_balance||0) + l.net_earnings - l.payouts_total);
+  return { expected, actual: round2(p.closing_balance), ok: Math.abs(expected - round2(p.closing_balance)) < 0.02 };
+}
+
+function openExtractReview() {
+  const p = _extractDraft;
+  if (!p) return;
+  const propOpts = (sel) => Object.keys(PROPS).map(k =>
+    `<option value="${k}" ${sel===k?'selected':''}>${PROPS[k].short||PROPS[k].name}</option>`).join('');
+  const rec = extractReconciliation(p);
+  const money = n => 'R ' + Number(n||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+  document.getElementById('day-modal-title').textContent = 'Statement figures — check before saving';
+  document.getElementById('day-modal-body').innerHTML = `
+    ${!p.platform ? `<div style="background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 12px;font-size:.82rem;margin-bottom:12px">
+        ${p.warnings.join(' ')}
+      </div>` : `
+      <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">
+        <strong style="color:var(--ink)">${PLATFORM_LABELS[p.platform]||p.platform}</strong>
+        ${p.period_start ? ' · ' + fmtDate(p.period_start) + ' → ' + fmtDate(p.period_end) : ''}
+        ${p.lines.length ? ' · ' + p.lines.length + ' transactions' : ' · summary only'}
+      </div>`}
+    ${p.warnings.length && p.platform ? `<div style="background:var(--amber-light);color:#92400e;border-radius:8px;padding:10px 12px;font-size:.8rem;margin-bottom:12px">${p.warnings.join(' ')}</div>` : ''}
+    ${rec ? `<div style="background:${rec.ok?'var(--green-light)':'#fee2e2'};color:${rec.ok?'#065f46':'#991b1b'};border-radius:8px;padding:10px 12px;font-size:.8rem;margin-bottom:12px">
+      ${rec.ok
+        ? `✓ Adds up — opening balance plus earnings minus payouts equals the statement's closing balance of ${money(rec.actual)}.`
+        : `⚠ Does not add up — from the transactions we read, the closing balance should be ${money(rec.expected)}, but the statement says ${money(rec.actual)}. Some rows may not have been read correctly; check before saving.`}
+    </div>` : ''}
+    <div style="display:grid;gap:10px">
+      ${p.listings.map((l, i) => `
+        <div class="card" style="padding:12px 14px">
+          <div style="font-weight:700;font-size:.86rem;margin-bottom:2px">${escHtml(l.listing_name||'(unnamed listing)')}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+            <label style="font-size:.76rem;color:var(--muted)">Counts as</label>
+            <select onchange="extractSetProperty(${i}, this.value)" style="padding:5px 9px;border:1.5px solid ${l.property_id?'var(--border)':'var(--red)'};border-radius:7px;font-size:.8rem;font-family:inherit">
+              <option value="">— choose a property —</option>
+              ${propOpts(l.property_id)}
+            </select>
+          </div>
+          <table style="width:100%;font-size:.78rem;border-collapse:collapse">
+            <tr><td style="padding:2px 0;color:var(--muted)">Guest payments (gross)</td><td style="text-align:right">${money(l.gross_earnings)}</td></tr>
+            ${l.commission ? `<tr><td style="padding:2px 0;color:var(--muted)">Commission</td><td style="text-align:right;color:var(--red)">−${money(l.commission)}</td></tr>` : ''}
+            ${l.fees ? `<tr><td style="padding:2px 0;color:var(--muted)">Fees</td><td style="text-align:right;color:var(--red)">−${money(l.fees)}</td></tr>` : ''}
+            ${l.adjustments ? `<tr><td style="padding:2px 0;color:var(--muted)">Adjustments</td><td style="text-align:right">${money(l.adjustments)}</td></tr>` : ''}
+            ${l.tax_withheld ? `<tr><td style="padding:2px 0;color:var(--muted)">Tax withheld</td><td style="text-align:right;color:var(--red)">−${money(l.tax_withheld)}</td></tr>` : ''}
+            <tr><td style="padding:5px 0 2px;font-weight:700;border-top:1px solid var(--border)">Actual income</td><td style="text-align:right;font-weight:700;border-top:1px solid var(--border);color:var(--green2)">${money(l.net_earnings)}</td></tr>
+            ${l.payouts_total ? `<tr><td style="padding:2px 0;color:var(--muted);font-size:.74rem">Paid out to the bank so far<div style="font-size:.7rem">(not income — money already earned, moved across)</div></td><td style="text-align:right;color:var(--muted);vertical-align:top">${money(l.payouts_total)}</td></tr>` : ''}
+            ${l.nights_booked != null ? `<tr><td style="padding:2px 0;color:var(--muted)">Nights booked</td><td style="text-align:right">${l.nights_booked}</td></tr>` : ''}
+          </table>
+        </div>`).join('')}
+    </div>
+    <div id="extract-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:10px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      ${p.listings.length ? `<button class="btn btn-primary" id="extract-save-btn" onclick="saveExtractedStatement()">Save as actual income</button>` : ''}
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">${p.listings.length?'Skip — keep the file only':'Close'}</button>
+    </div>`;
+  openModal('day-modal');
+}
+
+function extractSetProperty(i, key) {
+  if (!_extractDraft) return;
+  _extractDraft.listings[i].property_id = key;
+  openExtractReview();
+}
+
+async function saveExtractedStatement() {
+  const p = _extractDraft;
+  if (!p || !db) return;
+  const errEl = document.getElementById('extract-error');
+  const unmapped = p.listings.filter(l => !l.property_id);
+  if (unmapped.length) {
+    errEl.textContent = 'Choose which property each listing counts as first.';
+    errEl.style.display = 'block'; return;
+  }
+  const btn = document.getElementById('extract-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const orgId = getOrgId();
+    // Replace rather than append — re-reading the same document must not
+    // double-count its earnings in Reports.
+    await db.from('platform_earnings').delete().eq('document_id', p.document_id);
+    await db.from('platform_statement_lines').delete().eq('document_id', p.document_id);
+
+    const earnings = p.listings.map(l => ({
+      org_id: orgId, document_id: p.document_id, platform: p.platform,
+      property_id: l.property_id, period_start: p.period_start || null, period_end: p.period_end || null,
+      gross_earnings: l.gross_earnings, commission: l.commission, fees: l.fees,
+      adjustments: l.adjustments, tax_withheld: l.tax_withheld, net_earnings: l.net_earnings,
+      payouts_total: l.payouts_total, closing_balance: l.closing_balance, nights_booked: l.nights_booked,
+    }));
+    const { error: eErr } = await db.from('platform_earnings').insert(earnings);
+    if (eErr) throw eErr;
+
+    if (p.lines.length) {
+      const propForLines = p.listings[0].property_id;
+      const rows = p.lines.map(l => ({
+        org_id: orgId, document_id: p.document_id, platform: p.platform, property_id: propForLines,
+        booking_reference: l.booking_reference, txn_date: l.txn_date, description: l.description,
+        line_type: l.line_type, amount: l.amount, balance: l.balance,
+      }));
+      const { error: lErr } = await db.from('platform_statement_lines').insert(rows);
+      if (lErr) throw lErr;
+    }
+
+    await db.from('finance_documents').update({
+      platform: p.platform, period_start: p.period_start || null,
+      period_end: p.period_end || null, extraction_status: 'extracted',
+    }).eq('id', p.document_id);
+
+    // Remember any listing name the user mapped by hand, so the next
+    // statement from the same platform maps itself (best-effort: a
+    // non-admin or a tightened policy just means no learning).
+    for (const l of p.listings) {
+      const prop = PROPS[l.property_id];
+      if (!prop || !l.listing_name) continue;
+      const pi = prop.platformIntegrations || {};
+      const names = pi.listing_names || [];
+      if (names.some(n => String(n).trim().toLowerCase() === l.listing_name.trim().toLowerCase())) continue;
+      const updated = { ...pi, listing_names: [...names, l.listing_name] };
+      const { error } = await db.from('properties').update({ platform_integrations: updated }).eq('id', prop.uuid);
+      if (!error) prop.platformIntegrations = updated;
+    }
+
+    toast('Saved — these are now your actual income figures ✓','success');
+    closeModal('day-modal');
+    _extractDraft = null;
+    await loadFinanceDocuments();
+    await loadPlatformEarnings();
+  } catch (e) {
+    errEl.textContent = 'Could not save: ' + e.message; errEl.style.display = 'block';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save as actual income'; }
+  }
+}
+
+// Re-runs extraction on an already-uploaded document (e.g. after the
+// parser improves, or if the review was skipped the first time).
+async function reextractDocument(id) {
+  const d = financeDocuments.find(x => x.id === id);
+  if (!d || !db) return;
+  try {
+    const { data, error } = await db.storage.from('finance-documents').download(d.file_path);
+    if (error) throw error;
+    await extractStatement(d, new File([data], d.file_name, { type: 'application/pdf' }));
+  } catch (e) {
+    toast('Could not read that document: ' + e.message, 'error');
   }
 }
 
@@ -4700,7 +5113,7 @@ const ROADMAP = [
   {k:'p2-14',t:'Season-aware posting nudges',n:'Owner-approved. PROPERTY_SEASON_RATES already exists (drives the invoice/quote seasonal pricing) — reuse it to prompt "Peak season starts next month for Speranta, people are planning December trips now" right when it\'s actually useful, instead of a generic weekly reminder unconnected to real seasonality. Simplest of this batch to build once p2-11\'s prompt-surfacing mechanism exists, since it\'s the same UI pattern with a date-vs-season-table trigger instead of a vacancy trigger',c:'GTM'},
   {k:'p2-15',t:'Bake the direct-booking pitch into every social caption',n:'Owner flagged this needs more thought before committing — not yet approved, just captured. Idea: default every auto-generated caption (p2-10 Tier 0, p2-11, p2-12) to include the RETURN10 code and "no platform fees, best rate guaranteed" framing already used in the post-stay WhatsApp message, so social becomes another channel reinforcing the same direct-booking economics (p2-3/p2-4) instead of a disconnected marketing side-project. Open question worth resolving before building: does a discount code belong in every single post, or does that undercut the "book direct because it\'s genuinely better" pitch by making it feel like a constant sale? Revisit once p2-11/p2-12 have real usage to look at',c:'GTM'},
   {k:'p2-16',t:'Connect Outlook / Microsoft 365 — send email from inside HEP',n:'Owner asked for this alongside the WhatsApp/email login-share buttons ("can we connect our outlook too, still has to be done with all our emails"). What ships today is the honest near-term version: every email action (share login details, and any future guest email) opens a pre-filled draft in the user\'s OWN mail app via mailto — which IS Outlook on our machines, no setup, works for all our addresses. The real integration (HEP sending through the S&N mailboxes itself, with sent mail in the Outlook Sent folder) means Microsoft Graph: an Azure app registration, per-mailbox OAuth consent + refresh-token storage, and Microsoft\'s publisher verification for any org beyond our own tenant — same shape of per-customer-OAuth burden as the Meta Tier 2 work in p2-10, so scope them with the same eyes. Decide first whether the actual need is outbound sending (Graph sendMail — moderate) or also READING a shared inbox into HEP (much bigger; overlaps the p3-3 support-channel question)',c:'Architecture'},
-  {k:'p2-17',t:'Documents: extract data from platform statements & earnings reports',n:'Scoped 2026-07-30 against the owner\'s real example files (Airbnb monthly earnings PDF + LekkeSlaap statement). Airbnb\'s earnings report is a clean text PDF: period, per-listing gross/adjustments/service fees/tax/net, nights booked — all regex-able client-side with pdf.js after a listing-name→property mapping ("Calm Blouberg Beach Apt - Gated & Lift Access"→speranta) which should live in the DB, not code (see p2-18). LekkeSlaap statements carry MORE: booking-reference-level lines (guest payment/commission/handling fee/payout/cancellation reversals) + opening/closing balance — extractable the same way IF exported as text PDF (the example was a phone screenshot; image files would need OCR — skip, just ask for the PDF export). TIER 0 (build first): on upload, auto-detect platform, extract the summary numbers, prefill a review form, store on the finance_documents row and show on the card — Documents becomes searchable/summarized instead of a blob pile. TIER 1: reconciliation — compare extracted per-property earnings against HEP\'s own bookings for that month and flag mismatches (platform says R2,466.56, HEP thinks R2,600 → investigate). TIER 2: ingest LekkeSlaap line items into financial_transactions keyed by booking reference — needs a data-model decision (do platform fees become expense rows?) before building. OPEN with the owner: does extracted data stay display-only (Tier 0/1) or feed the money tables (Tier 2)?',c:'HEP'},
+  {k:'p2-17',t:'Documents: extract data from platform statements & earnings reports',n:'Scoped 2026-07-30 against the owner\'s real example files (Airbnb monthly earnings PDF + LekkeSlaap statement). Airbnb\'s earnings report is a clean text PDF: period, per-listing gross/adjustments/service fees/tax/net, nights booked — all regex-able client-side with pdf.js after a listing-name→property mapping ("Calm Blouberg Beach Apt - Gated & Lift Access"→speranta) which should live in the DB, not code (see p2-18). LekkeSlaap statements carry MORE: booking-reference-level lines (guest payment/commission/handling fee/payout/cancellation reversals) + opening/closing balance — extractable the same way IF exported as text PDF (the example was a phone screenshot; image files would need OCR — skip, just ask for the PDF export). TIER 0 (build first): on upload, auto-detect platform, extract the summary numbers, prefill a review form, store on the finance_documents row and show on the card — Documents becomes searchable/summarized instead of a blob pile. TIER 1: reconciliation — compare extracted per-property earnings against HEP\'s own bookings for that month and flag mismatches (platform says R2,466.56, HEP thinks R2,600 → investigate). TIER 2: ingest LekkeSlaap line items into financial_transactions keyed by booking reference — needs a data-model decision (do platform fees become expense rows?) before building. OPEN with the owner: does extracted data stay display-only (Tier 0/1) or feed the money tables (Tier 2)? ANSWERED + BUILT (2026-07-30): the owner\'s call was unambiguous — "the data should actually be used as real numbers as the other numbers are just averages and guidelines. this is our actual income!" So extraction landed as real financial data, not decoration (migration 700): uploading a statement PDF under Invoices > Documents parses it in-browser via pdf.js, shows every figure for review with the property mapping confirmable, and saves into platform_earnings (per property/period totals) + platform_statement_lines (LekkeSlaap\'s per-booking detail, as an audit trail). Reports gained an "Actual income" panel above the booking-derived charts, including a vs-estimate column so a stale nightly rate shows up as a gap. Key accounting decision, easy to get wrong: a Payout line is NOT income, it is already-earned money moving to the bank — counting it would double every rand — so net = gross - commission - fees + adjustments, with payouts tracked separately purely to reconcile the closing balance. The review step runs that reconciliation and warns loudly when the parsed lines do not add up to the statement\'s own closing balance. Parsers are covered by scripts/tests/test_statement_parsers.js, which extracts the parser source from index_fixed.html (never a copy) and asserts against the totals printed on the two real example statements. STILL OPEN: Booking.com statements are unhandled (no example file yet); scans/screenshots have no text layer and cannot be parsed (the UI says so and asks for the PDF export); and nothing yet reconciles a statement line back to the specific HEP booking via its booking reference, which is the natural next step now that the references are stored',c:'HEP'},
   {k:'p2-18',t:'Scalability: move remaining hardcoded S&N config from code to Supabase',n:'Owner direction 2026-07-30: "we will have to make sure everything is scalable, so the hardcode will have to move to supabase". DONE so far: cleaner roster/properties/rates (660), staff-portal PINs with server-side check (680), team contacts (520), inventory checklists (280 property_manuals), iCal feeds (per-org table, S&N fallback only), and guest pre-arrival message content incl. the door/lockbox codes and WiFi that used to sit in the page source (690 — the codes themselves should still be ROTATED, since git history and previously served pages still carry them). STILL HARDCODED, in priority order: (1) property key↔UUID mappings + property names/rates duplicated across index_fixed.html, domestic.html, outside-cleaner.html, api/*-cal.js and several SQL functions (390/660) — should come from the properties table everywhere. (3) WA_NUMBER business line + CLEANING_GUIDE_URLS + propRateFromKey in code → org_settings/properties. (4) NINA_CHECKLISTS + FALLBACK_INVENTORY fallback copies in domestic.html (live versions already DB-backed — decide if fallbacks stay). (5) SN_OWNER_ORG_ID fallback in getOrgId() — remove once org-creation flow is exercised. (6) the per-org staff portal itself (660/680 RPCs hardcode the S&N org because the portal has no org context — a truly multi-tenant portal needs org-scoped URLs or portal accounts, real design work). Chip away per-item; each is small except the last',c:'Architecture'}]},
  {id:'p3',lbl:'Phase 3 — Go-to-market',meta:'Weeks 28–48',col:'#7F77DD',tasks:[
   {k:'p3-1',t:'HEP marketing landing page + waitlist',n:'Value clear to a stranger in 10 seconds',c:'GTM'},
@@ -8378,6 +8791,84 @@ async function saveKB() {
 }
 
 // ── REPORTS ───────────────────────────────────────────────────
+// Actual income panel — reads platform_earnings (populated by uploading a
+// statement under Invoices → Documents). Silent when nothing has been
+// uploaded yet: an empty panel would just be noise on a page that already
+// shows booking-derived figures.
+function renderActualIncome(cutoff, fmt) {
+  const el = document.getElementById('report-actuals');
+  if (!el) return;
+  const rows = platformEarnings.filter(e => !cutoff || !e.period_end || e.period_end >= cutoff);
+  if (!rows.length) { el.innerHTML = ''; return; }
+
+  const money = n => 'R ' + Number(n||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const totalNet = rows.reduce((s,r) => s + Number(r.net_earnings||0), 0);
+  const totalGross = rows.reduce((s,r) => s + Number(r.gross_earnings||0), 0);
+  const totalCut = rows.reduce((s,r) => s + Number(r.commission||0) + Number(r.fees||0) + Number(r.tax_withheld||0), 0);
+  const cutPct = totalGross ? (totalCut/totalGross*100) : 0;
+
+  el.innerHTML = `<div class="card mb-6">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+      <div class="card-title" style="margin:0">💰 Actual income — from platform statements</div>
+      <button class="btn btn-sm btn-ghost" onclick="switchTab('invoices');setTimeout(()=>switchInvoiceSub('documents'),50)">Upload a statement →</button>
+    </div>
+    <div class="text-muted" style="font-size:.76rem;margin-bottom:12px">
+      Read from the statements you've uploaded — what the platforms actually paid. The charts below are estimates from booking rates.
+    </div>
+    <div class="dash-console" style="margin-bottom:12px">
+      ${sCard('Actual income', money(totalNet), rows.length+' statement '+(rows.length===1?'period':'periods'), 'var(--green2)')}
+      ${sCard('Guest payments', money(totalGross), 'before platform deductions', 'var(--accent)')}
+      ${sCard('Platform kept', money(totalCut), cutPct.toFixed(1)+'% of guest payments', 'var(--red)')}
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.78rem;min-width:520px">
+        <thead><tr style="text-align:left;color:var(--muted)">
+          <th style="padding:6px 8px;font-weight:600">Period</th>
+          <th style="padding:6px 8px;font-weight:600">Property</th>
+          <th style="padding:6px 8px;font-weight:600">Platform</th>
+          <th style="padding:6px 8px;font-weight:600;text-align:right">Guest paid</th>
+          <th style="padding:6px 8px;font-weight:600;text-align:right">Fees</th>
+          <th style="padding:6px 8px;font-weight:600;text-align:right">Actual income</th>
+          <th style="padding:6px 8px;font-weight:600;text-align:right">vs estimate</th>
+        </tr></thead>
+        <tbody>
+        ${rows.map((r,i) => {
+          const est = estimatedRevenueFor(r.property_id, r.period_start, r.period_end);
+          const diff = est == null ? null : Number(r.net_earnings) - est;
+          return `<tr style="${i%2?'background:var(--surface-2)':''}">
+            <td style="padding:6px 8px">${r.period_start?fmtDate(r.period_start):'—'}${r.period_end?' → '+fmtDate(r.period_end):''}</td>
+            <td style="padding:6px 8px">${propName(r.property_id)}</td>
+            <td style="padding:6px 8px">${PLATFORM_LABELS[r.platform]||r.platform}</td>
+            <td style="padding:6px 8px;text-align:right">${money(r.gross_earnings)}</td>
+            <td style="padding:6px 8px;text-align:right;color:var(--red)">−${money(Number(r.commission||0)+Number(r.fees||0)+Number(r.tax_withheld||0))}</td>
+            <td style="padding:6px 8px;text-align:right;font-weight:700;color:var(--green2)">${money(r.net_earnings)}</td>
+            <td style="padding:6px 8px;text-align:right;color:${diff==null?'var(--muted)':Math.abs(diff)<1?'var(--muted)':diff>0?'var(--green2)':'var(--red)'}">
+              ${diff==null?'—':(diff>0?'+':'')+fmt(diff)}</td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="text-muted" style="font-size:.72rem;margin-top:8px">
+      "vs estimate" compares against what this app calculated from bookings for the same property and dates — a big gap means those booking rates need a look. Payouts already transferred to the bank aren't income and aren't counted here.
+    </div>
+  </div>`;
+}
+
+// Booking-derived revenue for one property over a date range — the
+// estimate the actual figures get compared against. Returns null when
+// there's nothing to compare (no bookings in range), so the UI can show
+// "—" instead of a misleading zero.
+function estimatedRevenueFor(propKey, from, to) {
+  if (!from || !to) return null;
+  const rows = bookings.filter(b =>
+    b.status !== 'cancelled' && !isOwnerStay(b) && !isCaretaker(b) &&
+    (b.property_id === propKey) &&
+    (b.check_in||'') >= from && (b.check_in||'') <= to);
+  if (!rows.length) return null;
+  return rows.reduce((s,b) => s + (b.revenue || b.total_amount || 0), 0);
+}
+
 async function renderReports(monthsBack) {
   if (monthsBack === undefined) monthsBack = window._reportMonths ?? 3;
   window._reportMonths = monthsBack;
@@ -8438,6 +8929,15 @@ const platOrder = ['airbnb','booking','lekkeslaap','manual'];
     sCard('Avg Per Night', fmt(avgNight), 'all platforms combined', 'var(--accent)') +
     sCard('Best Platform', fmt(airbnbAvg)+'/night', 'Airbnb · R'+(airbnbAvg-lsAvg)+' more than LekkeSlaap', '#E14666') +
     (_includePipeline ? sCard('Pipeline', upcoming.length+' bookings', upcomingNights+' upcoming nights', 'var(--blue)') : '');
+
+  // ── ACTUAL INCOME (uploaded platform statements, migration 700) ──
+  // Rendered above the booking-derived charts and deliberately labelled
+  // as the real figures: everything else on this page multiplies nightly
+  // rates by nights, which is an estimate. Where a statement covers the
+  // same property and period, its variance against the estimate is shown
+  // — a large gap usually means the booking data's rates are stale.
+  await loadPlatformEarnings();
+  renderActualIncome(cutoff, fmt);
 
   // ── MONTHLY DATA ──
   const monthlyData = {};
