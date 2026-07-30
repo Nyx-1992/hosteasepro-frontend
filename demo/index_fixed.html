@@ -891,16 +891,64 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div id="team-content"></div>
       </div>
 
+      <!-- MARKETING (admin only) — outward-facing content. Website copy
+           today; social media (roadmap p2-10) becomes a sibling sub-tab
+           here rather than a separate top-level place. Content is
+           org-scoped (720), so a management client who buys a website
+           through S&N edits their own words from their own login. -->
+      <div class="tab-pane" id="tab-marketing">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px">
+          <div>
+            <h2 style="font-size:1.1rem;margin-bottom:2px;font-family:'DM Serif Display',serif">📣 Marketing</h2>
+            <div class="text-muted" style="font-size:.78rem">Your website's words — edit and publish without a developer</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin:14px 0 18px;border-bottom:2px solid var(--border)">
+          <button id="msub-website-btn" onclick="switchMarketingSub('website')"
+            style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px">
+            🌐 Website
+          </button>
+          <button id="msub-social-btn" onclick="switchMarketingSub('social')"
+            style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
+            📱 Social
+          </button>
+        </div>
+        <div id="msub-website">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+            <label style="font-size:.76rem;color:var(--muted);font-weight:600">Site</label>
+            <select id="site-key-select" onchange="loadSiteContent()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:.82rem;font-family:inherit"></select>
+            <label style="font-size:.76rem;color:var(--muted);font-weight:600;margin-left:8px">Page</label>
+            <select id="site-page-select" onchange="renderSiteEditor()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-size:.82rem;font-family:inherit"></select>
+          </div>
+          <div id="site-editor"></div>
+        </div>
+        <div id="msub-social" style="display:none"></div>
+      </div>
+
       <!-- BUSINESS VAULT (admin only, admin-only RLS too — banking/legal/insurance) -->
       <div class="tab-pane" id="tab-vault">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:8px">
           <div>
             <h2 style="font-size:1.1rem;margin-bottom:2px;font-family:'DM Serif Display',serif">🔐 Business Info</h2>
-            <div class="text-muted" style="font-size:.78rem">Banking, legal, insurance & tax — admin eyes only</div>
+            <div class="text-muted" style="font-size:.78rem">Banking, legal, insurance, tax & budget — admin eyes only</div>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="openAddVaultEntry()">+ Add Entry</button>
+          <button class="btn btn-primary btn-sm" id="vault-add-btn" onclick="openAddVaultEntry()">+ Add Entry</button>
         </div>
-        <div id="vault-content"></div>
+        <div style="display:flex;gap:8px;margin:14px 0 18px;border-bottom:2px solid var(--border)">
+          <button id="vsub-records-btn" onclick="switchVaultSub('records')"
+            style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid var(--accent);color:var(--accent);margin-bottom:-2px">
+            🗂 Records
+          </button>
+          <button id="vsub-budget-btn" onclick="switchVaultSub('budget')"
+            style="padding:8px 18px;font-size:.82rem;font-weight:700;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;color:var(--muted);margin-bottom:-2px">
+            📈 Budget
+          </button>
+        </div>
+        <div id="vsub-records"><div id="vault-content"></div></div>
+        <!-- Budget: what a normal month should look like. Deliberately a
+             planner, not a ledger — actuals live in Reports and the
+             platform statements. -->
+        <div id="vsub-budget" style="display:none"><div id="budget-content"></div></div>
       </div>
 
       <!-- STAFF (admin only) — employed people ONLY (owner feedback
@@ -2647,6 +2695,7 @@ const NAV = [
   {id:'inspections',label:'Inspections', icon:'🔍',roles:['owner','admin','host']},
   {id:'team',     label:'Contacts',     icon:'👥',roles:['owner','admin']},
   {id:'staff',    label:'Staff',        icon:'🧑‍🔧',roles:['owner','admin']},
+  {id:'marketing',label:'Marketing',   icon:'📣',roles:['owner','admin']},
   {id:'vault',    label:'Business Info',icon:'🔐',roles:['owner','admin']},
   {id:'invoices', label:'Invoices',     icon:'🧾',roles:['owner','admin']},
   {id:'roadmap',  label:'Roadmap',      icon:'🗺️',roles:['owner']},
@@ -2663,6 +2712,10 @@ const NAV_GROUPS = [
   {label:'Operate', items:['bookings','calendar','cleaning','tasks','messages']},
   {label:'Property',items:['knowledge','inspections']},
   {label:'Money',   items:['invoices','reports']},
+  // Grow holds the outward-facing work. Website content lives here now;
+  // social media (roadmap p2-10) joins it as a sibling sub-tab rather
+  // than needing its own place in the nav.
+  {label:'Grow',    items:['marketing']},
   {label:'People',  items:['team']},
   {label:'Admin',   items:['vault','staff','roadmap','settings']},
 ];
@@ -3097,6 +3150,7 @@ function renderTab(id) {
   else if (id==='team')      renderTeam();
   else if (id==='staff')     renderStaffTab();
   else if (id==='vault')     renderVault();
+  else if (id==='marketing') loadMarketingTab();
   else if (id==='reports')   {
     renderReports(); renderReportInspections(); renderReportInventory();
     if (feeConfigLoaded) { renderFeeInputs(); renderRateCalcResults(); }
@@ -5106,7 +5160,7 @@ const ROADMAP = [
   {k:'p2-7',t:'Multi-room / guesthouse support (nice to have)',n:'11-room guesthouse test case — needs room-level bookings & calendars, not just property-level. Scope only after confirming his actual booking model (whole-property vs per-room)',c:'Architecture'},
   {k:'p2-8',t:'Fix service worker Cache errors (PATCH/POST unsupported)',n:'Console noise from domestic.html PWA caching API responses it shouldn\'t — queued for when we\'re next in that file',c:'HEP'},
   {k:'p2-9',t:'Booking site: cross-platform price comparison + real ratings/reviews',n:'Idea, not yet scoped — feasibility mixed. Goal: show guests the price difference across Airbnb/Booking.com/LekkeSlaap plus real star ratings (rotating, labeled by platform) and real guest feedback directly on our own booking page, to prove it\'s not a fake/marketing number. Price comparison has no official API path — Airbnb/Booking.com don\'t offer one to third-party sites, so the only route is scraping, which is fragile and against most of these platforms\' ToS; not something to build as a silent background job. Ratings/reviews are more feasible via a licensed review-aggregator widget (e.g. Trustindex/EmbedSocial/Elfsight) rather than scraping ourselves. Our existing iCal feeds only carry availability, not price or reviews, so this is a new integration surface either way',c:'Website'},
-  {k:'p2-10',t:'Marketing & social media integration — toward a true "one-stop" platform',n:'Idea flagged by the owner; now scoped into 3 tiers after researching Meta\'s actual requirements. TIER 0 (days, no OAuth/review needed): a "Share to Instagram/Facebook" button that hands off a pre-built caption+listing photo to the platform\'s own share sheet/composer for the host to post manually — quick real win. TIER 1 (1-2 weeks): pull engagement stats (likes/reach) back into Reports via instagram_manage_insights — needs per-org OAuth plus Meta App Review, but a narrower/less-scrutinized review than publishing. TIER 2 (2-4+ months incl. review cycles, the "real" version): actually publish/schedule posts to a host\'s Instagram/Facebook from inside HEP on their behalf. Requires the host\'s Instagram to be a Business/Creator account linked to a Facebook Page (personal accounts don\'t qualify), full per-customer-org OAuth token storage/refresh, Meta App Review with a screencast proving a human-initiated action (first-attempt rejection is common), AND Business Verification (legal-entity docs) before ANY customer besides our own test account can use it — plus ongoing maintenance as Meta deprecates API versions roughly yearly and a ~25-posts/24h rolling rate limit per account. Alternative to going direct-to-Meta for Tier 2: unified APIs like Ayrshare/Buffer already hold Meta\'s approval and expose one simpler call across platforms, trading the App Review/Business Verification burden for a subscription (Buffer ~R100-200/channel/mo, Ayrshare from ~R2,800/mo) — likely the pragmatic choice unless per-property costs get prohibitive at scale. Recommendation: ship Tier 0 as a near-term win, evaluate Ayrshare/Buffer before ever building Tier 2 in-house. TIER 0 DONE — Settings > Share to Social: property picker + auto-generated caption, one-click Facebook share dialog (real, zero setup), copy-caption-and-open-Instagram (honest about Instagram having no pre-fill API). See p2-11 to p2-14 for the real differentiator ideas — using data HEP already has (calendar, bookings, guest relationships) to make social smarter than a generic scheduler could ever be, rather than just being Buffer with extra steps',c:'GTM'},
+  {k:'p2-10',t:'Marketing & social media integration — toward a true "one-stop" platform',n:'Idea flagged by the owner; now scoped into 3 tiers after researching Meta\'s actual requirements. TIER 0 (days, no OAuth/review needed): a "Share to Instagram/Facebook" button that hands off a pre-built caption+listing photo to the platform\'s own share sheet/composer for the host to post manually — quick real win. TIER 1 (1-2 weeks): pull engagement stats (likes/reach) back into Reports via instagram_manage_insights — needs per-org OAuth plus Meta App Review, but a narrower/less-scrutinized review than publishing. TIER 2 (2-4+ months incl. review cycles, the "real" version): actually publish/schedule posts to a host\'s Instagram/Facebook from inside HEP on their behalf. Requires the host\'s Instagram to be a Business/Creator account linked to a Facebook Page (personal accounts don\'t qualify), full per-customer-org OAuth token storage/refresh, Meta App Review with a screencast proving a human-initiated action (first-attempt rejection is common), AND Business Verification (legal-entity docs) before ANY customer besides our own test account can use it — plus ongoing maintenance as Meta deprecates API versions roughly yearly and a ~25-posts/24h rolling rate limit per account. Alternative to going direct-to-Meta for Tier 2: unified APIs like Ayrshare/Buffer already hold Meta\'s approval and expose one simpler call across platforms, trading the App Review/Business Verification burden for a subscription (Buffer ~R100-200/channel/mo, Ayrshare from ~R2,800/mo) — likely the pragmatic choice unless per-property costs get prohibitive at scale. Recommendation: ship Tier 0 as a near-term win, evaluate Ayrshare/Buffer before ever building Tier 2 in-house. TIER 0 DONE — Settings > Share to Social: property picker + auto-generated caption, one-click Facebook share dialog (real, zero setup), copy-caption-and-open-Instagram (honest about Instagram having no pre-fill API). See p2-11 to p2-14 for the real differentiator ideas — using data HEP already has (calendar, bookings, guest relationships) to make social smarter than a generic scheduler could ever be, rather than just being Buffer with extra steps STARTED (2026-07-30): the Marketing tab now exists (nav group \'Grow\') with Website live and Social as a placeholder describing this plan, so social slots in beside website content instead of needing its own home.',c:'GTM'},
   {k:'p2-11',t:'Vacancy-triggered promo posts — surface the content idea where the gap already shows',n:'Owner-loved idea. Instead of a host having to remember to post something, HEP already knows the moment a gap opens (cancellation, unbooked week) — same detection the booking-cancellation workflow (p0-16) already does. Surface a prompt right where the vacancy already appears (Dashboard/Calendar): "Speranta has a gap Aug 15-20 — draft a promo post?" pre-filled with those dates and a suggested discount framing, feeding straight into the Share to Social caption (p2-10 Tier 0). Turns marketing from a chore into a reflex instead of a separate content-calendar habit to maintain. Not yet scoped in detail — needs a decision on where exactly the prompt surfaces and whether/how a discount percentage gets suggested',c:'GTM'},
   {k:'p2-12',t:'Auto-drafted social proof captions from real booking data',n:'Owner-approved. "Speranta Flat is fully booked through September" / "TV House just crossed 50 stays this year" — captions generated from real bookings/domestics counts (occupancy %, total stays, repeat-guest rate), not something the host has to notice and write themselves. Trivial for a PMS since the data already exists; impossible for a generic scheduler with zero calendar visibility. Feeds into the same Share to Social flow as a second caption-template option alongside the current generic one. Not yet scoped — needs a decision on which milestones are worth surfacing (occupancy thresholds? review counts? anniversary of first booking?) so it doesn\'t become noise',c:'GTM'},
   {k:'p2-13',t:'Turn the post-stay WhatsApp flow into a content pipeline',n:'Owner-loved idea. The Guest Timeline (p0-30) already sends a rebooking message after checkout with the RETURN10 code — add one soft, optional ask ("mind if we share your photo/review?") to that same message. A positive reply becomes ready-made testimonial content sourced from a guest there\'s already a relationship with, not cold outreach. Needs real scoping: where the guest\'s reply/photo actually lands (a new inbox view? manual copy-paste from WhatsApp for now?), consent/opt-out handling, and whether this stays a manual "coordinator reviews and reposts" step or becomes something more automated later. Deliberately starting manual-assisted rather than building guest-facing upload infrastructure up front',c:'GTM'},
@@ -5117,6 +5171,8 @@ const ROADMAP = [
   {k:'p2-18',t:'Scalability: move remaining hardcoded S&N config from code to Supabase',n:'Owner direction 2026-07-30: "we will have to make sure everything is scalable, so the hardcode will have to move to supabase". DONE so far: cleaner roster/properties/rates (660), staff-portal PINs with server-side check (680), team contacts (520), inventory checklists (280 property_manuals), iCal feeds (per-org table, S&N fallback only), and guest pre-arrival message content incl. the door/lockbox codes and WiFi that used to sit in the page source (690 — the codes themselves should still be ROTATED, since git history and previously served pages still carry them). STILL HARDCODED, in priority order: (1) property key↔UUID mappings + property names/rates duplicated across index_fixed.html, domestic.html, outside-cleaner.html, api/*-cal.js and several SQL functions (390/660) — should come from the properties table everywhere. (3) WA_NUMBER business line + CLEANING_GUIDE_URLS + propRateFromKey in code → org_settings/properties. (4) NINA_CHECKLISTS + FALLBACK_INVENTORY fallback copies in domestic.html (live versions already DB-backed — decide if fallbacks stay). (5) SN_OWNER_ORG_ID fallback in getOrgId() — remove once org-creation flow is exercised. (6) the per-org staff portal itself (660/680 RPCs hardcode the S&N org because the portal has no org context — a truly multi-tenant portal needs org-scoped URLs or portal accounts, real design work). Chip away per-item; each is small except the last',c:'Architecture'}]},
  {id:'p3',lbl:'Phase 3 — Go-to-market',meta:'Weeks 28–48',col:'#7F77DD',tasks:[
   {k:'p3-1',t:'HEP marketing landing page + waitlist',n:'Value clear to a stranger in 10 seconds',c:'GTM'},
+  {k:'p2-19',t:'Business budgeting in Business Info (migration 710)',n:'DONE (2026-07-30) — Business Info gained Records/Budget sub-tabs. Budget holds recurring income and cost lines with a frequency (monthly/quarterly/annual/once); monthly_amount is a GENERATED column so a quarterly or annual line can never drift out of sync with its own normalisation, and once-offs contribute 0 to the run rate but are surfaced separately rather than silently inflating a normal month. direction is explicit rather than inferred from the sign of the amount, because transposing an income and an expense is easy and would silently double apparent profit. Matters more under the fixed-fee management model than it would under a percentage one: charging a flat R6,000 rather than a cut of revenue means the run rate IS the picture. Admin-only RLS matching business_vault. Seeded with the one arrangement known to be real (TV House R6,000/month). Deliberately a planner, not a ledger — no double entry, no bank reconciliation; actuals stay in Reports and platform_earnings. NOTE recorded on the seed row: Tino costs nothing in cash (paid in accommodation, pays R500/month electricity back to the property owners), which is specific to TV House and must NOT be assumed when pricing other clients\' properties — a client villa would need a paid caretaker.',c:'Business'},
+  {k:'p2-20',t:'Website content editor — Marketing tab (migrations 720 + 730)',n:'DONE (2026-07-30) — new Marketing tab (nav group "Grow") with a Website sub-tab: edit home/about/contact/management/SEO copy with draft-vs-publish, so saving is safe and only publishing goes live. site_content is org-scoped and site-keyed FROM THE FIRST MIGRATION rather than retrofitted, because the plan is to sell websites to management clients who edit their own content from their own login — and (owner\'s later note) an agency client may want one site per property OR one combined site, which (org_id, site_key, page) already supports with no schema change, and makes per-site billing natural. 730 corrects 720\'s public read path, which testing showed was wrong twice over: the plain RLS policy USING (published) was INERT because anon has no SELECT grant (so the website could never have read a row), and it LEAKED ACROSS TENANTS because site_key is not unique across orgs — two clients both using the default \'main\' would have served each other\'s pages. Replaced with get_site_content(org_id, site_key), a SECURITY DEFINER function returning published rows only, granted to anon — matching this codebase\'s existing convention (get_outside_clean_info 390, get_staff_portal_roster 660) that anon never gets direct table access. Verified: anon sees the published page only, not the draft and not the other org\'s page, and cannot read the table directly at all. STILL OPEN: the Next.js site (snapartments-frontend) does not yet CALL get_site_content — the editing side is built, the rendering side is the next step, and property/listing content (data/listings.ts, incl. seasonal rates) is not yet editable.',c:'Website'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
@@ -10398,6 +10454,440 @@ function vaultCard(v) {
 function toggleVaultExpand(id) {
   if (_vaultExpanded.has(id)) _vaultExpanded.delete(id); else _vaultExpanded.add(id);
   renderVault();
+}
+
+// ── MARKETING / WEBSITE CONTENT (migration 720) ────────────────
+// Lets the people who own the words change them. Today the booking site
+// (snapartments-frontend, Next.js) has all its copy hardcoded in .tsx
+// files, so a typo needs a developer and a deploy.
+//
+// Content is org-scoped and site-keyed, which is the point rather than
+// an accident: the plan is to sell websites to management clients and
+// let each client edit their own from their own HEP login. The same
+// editor therefore has to work for someone else's site, not just S&N's.
+//
+// Draft/publish is real here: edits save immediately but only reach the
+// public site when published. Handing a client an editor where every
+// keystroke is live copy would not be safe.
+//
+// SITE_PAGES defines the editable shape of each page. It lives in code
+// because it mirrors the website's actual layout — a field only makes
+// sense if the site renders it — but the VALUES all live in Supabase.
+const SITE_PAGES = {
+  home: { label:'Home', fields:[
+    {k:'badge',    label:'Top badge',     type:'text',     hint:'Small pill above the headline'},
+    {k:'headline', label:'Headline',      type:'text'},
+    {k:'subhead',  label:'Sub-headline',  type:'textarea'},
+    {k:'cta_label',label:'Button text',   type:'text'},
+    {k:'intro_title', label:'Section title', type:'text'},
+    {k:'intro_body',  label:'Section text',  type:'textarea'},
+  ]},
+  about: { label:'About', fields:[
+    {k:'headline', label:'Headline',  type:'text'},
+    {k:'body',     label:'Main text', type:'textarea', rows:8},
+  ]},
+  contact: { label:'Contact', fields:[
+    {k:'headline', label:'Headline',  type:'text'},
+    {k:'body',     label:'Intro text',type:'textarea'},
+    {k:'email',    label:'Email',     type:'text'},
+    {k:'phone',    label:'Phone',     type:'text'},
+    {k:'whatsapp', label:'WhatsApp number', type:'text', hint:'International format, e.g. 27799779455'},
+  ]},
+  management: { label:'Management (owner pitch)', fields:[
+    {k:'headline',  label:'Headline',      type:'text',     hint:'What you do, for whom'},
+    {k:'subhead',   label:'Sub-headline',  type:'textarea'},
+    {k:'languages', label:'Languages line',type:'text',     hint:'e.g. We speak English, German, Polish and Spanish'},
+    {k:'body',      label:'What’s included', type:'textarea', rows:8},
+    {k:'pricing_note', label:'Pricing note', type:'textarea', hint:'Shown under the plans'},
+    {k:'cta_label', label:'Button text',   type:'text'},
+  ]},
+  seo: { label:'SEO & sharing', fields:[
+    {k:'title',       label:'Browser title', type:'text'},
+    {k:'description', label:'Search description', type:'textarea', hint:'Roughly 150 characters'},
+  ]},
+};
+// Sites an org can hold. The owner is splitting the company site from
+// the bookings site onto separate domains, so both are offered.
+const SITE_KEYS = {company:'Company site', bookings:'Bookings site'};
+
+let siteContent = [];      // rows for the selected site
+let _siteDirty = {};       // page -> true when edited but not saved
+
+function switchMarketingSub(sub) {
+  ['website','social'].forEach(s => {
+    const pane = document.getElementById('msub-'+s);
+    if (pane) pane.style.display = s === sub ? '' : 'none';
+    const btn = document.getElementById('msub-'+s+'-btn');
+    if (btn) {
+      btn.style.borderBottomColor = s === sub ? 'var(--accent)' : 'transparent';
+      btn.style.color = s === sub ? 'var(--accent)' : 'var(--muted)';
+    }
+  });
+  if (sub === 'social') renderSocialPlaceholder();
+}
+
+function renderSocialPlaceholder() {
+  const el = document.getElementById('msub-social');
+  if (!el || el.dataset.filled) return;
+  el.dataset.filled = '1';
+  el.innerHTML = `<div class="card">
+    <div class="card-title" style="margin-bottom:8px">📱 Social media</div>
+    <div class="text-muted" style="font-size:.82rem;line-height:1.7">
+      Not built yet — this is where it will live, beside the website content, so everything outward-facing sits together.
+      The plan on the roadmap (p2-10 to p2-15) is to draft posts from real booking data: vacancy-triggered promos when a
+      gap actually shows in the calendar, season-aware nudges off the existing rate table, and captions built from
+      genuine stays rather than invented copy.
+    </div>
+  </div>`;
+}
+
+async function loadMarketingTab() {
+  const siteSel = document.getElementById('site-key-select');
+  const pageSel = document.getElementById('site-page-select');
+  if (!siteSel || !pageSel) return;
+  if (!siteSel.options.length) {
+    siteSel.innerHTML = Object.keys(SITE_KEYS).map(k => `<option value="${k}">${SITE_KEYS[k]}</option>`).join('');
+    pageSel.innerHTML = Object.keys(SITE_PAGES).map(p => `<option value="${p}">${SITE_PAGES[p].label}</option>`).join('');
+  }
+  await loadSiteContent();
+}
+
+async function loadSiteContent() {
+  const el = document.getElementById('site-editor');
+  if (!el) return;
+  if (!db) { el.innerHTML = '<div class="text-muted">Not connected.</div>'; return; }
+  const siteKey = document.getElementById('site-key-select').value;
+  el.innerHTML = skeletonRows(3);
+  try {
+    const { data, error } = await db.from('site_content').select('*').eq('site_key', siteKey);
+    if (error) throw error;
+    siteContent = data || [];
+    _siteDirty = {};
+    renderSiteEditor();
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--red)">Error: '+e.message+'</div>';
+  }
+}
+
+function siteRowFor(page) {
+  return siteContent.find(r => r.page === page) || null;
+}
+
+function renderSiteEditor() {
+  const el = document.getElementById('site-editor');
+  if (!el) return;
+  const page = document.getElementById('site-page-select').value;
+  const def = SITE_PAGES[page];
+  if (!def) { el.innerHTML = ''; return; }
+  const row = siteRowFor(page);
+  const c = (row && row.content) || {};
+  const dirty = !!_siteDirty[page];
+  const hasUnpublished = row && !row.published;
+  const editedSincePublish = row && row.published && row.published_at && row.updated_at > row.published_at;
+
+  el.innerHTML = `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px">
+        <div class="card-title" style="margin:0">${def.label}</div>
+        <div style="font-size:.74rem">
+          ${!row ? '<span style="color:var(--muted)">Not created yet</span>'
+            : row.published
+              ? (editedSincePublish
+                  ? '<span style="background:var(--amber-light);color:#92400e;border-radius:6px;padding:3px 8px">Edited since publishing</span>'
+                  : '<span style="background:var(--green-light);color:#065f46;border-radius:6px;padding:3px 8px">Live</span>')
+              : '<span style="background:var(--surface-2);color:var(--muted);border-radius:6px;padding:3px 8px">Draft — not live</span>'}
+        </div>
+      </div>
+      <div class="text-muted" style="font-size:.76rem;margin-bottom:14px">
+        Saving keeps it as a draft. It only reaches visitors when you publish.
+      </div>
+      <div class="form-grid" style="gap:12px">
+        ${def.fields.map(f => `
+          <div class="form-field span-full">
+            <label>${f.label}</label>
+            ${f.type === 'textarea'
+              ? `<textarea id="sc-${f.k}" rows="${f.rows||3}" oninput="markSiteDirty()">${escHtml(c[f.k]||'')}</textarea>`
+              : `<input id="sc-${f.k}" value="${escHtml(c[f.k]||'').replace(/"/g,'&quot;')}" oninput="markSiteDirty()"/>`}
+            ${f.hint ? `<div class="text-muted" style="font-size:.72rem;margin-top:3px">${f.hint}</div>` : ''}
+          </div>`).join('')}
+      </div>
+      <div id="sc-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:10px"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm" id="sc-save-btn" onclick="saveSiteContent(false)">${dirty?'Save draft •':'Save draft'}</button>
+        <button class="btn btn-sm" style="background:var(--green2);color:#fff" onclick="saveSiteContent(true)">
+          ${hasUnpublished || editedSincePublish ? '↑ Save & publish' : '↑ Publish'}
+        </button>
+        ${row && row.published ? `<button class="btn btn-ghost btn-sm" onclick="unpublishSiteContent()">Unpublish</button>` : ''}
+      </div>
+      ${row && row.published_at ? `<div class="text-muted" style="font-size:.72rem;margin-top:8px">Last published ${fmtDate(String(row.published_at).slice(0,10))}</div>` : ''}
+    </div>`;
+}
+
+function markSiteDirty() {
+  const page = document.getElementById('site-page-select').value;
+  if (_siteDirty[page]) return;
+  _siteDirty[page] = true;
+  const btn = document.getElementById('sc-save-btn');
+  if (btn) btn.textContent = 'Save draft •';
+}
+
+async function saveSiteContent(publish) {
+  const errEl = document.getElementById('sc-error');
+  if (!db) { errEl.textContent = 'Not connected — changes need a live connection to save.'; errEl.style.display='block'; return; }
+  const siteKey = document.getElementById('site-key-select').value;
+  const page = document.getElementById('site-page-select').value;
+  const def = SITE_PAGES[page];
+  const content = {};
+  def.fields.forEach(f => {
+    const input = document.getElementById('sc-'+f.k);
+    if (input && input.value.trim()) content[f.k] = input.value.trim();
+  });
+  const existing = siteRowFor(page);
+  try {
+    const payload = { org_id: getOrgId(), site_key: siteKey, page, content };
+    if (publish) payload.published = true;
+    let error;
+    if (existing) {
+      ({ error } = await db.from('site_content').update(payload).eq('id', existing.id));
+    } else {
+      ({ error } = await db.from('site_content').insert([payload]));
+    }
+    if (error) throw error;
+    delete _siteDirty[page];
+    toast(publish ? 'Published — it’s live ✓' : 'Draft saved ✓', 'success');
+    await loadSiteContent();
+  } catch (e) {
+    errEl.textContent = 'Could not save: ' + e.message; errEl.style.display = 'block';
+  }
+}
+
+async function unpublishSiteContent() {
+  const page = document.getElementById('site-page-select').value;
+  const row = siteRowFor(page);
+  if (!row || !db) return;
+  confirmAction('Take this page down from the live site? Your text is kept as a draft.', async () => {
+    const { error } = await db.from('site_content').update({ published: false }).eq('id', row.id);
+    if (error) { toast('Could not unpublish: '+error.message,'error'); return; }
+    toast('Unpublished — kept as a draft','info');
+    loadSiteContent();
+  }, 'Unpublish');
+}
+
+// ── BUSINESS BUDGET (migration 710) ────────────────────────────
+// What a normal month should look like for the business itself. This
+// matters more under the fixed-fee management model than it would under
+// a percentage one: charging a flat R6,000 rather than a cut of revenue
+// means the run rate is the whole picture, and nothing else in the app
+// tracks it. Actuals deliberately stay where they already live (Reports,
+// platform statements) — the panel shows recorded income beside the
+// budget for context rather than pretending to reconcile the two.
+let businessBudget = [];
+const BUDGET_CATS = {
+  management_fee:'Management fee', rental:'Rental income', website:'Website',
+  cleaning:'Cleaning', maintenance:'Maintenance', staff:'Staff', software:'Software',
+  marketing:'Marketing', accounting:'Accounting', insurance:'Insurance', other:'Other',
+};
+const BUDGET_FREQ = {monthly:'per month', quarterly:'per quarter', annual:'per year', once:'once-off'};
+
+function switchVaultSub(sub) {
+  ['records','budget'].forEach(s => {
+    const pane = document.getElementById('vsub-'+s);
+    if (pane) pane.style.display = s === sub ? '' : 'none';
+    const btn = document.getElementById('vsub-'+s+'-btn');
+    if (btn) {
+      btn.style.borderBottomColor = s === sub ? 'var(--accent)' : 'transparent';
+      btn.style.color = s === sub ? 'var(--accent)' : 'var(--muted)';
+    }
+  });
+  // The header button changes meaning with the sub-tab — one button that
+  // adds the thing you're currently looking at, rather than two.
+  const addBtn = document.getElementById('vault-add-btn');
+  if (addBtn) {
+    addBtn.textContent = sub === 'budget' ? '+ Add Budget Line' : '+ Add Entry';
+    addBtn.setAttribute('onclick', sub === 'budget' ? 'openBudgetLine()' : 'openAddVaultEntry()');
+  }
+  if (sub === 'budget') loadBusinessBudget();
+}
+
+async function loadBusinessBudget() {
+  const el = document.getElementById('budget-content');
+  if (!el) return;
+  if (!db) { el.innerHTML = '<div class="text-muted">Not connected.</div>'; return; }
+  el.innerHTML = skeletonRows(4);
+  try {
+    const { data, error } = await db.from('business_budget').select('*').order('sort_order').order('created_at');
+    if (error) throw error;
+    businessBudget = data || [];
+    renderBusinessBudget();
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--red)">Error: '+e.message+'</div>';
+  }
+}
+
+function renderBusinessBudget() {
+  const el = document.getElementById('budget-content');
+  if (!el) return;
+  const money = n => 'R ' + Number(n||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const active = businessBudget.filter(b => b.active);
+  const income = active.filter(b => b.direction === 'income');
+  const costs  = active.filter(b => b.direction === 'cost');
+  const sumM = rows => rows.reduce((s,b) => s + Number(b.monthly_amount||0), 0);
+  const incomeM = sumM(income), costsM = sumM(costs), netM = incomeM - costsM;
+  // Once-offs are real planned money but not part of the run rate, so
+  // they're surfaced separately instead of being folded into the monthly
+  // totals (which would overstate a normal month).
+  const onceOffs = active.filter(b => b.frequency === 'once');
+  const onceTotal = onceOffs.reduce((s,b) => s + (b.direction==='income'?1:-1) * Number(b.amount||0), 0);
+
+  if (!businessBudget.length) {
+    el.innerHTML = emptyState('📈', 'No budget lines yet',
+      `<div class="text-muted" style="font-size:.8rem;max-width:420px;margin:0 auto 12px">
+         Add what the business earns and spends each month — management fees, rental income, software, accounting — and see the run rate.
+       </div>
+       <button class="btn btn-sm btn-primary" onclick="openBudgetLine()">+ Add Budget Line</button>`);
+    return;
+  }
+
+  const section = (title, rows, colour) => {
+    if (!rows.length) return '';
+    return `
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${title}</div>
+      <div style="display:grid;gap:6px">
+        ${rows.map(b => `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:var(--surface-2);border-radius:8px;flex-wrap:wrap">
+            <div style="min-width:0">
+              <div style="font-weight:600;font-size:.84rem">${escHtml(b.label)}</div>
+              <div style="font-size:.74rem;color:var(--muted)">
+                ${BUDGET_CATS[b.category]||b.category}
+                ${b.property_id ? ' · '+propName(b.property_id) : ''}
+                ${b.frequency !== 'monthly' ? ' · '+money(b.amount)+' '+BUDGET_FREQ[b.frequency] : ''}
+              </div>
+              ${b.notes ? `<div style="font-size:.72rem;color:var(--muted);margin-top:3px;white-space:pre-wrap">${escHtml(b.notes)}</div>` : ''}
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="text-align:right">
+                <div style="font-weight:700;font-size:.86rem;color:${colour}">${b.frequency==='once' ? money(b.amount) : money(b.monthly_amount)}</div>
+                <div style="font-size:.68rem;color:var(--muted)">${b.frequency==='once' ? 'once-off' : 'per month'}</div>
+              </div>
+              <button class="btn btn-sm btn-ghost" onclick="openBudgetLine('${b.id}')" title="Edit">✎</button>
+              <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="deleteBudgetLine('${b.id}')" title="Delete">✕</button>
+            </div>
+          </div>`).join('')}
+      </div>`;
+  };
+
+  const inactive = businessBudget.filter(b => !b.active);
+  el.innerHTML = `
+    <div class="dash-console" style="margin-bottom:6px">
+      ${sCard('Income / month', money(incomeM), income.length+' line'+(income.length===1?'':'s'), 'var(--green2)')}
+      ${sCard('Costs / month', money(costsM), costs.length+' line'+(costs.length===1?'':'s'), 'var(--red)')}
+      ${sCard('Net / month', money(netM), netM>=0?'projected profit':'projected shortfall', netM>=0?'var(--accent)':'var(--red)')}
+      ${sCard('Net / year', money(netM*12), 'at the current run rate', 'var(--blue)')}
+    </div>
+    ${onceOffs.length ? `<div class="text-muted" style="font-size:.76rem;margin-bottom:4px">
+      Plus ${onceOffs.length} once-off ${onceOffs.length===1?'line':'lines'} totalling <strong style="color:${onceTotal>=0?'var(--green2)':'var(--red)'}">${money(Math.abs(onceTotal))}</strong> ${onceTotal>=0?'in':'out'} — not counted in the monthly figures above.
+    </div>` : ''}
+    ${section('Income', income, 'var(--green2)')}
+    ${section('Costs', costs, 'var(--red)')}
+    ${inactive.length ? section('Paused', inactive, 'var(--muted)') : ''}
+    <div class="text-muted" style="font-size:.72rem;margin-top:14px">
+      A plan, not a ledger — what a normal month should look like. Quarterly and annual lines are shown as their monthly share. Your actual recorded income is in Reports.
+    </div>`;
+}
+
+function openBudgetLine(id) {
+  const b = id ? businessBudget.find(x => x.id === id) : null;
+  const catOpts = Object.keys(BUDGET_CATS).map(k =>
+    `<option value="${k}" ${b&&b.category===k?'selected':''}>${BUDGET_CATS[k]}</option>`).join('');
+  const freqOpts = Object.keys(BUDGET_FREQ).map(k =>
+    `<option value="${k}" ${b&&b.frequency===k?'selected':''}>${BUDGET_FREQ[k]}</option>`).join('');
+  const propOpts = Object.keys(PROPS).map(k =>
+    `<option value="${k}" ${b&&b.property_id===k?'selected':''}>${PROPS[k].short||PROPS[k].name}</option>`).join('');
+
+  document.getElementById('day-modal-title').textContent = b ? 'Edit budget line' : 'Add budget line';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field"><label>Type *</label>
+        <select id="bl-direction">
+          <option value="income" ${!b||b.direction==='income'?'selected':''}>Money in</option>
+          <option value="cost" ${b&&b.direction==='cost'?'selected':''}>Money out</option>
+        </select>
+      </div>
+      <div class="form-field"><label>Category</label><select id="bl-category">${catOpts}</select></div>
+      <div class="form-field span-full"><label>Description *</label>
+        <input id="bl-label" value="${b?escHtml(b.label).replace(/"/g,'&quot;'):''}" placeholder="e.g. Speranta — management fee"/></div>
+      <div class="form-field"><label>Amount (R) *</label>
+        <input id="bl-amount" type="number" step="0.01" min="0" value="${b?b.amount:''}" placeholder="0.00"/></div>
+      <div class="form-field"><label>How often</label><select id="bl-frequency">${freqOpts}</select></div>
+      <div class="form-field"><label>Property</label>
+        <select id="bl-property"><option value="">— not property-specific —</option>${propOpts}</select></div>
+      <div class="form-field"><label>Status</label>
+        <select id="bl-active">
+          <option value="true" ${!b||b.active?'selected':''}>Active</option>
+          <option value="false" ${b&&!b.active?'selected':''}>Paused</option>
+        </select>
+      </div>
+      <div class="form-field span-full"><label>Notes</label>
+        <textarea id="bl-notes" rows="2" placeholder="Anything worth remembering about this line">${b?escHtml(b.notes||''):''}</textarea></div>
+    </div>
+    <div class="text-muted" style="font-size:.74rem;margin-top:8px">
+      Enter the amount as a positive number — "Money in" or "Money out" decides which way it counts.
+    </div>
+    <div id="bl-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" id="bl-save-btn" onclick="saveBudgetLine(${b?`'${b.id}'`:'null'})">${b?'Save changes':'Add line'}</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+    </div>`;
+  openModal('day-modal');
+}
+
+async function saveBudgetLine(id) {
+  const errEl = document.getElementById('bl-error');
+  const label = document.getElementById('bl-label').value.trim();
+  const amount = parseFloat(document.getElementById('bl-amount').value);
+  if (!label) { errEl.textContent = 'Give the line a description.'; errEl.style.display='block'; return; }
+  if (!(amount >= 0)) { errEl.textContent = 'Enter an amount (a positive number).'; errEl.style.display='block'; return; }
+  if (!db) { errEl.textContent = 'Not connected — changes need a live connection to save.'; errEl.style.display='block'; return; }
+
+  const btn = document.getElementById('bl-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const row = {
+    org_id: getOrgId(),
+    direction: document.getElementById('bl-direction').value,
+    category: document.getElementById('bl-category').value,
+    label,
+    amount,
+    frequency: document.getElementById('bl-frequency').value,
+    property_id: document.getElementById('bl-property').value || null,
+    active: document.getElementById('bl-active').value === 'true',
+    notes: document.getElementById('bl-notes').value.trim(),
+  };
+  try {
+    const { error } = id
+      ? await db.from('business_budget').update(row).eq('id', id)
+      : await db.from('business_budget').insert([row]);
+    if (error) throw error;
+    toast(id ? 'Budget line updated ✓' : 'Budget line added ✓','success');
+    closeModal('day-modal');
+    loadBusinessBudget();
+  } catch (e) {
+    errEl.textContent = 'Could not save: ' + e.message; errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = id ? 'Save changes' : 'Add line';
+  }
+}
+
+function deleteBudgetLine(id) {
+  const b = businessBudget.find(x => x.id === id);
+  if (!b) return;
+  confirmAction(`Delete "${b.label}" from the budget?`, async () => {
+    if (db) {
+      const { error } = await db.from('business_budget').delete().eq('id', id);
+      if (error) { toast('Delete error: '+error.message,'error'); return; }
+    }
+    businessBudget = businessBudget.filter(x => x.id !== id);
+    toast('Budget line deleted','info');
+    renderBusinessBudget();
+  }, 'Delete');
 }
 
 function openAddVaultEntry() { openVaultModal(null); }
