@@ -899,13 +899,16 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div id="vault-content"></div>
       </div>
 
-      <!-- STAFF (admin only) — all team_contacts categories, DB-backed. Domestic
-           entries additionally carry cleaner rate/payment/properties/birthday. -->
+      <!-- STAFF (admin only) — employed people ONLY (owner feedback
+           2026-07-30): Management (owners + host manager) and Domestic
+           (cleaners/caretakers, with rate/payment/properties/birthday).
+           Suppliers, maintenance contractors etc. live in Contacts
+           (tab-team) — same team_contacts table, different lens. -->
       <div class="tab-pane" id="tab-staff">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
           <div>
             <h2 style="font-size:1.1rem;margin-bottom:2px;font-family:'DM Serif Display',serif">🧑‍🔧 Staff</h2>
-            <div class="text-muted" style="font-size:.78rem">Everyone on the team — cleaners get rate/payment/properties, everyone else the usual contact fields</div>
+            <div class="text-muted" style="font-size:.78rem">Employed people only — owners, host manager, cleaners &amp; caretakers. Suppliers and contractors live under Contacts</div>
           </div>
           <div style="display:flex;gap:8px">
             <button class="btn btn-ghost btn-sm" onclick="openInviteStaffModal()">+ Invite Login</button>
@@ -916,10 +919,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <button class="btn btn-sm btn-primary" onclick="setStaffFilter('all',this)">All</button>
           <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('management',this)">Management</button>
           <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('domestic',this)">Domestic</button>
-          <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('maintenance',this)">Maintenance</button>
-          <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('security',this)">Security</button>
-          <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('supplier',this)">Suppliers</button>
-          <button class="btn btn-sm btn-ghost" onclick="setStaffFilter('other',this)">Other</button>
         </div>
         <div id="staff-content"></div>
       </div>
@@ -9357,6 +9356,8 @@ function fmtBirthday(b) {
   return d.toLocaleDateString('en-ZA', {day:'numeric', month:'short'});
 }
 const STAFF_CAT_LABELS = {management:'Management',domestic:'Domestic',maintenance:'Maintenance',security:'Security',supplier:'Supplier',other:'Other'};
+// The Staff tab's world: employed people. Everything else is Contacts.
+const STAFF_EMPLOYED_CATS = ['management','domestic'];
 function staffCard(c) {
   const isCleaner = c.cat==='domestic' && c.cleaner_rate != null;
   const isDomestic = c.cat==='domestic';
@@ -9390,7 +9391,11 @@ function renderStaffTab() {
   if (!currentUser) return;
   const el = document.getElementById('staff-content');
   if (!el) return;
-  const staff = _staffFilter==='all' ? contacts : contacts.filter(c=>c.cat===_staffFilter);
+  // Employed people only (owner feedback): management + domestic. The
+  // rest of team_contacts (suppliers/maintenance/security/other) belongs
+  // to the Contacts tab, not here.
+  const pool = contacts.filter(c => STAFF_EMPLOYED_CATS.includes(c.cat));
+  const staff = _staffFilter==='all' ? pool : pool.filter(c=>c.cat===_staffFilter);
   if (!staff.length) {
     el.innerHTML = emptyState('🧑‍🔧', 'No staff' + (_staffFilter==='all'?' added yet':' in this category'),
       `<button class="btn btn-sm btn-primary" onclick="openAddStaff()">+ Add Staff</button>`);
@@ -9430,7 +9435,7 @@ function openStaffModal(id) {
       <div class="form-field span-full"><label>Name *</label><input id="st-name" placeholder="Full name" value="${escAttr(existing?existing.name:'')}"/></div>
       <div class="form-field"><label>Category</label>
         <select id="st-cat" onchange="onStaffCatChange()">
-          ${Object.keys(STAFF_CAT_LABELS).map(k=>`<option value="${k}" ${cat===k?'selected':''}>${STAFF_CAT_LABELS[k]}</option>`).join('')}
+          ${STAFF_EMPLOYED_CATS.map(k=>`<option value="${k}" ${cat===k?'selected':''}>${STAFF_CAT_LABELS[k]}</option>`).join('')}
         </select>
       </div>
       <div class="form-field"><label>Role</label><input id="st-role" placeholder="e.g. Cleaner — Speranta" value="${escAttr(existing?existing.role:'')}"/></div>
