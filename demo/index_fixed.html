@@ -4627,7 +4627,7 @@ const ROADMAP = [
   {k:'now-2',t:'Invoice PDF generation fixed — client-side, colours preserved',n:'html2pdf.js replaces broken print fallback; date pickers + platform-based reference (DIRECT-/AIRBNB-/etc.) added',c:'HEP'},
   {k:'now-3',t:'snapartments.co.za DNS — CNAME in Xneelo → cname.vercel-dns.com',n:'Then add custom domain in Vercel project settings',c:'Website'},
   {k:'now-4',t:'PayFast — chase pending account verification',n:'Live merchant key needed; then add ID+KEY to Vercel env vars',c:'Website'},
-  {k:'now-5',t:'Deploy domestic.html with Nina coordinator view (PIN 7021)',n:'Already built — upload to demo/ folder',c:'Domestic'}]},
+  {k:'now-5',t:'Deploy domestic.html with Nina coordinator view',n:'Already built — upload to demo/ folder. (Her PIN used to be written out here in the page source; PINs now live in team_contacts and are checked server-side — see migration 680)',c:'Domestic'}]},
  {id:'p0',lbl:'Phase 0 — Foundation',meta:'Weeks 1–6',col:'#D97706',tasks:[
   {k:'p0-3',t:'Create invoices table in Supabase — save every generated doc',n:'Powers the Past documents history list',c:'HEP'},
   {k:'p0-4',t:'org_settings table — move INV_COMPANY out of client JS',n:'Banking, address, reg per org — multi-tenant ready',c:'HEP'},
@@ -4701,7 +4701,7 @@ const ROADMAP = [
   {k:'p2-15',t:'Bake the direct-booking pitch into every social caption',n:'Owner flagged this needs more thought before committing — not yet approved, just captured. Idea: default every auto-generated caption (p2-10 Tier 0, p2-11, p2-12) to include the RETURN10 code and "no platform fees, best rate guaranteed" framing already used in the post-stay WhatsApp message, so social becomes another channel reinforcing the same direct-booking economics (p2-3/p2-4) instead of a disconnected marketing side-project. Open question worth resolving before building: does a discount code belong in every single post, or does that undercut the "book direct because it\'s genuinely better" pitch by making it feel like a constant sale? Revisit once p2-11/p2-12 have real usage to look at',c:'GTM'},
   {k:'p2-16',t:'Connect Outlook / Microsoft 365 — send email from inside HEP',n:'Owner asked for this alongside the WhatsApp/email login-share buttons ("can we connect our outlook too, still has to be done with all our emails"). What ships today is the honest near-term version: every email action (share login details, and any future guest email) opens a pre-filled draft in the user\'s OWN mail app via mailto — which IS Outlook on our machines, no setup, works for all our addresses. The real integration (HEP sending through the S&N mailboxes itself, with sent mail in the Outlook Sent folder) means Microsoft Graph: an Azure app registration, per-mailbox OAuth consent + refresh-token storage, and Microsoft\'s publisher verification for any org beyond our own tenant — same shape of per-customer-OAuth burden as the Meta Tier 2 work in p2-10, so scope them with the same eyes. Decide first whether the actual need is outbound sending (Graph sendMail — moderate) or also READING a shared inbox into HEP (much bigger; overlaps the p3-3 support-channel question)',c:'Architecture'},
   {k:'p2-17',t:'Documents: extract data from platform statements & earnings reports',n:'Scoped 2026-07-30 against the owner\'s real example files (Airbnb monthly earnings PDF + LekkeSlaap statement). Airbnb\'s earnings report is a clean text PDF: period, per-listing gross/adjustments/service fees/tax/net, nights booked — all regex-able client-side with pdf.js after a listing-name→property mapping ("Calm Blouberg Beach Apt - Gated & Lift Access"→speranta) which should live in the DB, not code (see p2-18). LekkeSlaap statements carry MORE: booking-reference-level lines (guest payment/commission/handling fee/payout/cancellation reversals) + opening/closing balance — extractable the same way IF exported as text PDF (the example was a phone screenshot; image files would need OCR — skip, just ask for the PDF export). TIER 0 (build first): on upload, auto-detect platform, extract the summary numbers, prefill a review form, store on the finance_documents row and show on the card — Documents becomes searchable/summarized instead of a blob pile. TIER 1: reconciliation — compare extracted per-property earnings against HEP\'s own bookings for that month and flag mismatches (platform says R2,466.56, HEP thinks R2,600 → investigate). TIER 2: ingest LekkeSlaap line items into financial_transactions keyed by booking reference — needs a data-model decision (do platform fees become expense rows?) before building. OPEN with the owner: does extracted data stay display-only (Tier 0/1) or feed the money tables (Tier 2)?',c:'HEP'},
-  {k:'p2-18',t:'Scalability: move remaining hardcoded S&N config from code to Supabase',n:'Owner direction 2026-07-30: "we will have to make sure everything is scalable, so the hardcode will have to move to supabase". DONE so far: cleaner roster/properties/rates (660), staff-portal PINs with server-side check (680), team contacts (520), inventory checklists (280 property_manuals), iCal feeds (per-org table, S&N fallback only). STILL HARDCODED, in priority order: (1) guest message templates in index_fixed.html — including real door/lockbox codes and WiFi names inside PRE_ARRIVAL_TVHOUSE/SPERANTA, world-readable in the page source; should move to property_manuals sections and get templated ASAP, it\'s a security smell not just a scalability one. (2) property key↔UUID mappings + property names/rates duplicated across index_fixed.html, domestic.html, outside-cleaner.html, api/*-cal.js and several SQL functions (390/660) — should come from the properties table everywhere. (3) WA_NUMBER business line + CLEANING_GUIDE_URLS + propRateFromKey in code → org_settings/properties. (4) NINA_CHECKLISTS + FALLBACK_INVENTORY fallback copies in domestic.html (live versions already DB-backed — decide if fallbacks stay). (5) SN_OWNER_ORG_ID fallback in getOrgId() — remove once org-creation flow is exercised. (6) the per-org staff portal itself (660/680 RPCs hardcode the S&N org because the portal has no org context — a truly multi-tenant portal needs org-scoped URLs or portal accounts, real design work). Chip away per-item; each is small except the last',c:'Architecture'}]},
+  {k:'p2-18',t:'Scalability: move remaining hardcoded S&N config from code to Supabase',n:'Owner direction 2026-07-30: "we will have to make sure everything is scalable, so the hardcode will have to move to supabase". DONE so far: cleaner roster/properties/rates (660), staff-portal PINs with server-side check (680), team contacts (520), inventory checklists (280 property_manuals), iCal feeds (per-org table, S&N fallback only), and guest pre-arrival message content incl. the door/lockbox codes and WiFi that used to sit in the page source (690 — the codes themselves should still be ROTATED, since git history and previously served pages still carry them). STILL HARDCODED, in priority order: (1) property key↔UUID mappings + property names/rates duplicated across index_fixed.html, domestic.html, outside-cleaner.html, api/*-cal.js and several SQL functions (390/660) — should come from the properties table everywhere. (3) WA_NUMBER business line + CLEANING_GUIDE_URLS + propRateFromKey in code → org_settings/properties. (4) NINA_CHECKLISTS + FALLBACK_INVENTORY fallback copies in domestic.html (live versions already DB-backed — decide if fallbacks stay). (5) SN_OWNER_ORG_ID fallback in getOrgId() — remove once org-creation flow is exercised. (6) the per-org staff portal itself (660/680 RPCs hardcode the S&N org because the portal has no org context — a truly multi-tenant portal needs org-scoped URLs or portal accounts, real design work). Chip away per-item; each is small except the last',c:'Architecture'}]},
  {id:'p3',lbl:'Phase 3 — Go-to-market',meta:'Weeks 28–48',col:'#7F77DD',tasks:[
   {k:'p3-1',t:'HEP marketing landing page + waitlist',n:'Value clear to a stranger in 10 seconds',c:'GTM'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
@@ -7580,95 +7580,48 @@ const MESSAGE_LANGUAGES = [
 function msgLang() { return userSettings.language || 'en'; }
 function pickMsg(table) { return (table[msgLang()] || table.en); }
 
-// Property-specific pre-arrival messages — real self-check-in instructions
-// per property, so dispatches to the matching template. Falls back to a
-// generic placeholder-based message for any future property.
+// Property-specific pre-arrival messages. The real content — address,
+// lockbox/smart-lock codes, alarm steps, WiFi — lives in the property's
+// 'access' manual section (migration 690), NOT in this file: it used to
+// be hardcoded here, which meant TV House's lockbox code and WiFi name
+// were readable in the page source by anyone, logged in or not. Editing
+// it is now Property Manual → 🔑 Access & Welcome.
+//
+// Falls back to a generic placeholder message for a property with no
+// access section filled in yet (placeholders only, no real secrets).
 function buildPreArrivalMsg(b) {
-  const key = UUID_MAP[b.property_id] || b.property_id;
-  if (key === 'tvhouse')  return pickMsg(PRE_ARRIVAL_TVHOUSE)(b);
-  if (key === 'speranta') return pickMsg(PRE_ARRIVAL_SPERANTA)(b);
-  return pickMsg(PRE_ARRIVAL_GENERIC)(b);
+  const uuid = (PROPS[UUID_MAP[b.property_id] || b.property_id] || {}).uuid
+            || (PROPS[b.property_id] || {}).uuid || b.property_id;
+  const access = (propertyManuals[uuid] || {}).access;
+  if (!access || !(access.blocks || []).length) return pickMsg(PRE_ARRIVAL_GENERIC)(b);
+  return renderAccessMessage(access, b);
 }
 
-const PRE_ARRIVAL_TVHOUSE = {
-  en: function(b) {
-    return `Hello ${guestFirstName(b)} 👋
+// Builds the guest-facing message from an 'access' section. Each block is
+// either "*Label:* value" or a bare paragraph; tight blocks join to the
+// previous line with a single newline (keeps the Keys/Alarm/WiFi grouping
+// the hardcoded templates had). `_af` variants are used when the message
+// language is Afrikaans, falling back to the English value.
+function renderAccessMessage(access, b) {
+  const af = msgLang() === 'af';
+  const pick = (obj, field) => (af && obj[field+'_af']) ? obj[field+'_af'] : (obj[field] || '');
+  let body = '';
+  (access.blocks || []).forEach((blk, i) => {
+    const value = pick(blk, 'value');
+    if (!value) return;
+    const label = pick(blk, 'label');
+    const line = label ? `*${label}:* ${value}` : value;
+    body += (i === 0 ? '' : (blk.tight ? '\n' : '\n\n')) + line;
+  });
+  return [
+    `${af ? 'Hallo' : 'Hello'} ${guestFirstName(b)} 👋`,
+    pick(access, 'welcome'),
+    pick(access, 'intro'),
+    body,
+    pick(access, 'closing'),
+  ].filter(Boolean).join('\n\n');
+}
 
-Welcome to Tableview Holiday Accommodation! I'm Nina, your Host, and we're thrilled to have you stay with us.
-
-Here are a few details to help you settle in:
-
-*Address:* 110 Athens Road, 7441 Tableview, Cape Town
-
-*Self Check-in:* Call or WhatsApp *+27 79 977 9455* on arrival and the gate will be opened remotely for you.
-
-*Keys:* Lockbox at the back of the house — code *7021*
-*Alarm:* Facing the front door, you'll see a blue light in the top right corner — press the blue button before entering to disable it, and again when leaving to activate it
-*WiFi:* WelcomeToOurHome
-
-Our caretaker lives on the property and is dedicated to respecting your privacy while quietly taking care of things like the bins — nothing for you to worry about there.
-
-Don't hesitate to message us if you need anything. Enjoy your stay! 🏡`;
-  },
-  af: function(b) {
-    return `Hallo ${guestFirstName(b)} 👋
-
-Welkom by Tableview Holiday Accommodation! Ek is Nina, jou Gasheer, en ons is opgewonde dat jy by ons gaan bly.
-
-Hier is 'n paar besonderhede om jou te help tuisvoel:
-
-*Adres:* Athenaweg 110, 7441 Tableview, Kaapstad
-
-*Selfinklok:* Skakel of WhatsApp *+27 79 977 9455* by aankoms en die hek sal van ver af vir jou oopgemaak word.
-
-*Sleutels:* Sleutelkassie agter die huis — kode *7021*
-*Alarm:* Wanneer jy voor die voordeur staan, sal jy 'n blou lig in die boonste regterhoek sien — druk die blou knoppie voordat jy ingaan om dit af te skakel, en weer wanneer jy vertrek om dit te aktiveer
-*WiFi:* WelcomeToOurHome
-
-Ons opsigter woon op die eiendom en is daartoe verbind om jou privaatheid te respekteer terwyl hy stilweg sorg vir sake soos die vullis — daar hoef jy jou nie oor te bekommer nie.
-
-Moenie huiwer om ons te kontak as jy iets nodig het nie. Geniet jou verblyf! 🏡`;
-  },
-};
-
-const PRE_ARRIVAL_SPERANTA = {
-  en: function(b) {
-    return `Hello ${guestFirstName(b)} 👋
-
-Welcome to our beautiful Blouberg Apartment! We're thrilled to have you stay with us and hope you enjoy your time here.
-
-Here are a few details to help you settle in:
-
-*Address:* You'll find the apartment in the Speranta Complex — 35 Athens Road Unit 5, Floor 1, Speranta Complex, Cape Town, Western Cape 7439, South Africa. Don't worry about parking — we have an allocated spot just for you, and there's a lift for your convenience!
-
-*Check-in/Out:* Check-in is from 3:00 PM, and check-out is by 10:00 AM. If you'd like to extend your stay, please let us know at least a day in advance so we can check availability.
-
-To ensure a smooth check-in, could you please send us your ETA so we can make sure to be available for you?
-
-We use a Smart Lock for the apartment — your code is *[CODE]*.
-Simply tap the middle of the lock to wake it, enter your code, then press *#*.
-
-Don't hesitate to message us if you need anything. Enjoy your stay! 🌊`;
-  },
-  af: function(b) {
-    return `Hallo ${guestFirstName(b)} 👋
-
-Welkom by ons pragtige Blouberg-woonstel! Ons is opgewonde dat jy by ons gaan bly en hoop jy geniet jou tyd hier.
-
-Hier is 'n paar besonderhede om jou te help tuisvoel:
-
-*Adres:* Jy sal die woonstel in die Speranta-kompleks vind — Athenaweg 35 Eenheid 5, Vloer 1, Speranta-kompleks, Kaapstad, Wes-Kaap 7439, Suid-Afrika. Moenie oor parkering bekommerd wees nie — ons het 'n toegewese plek net vir jou, en daar is 'n hysbak vir jou gerief!
-
-*Intrek/Uittrek:* Intrektyd is vanaf 15:00, en uittrektyd is voor 10:00. Indien jy jou verblyf wil verleng, laat weet ons asseblief minstens 'n dag vooraf sodat ons beskikbaarheid kan bevestig.
-
-Om 'n vlot inklok te verseker, kan jy asseblief jou beraamde aankomstyd vir ons stuur sodat ons kan verseker dat ons beskikbaar is om jou in te laat?
-
-Ons gebruik 'n Slotslot vir die woonstel — jou kode is *[CODE]*.
-Tik eenvoudig in die middel van die slot om dit te aktiveer, voer jou kode in, gevolg deur *#*.
-
-Moenie huiwer om ons te kontak as jy iets nodig het nie. Geniet jou verblyf! 🌊`;
-  },
-};
 
 const PRE_ARRIVAL_GENERIC = {
   en: function(b) {
@@ -8058,6 +8011,7 @@ let kmProp = null;
 let kmSection = 'checklist';
 const KM_SECTIONS = [
   {key:'checklist', label:'🧹 Inventory & Checklist'},
+  {key:'access',     label:'🔑 Access & Welcome'},
   {key:'faq',        label:'💬 Guest FAQ'},
   {key:'notes',      label:'📚 General Notes'},
 ];
@@ -8086,6 +8040,7 @@ function setKmSection(section) { kmSection = section; renderKnowledgeManual(); }
 
 function renderKmSectionContent() {
   if (kmSection === 'checklist') renderKmChecklist();
+  else if (kmSection === 'access') renderKmAccess();
   else if (kmSection === 'faq') renderKmFaq();
   else if (kmSection === 'notes') renderKmNotes();
 }
@@ -8200,6 +8155,91 @@ function kmUpdateInspItem(ii, val) {
   const content = kmContent('inspection', {checklist:[]});
   content.checklist[ii].label = val;
   kmSaveInspection(content);
+}
+
+// ── Access & Welcome section (migration 690) — the content of the guest
+// pre-arrival message: address, entry method, door/lockbox codes, alarm,
+// WiFi. Lives here rather than in the page source precisely because it
+// holds real secrets; editing a code is a data change, not a deploy. ──
+function renderKmAccess() {
+  const el = document.getElementById('km-content');
+  const content = kmContent('access', {blocks:[]});
+  const blocks = content.blocks || [];
+  const propLabel = (PROPS[kmProp]||{}).name || 'this property';
+  const fld = (label, key, rows) => `
+    <div style="margin-bottom:10px">
+      <label style="display:block;font-size:.74rem;font-weight:700;color:var(--muted);margin-bottom:3px">${label}</label>
+      <textarea rows="${rows||2}" onchange="kmUpdateAccessField('${key}',this.value)"
+        style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:.82rem;resize:vertical;box-sizing:border-box">${escHtml(content[key]||'')}</textarea>
+    </div>`;
+
+  el.innerHTML = `
+    <div class="card" style="padding:14px;margin-bottom:14px">
+      <div style="font-weight:700;font-size:.92rem;margin-bottom:4px">🔑 Access &amp; Welcome — ${propLabel}</div>
+      <div class="text-muted" style="font-size:.76rem;margin-bottom:12px">
+        This is what the guest receives as their pre-arrival message. Door codes and WiFi details belong here, not in the app's code — anything typed here stays behind your login.
+      </div>
+      ${fld('Welcome line','welcome')}
+      ${fld('Intro line (before the details)','intro',1)}
+      <div style="font-size:.74rem;font-weight:700;color:var(--muted);margin:14px 0 6px">Details</div>
+      <div style="display:grid;gap:8px">
+        ${blocks.map((blk,bi) => `
+          <div class="card" style="padding:10px 12px;background:var(--surface-2)">
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+              <input value="${escAttr(blk.label||'')}" placeholder="Label (e.g. Keys) — leave blank for a plain paragraph"
+                onchange="kmUpdateAccessBlock(${bi},'label',this.value)"
+                style="flex:1;font-weight:700;border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-family:inherit;font-size:.8rem"/>
+              <button onclick="kmMoveAccessBlock(${bi},-1)" title="Move up" ${bi===0?'disabled':''}
+                style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 7px;cursor:pointer;font-size:.72rem;opacity:${bi===0?'.35':'1'}">↑</button>
+              <button onclick="kmMoveAccessBlock(${bi},1)" title="Move down" ${bi===blocks.length-1?'disabled':''}
+                style="background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 7px;cursor:pointer;font-size:.72rem;opacity:${bi===blocks.length-1?'.35':'1'}">↓</button>
+              <button onclick="kmDeleteAccessBlock(${bi})" style="background:#fee2e2;color:#dc2626;border:none;border-radius:6px;padding:5px 9px;font-size:.72rem;cursor:pointer">✕</button>
+            </div>
+            <textarea rows="2" placeholder="Value — e.g. Lockbox at the back of the house — code 1234"
+              onchange="kmUpdateAccessBlock(${bi},'value',this.value)"
+              style="width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:inherit;font-size:.82rem;resize:vertical;box-sizing:border-box">${escHtml(blk.value||'')}</textarea>
+            <label style="display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--muted);margin-top:5px;font-weight:400">
+              <input type="checkbox" ${blk.tight?'checked':''} onchange="kmUpdateAccessBlock(${bi},'tight',this.checked)" style="width:auto"/>
+              Keep on the line directly below the previous detail (no blank line)
+            </label>
+          </div>`).join('')}
+        <button onclick="kmAddAccessBlock()" style="text-align:left;background:transparent;border:1.5px dashed var(--border);border-radius:8px;padding:8px 10px;font-size:.8rem;color:var(--muted);cursor:pointer">+ Add detail</button>
+      </div>
+      <div style="margin-top:14px">${fld('Closing line','closing')}</div>
+    </div>
+    <div class="card" style="padding:14px">
+      <div style="font-weight:700;font-size:.88rem;margin-bottom:8px">👁 Preview</div>
+      <div style="background:var(--surface-2);border-radius:8px;padding:10px 12px;font-size:.78rem;white-space:pre-wrap">${escHtml(renderAccessMessage(content, {guest_name:'Sarah'}))}</div>
+    </div>`;
+}
+function kmSaveAccess(content) { savePropertyManualSection(kmPropUuid(), 'access', content); renderKmAccess(); }
+function kmUpdateAccessField(key, val) {
+  const content = kmContent('access', {blocks:[]});
+  content[key] = val;
+  kmSaveAccess(content);
+}
+function kmAddAccessBlock() {
+  const content = kmContent('access', {blocks:[]});
+  content.blocks = [...(content.blocks||[]), {label:'', value:''}];
+  kmSaveAccess(content);
+}
+function kmDeleteAccessBlock(bi) {
+  const content = kmContent('access', {blocks:[]});
+  content.blocks = content.blocks.filter((_,i)=>i!==bi);
+  kmSaveAccess(content);
+}
+function kmUpdateAccessBlock(bi, field, val) {
+  const content = kmContent('access', {blocks:[]});
+  content.blocks[bi][field] = val;
+  kmSaveAccess(content);
+}
+function kmMoveAccessBlock(bi, dir) {
+  const content = kmContent('access', {blocks:[]});
+  const to = bi + dir;
+  if (to < 0 || to >= content.blocks.length) return;
+  const [blk] = content.blocks.splice(bi, 1);
+  content.blocks.splice(to, 0, blk);
+  kmSaveAccess(content);
 }
 
 // ── Guest FAQ section — entries are surfaced (with a Copy button) in the
@@ -9268,6 +9308,9 @@ function ctSel(existing, cat, defaultWhenNew) {
   return (!existing && defaultWhenNew) ? 'selected' : '';
 }
 function escAttr(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+// Full text escape — for content dropped between tags (textarea bodies,
+// message previews), where escAttr's quote-only escaping isn't enough.
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function scRowHtml(sc) {
   sc = sc || {};
