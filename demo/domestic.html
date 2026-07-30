@@ -780,22 +780,50 @@ function sendOutsideCleanerWhatsApp(row, waWin) {
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
-function buildAuth() {
-  // All cleaners except Nina in the grid (Nina has her own button)
-  const gridCleaners = CLEANERS.filter(c=>c.name!=='Nina');
-  let gridHTML = gridCleaners.map(c=>`
+// The login list (who appears on this screen) lives in team_contacts
+// (portal_pin/portal_color, migration 680) and is managed from the admin
+// app's Staff tab. PINs are verified SERVER-SIDE via staff_portal_login()
+// — the grid RPC never returns pin values, so unlike the old hardcoded
+// CLEANERS array, PINs no longer ship in this page's source. CLEANERS
+// above remains only as the offline/RPC-failure fallback.
+const PORTAL_PALETTE=['#f59e0b','#8b5cf6','#2dd4a0','#5b8ef0','#f472b6','#38bdf8'];
+let PORTAL_USERS = CLEANERS.map(c=>({name:c.name, initials:c.initials, color:c.color, is_coordinator:c.name==='Nina', pin:c.pin}));
+async function loadPortalLogins() {
+  if(!db) return;
+  try {
+    const {data,error}=await db.rpc('get_staff_portal_logins');
+    if(!error && data && data.length){
+      PORTAL_USERS=data.map((r,i)=>({
+        name:r.name,
+        initials:r.initials||(r.name||'??').slice(0,2).toUpperCase(),
+        color:r.color||PORTAL_PALETTE[i%PORTAL_PALETTE.length],
+        is_coordinator:!!r.is_coordinator,
+        pin:null, // never sent by the server — checked via staff_portal_login()
+      }));
+      buildAuthGrid();
+    }
+  } catch(e){ console.warn('portal logins:',e); }
+}
+
+function buildAuthGrid() {
+  const cleaners=PORTAL_USERS.filter(u=>!u.is_coordinator);
+  const coords=PORTAL_USERS.filter(u=>u.is_coordinator);
+  let gridHTML = cleaners.map(c=>`
     <button class="cleaner-btn" onclick="selectCleaner('${c.name}')">
       <div class="av" style="background:${c.color}">${c.initials}</div>
       <div class="nm">${c.name}</div>
     </button>`).join('');
-  // Nina gets a full-width coordinator button
-  gridHTML += `
-    <button class="cleaner-btn" style="grid-column:1/-1;flex-direction:row;justify-content:center;gap:12px;border-color:rgba(108,71,255,.4);background:rgba(108,71,255,.08);" onclick="selectCleaner('Nina')">
-      <div class="av" style="background:#6c47ff">NW</div>
-      <div><div class="nm" style="color:#a78bfa">Nina Williams</div><div style="font-size:.7rem;color:var(--muted);">Coordinator</div></div>
-    </button>`;
+  // Coordinators get the full-width button below the grid
+  gridHTML += coords.map(u=>`
+    <button class="cleaner-btn" style="grid-column:1/-1;flex-direction:row;justify-content:center;gap:12px;border-color:rgba(108,71,255,.4);background:rgba(108,71,255,.08);" onclick="selectCleaner('${u.name}')">
+      <div class="av" style="background:${u.color}">${u.initials}</div>
+      <div><div class="nm" style="color:#a78bfa">${u.name}</div><div style="font-size:.7rem;color:var(--muted);">Coordinator</div></div>
+    </button>`).join('');
   document.getElementById('cleaner-grid').innerHTML = gridHTML;
+}
 
+function buildAuth() {
+  buildAuthGrid();
   const numpad = document.getElementById('numpad');
   [1,2,3,4,5,6,7,8,9,'',0,'⌫'].forEach(n=>{
     const b=document.createElement('button');
@@ -808,7 +836,7 @@ function buildAuth() {
 }
 
 function selectCleaner(name) {
-  selectedCleaner = CLEANERS.find(c=>c.name===name);
+  selectedCleaner = PORTAL_USERS.find(c=>c.name===name);
   pinInput=''; updatePinDots();
   document.getElementById('auth-error').textContent='';
   document.querySelectorAll('.cleaner-btn').forEach(b=>b.classList.remove('selected'));
@@ -829,21 +857,39 @@ function updatePinDots() {
   for(let i=0;i<4;i++) document.getElementById('pd'+i).classList.toggle('filled',i<pinInput.length);
 }
 
-function checkPin() {
-  if(pinInput==='7021') {
-    showNinaView();
-    return;
+function pinRejected(msg) {
+  pinInput=''; updatePinDots();
+  document.getElementById('auth-error').textContent=msg||'Incorrect PIN — try again';
+  document.querySelectorAll('.pin-dot').forEach(d=>{
+    d.style.background='var(--red)';d.style.borderColor='var(--red)';
+    setTimeout(()=>{d.style.background='';d.style.borderColor='';},500);
+  });
+}
+
+async function checkPin() {
+  if(!selectedCleaner) return;
+  const entered=pinInput;
+  // Server-side check (migration 680) — the page never holds the real
+  // PINs. Falls back to the hardcoded CLEANERS pins ONLY if the RPC
+  // itself is unreachable (offline / DB down), not on a wrong PIN.
+  if(db){
+    try {
+      const {data,error}=await db.rpc('staff_portal_login',{p_name:selectedCleaner.name,p_pin:entered});
+      if(!error){
+        if(data && data.length){
+          const u=data[0];
+          if(u.is_coordinator) showNinaView();
+          else doLogin({name:u.name, initials:u.initials||selectedCleaner.initials, color:u.color||selectedCleaner.color});
+        } else pinRejected();
+        return;
+      }
+    } catch(e){ console.warn('staff_portal_login:',e); }
   }
-  if(pinInput===selectedCleaner.pin) {
-    doLogin(selectedCleaner);
-  } else {
-    pinInput=''; updatePinDots();
-    document.getElementById('auth-error').textContent='Incorrect PIN — try again';
-    document.querySelectorAll('.pin-dot').forEach(d=>{
-      d.style.background='var(--red)';d.style.borderColor='var(--red)';
-      setTimeout(()=>{d.style.background='';d.style.borderColor='';},500);
-    });
-  }
+  // Fallback path — mirrors the pre-680 behavior (incl. Nina's PIN
+  // opening the coordinator view from any selected button)
+  if(entered==='7021') { showNinaView(); return; }
+  if(selectedCleaner.pin && entered===selectedCleaner.pin) doLogin(selectedCleaner);
+  else pinRejected();
 }
 
 async function doLogin(cleaner) {
@@ -1901,7 +1947,8 @@ function renderEarnings() {
 }
 
 buildAuth();
-loadStaffRoster(); // async — done long before Nina can reach the assign modal
+loadStaffRoster();  // async — done long before Nina can reach the assign modal
+loadPortalLogins(); // async — re-renders the login grid from team_contacts
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){

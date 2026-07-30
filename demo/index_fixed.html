@@ -4700,7 +4700,9 @@ const ROADMAP = [
   {k:'p2-13',t:'Turn the post-stay WhatsApp flow into a content pipeline',n:'Owner-loved idea. The Guest Timeline (p0-30) already sends a rebooking message after checkout with the RETURN10 code — add one soft, optional ask ("mind if we share your photo/review?") to that same message. A positive reply becomes ready-made testimonial content sourced from a guest there\'s already a relationship with, not cold outreach. Needs real scoping: where the guest\'s reply/photo actually lands (a new inbox view? manual copy-paste from WhatsApp for now?), consent/opt-out handling, and whether this stays a manual "coordinator reviews and reposts" step or becomes something more automated later. Deliberately starting manual-assisted rather than building guest-facing upload infrastructure up front',c:'GTM'},
   {k:'p2-14',t:'Season-aware posting nudges',n:'Owner-approved. PROPERTY_SEASON_RATES already exists (drives the invoice/quote seasonal pricing) — reuse it to prompt "Peak season starts next month for Speranta, people are planning December trips now" right when it\'s actually useful, instead of a generic weekly reminder unconnected to real seasonality. Simplest of this batch to build once p2-11\'s prompt-surfacing mechanism exists, since it\'s the same UI pattern with a date-vs-season-table trigger instead of a vacancy trigger',c:'GTM'},
   {k:'p2-15',t:'Bake the direct-booking pitch into every social caption',n:'Owner flagged this needs more thought before committing — not yet approved, just captured. Idea: default every auto-generated caption (p2-10 Tier 0, p2-11, p2-12) to include the RETURN10 code and "no platform fees, best rate guaranteed" framing already used in the post-stay WhatsApp message, so social becomes another channel reinforcing the same direct-booking economics (p2-3/p2-4) instead of a disconnected marketing side-project. Open question worth resolving before building: does a discount code belong in every single post, or does that undercut the "book direct because it\'s genuinely better" pitch by making it feel like a constant sale? Revisit once p2-11/p2-12 have real usage to look at',c:'GTM'},
-  {k:'p2-16',t:'Connect Outlook / Microsoft 365 — send email from inside HEP',n:'Owner asked for this alongside the WhatsApp/email login-share buttons ("can we connect our outlook too, still has to be done with all our emails"). What ships today is the honest near-term version: every email action (share login details, and any future guest email) opens a pre-filled draft in the user\'s OWN mail app via mailto — which IS Outlook on our machines, no setup, works for all our addresses. The real integration (HEP sending through the S&N mailboxes itself, with sent mail in the Outlook Sent folder) means Microsoft Graph: an Azure app registration, per-mailbox OAuth consent + refresh-token storage, and Microsoft\'s publisher verification for any org beyond our own tenant — same shape of per-customer-OAuth burden as the Meta Tier 2 work in p2-10, so scope them with the same eyes. Decide first whether the actual need is outbound sending (Graph sendMail — moderate) or also READING a shared inbox into HEP (much bigger; overlaps the p3-3 support-channel question)',c:'Architecture'}]},
+  {k:'p2-16',t:'Connect Outlook / Microsoft 365 — send email from inside HEP',n:'Owner asked for this alongside the WhatsApp/email login-share buttons ("can we connect our outlook too, still has to be done with all our emails"). What ships today is the honest near-term version: every email action (share login details, and any future guest email) opens a pre-filled draft in the user\'s OWN mail app via mailto — which IS Outlook on our machines, no setup, works for all our addresses. The real integration (HEP sending through the S&N mailboxes itself, with sent mail in the Outlook Sent folder) means Microsoft Graph: an Azure app registration, per-mailbox OAuth consent + refresh-token storage, and Microsoft\'s publisher verification for any org beyond our own tenant — same shape of per-customer-OAuth burden as the Meta Tier 2 work in p2-10, so scope them with the same eyes. Decide first whether the actual need is outbound sending (Graph sendMail — moderate) or also READING a shared inbox into HEP (much bigger; overlaps the p3-3 support-channel question)',c:'Architecture'},
+  {k:'p2-17',t:'Documents: extract data from platform statements & earnings reports',n:'Scoped 2026-07-30 against the owner\'s real example files (Airbnb monthly earnings PDF + LekkeSlaap statement). Airbnb\'s earnings report is a clean text PDF: period, per-listing gross/adjustments/service fees/tax/net, nights booked — all regex-able client-side with pdf.js after a listing-name→property mapping ("Calm Blouberg Beach Apt - Gated & Lift Access"→speranta) which should live in the DB, not code (see p2-18). LekkeSlaap statements carry MORE: booking-reference-level lines (guest payment/commission/handling fee/payout/cancellation reversals) + opening/closing balance — extractable the same way IF exported as text PDF (the example was a phone screenshot; image files would need OCR — skip, just ask for the PDF export). TIER 0 (build first): on upload, auto-detect platform, extract the summary numbers, prefill a review form, store on the finance_documents row and show on the card — Documents becomes searchable/summarized instead of a blob pile. TIER 1: reconciliation — compare extracted per-property earnings against HEP\'s own bookings for that month and flag mismatches (platform says R2,466.56, HEP thinks R2,600 → investigate). TIER 2: ingest LekkeSlaap line items into financial_transactions keyed by booking reference — needs a data-model decision (do platform fees become expense rows?) before building. OPEN with the owner: does extracted data stay display-only (Tier 0/1) or feed the money tables (Tier 2)?',c:'HEP'},
+  {k:'p2-18',t:'Scalability: move remaining hardcoded S&N config from code to Supabase',n:'Owner direction 2026-07-30: "we will have to make sure everything is scalable, so the hardcode will have to move to supabase". DONE so far: cleaner roster/properties/rates (660), staff-portal PINs with server-side check (680), team contacts (520), inventory checklists (280 property_manuals), iCal feeds (per-org table, S&N fallback only). STILL HARDCODED, in priority order: (1) guest message templates in index_fixed.html — including real door/lockbox codes and WiFi names inside PRE_ARRIVAL_TVHOUSE/SPERANTA, world-readable in the page source; should move to property_manuals sections and get templated ASAP, it\'s a security smell not just a scalability one. (2) property key↔UUID mappings + property names/rates duplicated across index_fixed.html, domestic.html, outside-cleaner.html, api/*-cal.js and several SQL functions (390/660) — should come from the properties table everywhere. (3) WA_NUMBER business line + CLEANING_GUIDE_URLS + propRateFromKey in code → org_settings/properties. (4) NINA_CHECKLISTS + FALLBACK_INVENTORY fallback copies in domestic.html (live versions already DB-backed — decide if fallbacks stay). (5) SN_OWNER_ORG_ID fallback in getOrgId() — remove once org-creation flow is exercised. (6) the per-org staff portal itself (660/680 RPCs hardcode the S&N org because the portal has no org context — a truly multi-tenant portal needs org-scoped URLs or portal accounts, real design work). Chip away per-item; each is small except the last',c:'Architecture'}]},
  {id:'p3',lbl:'Phase 3 — Go-to-market',meta:'Weeks 28–48',col:'#7F77DD',tasks:[
   {k:'p3-1',t:'HEP marketing landing page + waitlist',n:'Value clear to a stranger in 10 seconds',c:'GTM'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
@@ -9151,6 +9153,7 @@ function nc(c) {
     cleaner_payment: c.cleaner_payment || '',
     cleaner_properties: c.cleaner_properties || [],
     birthday: c.birthday || '',
+    portal_pin: c.portal_pin || '',
   };
 }
 
@@ -9371,6 +9374,7 @@ function staffCard(c) {
       ${isDomestic&&isCleaner?`<div style="font-size:.8rem;margin-bottom:2px">💰 ${fmtCleanerRate(c)}${c.cleaner_payment?' · '+c.cleaner_payment:''}</div>`:''}
       ${isDomestic&&c.cleaner_properties&&c.cleaner_properties.length?`<div style="font-size:.8rem;margin-bottom:2px">🏠 ${c.cleaner_properties.map(k=>PROPS[k]?PROPS[k].short:k).join(', ')}</div>`:''}
       ${isDomestic&&c.birthday?`<div style="font-size:.8rem;margin-bottom:2px">🎂 ${fmtBirthday(c.birthday)}</div>`:''}
+      ${c.portal_pin?`<div style="font-size:.8rem;margin-bottom:2px">🔑 Staff portal access</div>`:''}
       ${c.note?`<div class="contact-note">${c.note}</div>`:''}
     </div>
   </div>`;
@@ -9401,10 +9405,15 @@ function openAddStaff() { openStaffModal(null); }
 function openEditStaff(id) { openStaffModal(id); }
 // Toggles the cleaner-only "Properties & rate" block based on the Category
 // select — same show/hide-on-select pattern as the Schedule Cleaning
-// modal's "Other cleaner" fields.
+// modal's "Other cleaner" fields. The portal-PIN field additionally shows
+// for Management (Nina — coordinator view), since portal access spans
+// both categories (migration 680).
 function onStaffCatChange() {
+  const cat = document.getElementById('st-cat').value;
   const block = document.getElementById('staff-cleaner-fields');
-  if (block) block.style.display = document.getElementById('st-cat').value==='domestic' ? 'contents' : 'none';
+  if (block) block.style.display = cat==='domestic' ? 'contents' : 'none';
+  const pinField = document.getElementById('staff-pin-field');
+  if (pinField) pinField.style.display = (cat==='domestic'||cat==='management') ? '' : 'none';
 }
 
 function openStaffModal(id) {
@@ -9452,6 +9461,10 @@ function openStaffModal(id) {
           <div class="text-muted" style="font-size:.72rem;margin-top:2px">Leave unchecked if this person isn't an assignable cleaner (e.g. a caretaker) — they'll still show in Staff, just not in the cleaner picker.</div>
         </div>
       </div>
+      <div class="form-field" id="staff-pin-field" style="display:${(cat==='domestic'||cat==='management')?'':'none'}">
+        <label>Staff portal PIN <span style="font-weight:400;color:var(--muted)">(4 digits — blank = no portal login)</span></label>
+        <input id="st-pin" maxlength="4" inputmode="numeric" placeholder="e.g. 0314" value="${escAttr(existing&&existing.portal_pin?existing.portal_pin:'')}"/>
+      </div>
       <div class="form-field span-full"><label>Notes</label><textarea id="st-note" rows="2">${existing?existing.note:''}</textarea></div>
     </div>
     <div style="display:flex;gap:8px;margin-top:16px">
@@ -9482,6 +9495,14 @@ async function saveStaff(id) {
       : (rateValues.every(r => r === rateValues[0]) ? rateValues[0] : rateMap);
     cleaner_payment = document.getElementById('st-payment').value;
   }
+  // Portal PIN (migration 680) — only meaningful for the categories the
+  // staff portal knows (cleaners + coordinator); cleared for the rest.
+  let portal_pin = null;
+  if (cat==='domestic' || cat==='management') {
+    const pinVal = document.getElementById('st-pin').value.trim();
+    if (pinVal && !/^\d{4}$/.test(pinVal)) { toast('Portal PIN must be exactly 4 digits (or blank)','error'); return; }
+    portal_pin = pinVal || null;
+  }
   const name0 = name;
   const row = {
     cat,
@@ -9496,6 +9517,7 @@ async function saveStaff(id) {
     cleaner_properties: properties,
     cleaner_rate,
     birthday: (cat==='domestic' && document.getElementById('st-birthday').value) ? document.getElementById('st-birthday').value : null,
+    portal_pin,
   };
   if (!db) { toast('Not connected — changes need a live connection to save','error'); return; }
   if (id) {
