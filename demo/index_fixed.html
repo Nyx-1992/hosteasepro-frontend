@@ -3166,7 +3166,7 @@ function renderTab(id) {
   else if (id==='messages')  renderMessages();
   else if (id==='knowledge') { renderKnowledgeManual(); }
   else if (id==='kb')        switchTab('knowledge'); // redirect — Knowledge Base merged into Property Manual as a section
-  else if (id==='people')    renderPeople();
+  else if (id==='people')    loadPeopleTab();
   // Contacts + Staff merged into People — keep the old ids working so
   // any saved state or stray link lands somewhere sensible.
   else if (id==='team' || id==='staff') switchTab('people');
@@ -10055,12 +10055,17 @@ function staffCard(c) {
   // colour from cleaners for no reason a viewer could infer, which is
   // what made the Domestic group look jumbled.
   const band = isDomestic ? 'var(--teal)' : 'var(--accent)';
-  const canEdit = currentUser && (currentUser.role==='owner' || currentUser.role==='admin');
+  // Editing follows people.manage; deleting stays with admins, per the
+  // owner: "as long as she can add I am happy, deletion probably down to
+  // admins". Both are backed by RLS (790), so these buttons reflect the
+  // database rather than substituting for it.
+  const canEdit = uiCan('people.manage');
+  const canDelete = currentUser && (currentUser.role==='owner' || currentUser.role==='admin');
   return `<div class="contact-badge">
     <div class="contact-band" style="background:${band}"></div>
-    ${canEdit ? `<div class="contact-actions-top">
-      <button class="contact-edit" onclick="openEditStaff('${c.id}')" title="Edit">✎</button>
-      <button class="contact-del" onclick="deleteStaffEntry('${c.id}')" title="Delete">✕</button>
+    ${(canEdit||canDelete) ? `<div class="contact-actions-top">
+      ${canEdit ? `<button class="contact-edit" onclick="openEditStaff('${c.id}')" title="Edit">✎</button>` : ''}
+      ${canDelete ? `<button class="contact-del" onclick="deleteStaffEntry('${c.id}')" title="Delete">✕</button>` : ''}
     </div>` : ''}
     <div class="contact-info" style="padding-top:16px">
       <div class="contact-name">${c.name}</div>
@@ -10099,6 +10104,15 @@ function setPeopleView(v, btn) {
   renderPeople();
 }
 
+// People must load the permission grid BEFORE rendering. Without this,
+// uiCan() answered from an empty rolePermissions list, so a host saw the
+// deny-by-default result no matter what the grid actually said — a grant
+// only took effect if she happened to visit Marketing or Settings first.
+async function loadPeopleTab() {
+  await ensureRolePermissions();
+  renderPeople();
+}
+
 function renderPeople() {
   if (!currentUser) return;
   const el = document.getElementById('people-content');
@@ -10106,8 +10120,7 @@ function renderPeople() {
   // Adding and inviting are admin-only writes (520); a host gets the
   // directory read-only rather than buttons that would fail.
   const actions = document.getElementById('people-admin-actions');
-  if (actions) actions.style.display =
-    (currentUser.role==='owner' || currentUser.role==='admin') ? '' : 'none';
+  if (actions) actions.style.display = uiCan('people.manage') ? '' : 'none';
   if (_peopleView === 'chart') { renderOrganogram(el); return; }
 
   const q = (document.getElementById('contact-search')?.value||'').toLowerCase();
@@ -10518,14 +10531,15 @@ function contactCard(c) {
   const isHidden = c.sensitive && !_contactExpanded.has(c.id);
   // team_contacts is admin-only to write (520), so a host clicking these
   // would just get a policy error. Show the directory, hide the pencil.
-  const canEdit = currentUser && (currentUser.role==='owner' || currentUser.role==='admin');
+  const canEdit = uiCan('people.manage');
+  const canDelete = currentUser && (currentUser.role==='owner' || currentUser.role==='admin');
 
   if (isHidden) {
     return `<div class="contact-badge contact-badge-compact">
       <div class="contact-band" style="background:${col}"></div>
-      ${canEdit ? `<div class="contact-actions-top">
-        <button class="contact-edit" onclick="openEditContact('${c.id}')" title="Edit">✎</button>
-        <button class="contact-del" onclick="deleteContact('${c.id}')" title="Delete">✕</button>
+      ${(canEdit||canDelete) ? `<div class="contact-actions-top">
+        ${canEdit ? `<button class="contact-edit" onclick="openEditContact('${c.id}')" title="Edit">✎</button>` : ''}
+        ${canDelete ? `<button class="contact-del" onclick="deleteContact('${c.id}')" title="Delete">✕</button>` : ''}
       </div>` : ''}
       <div class="contact-avatar" style="font-size:${c.initials.length>2?'.72rem':'.8rem'}">${c.initials}</div>
       <div class="contact-info">
@@ -10668,6 +10682,7 @@ const PERMISSIONS = [
   {key:'budget.edit',       label:'Change the budget',      hint:'Add or edit income lines and pricing plans'},
   {key:'statements.upload', label:'Upload platform statements', hint:'Add statements and save real income figures'},
   {key:'people.pay',        label:'See pay details',        hint:'Rates, payment method, birthdays and private notes on staff'},
+  {key:'people.manage',     label:'Add & edit people',      hint:'Create and update staff and contacts. Deleting stays with admins'},
 ];
 // Roles the grid manages. 'owner' is listed but locked on.
 const PERM_ROLES = [
