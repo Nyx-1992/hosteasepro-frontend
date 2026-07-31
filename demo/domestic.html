@@ -1397,12 +1397,43 @@ async function ninaSubmitInspection() {
       photo_urls:photoUrls, created_at:new Date().toISOString(),
     }]).select('id').single();
     if(insErr) throw new Error(insErr.message);
+    await ninaTaskFromInspection(inserted?.id);
     document.getElementById('nina-insp-step4').style.display='none';
     document.getElementById('nina-insp-success').style.display='';
     const ref=inserted?.id?.toString().slice(0,8).toUpperCase()||slug;
     document.getElementById('nina-insp-success-ref').textContent=`Ref: ${ref} · ${propNameFromKey(pk)} · ${fmtFull(date)}`;
     loadNinaLastInspections();
   } catch(err){show('Error: '+err.message,'error');btn.disabled=false;}
+}
+
+// An inspection that finds something wrong should not end as a note
+// somebody has to remember to read. Nina's May report said "light switch
+// in small bathroom cracked — needs replacement (still pending)" and
+// nothing anywhere tracked it.
+//
+// A report with breakages, flagged checklist items or a poor/fair rating
+// now raises a task, and that task is SHARED WITH THE OWNER
+// (client_visible, migration 850) — someone told about a problem should
+// be able to watch it through to done rather than have to ask.
+//
+// The work happens in raise_inspection_task (migration 851), not here.
+// This portal signs in with a PIN rather than a Supabase session, so it
+// calls as anon, and every policy on tasks requires an authenticated
+// role — a direct insert from this page is simply rejected. The RPC
+// takes only an inspection id and reads org, property and text from the
+// row itself, so nothing about the task is decided by the browser.
+//
+// Best-effort on purpose: the inspection is already saved by this point,
+// and a failure to raise a task must never make Nina think her report
+// did not go through.
+async function ninaTaskFromInspection(inspectionId) {
+  if (!inspectionId) return;
+  try {
+    const { error } = await db.rpc('raise_inspection_task', { p_inspection_id: inspectionId });
+    if (error) console.warn('inspection task not raised:', error.message);
+  } catch (e) {
+    console.warn('inspection task not raised:', e);
+  }
 }
 
 function ninaInspReset() {
