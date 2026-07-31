@@ -846,7 +846,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
               <label for="msg-language-select" style="font-size:.78rem;color:var(--muted);font-weight:600">🌐 Message language</label>
               <select id="msg-language-select" onchange="saveUserSetting('language', this.value); renderGuestTimeline();" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit;background:#fff"></select>
             </div>
-            <a href="https://web.whatsapp.com" target="wa_chat_tab" rel="noopener noreferrer" title="+27 79 977 9455 · S&N Apt Management"
+            <a href="https://web.whatsapp.com" target="wa_chat_tab" rel="noopener noreferrer" title="Open WhatsApp Web"
               style="display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;color:#25D366;text-decoration:none;padding:6px 13px;border:1px solid var(--border);border-radius:20px;background:var(--surface)">
               💬 WhatsApp Web ↗
             </a>
@@ -980,7 +980,20 @@ function _buildMobileNavStub(){/* replaced by main script */}
             📈 Budget
           </button>
         </div>
-        <div id="vsub-records"><div id="vault-content"></div></div>
+        <div id="vsub-records">
+          <!-- Company and banking details (870). Here rather than in
+               Settings because this is the admin-only tab, which is
+               exactly the argument made when banking was moved off the
+               general Settings page in the first place. -->
+          <div class="card" style="margin-bottom:18px" id="vault-company-card">
+            <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🏦 Company &amp; banking</div>
+            <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">
+              What appears on the invoices you send, including the account your customers pay into.
+            </div>
+            <div id="vault-company"></div>
+          </div>
+          <div id="vault-content"></div>
+        </div>
         <!-- Budget: what a normal month should look like. Deliberately a
              planner, not a ledger — actuals live in Reports and the
              platform statements. -->
@@ -1420,6 +1433,19 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;font-weight:700">Settings &amp; Links</div>
         </div>
 
+        <!-- BRANDING & INVOICE DETAILS (870). Everything here used to be
+             hardcoded to S&N and inherited by every org — including the
+             bank account on outgoing invoices. -->
+        <div class="card" style="margin-bottom:18px" id="settings-brand-card">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🏷️ Your business</div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">
+            Your name and contact details. These appear in the sidebar, on guest messages and at the
+            top of every invoice. Banking, registration and tax live under Business Info — they are
+            admin-only and do not belong on a page anyone can scroll past.
+          </div>
+          <div id="settings-brand"></div>
+        </div>
+
         <!-- Permissions (owner only — see renderPermissions). A grid of
              per-role toggles, enforced in the database by has_permission()
              (750), not just hidden in the UI. -->
@@ -1749,7 +1775,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
 <!-- MOBILE DRAWER -->
 <div class="mob-drawer-overlay" id="mob-overlay" onclick="closeDrawer()"></div>
 <div class="mob-drawer" id="mob-drawer">
-  <div class="s-logo" style="padding:24px 20px 16px;flex-shrink:0"><span class="s-logo-text">HostEase Pro</span><small>S&N Apt Management</small></div>
+  <div class="s-logo" style="padding:24px 20px 16px;flex-shrink:0"><span class="s-logo-text">HostEase Pro</span><small>Property Management</small></div>
   <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0">
     <select id="mob-prop-select" onchange="switchProperty(this.value);closeDrawer()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none">
       <option value="all">All Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option>
@@ -1803,17 +1829,29 @@ const BOOKING_SITE_NAME = 'Sunset Coast Stays';
 const BOOKING_SITE_URL  = 'https://www.snapartments.co.za';  // TODO -> https://www.sunsetcoaststays.co.za once the domain is live
 
 // ╔══════════════════════════════════════════════════════════════╗
-// ║  CLIENT CONFIG — S&N Apt. Management                        ║
-// ║  Replace this entire block for each new client              ║
+// ║  WHO IS RUNNING THIS APP                                     ║
 // ╚══════════════════════════════════════════════════════════════╝
-
-const CLIENT_BRAND = {
-  name:       'S&N Apt. Management',
-  shortName:  'S&N',
-  website:    BOOKING_SITE_URL,
+//
+// Loaded from org_settings at login (migration 870), not hardcoded.
+//
+// The defaults below are NEUTRAL ON PURPOSE. They used to be S&N's real
+// name, WhatsApp number and email, which meant a second agency logging
+// in was branded as S&N and — through INV_COMPANY's matching fallback —
+// would have invoiced their customers into S&N's bank account.
+//
+// A default that is one tenant's real data is never a safe default. The
+// same mistake, in a more expensive place, as the hardcoded property
+// list (p3-18). Where a value is genuinely unknown the right answer is
+// blank: a missing bank account on an invoice is obviously wrong to
+// whoever reads it and gets fixed; the wrong bank account is silently
+// wrong and does not.
+let CLIENT_BRAND = {
+  name:       'HostEase Pro',
+  shortName:  'HEP',
+  website:    '',
   logo:       '🏠',
-  whatsapp:   '27636021847',        // Nicole (testing) — change to Nina's for production
-  email:      'sn_apt_management@outlook.com',
+  whatsapp:   '',
+  email:      '',
   currency:   'ZAR',
   country:    'ZA',
 };
@@ -2073,7 +2111,10 @@ function renderSocialCaption() {
   const p = PROPS[sel.value];
   if (!p) return;
   const cityLine = p.city ? ' 📍 '+p.city : '';
-  el.value = `✨ ${p.name} is open for bookings!${cityLine}\n\nBook directly with us for the best rate — no platform fees.\n🔗 ${CLIENT_BRAND.website}`;
+  // The link is omitted rather than left dangling when an org has not
+  // set a website — a bare "🔗" in a social post looks broken.
+  const siteLine = CLIENT_BRAND.website ? `\n🔗 ${CLIENT_BRAND.website}` : '';
+  el.value = `✨ ${p.name} is open for bookings!${cityLine}\n\nBook directly with us for the best rate — no platform fees.${siteLine}`;
 }
 
 function shareToFacebook() {
@@ -2305,11 +2346,108 @@ function saveUserSetting(key, val) {
   renderTab(currentTab);
   toast('Setting saved ✓','success');
 }
+// ── Branding & invoice details (migration 870) ────────────────────
+// Admin-only to edit: these values go out on invoices and guest
+// messages, so they are not something a host should be able to change.
+// `where` splits them across two screens on purpose. Identity is
+// harmless and belongs in Settings; registration, tax and banking are
+// admin-only and live in Business Info, which is the reasoning that put
+// them there in the first place.
+const BRAND_FIELDS = [
+  { k: 'business_name',  label: 'Business name',   ph: 'e.g. Cape Coast Property Co', group: 'Identity',        where: 'settings' },
+  { k: 'short_name',     label: 'Short name',      ph: 'e.g. CCPC',                   group: 'Identity',        where: 'settings' },
+  { k: 'logo',           label: 'Icon',            ph: '🏠',                          group: 'Identity',        where: 'settings' },
+  { k: 'email',          label: 'Email',           ph: 'hello@example.co.za',         group: 'Identity',        where: 'settings' },
+  { k: 'whatsapp',       label: 'WhatsApp',        ph: '27XXXXXXXXX',                 group: 'Identity',        where: 'settings',
+    hint: 'Digits and country code, no + or spaces. Guest messages are sent from this number.' },
+  { k: 'website',        label: 'Website',         ph: 'https://…',                   group: 'Identity',        where: 'settings' },
+  { k: 'address',        label: 'Address',         ph: 'Street, suburb, city',        group: 'Registered details', where: 'vault' },
+  { k: 'reg_number',     label: 'Company reg. no', ph: '',                            group: 'Registered details', where: 'vault' },
+  { k: 'tax_number',     label: 'Tax / VAT no',    ph: '',                            group: 'Registered details', where: 'vault' },
+  { k: 'account_name',   label: 'Account name',    ph: '',                            group: 'Banking',         where: 'vault' },
+  { k: 'bank_name',      label: 'Bank',            ph: '',                            group: 'Banking',         where: 'vault' },
+  { k: 'account_number', label: 'Account number',  ph: '',                            group: 'Banking',         where: 'vault' },
+  { k: 'account_type',   label: 'Account type',    ph: 'Current Account',             group: 'Banking',         where: 'vault' },
+  { k: 'branch_code',    label: 'Branch code',     ph: '',                            group: 'Banking',         where: 'vault' },
+];
+
+let _brandRow = null;
+
+const renderBrandSettings  = () => renderOrgFields('settings', 'settings-brand', 'settings-brand-card');
+const renderCompanyBanking = () => renderOrgFields('vault',    'vault-company',  'vault-company-card');
+
+async function renderOrgFields(where, elId, cardId) {
+  const el = document.getElementById(elId);
+  const card = document.getElementById(cardId);
+  if (!el) return;
+  const canEdit = currentUser && ['owner', 'admin'].includes(currentUser.role);
+  if (card) card.style.display = canEdit ? '' : 'none';
+  if (!canEdit || !db) return;
+
+  const { data, error } = await db.from('org_settings').select('*').limit(1);
+  if (error) { el.innerHTML = `<div style="color:var(--red);font-size:.84rem">${escHtml(error.message)}</div>`; return; }
+  _brandRow = (data || [])[0] || {};
+
+  const fields = BRAND_FIELDS.filter(f => f.where === where);
+  // Banking is called out because an invoice with it blank is the one
+  // state that actively costs money — the reason 870 stopped falling
+  // back to another org's account.
+  const bankMissing = where === 'vault' &&
+    ['account_name', 'bank_name', 'account_number'].some(k => !(_brandRow[k] || '').trim());
+
+  const groups = [...new Set(fields.map(f => f.group))];
+  el.innerHTML = `
+    ${bankMissing ? `<div style="display:flex;gap:10px;align-items:flex-start;background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:10px 12px;margin-bottom:14px">
+      <span>⚠️</span><div style="font-size:.82rem">Your banking details are incomplete, so invoices will go out without payment instructions.</div>
+    </div>` : ''}
+    ${groups.map(g => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">${g}</div>
+        <div class="form-grid" style="gap:10px">
+          ${fields.filter(f => f.group === g).map(f => `
+            <div class="form-field${f.k === 'address' ? ' span-full' : ''}">
+              <label>${f.label}</label>
+              <input id="brand-${f.k}" placeholder="${escAttr(f.ph)}" value="${escAttr(_brandRow[f.k] || '')}"/>
+              ${f.hint ? `<div style="font-size:.7rem;color:var(--muted);margin-top:3px">${f.hint}</div>` : ''}
+            </div>`).join('')}
+        </div>
+      </div>`).join('')}
+    <button class="btn btn-primary btn-sm" onclick="saveBrandSettings('${where}')">Save</button>
+    <span id="brand-save-msg" style="font-size:.8rem;margin-left:10px"></span>`;
+}
+
+// Only the fields on the screen being saved are written. Sending the
+// whole set from a half-rendered form would blank whatever lives on the
+// OTHER screen — banking wiped by someone editing their business name.
+async function saveBrandSettings(where) {
+  const msg = document.getElementById('brand-save-msg');
+  const row = {};
+  BRAND_FIELDS.filter(f => f.where === where).forEach(f => {
+    const el = document.getElementById('brand-' + f.k);
+    if (el) row[f.k] = el.value.trim();
+  });
+  if (row.whatsapp === undefined) delete row.whatsapp;
+  // Digits only — a number stored as "+27 63 602 1847" produces a dead
+  // wa.me link, and the failure is invisible until a guest gets nothing.
+  if (row.whatsapp) row.whatsapp = row.whatsapp.replace(/[^0-9]/g, '');
+
+  const orgId = getOrgId();
+  const { error } = _brandRow && _brandRow.id
+    ? await db.from('org_settings').update(row).eq('id', _brandRow.id)
+    : await db.from('org_settings').insert([{ ...row, id: orgId, org_id: orgId, address: row.address || '' }]);
+  if (error) { msg.style.color = 'var(--red)'; msg.textContent = error.message; return; }
+  msg.style.color = 'var(--green2)'; msg.textContent = 'Saved ✓';
+  await loadOrgSettings(true);
+  renderOrgFields(where, where === 'vault' ? 'vault-company' : 'settings-brand',
+                         where === 'vault' ? 'vault-company-card' : 'settings-brand-card');
+}
+
 function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
   renderPropertiesSettings();
   renderSocialShareSettings();
+  renderBrandSettings();
   const isSNOrg = getOrgId() === SN_OWNER_ORG_ID;
   const orgCard = document.getElementById('settings-org-card');
   if (orgCard) orgCard.style.display = isSNOrg ? '' : 'none';
@@ -2804,6 +2942,12 @@ async function _afterLogin(user) {
     return;
   }
 
+  // Branding is loaded at LOGIN, not only when the invoice tabs open.
+  // It drives the sidebar, guest-message sign-offs and the WhatsApp
+  // number messages are sent from — all of which are used long before
+  // anyone opens an invoice. Quiet: a missing row is a setup state, not
+  // an error to toast at someone on every sign-in.
+  await loadOrgSettings(true);
   await loadProperties();
   await loadIcalFeeds();
   await loadPropertyManuals();
@@ -4201,36 +4345,71 @@ function invRenderDatePicker() {
   pop.innerHTML = html;
 }
 
+// Invoice letterhead and payment details. EMPTY BY DEFAULT — these used
+// to be S&N's real registration number, tax number and Nedbank account,
+// which every org inherited whenever org_settings had no row or a blank
+// field. A second agency would have invoiced its customers into S&N's
+// bank account.
+//
+// Blank is the correct fallback for banking details specifically. An
+// invoice with no account number is visibly incomplete and gets fixed
+// before it goes out; an invoice with someone else's account number
+// looks perfect and sends the money to the wrong company.
 let INV_COMPANY = {
-  name:'S&N Apt Management',
-  addr:'35 Athens Road, Tableview, 7441, Cape Town',
-  reg:'2024/643198/07',
-  tax:'9008226327',
-  email:'SN_Apt_Management@outlook.com',
-  bank:{name:'S&N Apt Management',bank:'Nedbank',acc:'1292867345',type:'Current Account',branch:'198765',ref_email:'SN_Apt_Management@outlook.com'}
+  name:'', addr:'', reg:'', tax:'', email:'',
+  bank:{name:'',bank:'',acc:'',type:'',branch:'',ref_email:''}
 };
 
-async function loadOrgSettings() {
-  if (!db) { toast('org_settings: no DB connection','error'); return; }
+// Paints the org's identity onto the app shell. "HostEase Pro" stays as
+// the product name — it is the platform, not the agency — and the
+// subtitle beneath it is the agency, which is what used to be hardcoded
+// to S&N for everyone.
+function applyBrandToChrome() {
+  document.querySelectorAll('.s-logo-text').forEach(el => { el.textContent = 'HostEase Pro'; });
+  document.querySelectorAll('.s-logo small').forEach(el => { el.textContent = CLIENT_BRAND.name; });
+  const mobTitle = document.getElementById('mob-brand');
+  if (mobTitle) mobTitle.textContent = CLIENT_BRAND.name;
+}
+
+async function loadOrgSettings(quiet) {
+  if (!db) { if (!quiet) toast('org_settings: no DB connection','error'); return; }
   try {
     const { data, error } = await db.from('org_settings').select('*').limit(1);
-    if (error) { toast('org_settings error: '+error.message,'error'); return; }
-    if (!data || !data.length) { toast('org_settings: table returned 0 rows','error'); return; }
-    toast('org_settings loaded: '+data[0].business_name,'success');
+    if (error) { if (!quiet) toast('org_settings error: '+error.message,'error'); return; }
+    if (!data || !data.length) { if (!quiet) toast('org_settings: table returned 0 rows','error'); return; }
+    if (!quiet) toast('org_settings loaded: '+data[0].business_name,'success');
     const s = data[0];
+
+    // The app's identity follows the org. Anything the org has not set
+    // stays on the neutral default rather than borrowing another
+    // tenant's — see the CLIENT_BRAND declaration for why.
+    CLIENT_BRAND = {
+      name:      s.business_name || 'HostEase Pro',
+      shortName: s.short_name    || s.business_name || 'HEP',
+      website:   s.website       || '',
+      logo:      s.logo          || '🏠',
+      whatsapp:  (s.whatsapp     || '').replace(/[^0-9]/g, ''),
+      email:     s.email         || '',
+      currency:  s.currency      || 'ZAR',
+      country:   s.country       || 'ZA',
+    };
+    applyBrandToChrome();
+    // Taken straight from the org's row, with no fallback to a previous
+    // value. Falling back is what let one org's banking details survive
+    // into another's invoice.
     INV_COMPANY = {
-      name: s.business_name || INV_COMPANY.name,
-      addr: s.address || INV_COMPANY.addr,
-      reg:  s.reg_number || INV_COMPANY.reg,
-      tax:  s.tax_number || INV_COMPANY.tax,
-      email: s.email || INV_COMPANY.email,
+      name:  s.business_name || '',
+      addr:  s.address       || '',
+      reg:   s.reg_number    || '',
+      tax:   s.tax_number    || '',
+      email: s.email         || '',
       bank: {
-        name: s.account_name || INV_COMPANY.bank.name,
-        bank: s.bank_name || INV_COMPANY.bank.bank,
-        acc: s.account_number || INV_COMPANY.bank.acc,
-        type: s.account_type || INV_COMPANY.bank.type,
-        branch: s.branch_code || INV_COMPANY.bank.branch,
-        ref_email: s.email || INV_COMPANY.bank.ref_email,
+        name:      s.account_name   || '',
+        bank:      s.bank_name      || '',
+        acc:       s.account_number || '',
+        type:      s.account_type   || '',
+        branch:    s.branch_code    || '',
+        ref_email: s.email          || '',
       },
     };
   } catch(e) { console.warn('loadOrgSettings:', e); }
@@ -5587,6 +5766,7 @@ const ROADMAP = [
   {k:"p3-17",t:"Inspections automatically raise an owner-visible task (851)",n:"DONE (2026-07-31). Owner: 'i love the overview from Nina's report - can you automatically do that whenever a report is submitted? I did ask her to use the platform moving forward.' raise_inspection_task() turns a submitted inspection into a task when it finds breakages, flagged checklist items, or a poor/fair rating - and shares it with the owner, because someone told about a problem should be able to watch it to done rather than have to ask. Nina's May report said 'light switch in small bathroom cracked - needs replacement (still pending)' and NOTHING ANYWHERE TRACKED IT; a report is a record of a moment, a task is what gets chased. Built as a SECURITY DEFINER RPC rather than an insert from the page because Nina's portal signs in with a PIN, not a Supabase session, so it calls as anon and every policy on tasks requires an authenticated role - a direct insert is simply rejected. Follows the existing convention for exactly that case (get_outside_clean_info, submit_outside_inventory, get_staff_portal_roster). The function takes ONLY an inspection id and reads org, property and text from that row, so the browser cannot choose what gets written or which org it lands in, and it is idempotent on property_inspections.task_created so one inspection raises at most one task. Breakages are high priority and lead the title; a flagged item or middling rating is normal and must not cry wolf. A clean report raises nothing - an empty task per inspection would train everyone to ignore the board. Verified against Nina's real May row on staging: it produced 'Repair: Light switch in small bathroom cracked...', high, maintenance, client_visible, and a second call created nothing.",c:"HEP"},
   {k:"p3-18",t:"A new org saw S&N's properties on its dashboard",n:"DONE (2026-07-31) - reported live by the owner: 'i just logged into the test-owner email and it shows the same dashboard as for the tv house owners.. that's wrong'. NOT a data leak, and that was checked FIRST by impersonating that account against RLS: it returns 0 properties, 0 bookings, 0 tasks, 0 cleans, 0 inspections, 0 earnings and 1 profile (its own). The database is correctly isolated. The defect was in the UI: loadProperties() kept the HARDCODED PROPS/UUID_MAP fallback whenever the fetch succeeded but returned zero rows, on the reasoning that a brand-new org legitimately has no properties yet. The effect was that another agency's owner saw 'Speranta Flat' and 'TV House' - with S&N's real street addresses - in their property switcher and across their dashboard. Indefensible in a product sold to other agencies, and alarming enough that it was first read as a leak. Zero rows now clears PROPS and UUID_MAP and shows an explicit 'No properties yet' state with a button to add one. The hardcoded values remain as a fallback for a FAILED fetch, which is a real resilience case - a working fetch returning nothing is not. NOTE the same class of problem remains in CLIENT_BRAND: a new org still sees S&N's name, WhatsApp number and email as the app chrome. That is p3-5 (white-label per org) and should be treated as a blocker before any agency other than S&N is given a login.",c:"Bug"},
   {k:"p3-19",t:"Which platforms the agency collects money for (860)",n:"DONE (2026-07-31). Owner, correcting a wrong conclusion of mine: \"I don't know if it needs to be flagged. Maybe it should be in the settings of agencies report on their clients finances. As we don't do that with the TV house and hence we don't care if their numbers come in. They set up bookingcom themselves (most their revenue), whereas we set up Airbnb and LekkeSlaap. So that money only comes through us and we report back to them.\" I had read TV House's 16 Booking.com bookings with zero revenue as BROKEN DATA and was about to add a warning to Reports for it. It is not broken - it is OUT OF SCOPE, and the warning would have nagged forever about something nobody wants. properties.revenue_platforms (860) records which platforms' MONEY flows through the agency, which is a different question from which platforms a property is LISTED on; conflating the two is what produced the wrong conclusion. For TV House the agency manages the stays on every channel - cleaning, guests, turnovers, calendar - but the money only on Airbnb, LekkeSlaap and direct. NULL means all platforms, so every existing property behaves as before and a new one needs no decision until the arrangement actually differs. Set from Settings > Properties with a tick per platform; all four ticked stores NULL rather than the full list, so a platform added later is included automatically instead of silently excluded by a list written before it existed. THE CLIENT-FACING HALF MATTERS MOST: without this the TV House owner logs in, sees a total covering Airbnb and LekkeSlaap only, and reasonably concludes their manager has lost most of their money. The income card now names both sides - 'Airbnb, LekkeSlaap, Direct - collected by us on your behalf' and 'Booking.com - paid directly to you, not shown here' - in all five languages, and the stat card subtitle says what the figure covers. Average per night also now divides by the nights on platforms the agency is actually PAID for; including the Booking.com nights would have reported a nightly rate a fraction of the real one. Nights, occupancy and the platform mix deliberately still count EVERY channel, because the agency does manage those stays - only the money is scoped. GENERALISES: every agency HEP is sold to will have this split, some properties where they run all the channels and some where the owner keeps one.",c:"Business"},
+  {k:"p3-20",t:"White-label: the app belongs to the org, not to S&N (870)",n:"DONE (2026-07-31). Closes the blocker recorded in p3-18. HEP is sold to other agencies but still hardcoded S&N everywhere: the sidebar subtitle, the WhatsApp number guest messages are SENT from, the sign-off on those messages, and - the one that is not cosmetic - INV_COMPANY, whose fallback carried S&N's registration number, tax number and NEDBANK ACCOUNT. org_settings already existed and invoices already read it, but every field fell back to S&N's value when the row was missing or blank, and only S&N had a row. A second agency would have invoiced its customers into S&N's bank account. That is a money-routing bug wearing a branding bug's clothes, and the same shape of mistake as the hardcoded PROPS fallback: A DEFAULT THAT IS ONE TENANT'S REAL DATA IS NEVER A SAFE DEFAULT. 870 adds short_name, logo, whatsapp, website and country to org_settings, backfills S&N from the values that were hardcoded so nothing changes for them, and gives EVERY org a row so 'no row' stops meaning 'inherit S&N'. In the app, CLIENT_BRAND and INV_COMPANY now default to neutral/blank and are filled from the org at LOGIN rather than only when an invoice tab opens - branding drives the sidebar and guest messaging, which are used long before anyone opens an invoice. Blank is deliberate for banking: an invoice with no account number is visibly incomplete and gets fixed, while an invoice with someone else's account number looks perfect and sends the money to the wrong company. Editing is SPLIT across two screens on purpose - identity in Settings, and address, registration, tax and banking under Business Info, which is admin-only. That honours the existing decision that moved banking off the general Settings page, and each screen saves only its own fields so editing a business name cannot blank the bank account. A warning shows when banking is incomplete. VERIFIED in a browser with two orgs: S&N unchanged (name, WhatsApp 27636021847, account 1292867345, reg 2024/643198/07, sidebar), and a fresh org sees its OWN name with empty WhatsApp, empty bank account and empty registration number - nothing inherited. STILL HARDCODED and tracked in p2-18: the domestic staff portal URL and its S&N-scoped RPCs, which need org-scoped portal links rather than a settings field.",c:"Architecture"},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
@@ -8483,7 +8663,15 @@ function setMsgSubTab(tab) {
 // mark-as-sent tracking (reuses booking_checklists — see 260 migration for
 // the one new column, mid_stay_msg_at; the other three stages reuse
 // existing columns via toggleNinaTask's COL_MAP).
-const WA_NUMBER = '27636021847'; // Nicole — shared WhatsApp Business line for all guest messaging
+// The number guest messages are sent FROM. Reads the org's own value
+// (migration 870) rather than a hardcoded one — this used to be S&N's
+// line for every org, so another agency's guests would have been
+// messaged from S&N's WhatsApp.
+//
+// A getter, not a captured constant: CLIENT_BRAND is replaced wholesale
+// when org_settings loads, and a const read at parse time would have
+// frozen the empty pre-login default.
+function waNumber() { return CLIENT_BRAND.whatsapp || ''; }
 
 // Single delivery point for every guest WhatsApp send in the app. Message
 // *building* (below) is kept completely separate from message *delivery*
@@ -8614,7 +8802,7 @@ We hope you enjoyed your stay at ${propName(b.property_id)}! We'd love your feed
 🎁 And next time, book directly and save: use code *RETURN10* for 10% off at ${BOOKING_SITE_URL} — no platform fees, best rate guaranteed.
 
 Hope to host you again soon! 🌊
-S&N Apt Management`;
+${CLIENT_BRAND.name}`;
   },
   af: function(b) {
     return `Hallo ${guestFirstName(b)} 😊
@@ -8624,7 +8812,7 @@ Ons hoop jy het jou verblyf by ${propName(b.property_id)} geniet! Ons stel jou t
 🎁 En volgende keer, bespreek direk en bespaar: gebruik kode *RETURN10* vir 10% afslag by ${BOOKING_SITE_URL} — geen platformfooie nie, beste tarief gewaarborg.
 
 Hoop om jou binnekort weer te gasheer! 🌊
-S&N Apt Management`;
+${CLIENT_BRAND.name}`;
   },
 };
 function buildMidStayMsg(b)    { return pickMsg(MID_STAY_MSG)(b); }
@@ -8738,7 +8926,7 @@ function sendGuestTouchpoint(bookingId, stageKey) {
   if (!b) return;
   const stage = getGuestTouchpoints(b).find(s => s.key === stageKey);
   if (!stage) return;
-  deliverWhatsAppMessage(WA_NUMBER, stage.message);
+  deliverWhatsAppMessage(waNumber(), stage.message);
   // Marks sent unless already sent — a "ticked off (not sent)" stage that
   // does get sent after all upgrades to properly sent (toggleNinaTask
   // clears the yellow-state flag as part of the same write).
@@ -11004,6 +11192,8 @@ let _vaultExpanded = new Set(); // entries the admin has clicked to reveal, this
 
 function renderVault() {
   if (!currentUser) return;
+  // Company and banking sit above the free-text records on this tab.
+  renderCompanyBanking();
   const el = document.getElementById('vault-content');
   if (!el) return;
 
