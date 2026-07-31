@@ -8881,7 +8881,24 @@ function renderActualIncome(cutoff, fmt) {
   const el = document.getElementById('report-actuals');
   if (!el) return;
   const rows = platformEarnings.filter(e => !cutoff || !e.period_end || e.period_end >= cutoff);
-  if (!rows.length) { el.innerHTML = ''; return; }
+  // Nothing uploaded yet: still show the way in. The first version of
+  // this rendered nothing at all, which hid the only pointer to
+  // statement upload behind having already uploaded a statement — the
+  // feature was undiscoverable from the tab where its results appear.
+  if (!rows.length) {
+    el.innerHTML = `<div class="card mb-6">
+      <div class="card-title" style="margin-bottom:6px">💰 Actual income — from platform statements</div>
+      <div class="text-muted" style="font-size:.8rem;line-height:1.6;margin-bottom:12px">
+        Every figure on this page is estimated from booking rates. Upload an Airbnb or LekkeSlaap
+        statement (as a PDF) and its real figures are read out, checked by you, and shown here as
+        your actual income.
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="switchTab('invoices');setTimeout(()=>switchInvoiceSub('documents'),50)">
+        📤 Upload a statement
+      </button>
+    </div>`;
+    return;
+  }
 
   const money = n => 'R ' + Number(n||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   const totalNet = rows.reduce((s,r) => s + Number(r.net_earnings||0), 0);
