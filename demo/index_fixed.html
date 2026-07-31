@@ -5199,6 +5199,7 @@ const ROADMAP = [
   {k:'p2-28',t:'Build the S&N management company site',n:'OPEN — the owner-facing pitch, to live at snapartments.co.za once p2-24 frees the domain. Differentiators to lead with: languages (English, German, Polish, some Spanish; Czech clients) for foreign owners who own SA property but live in Europe, and a real live owner dashboard (HEP), which almost no small manager can offer. The \'management\' page shape already exists in SITE_PAGES (headline, subhead, languages line, what\'s included, pricing note, CTA), so the content can be written in HEP before the site renders it. Decisions still open, previously asked and not yet answered: whether to publish \'from\' prices or full tiers or stay enquiry-only, and whether the page is English-only (fastest, and foreign owners searching SA property mostly search in English) or fully translated.',c:'GTM'},
   {k:'p2-29',t:'Repo/database drift on is_org_admin',n:'OPEN, FOUND 2026-07-30 while building 750 — the repo\'s 070_is_org_admin_fix.sql reads public.user_profiles (p.user_id = auth.uid()), but the LIVE function in BOTH databases reads public.profiles (p.id = auth.uid()). user_profiles is empty in prod; profiles holds the three real users. The live definition is the one that works, and every admin-only policy in the system depends on it — so a rebuild from the repo\'s migrations alone would produce a database where is_org_admin returns false for everyone and every admin-only tab silently empties. has_permission (750) deliberately matches the LIVE definition. Fix is to reconcile the migration file with reality (and check whether current_org_id has drifted the same way — its live body also reads profiles), but that touches every admin policy so it deserves its own change and its own verification.',c:'Architecture'},
   {k:'p2-30',t:'Rotate the exposed TV House lockbox code and WiFi password',n:'OPEN, OWNER ACTION — p2-17 moved these out of the page source, but that stops FUTURE exposure only. The lockbox code (7021) and the WiFi password were served in the public HTML to every visitor for as long as the page was live, and they remain in git history. They should be CHANGED at the property. Since 690 the change is a data edit in Property Manual > Access & Welcome rather than a code deploy, so this is now a two-minute job.',c:'Security'},
+  {k:'p2-31',t:'Statement shape differs per platform — one file can cover several properties',n:'OPEN, observed by the owner 2026-07-31 on the first real upload — an Airbnb earnings report covers EVERY home on the account (the June 2026 file produced two rows: Speranta R2,466.56 and TV House R0.00), whereas a LekkeSlaap statement is for a SINGLE property named at the top. So one uploaded document legitimately yields N earnings rows, and the document\'s own \'Property\' dropdown is only a label for the file — it deliberately does NOT constrain which properties the figures land against, because tying a multi-home report to one dropdown choice would silently discard the others. Two things to decide: (1) whether zero-value rows should be saved at all — keeping them distinguishes \'earned nothing\' from \'no data\', which is real information, but it puts R0.00 rows in Reports that read as noise; (2) whether the review step should let the user untick listings before saving, which would cover both the zero-row case and an owner who manages only some of the homes on an Airbnb account. Neither is a bug today; the behaviour is correct but surprising, and it will be more surprising with more properties. Worth revisiting before onboarding a client whose Airbnb account also contains properties S&N does not manage — that is the case where saving every home would be wrong.',c:'HEP'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
@@ -8881,7 +8882,24 @@ function renderActualIncome(cutoff, fmt) {
   const el = document.getElementById('report-actuals');
   if (!el) return;
   const rows = platformEarnings.filter(e => !cutoff || !e.period_end || e.period_end >= cutoff);
-  if (!rows.length) { el.innerHTML = ''; return; }
+  // Nothing uploaded yet: still show the way in. The first version of
+  // this rendered nothing at all, which hid the only pointer to
+  // statement upload behind having already uploaded a statement — the
+  // feature was undiscoverable from the tab where its results appear.
+  if (!rows.length) {
+    el.innerHTML = `<div class="card mb-6">
+      <div class="card-title" style="margin-bottom:6px">💰 Actual income — from platform statements</div>
+      <div class="text-muted" style="font-size:.8rem;line-height:1.6;margin-bottom:12px">
+        Every figure on this page is estimated from booking rates. Upload an Airbnb or LekkeSlaap
+        statement (as a PDF) and its real figures are read out, checked by you, and shown here as
+        your actual income.
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="switchTab('invoices');setTimeout(()=>switchInvoiceSub('documents'),50)">
+        📤 Upload a statement
+      </button>
+    </div>`;
+    return;
+  }
 
   const money = n => 'R ' + Number(n||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   const totalNet = rows.reduce((s,r) => s + Number(r.net_earnings||0), 0);

@@ -438,6 +438,21 @@ cd frontend && npm start
 
 ## 🚀 Deployment
 
+### Environments
+
+Two Vercel deployments off two branches. `demo/config.js` is the **only**
+file that differs between them — it points each build at its own Supabase
+project. When promoting `staging` → `main`, keep main's copy of that file,
+or the live app ends up talking to the staging database.
+
+| | Branch | URL | Supabase project |
+|---|---|---|---|
+| **Production** | `main` | https://hosteasepro-frontend.vercel.app | `dkyzbzlshrxdwetykmdo` |
+| **Staging / test** | `staging` | https://hosteasepro-frontend-git-staging-nicole-babczyks-projects.vercel.app | `rwsfbgtvqbkunbfvviiz` (hep-staging) |
+
+Migrations are applied by hand to **both** projects (staging first, then
+production once verified) — see `supabase/migrations/README.md`.
+
 ### Production Checklist
 1. Set NODE_ENV=production
 2. Use strong JWT_SECRET
