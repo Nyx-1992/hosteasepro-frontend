@@ -8,6 +8,9 @@
     { "source": "/outside-cleaner.html", "destination": "/demo/outside-cleaner.html" },
     { "source": "/outside-cleaner", "destination": "/demo/outside-cleaner.html" },
     { "source": "/speranta-cleaning-guide.pdf", "destination": "/demo/guides/speranta-cleaning-guide.pdf" },
+    { "source": "/welcome", "destination": "/demo/welcome.html" },
+    { "source": "/signup", "destination": "/demo/welcome.html" },
+    { "source": "/pricing", "destination": "/demo/welcome.html" },
     { "source": "/manifest.json", "destination": "/demo/manifest.json" },
     { "source": "/sw.js", "destination": "/demo/sw.js" },
     { "source": "/(.*)", "destination": "/demo/index_fixed.html" }

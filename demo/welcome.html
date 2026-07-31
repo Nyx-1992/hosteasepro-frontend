@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>HostEase Pro — property management software for small agencies</title>
+<meta name="description" content="Run every property, cleaner and booking from one place. Owners get their own live dashboard. One week free, no card needed."/>
+<style>
+/* Same faces as the app, so the marketing page and the product do not
+   look like two different companies. */
+@font-face{font-family:"DM Serif Display";src:url(/demo/fonts/Tektur-Medium.ttf) format("truetype");font-weight:400 700;font-display:swap}
+@font-face{font-family:"DM Sans";src:url(/demo/fonts/Jura-Light.ttf) format("truetype");font-weight:300 400;font-display:swap}
+@font-face{font-family:"DM Sans";src:url(/demo/fonts/Jura-Medium.ttf) format("truetype");font-weight:500 700;font-display:swap}
+:root{
+  --ink:#12233a; --muted:#61748c; --line:#e2e8f0; --bg:#f7f9fb; --card:#fff;
+  --accent:#c8922e; --accent-dark:#a8761d; --navy:#12233a; --green:#15803d;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"DM Sans",system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:"DM Serif Display",Georgia,serif;line-height:1.15;font-weight:700}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+.btn{display:inline-block;padding:13px 26px;border-radius:10px;font:inherit;font-weight:700;font-size:.95rem;cursor:pointer;border:none;text-decoration:none;transition:transform .12s,box-shadow .12s}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(200,146,46,.3)}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+
+nav{position:sticky;top:0;z-index:20;background:rgba(247,249,251,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px;gap:16px}
+.logo{font-family:"DM Serif Display",serif;font-size:1.15rem;font-weight:700}
+.logo span{color:var(--accent)}
+
+.hero{padding:72px 0 56px;text-align:center}
+.hero h1{font-size:clamp(2rem,5vw,3.2rem);margin-bottom:18px}
+.hero p.lead{font-size:clamp(1rem,2.2vw,1.2rem);color:var(--muted);max-width:660px;margin:0 auto 30px}
+.pill{display:inline-block;background:#eaf6ee;color:var(--green);border:1px solid #b7e0c4;border-radius:999px;padding:5px 14px;font-size:.8rem;font-weight:700;margin-bottom:18px}
+.hero-note{font-size:.82rem;color:var(--muted);margin-top:14px}
+
+section{padding:56px 0}
+.section-head{text-align:center;max-width:640px;margin:0 auto 38px}
+.section-head h2{font-size:clamp(1.5rem,3.4vw,2.1rem);margin-bottom:10px}
+.section-head p{color:var(--muted)}
+
+.grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px}
+.card h3{font-size:1.05rem;margin-bottom:8px}
+.card p{color:var(--muted);font-size:.92rem}
+.card .ico{font-size:1.5rem;display:block;margin-bottom:12px}
+
+.plans{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));align-items:stretch}
+.plan{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:26px;display:flex;flex-direction:column}
+.plan.featured{border-color:var(--accent);box-shadow:0 8px 30px rgba(200,146,46,.14);position:relative}
+.plan.featured::after{content:"Most agencies";position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:.68rem;font-weight:700;padding:3px 12px;border-radius:999px;letter-spacing:.03em}
+.plan .name{font-weight:700;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.plan .price{font-family:"DM Serif Display",serif;font-size:2.3rem;margin:8px 0 2px}
+.plan .price small{font-size:.85rem;font-family:"DM Sans",sans-serif;color:var(--muted);font-weight:400}
+.plan ul{list-style:none;margin:16px 0 22px;font-size:.9rem}
+.plan li{padding:6px 0 6px 24px;position:relative;color:var(--muted)}
+.plan li::before{content:"✓";position:absolute;left:0;color:var(--green);font-weight:700}
+.plan .btn{margin-top:auto;text-align:center}
+
+.owner-band{background:var(--navy);color:#fff;border-radius:18px;padding:44px 32px;text-align:center}
+.owner-band h2{color:#fff;font-size:clamp(1.4rem,3vw,2rem);margin-bottom:12px}
+.owner-band p{color:#c4d2e2;max-width:620px;margin:0 auto 8px}
+
+form{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px;max-width:520px;margin:0 auto}
+label{display:block;font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:5px}
+input{width:100%;padding:11px 13px;border:1.5px solid var(--line);border-radius:9px;font:inherit;font-size:.95rem;margin-bottom:15px;background:#fbfcfd}
+input:focus{outline:none;border-color:var(--accent);background:#fff}
+.form-msg{font-size:.88rem;margin-top:12px;min-height:20px}
+.form-note{font-size:.78rem;color:var(--muted);margin-top:12px;text-align:center}
+
+footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:var(--muted);font-size:.85rem}
+@media(max-width:640px){.hero{padding:48px 0 40px}section{padding:40px 0}.owner-band{padding:32px 20px}}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <div class="logo">🏠 HostEase <span>Pro</span></div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <a class="btn btn-ghost" href="/" style="padding:9px 18px;font-size:.88rem">Sign in</a>
+    <a class="btn btn-primary" href="#start" style="padding:9px 18px;font-size:.88rem">Start free</a>
+  </div>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <div class="pill">One week free · no card needed</div>
+  <h1>Every property, cleaner and booking<br>in one place</h1>
+  <p class="lead">
+    HostEase Pro is built for small property-management agencies — the ones running a handful of
+    homes across Airbnb, Booking.com and LekkeSlaap, with a cleaning team to coordinate and owners
+    to report back to.
+  </p>
+  <a class="btn btn-primary" href="#start">Start your free week</a>
+  <div class="hero-note">No credit card. Nothing to cancel if you walk away.</div>
+</div></header>
+
+<section><div class="wrap">
+  <div class="section-head">
+    <h2>What it actually does</h2>
+    <p>Not a booking engine and not a spreadsheet. The operational middle, which is where the day goes.</p>
+  </div>
+  <div class="grid">
+    <div class="card"><span class="ico">📅</span><h3>Every calendar, synced</h3>
+      <p>Airbnb, Booking.com and LekkeSlaap pull in over iCal, so one view shows what is actually booked and a double-booking cannot creep in.</p></div>
+    <div class="card"><span class="ico">🧹</span><h3>Cleaners who know the plan</h3>
+      <p>Turnovers schedule themselves off checkouts. Your team gets a phone-friendly portal to log cleans, submit inventory and mark availability — no app to install.</p></div>
+    <div class="card"><span class="ico">💬</span><h3>Guest messages, on time</h3>
+      <p>Pre-arrival, mid-stay and post-stay messages ready to send, with door codes and WiFi filled in per property — and kept out of the page source.</p></div>
+    <div class="card"><span class="ico">💰</span><h3>Real income, not estimates</h3>
+      <p>Upload a platform statement and it reads the figures — gross, commission, fees, what actually landed. Reconciled against your own bookings.</p></div>
+    <div class="card"><span class="ico">🔍</span><h3>Inspections that go somewhere</h3>
+      <p>A report that finds a cracked light switch raises a task, shared with the owner, tracked to done. Photos attached.</p></div>
+    <div class="card"><span class="ico">🔐</span><h3>Roles you control</h3>
+      <p>Tick who can see pay, edit the website or upload statements. The database enforces it, so hiding a button is not the whole story.</p></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="owner-band">
+    <h2>Your owners get their own dashboard</h2>
+    <p>
+      Income, occupancy, an availability calendar colour-coded by platform, cleaning history and
+      inspection reports — for their property only, in their own language. English, German, Czech,
+      Polish and Spanish.
+    </p>
+    <p style="margin-top:14px">
+      It is the thing almost no small agency can offer, and it is the reason owners stay.
+    </p>
+  </div>
+</div></section>
+
+<section id="pricing"><div class="wrap">
+  <div class="section-head">
+    <h2>Pricing</h2>
+    <p>Per agency, per month. Every plan includes the owner dashboards and the staff portal.</p>
+  </div>
+  <div class="plans">
+    <div class="plan">
+      <div class="name">Starter</div>
+      <div class="price">R350<small> /month</small></div>
+      <ul><li>Up to 3 properties</li><li>Calendar sync &amp; cleaning</li><li>Guest messaging</li><li>Owner dashboards</li></ul>
+      <a class="btn btn-ghost" href="#start">Start free</a>
+    </div>
+    <div class="plan featured">
+      <div class="name">Growth</div>
+      <div class="price">R550<small> /month</small></div>
+      <ul><li>Up to 10 properties</li><li>Everything in Starter</li><li>Statement reading &amp; reports</li><li>Roles &amp; permissions</li></ul>
+      <a class="btn btn-primary" href="#start">Start free</a>
+    </div>
+    <div class="plan">
+      <div class="name">Pro</div>
+      <div class="price">R750<small> /month</small></div>
+      <ul><li>Unlimited properties</li><li>Everything in Growth</li><li>Your branding on invoices</li><li>Priority support</li></ul>
+      <a class="btn btn-ghost" href="#start">Start free</a>
+    </div>
+  </div>
+  <p style="text-align:center;color:var(--muted);font-size:.85rem;margin-top:22px">
+    Prices exclude VAT. If your trial ends the app stays readable — your data is never held hostage.
+  </p>
+</div></section>
+
+<section id="start"><div class="wrap">
+  <div class="section-head">
+    <h2>Start your free week</h2>
+    <p>Takes a minute. No card, and nothing to cancel if it is not for you.</p>
+  </div>
+  <form onsubmit="return doSignup(event)">
+    <label for="su-business">Your business name</label>
+    <input id="su-business" placeholder="e.g. Cape Coast Property Co" autocomplete="organization" required/>
+
+    <label for="su-name">Your name</label>
+    <input id="su-name" placeholder="e.g. Nicole Babczyk" autocomplete="name" required/>
+
+    <label for="su-email">Email</label>
+    <input id="su-email" type="email" placeholder="you@yourcompany.co.za" autocomplete="email" required/>
+
+    <label for="su-password">Password</label>
+    <input id="su-password" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required/>
+
+    <button class="btn btn-primary" id="su-btn" style="width:100%" type="submit">Create my account</button>
+    <div class="form-msg" id="su-msg"></div>
+    <div class="form-note">Already have an account? <a href="/" style="color:var(--accent);font-weight:700">Sign in</a></div>
+  </form>
+</div></section>
+
+<footer><div class="wrap">
+  HostEase Pro · built in Cape Town for small property-management agencies
+</div></footer>
+
+<script>
+async function doSignup(e) {
+  e.preventDefault();
+  const btn = document.getElementById('su-btn');
+  const msg = document.getElementById('su-msg');
+  const body = {
+    business: document.getElementById('su-business').value.trim(),
+    name:     document.getElementById('su-name').value.trim(),
+    email:    document.getElementById('su-email').value.trim(),
+    password: document.getElementById('su-password').value,
+  };
+  btn.disabled = true; btn.textContent = 'Creating your account…';
+  msg.style.color = 'var(--muted)'; msg.textContent = '';
+  try {
+    const r = await fetch('/api/signup', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const out = await r.json();
+    if (!r.ok) throw new Error(out.error || 'Something went wrong.');
+    msg.style.color = 'var(--green)';
+    msg.textContent = 'Done — your ' + out.trialDays + '-day trial has started. Taking you to sign in…';
+    // Deliberately NOT auto-signed-in: the password they just chose is
+    // the one they have to remember, and typing it once at the real sign-in
+    // screen is what makes that stick.
+    setTimeout(() => { window.location.href = '/'; }, 1800);
+  } catch (err) {
+    msg.style.color = '#dc2626'; msg.textContent = err.message;
+    btn.disabled = false; btn.textContent = 'Create my account';
+  }
+  return false;
+}
+</script>
+</body>
+</html>
