@@ -5240,7 +5240,7 @@ const ROADMAP = [
   {k:'p2-30',t:'Rotate the exposed TV House lockbox code and WiFi password',n:'OPEN, SCHEDULED — owner confirmed 2026-07-31 that the code will be changed AFTER THE NEXT CHECKOUT, roughly a month out, because guests are in the house now. That is the right call: changing a lockbox code mid-stay strands the current guests. 690 already moved the values out of the page source so nothing new is being exposed; what remains is that the old code (7021) and the WiFi password were publicly readable for as long as the pre-rotation page was live and are still in git history. When the guests leave: change the physical lockbox, then update Property Manual > Access & Welcome (a data edit, no deploy). Do not close this until the physical code has actually changed.',c:'Security'},
   {k:'p2-31',t:'Statement shape differs per platform — one file can cover several properties',n:'PARTLY DONE (2026-07-31). Observed by the owner on the first real upload: an Airbnb earnings report covers EVERY home on the account (the June 2026 file produced two rows, Speranta R2,466.56 and TV House R0.00), whereas a LekkeSlaap statement names a single property. So one document legitimately yields N earnings rows, and the document\'s own Property dropdown is only a label for the file — it deliberately does not constrain which properties the figures land against, since tying a multi-home report to one dropdown choice would silently discard the rest. BUILT: when a statement covers more than one property the review step now shows a checkbox per listing, all ticked by default (unticking by default would lose real data silently). Only ticked listings are saved, only they require a property mapping, and alias learning is restricted to them too — remembering the name of a listing the user deliberately excluded would auto-map it next time and quietly undo their choice. This covers the case that actually matters: a client whose Airbnb account also holds properties S&N does not manage. STILL OPEN, deliberately: zero-value rows are still saved by default. Keeping them distinguishes \'earned nothing\' from \'no data\', which is real information, but it does put R0.00 rows in Reports. Revisit if it becomes noisy with more properties.',c:'HEP'},
   {k:'p2-32',t:'Staff + Contacts merged into one People tab, with an organogram',n:'DONE (2026-07-31). The owner\'s read was right: Staff (tab-staff) and Contacts (tab-team) were TWO NAV ENTRIES OVER ONE TABLE, public.team_contacts, differing only by which categories each showed. Merged into a single People tab. The employed-vs-external distinction was worth keeping and survives as a filter (All / Team / Suppliers); only the duplicated navigation is gone. Employed people keep the richer staff card (rate, payment, assigned properties, birthday, portal access) since that detail was the reason Staff existed; suppliers and contractors keep the contact card with its sub-contacts. A Chart view renders the same people as an organogram: Owners / Management / Domestic tiers with connectors, each node showing assigned properties and portal access, and external people shown separately below a dashed rule as explicitly not employed. Tiers are INFERRED from cat plus owner/director/principal wording in the role field rather than a new reports_to column — at this team size an inferred hierarchy is correct and a schema change to state it would be ceremony; if it ever mis-sorts someone, the fix is an explicit reports_to column, not more pattern matching. The UI says the lines are inferred rather than implying they were configured. IMPLEMENTATION NOTE for whoever touches this next: renderTeam() and renderStaffTab() survive as delegating shims that call renderPeople(), because seven save/delete handlers across the file call them to refresh after a change — repointing every call site would have been seven edits and one missed call away from a silently stale list. The old \'team\' and \'staff\' tab ids also redirect to \'people\' so saved state and stray links still land somewhere sensible. Verified with representative data: all seven people appear in both views, Team/Suppliers split 5/2, and nobody is lost from either. UPDATE 2026-07-31 (owner testing): People is now visible to HOSTS too — "I would expect Nina to see the contacts if she needs to contact someone." No policy change was needed: team_contacts has always allowed any org member to SELECT and restricted writes to admins (520). What DID need care is that staff cards carry more than contact details — cleaner rate, payment method, birthday, portal-access flag, and free-text notes. The notes are why this became a permission rather than a plain role check: the real records write the rate out in prose ("Paid via ewallet directly. Rate: R350/clean."), so hiding the rate field while showing notes would have leaked precisely what was being hidden. New permission people.pay (780) gates all five together, ON for admin and OFF for host by default, so the owner can grant it in Settings > Permissions without a developer. Add/Invite buttons and the per-card edit/delete controls are hidden for non-admins, since those writes would fail at the policy anyway. IMPORTANT AND DELIBERATE LIMITATION: people.pay is enforced in the UI ONLY, unlike website.edit / budget.* / statements.upload which are backed by RLS. Postgres RLS gates ROWS, not COLUMNS, and the sensitive values sit in columns of a row the host is legitimately allowed to read — so a host who opened the browser console could still read the rate off the API response. Making it a real boundary needs column-level grants or an admin-only view; worth doing if pay data ever becomes genuinely sensitive here, and not worth pretending is already done. Also fixed while in there: the card\'s colour band now follows the CATEGORY rather than whether cleaner_rate happens to be filled in, which had been giving caretakers a different colour from cleaners for no reason a viewer could infer — the thing that made the Domestic group look jumbled. Owner confirmed the organogram tiers match reality: everyone reports to Nicole and Silja as owners, with Nina as manager.',c:'Architecture'},
-  {k:'p2-33',t:'Website editor preview is an approximation until the site reads from site_content',n:'PARTLY DONE (2026-07-31). Owner feedback: \'for the marketing - it doesn\'t seem connected to the webpage yet, one should see the webpage and see a preview of what one edits!\' — correct, and the disconnect is p2-26. BUILT NOW: a live preview panel under the website editor that redraws as you type, in a browser-chrome frame, using the real site\'s palette and type taken from snapartments-frontend\'s tailwind config (ocean #0E4D6B, seafoam #4ABBA5, sand #F5EFE0, coral #E8604C, Playfair display face). Home and the management pitch render as a hero (badge/languages pill, headline, subhead, CTA) over the section beneath; About and Contact render their own shapes, with the WhatsApp number as a real-looking button; SEO renders as a Google search result with a character count that warns past 160, since a browser title and meta description are never seen on the page itself. It is LABELLED as an approximation in the UI rather than pretending to be the live page — a preview that quietly lies is worse than none. It becomes a TRUE preview once p2-26 lands and the Next.js site renders from site_content; at that point consider replacing this hand-drawn version with an iframe of the real page in draft mode, which is the only way for it to stay accurate as the site\'s design changes.',c:'Website'},
+  {k:'p2-33',t:'Website editor preview is an approximation until the site reads from site_content',n:'PARTLY DONE (2026-07-31). Owner feedback: \'for the marketing - it doesn\'t seem connected to the webpage yet, one should see the webpage and see a preview of what one edits!\' — correct, and the disconnect is p2-26. BUILT NOW: a live preview panel under the website editor that redraws as you type, in a browser-chrome frame, using the real site\'s palette and type taken from snapartments-frontend\'s tailwind config (ocean #0E4D6B, seafoam #4ABBA5, sand #F5EFE0, coral #E8604C, Playfair display face). Home and the management pitch render as a hero (badge/languages pill, headline, subhead, CTA) over the section beneath; About and Contact render their own shapes, with the WhatsApp number as a real-looking button; SEO renders as a Google search result with a character count that warns past 160, since a browser title and meta description are never seen on the page itself. It is LABELLED as an approximation in the UI rather than pretending to be the live page — a preview that quietly lies is worse than none. It becomes a TRUE preview once p2-26 lands and the Next.js site renders from site_content; at that point consider replacing this hand-drawn version with an iframe of the real page in draft mode, which is the only way for it to stay accurate as the site\'s design changes. UPDATE 2026-07-31 — owner: "the text should pre-populate of what\'s currently in and be like to like of the webpage." Both done. (1) PRE-POPULATED: migration 800 seeds site_content with the copy ACTUALLY ON THE SITE, transcribed verbatim from the live Next.js source (snapartments-frontend @ eb30ca7) — hero badge/headline/accent/subhead/both buttons, the whole \'why book direct\' band incl. all three benefit cards, the closing section, About, Contact and the SEO strings. 26 fields across four pages, verified none blank. Seeded under site_key \'bookings\' because that is what snapartments.co.za currently IS; the \'company\' key stays empty for the management pitch (p2-28). Seeded published=false on purpose — the public site does not read this table yet (p2-26), so marking it published would assert something untrue, and when the site IS wired up publishing should be a human decision rather than a side effect of an old migration. (2) LIKE-FOR-LIKE: SITE_PAGES was restructured to mirror the real page rather than a generic shape (headline + seafoam accent line, two CTAs, eyebrow, three benefit cards, closing band), grouped into labelled sections in the form; the preview now redraws that same structure in the site\'s own palette and order. NOTE the seed exposes the site\'s half-finished rebrand rather than hiding it: home and SEO still say \'Nestora\' while About already says \'S&N Apt Management\'. Left verbatim because this table\'s job is to reflect what visitors actually see — and it is now fixable in the editor without a deploy, once the new booking-site name is chosen (p2-24).',c:'Website'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
@@ -10817,16 +10817,28 @@ async function setPermission(role, permission, allowed) {
 // sense if the site renders it — but the VALUES all live in Supabase.
 const SITE_PAGES = {
   home: { label:'Home', fields:[
-    {k:'badge',    label:'Top badge',     type:'text',     hint:'Small pill above the headline'},
-    {k:'headline', label:'Headline',      type:'text'},
-    {k:'subhead',  label:'Sub-headline',  type:'textarea'},
-    {k:'cta_label',label:'Button text',   type:'text'},
-    {k:'intro_title', label:'Section title', type:'text'},
-    {k:'intro_body',  label:'Section text',  type:'textarea'},
+    {sec:'Hero', k:'badge',        label:'Badge pill',        type:'text',     hint:'Small pill above the headline'},
+    {k:'headline',                 label:'Headline',          type:'text'},
+    {k:'headline_accent',          label:'Headline accent',   type:'text',     hint:'Second line, shown in the seafoam colour'},
+    {k:'subhead',                  label:'Sub-headline',      type:'textarea'},
+    {k:'cta_label',                label:'Main button',       type:'text'},
+    {k:'cta_secondary_label',      label:'Second button',     type:'text'},
+    {sec:'“Why book direct” section', k:'intro_eyebrow', label:'Eyebrow',  type:'text'},
+    {k:'intro_title',              label:'Section heading',   type:'text'},
+    {k:'b1_title',                 label:'Point 1 — title',   type:'text'},
+    {k:'b1_desc',                  label:'Point 1 — text',    type:'textarea'},
+    {k:'b2_title',                 label:'Point 2 — title',   type:'text'},
+    {k:'b2_desc',                  label:'Point 2 — text',    type:'textarea'},
+    {k:'b3_title',                 label:'Point 3 — title',   type:'text'},
+    {k:'b3_desc',                  label:'Point 3 — text',    type:'textarea'},
+    {sec:'Closing section', k:'closing_title', label:'Heading', type:'text'},
+    {k:'closing_body',             label:'Text',              type:'textarea'},
   ]},
   about: { label:'About', fields:[
+    {k:'eyebrow',  label:'Eyebrow',   type:'text'},
     {k:'headline', label:'Headline',  type:'text'},
-    {k:'body',     label:'Main text', type:'textarea', rows:8},
+    {k:'headline_accent', label:'Headline accent', type:'text', hint:'Second line, in the ocean colour'},
+    {k:'body',     label:'Intro text',type:'textarea', rows:4},
   ]},
   contact: { label:'Contact', fields:[
     {k:'headline', label:'Headline',  type:'text'},
@@ -10836,12 +10848,15 @@ const SITE_PAGES = {
     {k:'whatsapp', label:'WhatsApp number', type:'text', hint:'International format, e.g. 27799779455'},
   ]},
   management: { label:'Management (owner pitch)', fields:[
-    {k:'headline',  label:'Headline',      type:'text',     hint:'What you do, for whom'},
-    {k:'subhead',   label:'Sub-headline',  type:'textarea'},
-    {k:'languages', label:'Languages line',type:'text',     hint:'e.g. We speak English, German, Polish and Spanish'},
-    {k:'body',      label:'What’s included', type:'textarea', rows:8},
-    {k:'pricing_note', label:'Pricing note', type:'textarea', hint:'Shown under the plans'},
-    {k:'cta_label', label:'Button text',   type:'text'},
+    {sec:'Hero', k:'badge',      label:'Badge pill',      type:'text'},
+    {k:'headline',               label:'Headline',        type:'text',     hint:'What you do, for whom'},
+    {k:'headline_accent',        label:'Headline accent', type:'text'},
+    {k:'subhead',                label:'Sub-headline',    type:'textarea'},
+    {k:'languages',              label:'Languages line',  type:'text',     hint:'e.g. We speak English, German, Polish and Spanish'},
+    {k:'cta_label',              label:'Main button',     type:'text'},
+    {sec:'What owners get', k:'intro_title', label:'Section heading', type:'text'},
+    {k:'body',                   label:'What’s included', type:'textarea', rows:7},
+    {k:'pricing_note',           label:'Pricing note',    type:'textarea', hint:'Shown under the plans'},
   ]},
   seo: { label:'SEO & sharing', fields:[
     {k:'title',       label:'Browser title', type:'text'},
@@ -10850,7 +10865,11 @@ const SITE_PAGES = {
 };
 // Sites an org can hold. The owner is splitting the company site from
 // the bookings site onto separate domains, so both are offered.
-const SITE_KEYS = {company:'Company site', bookings:'Bookings site'};
+// Bookings first: it's the site that actually exists today and the one
+// seeded with real copy (800). Defaulting to the empty 'company' key
+// would open the editor on blank fields, which is the opposite of the
+// point.
+const SITE_KEYS = {bookings:'Bookings site', company:'Company site'};
 
 let siteContent = [];      // rows for the selected site
 let _siteDirty = {};       // page -> true when edited but not saved
@@ -10956,6 +10975,7 @@ function renderSiteEditor() {
       </div>
       <div class="form-grid" style="gap:12px">
         ${def.fields.map(f => `
+          ${f.sec ? `<div class="span-full" style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:8px;padding-bottom:5px;border-bottom:1px solid var(--border)">${f.sec}</div>` : ''}
           <div class="form-field span-full">
             <label>${f.label}</label>
             ${f.type === 'textarea'
@@ -11024,40 +11044,73 @@ function renderSitePreview() {
   const has = k => c[k] && c[k].length;
   const ph = (k, fallback) => has(k) ? esc(c[k]) : `<span style="opacity:.45">${fallback}</span>`;
 
+  const dune = '#E8DCC8';
   let body = '';
   if (page === 'home' || page === 'management') {
+    // Mirrors the real hero: ocean->seafoam gradient, badge pill with a
+    // pulsing dot, Playfair-style serif headline whose second line is
+    // seafoam, then two buttons — solid white primary, translucent
+    // secondary. Then the sand "why book direct" band with three mist
+    // cards, and the closing sand band. Same order as index.tsx.
+    const bullets = [1,2,3].map(i => ({t:c['b'+i+'_title'], d:c['b'+i+'_desc'], icon:['💸','💬','🔑'][i-1]}))
+                            .filter(b => b.t || b.d);
     body = `
-      <div style="background:linear-gradient(135deg,${S.ocean} 0%,${S.ocean} 55%,${S.seafoam} 140%);padding:34px 22px;text-align:center;color:#fff">
-        ${has('badge') ? `<div style="display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:5px 13px;font-size:.68rem;margin-bottom:14px">${esc(c.badge)}</div>` : ''}
-        ${has('languages') ? `<div style="display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:5px 13px;font-size:.68rem;margin-bottom:14px">${esc(c.languages)}</div>` : ''}
-        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.9rem;line-height:1.12;margin-bottom:10px">${ph('headline','Your headline appears here')}</div>
-        <div style="opacity:.75;font-size:.86rem;line-height:1.6;max-width:340px;margin:0 auto 16px">${ph('subhead','The sub-headline sits under it.')}</div>
-        ${has('cta_label') ? `<span style="display:inline-block;background:#fff;color:${S.ocean};font-weight:700;border-radius:999px;padding:10px 22px;font-size:.8rem">${esc(c.cta_label)}</span>` : ''}
+      <div style="background:linear-gradient(135deg,${S.ocean} 0%,${S.ocean} 50%,${S.seafoam} 145%);padding:36px 22px;text-align:center;color:#fff;position:relative">
+        ${has('badge') || has('languages') ? `<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);border-radius:999px;padding:5px 13px;font-size:.68rem;margin-bottom:15px">
+          <span style="width:5px;height:5px;border-radius:50%;background:${S.seafoam};display:inline-block"></span>${esc(c.badge || c.languages)}
+        </div>` : ''}
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:2rem;line-height:1.08;margin-bottom:12px">
+          ${ph('headline','Your headline')}
+          ${has('headline_accent') ? `<br><span style="color:${S.seafoam}">${esc(c.headline_accent)}</span>` : ''}
+        </div>
+        <div style="opacity:.72;font-size:.85rem;line-height:1.65;max-width:330px;margin:0 auto 18px">${ph('subhead','The sub-headline sits under it.')}</div>
+        <div style="display:flex;gap:9px;justify-content:center;flex-wrap:wrap">
+          ${has('cta_label') ? `<span style="background:#fff;color:${S.ocean};font-weight:700;border-radius:999px;padding:10px 20px;font-size:.79rem">${esc(c.cta_label)}</span>` : ''}
+          ${has('cta_secondary_label') ? `<span style="background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;font-weight:600;border-radius:999px;padding:10px 20px;font-size:.79rem">${esc(c.cta_secondary_label)}</span>` : ''}
+        </div>
       </div>
-      ${(has('intro_title')||has('intro_body')||has('body')) ? `
-        <div style="background:${S.sand};padding:26px 22px;text-align:center">
-          ${has('intro_title') ? `<div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.25rem;color:${S.ink};margin-bottom:8px">${esc(c.intro_title)}</div>` : ''}
-          <div style="color:#4a4a4a;font-size:.84rem;line-height:1.75;white-space:pre-wrap;text-align:left">${esc(c.intro_body || c.body || '')}</div>
-          ${has('pricing_note') ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid ${S.coral}33;color:#6a6a6a;font-size:.76rem;white-space:pre-wrap;text-align:left">${esc(c.pricing_note)}</div>` : ''}
+      ${(has('intro_title')||has('intro_eyebrow')||bullets.length||has('body')) ? `
+        <div style="background:${S.sand};padding:26px 22px">
+          <div style="text-align:center;margin-bottom:${bullets.length?'18px':'0'}">
+            ${has('intro_eyebrow') ? `<div style="font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.13em;color:${S.ocean}99;margin-bottom:7px">${esc(c.intro_eyebrow)}</div>` : ''}
+            ${has('intro_title') ? `<div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;color:${S.ink};line-height:1.25">${esc(c.intro_title)}</div>` : ''}
+          </div>
+          ${bullets.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+            ${bullets.map(b => `<div style="background:${S.mist};border-radius:14px;padding:15px">
+              <div style="font-size:1.4rem;margin-bottom:7px">${b.icon}</div>
+              <div style="font-family:'DM Serif Display',Georgia,serif;font-size:.95rem;color:${S.ink};margin-bottom:5px">${esc(b.t||'')}</div>
+              <div style="color:rgba(28,26,23,.6);font-size:.76rem;line-height:1.6">${esc(b.d||'')}</div>
+            </div>`).join('')}
+          </div>` : ''}
+          ${has('body') ? `<div style="color:rgba(28,26,23,.7);font-size:.83rem;line-height:1.75;white-space:pre-wrap">${esc(c.body)}</div>` : ''}
+          ${has('pricing_note') ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid ${S.coral}33;color:rgba(28,26,23,.55);font-size:.76rem;white-space:pre-wrap">${esc(c.pricing_note)}</div>` : ''}
+        </div>` : ''}
+      ${(has('closing_title')||has('closing_body')) ? `
+        <div style="background:${dune}66;padding:26px 22px;text-align:center">
+          <div style="font-size:1.7rem;margin-bottom:9px">🐚</div>
+          ${has('closing_title') ? `<div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.3rem;color:${S.ink};line-height:1.25;margin-bottom:8px">${esc(c.closing_title)}</div>` : ''}
+          ${has('closing_body') ? `<div style="color:rgba(28,26,23,.6);font-size:.8rem;line-height:1.7">${esc(c.closing_body)}</div>` : ''}
         </div>` : ''}`;
   } else if (page === 'about') {
-    body = `<div style="background:${S.mist};padding:30px 22px">
-        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.5rem;color:${S.ocean};margin-bottom:12px">${ph('headline','About us')}</div>
-        <div style="color:#4a4a4a;font-size:.84rem;line-height:1.8;white-space:pre-wrap">${ph('body','Your story goes here.')}</div>
+    body = `<div style="background:${S.mist};padding:32px 22px;text-align:center">
+        ${has('eyebrow') ? `<div style="font-size:.63rem;font-weight:700;text-transform:uppercase;letter-spacing:.13em;color:${S.ocean}99;margin-bottom:9px">${esc(c.eyebrow)}</div>` : ''}
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.75rem;color:${S.ink};line-height:1.15;margin-bottom:12px">
+          ${ph('headline','About us')}
+          ${has('headline_accent') ? `<br><span style="color:${S.ocean}">${esc(c.headline_accent)}</span>` : ''}
+        </div>
+        <div style="color:rgba(28,26,23,.6);font-size:.84rem;line-height:1.8;max-width:330px;margin:0 auto;white-space:pre-wrap">${ph('body','Your story goes here.')}</div>
       </div>`;
   } else if (page === 'contact') {
     body = `<div style="background:${S.mist};padding:30px 22px">
         <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.5rem;color:${S.ocean};margin-bottom:8px">${ph('headline','Get in touch')}</div>
-        <div style="color:#4a4a4a;font-size:.84rem;line-height:1.7;white-space:pre-wrap;margin-bottom:14px">${esc(c.body||'')}</div>
+        <div style="color:rgba(28,26,23,.6);font-size:.84rem;line-height:1.7;white-space:pre-wrap;margin-bottom:14px">${esc(c.body||'')}</div>
         <div style="display:grid;gap:7px;font-size:.82rem">
-          ${has('email')    ? `<div>✉️ <a style="color:${S.ocean}">${esc(c.email)}</a></div>` : ''}
+          ${has('email')    ? `<div>✉️ <span style="color:${S.ocean}">${esc(c.email)}</span></div>` : ''}
           ${has('phone')    ? `<div>📞 ${esc(c.phone)}</div>` : ''}
           ${has('whatsapp') ? `<div><span style="display:inline-block;background:#25D366;color:#fff;border-radius:999px;padding:6px 14px;font-size:.78rem;font-weight:600">💬 WhatsApp ${esc(c.whatsapp)}</span></div>` : ''}
         </div>
       </div>`;
   } else if (page === 'seo') {
-    // SEO has no on-page rendering — show the Google result instead,
-    // which is the only place these two fields are ever seen.
     body = `<div style="background:#fff;padding:22px">
         <div style="font-size:.7rem;color:var(--muted);margin-bottom:10px">How it looks in search results</div>
         <div style="font-family:arial,sans-serif;max-width:420px">
