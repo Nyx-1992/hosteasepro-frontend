@@ -70,16 +70,24 @@ input:focus{outline:none;border-color:var(--accent);background:#fff}
 .form-msg{font-size:.88rem;margin-top:12px;min-height:20px}
 .form-note{font-size:.78rem;color:var(--muted);margin-top:12px;text-align:center}
 
-/* Product shot in a browser frame. The image is a tall full-page
-   capture, so the frame shows the top of it and crops the rest — a
-   screenshot squeezed to fit is unreadable, which defeats the point. */
-.shot{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 18px 44px rgba(18,35,58,.13)}
+/* The tour: real screens cross-fading in a browser frame. Every slide is
+   captured at one viewport size, so they share an aspect ratio and the
+   frame never crops — an earlier version chopped a tall full-page capture
+   mid-content, which read as unfinished. */
+.tour{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 18px 44px rgba(18,35,58,.13)}
 .shot-bar{display:flex;align-items:center;gap:7px;padding:11px 14px;background:#eef2f6;border-bottom:1px solid var(--line)}
 .shot-bar span{width:10px;height:10px;border-radius:50%;background:#cbd5e1}
 .shot-bar em{margin-left:10px;font-style:normal;font-size:.76rem;color:var(--muted)}
-.shot-view{max-height:560px;overflow:hidden}
-.shot-view img{width:100%;display:block}
+.tour-stage{position:relative;aspect-ratio:1340/880;background:#f7f9fb}
+.tour-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top left;opacity:0;transition:opacity .6s ease}
+.tour-slide.is-on{opacity:1}
+.tour-dots{display:flex;justify-content:center;gap:8px;padding:12px;background:var(--card);border-top:1px solid var(--line)}
+.tour-dot{width:9px;height:9px;border-radius:50%;border:none;background:#cbd5e1;cursor:pointer;padding:0;transition:background .2s,transform .2s}
+.tour-dot.is-on{background:var(--accent);transform:scale(1.25)}
 .shot-note{text-align:center;font-size:.78rem;color:var(--muted);margin-top:12px}
+/* Someone who has asked the system to stop animation gets the first
+   screen and the dots, not a slideshow they cannot switch off. */
+@media(prefers-reduced-motion:reduce){.tour-slide{transition:none}}
 
 /* Comparison table. Scrolls sideways on a phone rather than squashing —
    a four-column table at 380px wide is illegible. */
@@ -94,7 +102,11 @@ input:focus{outline:none;border-color:var(--accent);background:#fff}
 .cmp tbody tr:last-child td{border-bottom:none}
 
 footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:var(--muted);font-size:.85rem}
-@media(max-width:640px){.hero{padding:48px 0 40px}section{padding:40px 0}.owner-band{padding:32px 20px}}
+@media(max-width:640px){.hero{padding:48px 0 40px}section{padding:40px 0}.owner-band{padding:32px 20px}
+  /* Four buttons overflow a 420px screen. On a phone the page is one
+     scroll, so the jump links earn nothing and the two that matter stay. */
+  .nav-jump{display:none}
+  nav .wrap{gap:10px}}
 </style>
 </head>
 <body>
@@ -102,8 +114,8 @@ footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:v
 <nav><div class="wrap">
   <div class="logo">🏠 HostEase <span>Pro</span></div>
   <div style="display:flex;gap:10px;align-items:center">
-    <a class="btn btn-ghost" href="#why" style="padding:9px 18px;font-size:.88rem">Why HEP</a>
-    <a class="btn btn-ghost" href="#tour" style="padding:9px 18px;font-size:.88rem">See it</a>
+    <a class="btn btn-ghost nav-jump" href="#why" style="padding:9px 18px;font-size:.88rem">Why HEP</a>
+    <a class="btn btn-ghost nav-jump" href="#tour" style="padding:9px 18px;font-size:.88rem">See it</a>
     <a class="btn btn-ghost" href="/" style="padding:9px 18px;font-size:.88rem">Sign in</a>
     <a class="btn btn-primary" href="#start" style="padding:9px 18px;font-size:.88rem">Start free</a>
   </div>
@@ -158,47 +170,22 @@ footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:v
 
 <section id="tour"><div class="wrap">
   <div class="section-head">
-    <h2>This is what your owners see</h2>
-    <p>Their property, their numbers, their language — and nothing else of your business.</p>
+    <h2>A minute inside HostEase Pro</h2>
+    <p>Real screens from the app. Sample data — a fictional agency with three properties.</p>
   </div>
-  <div class="shot">
-    <div class="shot-bar"><span></span><span></span><span></span><em>Ocean Terrace Apartment · owner view</em></div>
-    <div class="shot-view"><img src="/demo/img/shot-owner-dashboard.png" alt="The owner dashboard: income, occupancy, nights booked, a monthly chart and an availability calendar colour-coded by booking platform." loading="lazy"/></div>
-  </div>
-  <p class="shot-note">Sample data. Your owners see only the property you have given them access to.</p>
-</div></section>
 
-<!-- Differentiation. Every claim here is about the CATEGORY, not a named
-     rival, and every one is defensible: the big platforms publish
-     per-listing pricing, list owner portals as paid add-ons, and quote
-     rather than publish their main tiers. Naming competitors and their
-     prices on a public page invites a dispute and rots the moment they
-     change a plan; the structural difference does not. -->
-<section id="why"><div class="wrap">
-  <div class="section-head">
-    <h2>Why not one of the big platforms?</h2>
-    <p>They are good software. They are also built for someone else.</p>
+  <div class="tour" id="tour">
+    <div class="shot-bar"><span></span><span></span><span></span><em id="tour-label">Today at a glance</em></div>
+    <div class="tour-stage">
+      <img class="tour-slide is-on" src="/demo/img/tour-dashboard.png" alt="Dashboard: today's check-ins and check-outs, which properties are occupied, and the next arrivals per property."/>
+      <img class="tour-slide" src="/demo/img/tour-calendar.png" alt="Calendar: every booking from Airbnb, Booking.com and LekkeSlaap on one month grid, colour-coded by platform." loading="lazy"/>
+      <img class="tour-slide" src="/demo/img/tour-cleaning.png" alt="Cleaning: turnovers scheduled against checkouts, assigned to cleaners." loading="lazy"/>
+      <img class="tour-slide" src="/demo/img/tour-tasks.png" alt="Tasks: a board of maintenance jobs by status, with priority and who is on them." loading="lazy"/>
+      <img class="tour-slide" src="/demo/img/tour-owner.png" alt="The owner dashboard: income, occupancy, a monthly chart and an availability calendar for one property." loading="lazy"/>
+    </div>
+    <div class="tour-dots" id="tour-dots"></div>
   </div>
-  <div class="grid">
-    <div class="card"><span class="ico">🧾</span><h3>Priced per agency, not per listing</h3>
-      <p>The large platforms bill per listing, per month, in dollars — ten properties means ten times the bill.
-         Here one price covers your whole portfolio. Growth is R550 whether you run three properties or ten.</p></div>
-    <div class="card"><span class="ico">👤</span><h3>Owner dashboards are included</h3>
-      <p>On the big systems an owner portal is a paid add-on stacked on top of the per-listing fee.
-         Here it is on every plan, in five languages, from day one.</p></div>
-    <div class="card"><span class="ico">🏷️</span><h3>The price is on this page</h3>
-      <p>No quote, no discovery call, no annual lock-in. You can work out what HostEase Pro costs you
-         in about ten seconds, which is more than most of the category will let you do.</p></div>
-    <div class="card"><span class="ico">🚫</span><h3>We take nothing from your bookings</h3>
-      <p>No commission, no per-reservation fee, no cut of what your guests pay. The monthly price is
-         the whole price.</p></div>
-    <div class="card"><span class="ico">📐</span><h3>Built for two to twenty properties</h3>
-      <p>Enterprise tools are designed, priced and supported for portfolios of fifty and up. At your size
-         you are the awkward customer at the bottom of their list. Here you are the whole point.</p></div>
-    <div class="card"><span class="ico">🔓</span><h3>Your data is never a hostage</h3>
-      <p>Stop paying and the app goes read-only — everything stays visible and yours. Nobody should have
-         to pay a ransom to look at their own bookings.</p></div>
-  </div>
+  <p class="shot-note">Plays automatically. Tap a dot to jump, or hover to pause.</p>
 </div></section>
 
 <section id="pricing"><div class="wrap">
@@ -289,6 +276,53 @@ footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:v
 </div></footer>
 
 <script>
+// Auto-playing tour. Plain cross-fade over pre-rendered screens rather
+// than a video: it needs no player, no hosting and no bandwidth budget,
+// and a real recorded walkthrough can replace it later by swapping this
+// block for a <video>.
+(function tour() {
+  const stage  = document.getElementById('tour');
+  if (!stage) return;
+  const slides = [...stage.querySelectorAll('.tour-slide')];
+  const label  = document.getElementById('tour-label');
+  const dots   = document.getElementById('tour-dots');
+  const LABELS = [
+    'Today at a glance',
+    'Every channel on one calendar',
+    'Cleaning scheduled off checkouts',
+    'Jobs tracked to done',
+    'And this is what your owners see',
+  ];
+  let i = 0, timer = null;
+  const HOLD = 4200;
+
+  slides.forEach((_, n) => {
+    const d = document.createElement('button');
+    d.className = 'tour-dot' + (n === 0 ? ' is-on' : '');
+    d.type = 'button';
+    d.setAttribute('aria-label', LABELS[n] || ('Slide ' + (n + 1)));
+    d.onclick = () => { show(n); restart(); };
+    dots.appendChild(d);
+  });
+
+  function show(n) {
+    i = (n + slides.length) % slides.length;
+    slides.forEach((s, k) => s.classList.toggle('is-on', k === i));
+    [...dots.children].forEach((d, k) => d.classList.toggle('is-on', k === i));
+    if (label) label.textContent = LABELS[i] || '';
+  }
+  function restart() { clearInterval(timer); timer = setInterval(() => show(i + 1), HOLD); }
+
+  // Paused while the pointer is on it, so nothing slides away mid-read.
+  stage.addEventListener('mouseenter', () => clearInterval(timer));
+  stage.addEventListener('mouseleave', restart);
+  // And paused entirely on a background tab — an invisible slideshow is
+  // just wasted work.
+  document.addEventListener('visibilitychange', () => document.hidden ? clearInterval(timer) : restart());
+
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) restart();
+})();
+
 async function doSignup(e) {
   e.preventDefault();
   const btn = document.getElementById('su-btn');
