@@ -632,11 +632,11 @@ function _buildMobileNavStub(){/* replaced by main script */}
       <div class="tab-pane" id="tab-calendar">
         <!-- ── Calendar toolbar: underline tabs ── -->
         <div style="margin-bottom:14px">
-          <div class="cal-utabs" id="cal-prop-toggle">
-            <button class="cal-utab active" onclick="setCalProp('all',this)">All Properties</button>
-            <button class="cal-utab" onclick="setCalProp('speranta',this)">Speranta Flat</button>
-            <button class="cal-utab" onclick="setCalProp('tvhouse',this)">TV House</button>
-          </div>
+          <!-- Filled by buildCalPropTabs() from the org's own properties.
+               These were hardcoded to Speranta Flat and TV House, so every
+               other agency saw S&N's property names across the top of
+               their calendar. Same class of bug as the PROPS fallback. -->
+          <div class="cal-utabs" id="cal-prop-toggle"></div>
           <div class="cal-usub">
             <div class="cal-umini">
               <button id="calview-month-btn" class="cal-umini-btn active" onclick="setCalView('month')">Month</button>
@@ -1905,6 +1905,7 @@ async function loadProperties() {
       PROPS = {};
       UUID_MAP = {};
       currentProp = 'all';
+      buildCalPropTabs();
       return;
     }
     const newProps = {}, newUuidMap = {};
@@ -1925,6 +1926,7 @@ async function loadProperties() {
       newUuidMap[p.id] = key;
     });
     PROPS = newProps;
+    buildCalPropTabs();
     UUID_MAP = newUuidMap;
     refreshPropSelects();
   } catch(e) { console.warn('loadProperties:', e); }
@@ -5837,6 +5839,7 @@ const ROADMAP = [
   {k:"p3-21",t:"Trial countdown and lapsed read-only, enforced in the database (880)",n:"DONE (2026-07-31), implementing the owner's rule from p3-14: 'Lapsed account needs definitely limited view, but not lock out.' The line is READ EVERYTHING, WRITE NOTHING - the business keeps running on what is already there, but new work needs a live subscription. WHY TRIGGERS AND NOT RLS, which is the whole design decision: the obvious move is to AND a subscription check into the existing policies the way 824 added is_org_member, and it is WRONG here. Most of those policies are FOR ALL, and a FOR ALL policy's USING clause governs SELECT as well as UPDATE and DELETE - so the check would remove READ too, the exact opposite of the rule. Restricting only WITH CHECK does not work either, because WITH CHECK is never consulted for DELETE. A BEFORE INSERT/UPDATE/DELETE trigger cannot make that mistake: it runs on writes and only writes, so 'read everything' holds by construction. org_can_write(org) is false once a subscription is past_due/canceled/expired OR a trial's end date has passed - checking the date in the function means nothing has to sweep the table on a timer. FAIL-OPEN when no subscription row exists: a missing row means nobody has billed that org yet, and the cost of getting it wrong the other way is bricking a paying customer over a data gap. Three tables stay writable so a lapsed org can dig itself out - org_subscriptions (resubscribing is a write), org_settings (fixing billing details is a write) and profiles (blocking those risks locking the account rather than limiting it). Service-role callers are exempt, or the very webhook that REACTIVATES an org would be blocked by the lapse it is clearing. VERIFIED on staging by lapsing S&N and acting as Nicole: 418 bookings and 58 cleans still readable, UPDATE booking and INSERT task both refused with the plain-English message, org_settings still writable - then restored to active. The in-app banner is the honest FACE of the rule, not the enforcement: quiet until three days remain, then a countdown, then a read-only notice. All four existing orgs are grandfathered founder/active, so nothing changes for anyone until a real trial expires.",c:"Business"},
   {k:"p3-22",t:"HEP marketing page and self-serve signup with a one-week trial",n:"DONE (2026-07-31). The owner's ask: 'I want people to see an overview of what the platform delivers to sign up for the monthly subscription (with a week trial plan).' demo/welcome.html is the marketing page - what the product actually does (calendar sync, cleaning, guest messaging, real income from statements, inspections that raise tasks, roles), the owner-dashboard pitch as the differentiator almost no small agency can match, the R350/R550/R750 tiers from p3-14, and a signup form. Served at /welcome, /signup and /pricing, and linked from the login screen. It uses the app's own type and palette so the marketing page and the product do not look like two different companies. api/signup.js provisions org + owner profile + a 7-day trialing subscription + a blank org_settings row (870, so nothing is inherited from another tenant). DELIBERATELY UNAUTHENTICATED, unlike create-org.js which is gated to an S&N owner - a signup form that requires a login is not a signup form. What keeps that safe: it always creates a BRAND-NEW EMPTY org and never touches an existing one, the org id is generated server-side and never read from the request, and an email that already has an account is refused rather than having a second org grafted onto it. Full rollback on any failure, because a half-made org is an account that signs in and works badly, which is worse than one that never got made. The subscription row is written BEFORE the response on purpose: 880 fails open on a missing row, so an org without one would be a free-forever account. NO CARD UP FRONT per the owner's decision - expect more trials that never convert, which is the accepted cost and not a sign of the product failing. Signup does NOT auto-sign-in: typing the new password once at the real sign-in screen is what makes it stick. NOTE this opens PUBLIC REGISTRATION on production. Exposure is low today because hosteasepro.com is not registered and the page is only linked from the login screen, but it is a real change of posture and the owner should decide when to publicise it.",c:"GTM"},
   {k:"p3-23",t:"Marketing page: product shot, plan comparison, Starter lowered to 2",n:"DONE (2026-07-31). Owner, reviewing the marketing page: 'i like the intro page but maybe a video showing what all is possible wouldn't hurt? OR WHAT IT MEANS WHEN WE SAY growth included etc. also, starterpack 3 properties fair or should we lower it?' THREE THINGS. (1) SHOW THE PRODUCT: added a real screenshot of the owner dashboard in a browser frame - a capture of the actual app driven ENTIRELY BY SYNTHETIC DATA (fictional agency 'Cape Coast Property Co', fictional property, invented guests and round invented figures). A public page must never carry a customer's real bookings or income, and blurring a real capture is not a safeguard. The generator lives in the scratchpad, not the repo, so the shot is regenerated deliberately rather than drifting with the data. (2) WHAT 'GROWTH' MEANS: a line-by-line comparison table under the plan cards - properties, calendar sync, cleaning, guest messaging, owner dashboards, inspections, statement reading, reports, roles, shared task board, invoice branding, website editing, support. The cards say what you get; the table says what the words mean, which is what someone choosing a tier actually needs. Scrolls sideways on a phone rather than squashing - four columns at 380px is illegible. (3) STARTER LOWERED FROM 3 PROPERTIES TO 2, owner's decision after the recommendation. The reasoning: a 3-property agency is a real business that can afford R550, and the tier boundary should sit BELOW the typical customer rather than above it. The tell is that S&N itself runs 2 properties - if your own business would sit on the cheapest tier, the cheapest tier is too generous, and most of the target market would never reach Growth. Ladder is now 2 / 10 / unlimited. STILL OPEN: a walkthrough VIDEO is worth adding and the tour section is built to host one, but it should be recorded by the owner rather than faked - an authentic screen recording of someone who runs the business is worth more than a synthetic one, and it is a ten-minute job.",c:"GTM"},
+  {k:"p3-24",t:"Marketing tour of the agency screens, and a calendar hardcoded to S&N",n:"DONE (2026-07-31). Three pieces of owner feedback on the marketing page. (1) 'this feels a bit cut and I want them to rather see what THEY see and not the clients' - the single static shot was a tall full-page capture cropped mid-content, and it showed the CLIENT dashboard when the buyer is the AGENCY. Replaced with an auto-playing tour of four staff screens (dashboard, calendar, cleaning, tasks) with the owner dashboard as the closing beat, all captured at one viewport size so they share an aspect ratio and nothing crops. (2) 'I would have liked a quick minute showing some features which we can update later' - built as a cross-fade over pre-rendered screens rather than a video: no player, no hosting, no bandwidth budget, ~4.2s a slide, pauses on hover and on a hidden tab, honours prefers-reduced-motion, and a real recorded walkthrough can replace it by swapping one block for a <video>. (3) 'i don't want to limit myself with the property amount (up to 20)' - the differentiator card no longer names a ceiling; it now contrasts independents against enterprise tooling and says the price does not punish growth. Pro is unlimited, so advertising a cap told a 40-property agency to look elsewhere. ALL SCREENS USE SYNTHETIC DATA - fictional agency 'Cape Coast Property Co', three invented properties, invented guests and figures. FOUND WHILE DOING IT: the calendar's property tab bar was HARDCODED to 'Speranta Flat' and 'TV House' in the markup, so every other agency saw S&N's property names across the top of their calendar - the same class of bug as the PROPS fallback in p3-18 and the branding in p3-20, and it only surfaced because a marketing screenshot would have published it. Now built by buildCalPropTabs() from the org's own properties, rebuilt whenever the property list changes. Also fixed a 3px horizontal overflow at 420px caused by a fourth nav button; the two jump links now hide on a phone, where the page is one scroll anyway. NOTE more hardcoded S&N property names remain in the static markup (booking/task/manual property selects) - most are overwritten at runtime, but they should be audited the same way.",c:"GTM"},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
@@ -7014,6 +7017,18 @@ async function saveBooking() {
 }
 
 // ── CALENDAR ──────────────────────────────────────────────────
+// Rebuilds the calendar's property tabs from PROPS. Called whenever the
+// property list changes, so a newly added property appears without a
+// reload and no other org's names can linger in the markup.
+function buildCalPropTabs() {
+  const el = document.getElementById('cal-prop-toggle');
+  if (!el) return;
+  const keys = Object.keys(PROPS);
+  el.innerHTML =
+    `<button class="cal-utab${calProp === 'all' ? ' active' : ''}" onclick="setCalProp('all',this)">All Properties</button>` +
+    keys.map(k => `<button class="cal-utab${calProp === k ? ' active' : ''}" onclick="setCalProp('${k}',this)">${escHtml(PROPS[k].name)}</button>`).join('');
+}
+
 function setCalProp(prop, btn) {
   calProp = prop;
   document.querySelectorAll('#cal-prop-toggle button').forEach(b=>b.classList.remove('active'));
