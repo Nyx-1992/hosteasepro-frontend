@@ -136,6 +136,25 @@ h2,h3{font-family:"DM Serif Display",serif}
 .strip-label{font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 10px;padding:0 2px}
 /* Console strip — dashboard's live stat segments (separate tiles) */
 .dash-console{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+/* Client dashboard: the chart takes two thirds and the calendar one, and
+   both cards share a height. An auto-fit grid gave them equal widths and
+   ragged heights — the calendar needs seven columns of square cells, so
+   it always ran taller and left the chart card with dead space under it. */
+.client-two-col{display:grid;gap:16px;grid-template-columns:1fr;align-items:stretch}
+@media(min-width:900px){.client-two-col{grid-template-columns:2fr 1fr}}
+.client-two-col>.card{display:flex;flex-direction:column}
+/* Bars are sized in PERCENT of this box rather than fixed pixels, so the
+   chart grows into whatever height the row settles at. */
+.client-chart{flex:1;display:flex;align-items:stretch;gap:4px;min-height:150px;margin-bottom:4px}
+.client-chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.client-chart-plot{flex:1;width:100%;display:flex;flex-direction:column;justify-content:flex-end}
+/* Pins the stats strip to the bottom edge so both cards end on the same line. */
+.client-card-foot{margin-top:auto}
+.client-chart-lbl{font-size:.6rem;color:var(--muted);white-space:nowrap;text-align:center}
+.client-chart-lbl.on{font-weight:700;color:var(--text)}
+/* On a phone twelve labels cannot sit side by side — "Aug 2025" ran into
+   "Sept". They shrink and wrap onto a second line instead of colliding. */
+@media(max-width:640px){.client-chart-lbl{font-size:.52rem;white-space:normal;line-height:1.15}}
 .pipe-toggle{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;user-select:none}
 .pipe-switch{width:30px;height:17px;border-radius:10px;background:var(--border);position:relative;transition:background .15s ease;flex-shrink:0}
 .pipe-switch::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:left .15s ease;box-shadow:0 1px 2px rgba(0,0,0,.2)}
@@ -10918,11 +10937,11 @@ function toggleVaultExpand(id) {
 // the world can be served". Strings live in one map rather than being
 // scattered, so adding a language is a data edit.
 const CLIENT_T = {
-  en:{title:'Your property',income:'Income',occupancy:'Occupancy',nights:'Nights booked',upcoming:'Upcoming stays',cleaning:'Cleaning',inspections:'Inspections',recent:'Recent bookings',noBookings:'No bookings in this period',thisYear:'Last 12 months',guest:'Guest',arrives:'Arrives',departs:'Departs',nightsCol:'Nights',cleans:'cleans completed',lastInspection:'Last inspection',none:'None recorded yet',managedBy:'Managed by',language:'Language',actualIncome:'Actual income received',afterFees:'after platform commission and fees',fromStatements:'From platform statements',estimated:'Estimated from bookings',period:'Period',signOut:'Sign out',welcome:'Welcome back',noStatements:'No platform statements loaded yet — your manager uploads these each month.',occNote:'Share of nights booked over the last 12 months',uploadTitle:'Send us a statement',uploadHelp:'If you receive statements we don\'t — Booking.com invoices, for example — upload the PDF here and we will add the figures to your income.',uploadBtn:'Choose a PDF',uploading:'Uploading…',uploaded:'Sent — thank you',yourUploads:'Sent by you',monthlyNights:'Nights booked by month',calendar:'Availability',platformMix:'Where bookings come from',free:'Free',booked:'Booked',ofNights:'of nights',noPlatform:'Direct / other',prevMonth:'Previous',nextMonth:'Next',avgStay:'Average stay',bestMonth:'Busiest month',turnovers:'Turnover cleans',deepCleans:'Deep cleans',lastClean:'Last clean',inspectedBy:'Inspected by',pool:'Pool',garden:'Garden',breakage:'Breakage found',condition:'Condition',allGood:'All good',needsAttention:'Needs attention',inventory:'Inventory checks',allPresent:'Everything present',itemsFlagged:'items flagged',lastCheck:'Last check',showing:'Showing',m3:'3 months',m6:'6 months',m12:'12 months',blockedLbl:'Not available',stays:'Stays',revPerNight:'Average per night'},
-  de:{title:'Ihre Immobilie',income:'Einnahmen',occupancy:'Auslastung',nights:'Gebuchte Nächte',upcoming:'Kommende Aufenthalte',cleaning:'Reinigung',inspections:'Inspektionen',recent:'Letzte Buchungen',noBookings:'Keine Buchungen in diesem Zeitraum',thisYear:'Letzte 12 Monate',guest:'Gast',arrives:'Anreise',departs:'Abreise',nightsCol:'Nächte',cleans:'Reinigungen abgeschlossen',lastInspection:'Letzte Inspektion',none:'Noch nichts erfasst',managedBy:'Verwaltet von',language:'Sprache',actualIncome:'Tatsächlich erhaltene Einnahmen',afterFees:'nach Plattformprovision und Gebühren',fromStatements:'Aus Plattformabrechnungen',estimated:'Geschätzt aus Buchungen',period:'Zeitraum',signOut:'Abmelden',welcome:'Willkommen zurück',noStatements:'Noch keine Plattformabrechnungen geladen — Ihr Verwalter lädt diese monatlich hoch.',occNote:'Anteil gebuchter Nächte in den letzten 12 Monaten',uploadTitle:'Abrechnung senden',uploadHelp:'Falls Sie Abrechnungen erhalten, die wir nicht bekommen — etwa Booking.com-Rechnungen — laden Sie das PDF hier hoch und wir übernehmen die Zahlen.',uploadBtn:'PDF auswählen',uploading:'Wird hochgeladen…',uploaded:'Gesendet — vielen Dank',yourUploads:'Von Ihnen gesendet',monthlyNights:'Gebuchte Nächte pro Monat',calendar:'Verfügbarkeit',platformMix:'Woher die Buchungen kommen',free:'Frei',booked:'Gebucht',ofNights:'der Nächte',noPlatform:'Direkt / andere',prevMonth:'Zurück',nextMonth:'Weiter',avgStay:'Durchschnittlicher Aufenthalt',bestMonth:'Stärkster Monat',turnovers:'Wechselreinigungen',deepCleans:'Grundreinigungen',lastClean:'Letzte Reinigung',inspectedBy:'Geprüft von',pool:'Pool',garden:'Garten',breakage:'Schaden festgestellt',condition:'Zustand',allGood:'Alles in Ordnung',needsAttention:'Handlungsbedarf',inventory:'Inventarkontrollen',allPresent:'Alles vorhanden',itemsFlagged:'Positionen gemeldet',lastCheck:'Letzte Kontrolle',showing:'Zeitraum',m3:'3 Monate',m6:'6 Monate',m12:'12 Monate',blockedLbl:'Nicht verfügbar',stays:'Aufenthalte',revPerNight:'Durchschnitt pro Nacht'},
-  cs:{title:'Vaše nemovitost',income:'Příjmy',occupancy:'Obsazenost',nights:'Rezervované noci',upcoming:'Nadcházející pobyty',cleaning:'Úklid',inspections:'Kontroly',recent:'Poslední rezervace',noBookings:'V tomto období žádné rezervace',thisYear:'Posledních 12 měsíců',guest:'Host',arrives:'Příjezd',departs:'Odjezd',nightsCol:'Nocí',cleans:'dokončených úklidů',lastInspection:'Poslední kontrola',none:'Zatím nic nezaznamenáno',managedBy:'Spravuje',language:'Jazyk',actualIncome:'Skutečně přijaté příjmy',afterFees:'po provizi a poplatcích platforem',fromStatements:'Z výpisů platforem',estimated:'Odhad z rezervací',period:'Období',signOut:'Odhlásit se',welcome:'Vítejte zpět',noStatements:'Zatím nebyly nahrány žádné výpisy z platforem — váš správce je nahrává každý měsíc.',occNote:'Podíl obsazených nocí za posledních 12 měsíců',uploadTitle:'Zaslat výpis',uploadHelp:'Pokud dostáváte výpisy, které my nemáme — například faktury Booking.com — nahrajte PDF zde a my čísla doplníme.',uploadBtn:'Vybrat PDF',uploading:'Nahrávání…',uploaded:'Odesláno — děkujeme',yourUploads:'Odeslané vámi',monthlyNights:'Rezervované noci podle měsíce',calendar:'Dostupnost',platformMix:'Odkud přicházejí rezervace',free:'Volno',booked:'Obsazeno',ofNights:'nocí',noPlatform:'Přímé / jiné',prevMonth:'Předchozí',nextMonth:'Další',avgStay:'Průměrný pobyt',bestMonth:'Nejsilnější měsíc',turnovers:'Úklidy mezi pobyty',deepCleans:'Generální úklidy',lastClean:'Poslední úklid',inspectedBy:'Kontrolu provedl',pool:'Bazén',garden:'Zahrada',breakage:'Zjištěno poškození',condition:'Stav',allGood:'Vše v pořádku',needsAttention:'Vyžaduje pozornost',inventory:'Kontroly inventáře',allPresent:'Vše na místě',itemsFlagged:'nahlášených položek',lastCheck:'Poslední kontrola',showing:'Období',m3:'3 měsíce',m6:'6 měsíců',m12:'12 měsíců',blockedLbl:'Nedostupné',stays:'Pobyty',revPerNight:'Průměr za noc'},
-  pl:{title:'Twoja nieruchomość',income:'Przychód',occupancy:'Obłożenie',nights:'Zarezerwowane noce',upcoming:'Nadchodzące pobyty',cleaning:'Sprzątanie',inspections:'Inspekcje',recent:'Ostatnie rezerwacje',noBookings:'Brak rezerwacji w tym okresie',thisYear:'Ostatnie 12 miesięcy',guest:'Gość',arrives:'Przyjazd',departs:'Wyjazd',nightsCol:'Noce',cleans:'ukończonych sprzątań',lastInspection:'Ostatnia inspekcja',none:'Brak zapisów',managedBy:'Zarządzane przez',language:'Język',actualIncome:'Faktycznie otrzymany przychód',afterFees:'po prowizji i opłatach platform',fromStatements:'Z wyciągów platform',estimated:'Szacowane z rezerwacji',period:'Okres',signOut:'Wyloguj',welcome:'Witaj ponownie',noStatements:'Nie wgrano jeszcze wyciągów z platform — zarządca wgrywa je co miesiąc.',occNote:'Udział zarezerwowanych nocy w ciągu ostatnich 12 miesięcy',uploadTitle:'Wyślij wyciąg',uploadHelp:'Jeśli otrzymujesz wyciągi, których my nie mamy — na przykład faktury Booking.com — wgraj PDF tutaj, a my dodamy dane do przychodu.',uploadBtn:'Wybierz PDF',uploading:'Wysyłanie…',uploaded:'Wysłano — dziękujemy',yourUploads:'Wysłane przez Ciebie',monthlyNights:'Zarezerwowane noce wg miesiąca',calendar:'Dostępność',platformMix:'Skąd pochodzą rezerwacje',free:'Wolne',booked:'Zajęte',ofNights:'nocy',noPlatform:'Bezpośrednie / inne',prevMonth:'Poprzedni',nextMonth:'Następny',avgStay:'Średni pobyt',bestMonth:'Najlepszy miesiąc',turnovers:'Sprzątania między pobytami',deepCleans:'Sprzątania generalne',lastClean:'Ostatnie sprzątanie',inspectedBy:'Kontrolę wykonał(a)',pool:'Basen',garden:'Ogród',breakage:'Wykryto uszkodzenie',condition:'Stan',allGood:'Wszystko w porządku',needsAttention:'Wymaga uwagi',inventory:'Kontrole inwentarza',allPresent:'Wszystko na miejscu',itemsFlagged:'zgłoszonych pozycji',lastCheck:'Ostatnia kontrola',showing:'Okres',m3:'3 miesiące',m6:'6 miesięcy',m12:'12 miesięcy',blockedLbl:'Niedostępne',stays:'Pobyty',revPerNight:'Średnio za noc'},
-  es:{title:'Su propiedad',income:'Ingresos',occupancy:'Ocupación',nights:'Noches reservadas',upcoming:'Próximas estancias',cleaning:'Limpieza',inspections:'Inspecciones',recent:'Reservas recientes',noBookings:'Sin reservas en este período',thisYear:'Últimos 12 meses',guest:'Huésped',arrives:'Llegada',departs:'Salida',nightsCol:'Noches',cleans:'limpiezas completadas',lastInspection:'Última inspección',none:'Aún sin registros',managedBy:'Gestionado por',language:'Idioma',actualIncome:'Ingresos realmente recibidos',afterFees:'tras comisiones y tarifas de plataforma',fromStatements:'De los extractos de plataforma',estimated:'Estimado a partir de reservas',period:'Período',signOut:'Cerrar sesión',welcome:'Bienvenido de nuevo',noStatements:'Aún no se han cargado extractos — su gestor los sube cada mes.',occNote:'Proporción de noches reservadas en los últimos 12 meses',uploadTitle:'Enviar un extracto',uploadHelp:'Si recibe extractos que nosotros no — facturas de Booking.com, por ejemplo — suba el PDF aquí y añadiremos las cifras a sus ingresos.',uploadBtn:'Elegir un PDF',uploading:'Subiendo…',uploaded:'Enviado — gracias',yourUploads:'Enviado por usted',monthlyNights:'Noches reservadas por mes',calendar:'Disponibilidad',platformMix:'De dónde vienen las reservas',free:'Libre',booked:'Reservado',ofNights:'de las noches',noPlatform:'Directo / otros',prevMonth:'Anterior',nextMonth:'Siguiente',avgStay:'Estancia media',bestMonth:'Mes más fuerte',turnovers:'Limpiezas entre estancias',deepCleans:'Limpiezas a fondo',lastClean:'Última limpieza',inspectedBy:'Inspeccionado por',pool:'Piscina',garden:'Jardín',breakage:'Daño detectado',condition:'Estado',allGood:'Todo correcto',needsAttention:'Requiere atención',inventory:'Revisiones de inventario',allPresent:'Todo presente',itemsFlagged:'artículos señalados',lastCheck:'Última revisión',showing:'Período',m3:'3 meses',m6:'6 meses',m12:'12 meses',blockedLbl:'No disponible',stays:'Estancias',revPerNight:'Media por noche'},
+  en:{title:'Your property',income:'Income',occupancy:'Occupancy',nights:'Nights booked',upcoming:'Upcoming stays',cleaning:'Cleaning',inspections:'Inspections',recent:'Recent bookings',noBookings:'No bookings in this period',thisYear:'Last 12 months',guest:'Guest',arrives:'Arrives',departs:'Departs',nightsCol:'Nights',cleans:'cleans completed',lastInspection:'Last inspection',none:'None recorded yet',managedBy:'Managed by',language:'Language',actualIncome:'Actual income received',afterFees:'after platform commission and fees',fromStatements:'From platform statements',estimated:'Estimated from bookings',period:'Period',signOut:'Sign out',welcome:'Welcome back',noStatements:'No platform statements loaded yet — your manager uploads these each month.',occNote:'Share of nights booked over the last 12 months',uploadTitle:'Send us a statement',uploadHelp:'If you receive statements we don\'t — Booking.com invoices, for example — upload the PDF here and we will add the figures to your income.',uploadBtn:'Choose a PDF',uploading:'Uploading…',uploaded:'Sent — thank you',yourUploads:'Sent by you',monthlyNights:'Nights booked by month',calendar:'Availability',platformMix:'Where bookings come from',free:'Free',booked:'Booked',ofNights:'of nights',noPlatform:'Direct / other',prevMonth:'Previous',nextMonth:'Next',avgStay:'Average stay',bestMonth:'Busiest month',lights:'Lights',meter:'Electricity meter',notes:'Notes',noPhotos:'No photos attached',turnovers:'Turnover cleans',deepCleans:'Deep cleans',lastClean:'Last clean',inspectedBy:'Inspected by',pool:'Pool',garden:'Garden',breakage:'Breakage found',condition:'Condition',allGood:'All good',needsAttention:'Needs attention',inventory:'Inventory checks',allPresent:'Everything present',itemsFlagged:'items flagged',lastCheck:'Last check',showing:'Showing',m3:'3 months',m6:'6 months',m12:'12 months',blockedLbl:'Not available',stays:'Stays',revPerNight:'Average per night'},
+  de:{title:'Ihre Immobilie',income:'Einnahmen',occupancy:'Auslastung',nights:'Gebuchte Nächte',upcoming:'Kommende Aufenthalte',cleaning:'Reinigung',inspections:'Inspektionen',recent:'Letzte Buchungen',noBookings:'Keine Buchungen in diesem Zeitraum',thisYear:'Letzte 12 Monate',guest:'Gast',arrives:'Anreise',departs:'Abreise',nightsCol:'Nächte',cleans:'Reinigungen abgeschlossen',lastInspection:'Letzte Inspektion',none:'Noch nichts erfasst',managedBy:'Verwaltet von',language:'Sprache',actualIncome:'Tatsächlich erhaltene Einnahmen',afterFees:'nach Plattformprovision und Gebühren',fromStatements:'Aus Plattformabrechnungen',estimated:'Geschätzt aus Buchungen',period:'Zeitraum',signOut:'Abmelden',welcome:'Willkommen zurück',noStatements:'Noch keine Plattformabrechnungen geladen — Ihr Verwalter lädt diese monatlich hoch.',occNote:'Anteil gebuchter Nächte in den letzten 12 Monaten',uploadTitle:'Abrechnung senden',uploadHelp:'Falls Sie Abrechnungen erhalten, die wir nicht bekommen — etwa Booking.com-Rechnungen — laden Sie das PDF hier hoch und wir übernehmen die Zahlen.',uploadBtn:'PDF auswählen',uploading:'Wird hochgeladen…',uploaded:'Gesendet — vielen Dank',yourUploads:'Von Ihnen gesendet',monthlyNights:'Gebuchte Nächte pro Monat',calendar:'Verfügbarkeit',platformMix:'Woher die Buchungen kommen',free:'Frei',booked:'Gebucht',ofNights:'der Nächte',noPlatform:'Direkt / andere',prevMonth:'Zurück',nextMonth:'Weiter',avgStay:'Durchschnittlicher Aufenthalt',bestMonth:'Stärkster Monat',lights:'Beleuchtung',meter:'Stromzähler',notes:'Notizen',noPhotos:'Keine Fotos angehängt',turnovers:'Wechselreinigungen',deepCleans:'Grundreinigungen',lastClean:'Letzte Reinigung',inspectedBy:'Geprüft von',pool:'Pool',garden:'Garten',breakage:'Schaden festgestellt',condition:'Zustand',allGood:'Alles in Ordnung',needsAttention:'Handlungsbedarf',inventory:'Inventarkontrollen',allPresent:'Alles vorhanden',itemsFlagged:'Positionen gemeldet',lastCheck:'Letzte Kontrolle',showing:'Zeitraum',m3:'3 Monate',m6:'6 Monate',m12:'12 Monate',blockedLbl:'Nicht verfügbar',stays:'Aufenthalte',revPerNight:'Durchschnitt pro Nacht'},
+  cs:{title:'Vaše nemovitost',income:'Příjmy',occupancy:'Obsazenost',nights:'Rezervované noci',upcoming:'Nadcházející pobyty',cleaning:'Úklid',inspections:'Kontroly',recent:'Poslední rezervace',noBookings:'V tomto období žádné rezervace',thisYear:'Posledních 12 měsíců',guest:'Host',arrives:'Příjezd',departs:'Odjezd',nightsCol:'Nocí',cleans:'dokončených úklidů',lastInspection:'Poslední kontrola',none:'Zatím nic nezaznamenáno',managedBy:'Spravuje',language:'Jazyk',actualIncome:'Skutečně přijaté příjmy',afterFees:'po provizi a poplatcích platforem',fromStatements:'Z výpisů platforem',estimated:'Odhad z rezervací',period:'Období',signOut:'Odhlásit se',welcome:'Vítejte zpět',noStatements:'Zatím nebyly nahrány žádné výpisy z platforem — váš správce je nahrává každý měsíc.',occNote:'Podíl obsazených nocí za posledních 12 měsíců',uploadTitle:'Zaslat výpis',uploadHelp:'Pokud dostáváte výpisy, které my nemáme — například faktury Booking.com — nahrajte PDF zde a my čísla doplníme.',uploadBtn:'Vybrat PDF',uploading:'Nahrávání…',uploaded:'Odesláno — děkujeme',yourUploads:'Odeslané vámi',monthlyNights:'Rezervované noci podle měsíce',calendar:'Dostupnost',platformMix:'Odkud přicházejí rezervace',free:'Volno',booked:'Obsazeno',ofNights:'nocí',noPlatform:'Přímé / jiné',prevMonth:'Předchozí',nextMonth:'Další',avgStay:'Průměrný pobyt',bestMonth:'Nejsilnější měsíc',lights:'Osvětlení',meter:'Elektroměr',notes:'Poznámky',noPhotos:'Nejsou přiloženy žádné fotografie',turnovers:'Úklidy mezi pobyty',deepCleans:'Generální úklidy',lastClean:'Poslední úklid',inspectedBy:'Kontrolu provedl',pool:'Bazén',garden:'Zahrada',breakage:'Zjištěno poškození',condition:'Stav',allGood:'Vše v pořádku',needsAttention:'Vyžaduje pozornost',inventory:'Kontroly inventáře',allPresent:'Vše na místě',itemsFlagged:'nahlášených položek',lastCheck:'Poslední kontrola',showing:'Období',m3:'3 měsíce',m6:'6 měsíců',m12:'12 měsíců',blockedLbl:'Nedostupné',stays:'Pobyty',revPerNight:'Průměr za noc'},
+  pl:{title:'Twoja nieruchomość',income:'Przychód',occupancy:'Obłożenie',nights:'Zarezerwowane noce',upcoming:'Nadchodzące pobyty',cleaning:'Sprzątanie',inspections:'Inspekcje',recent:'Ostatnie rezerwacje',noBookings:'Brak rezerwacji w tym okresie',thisYear:'Ostatnie 12 miesięcy',guest:'Gość',arrives:'Przyjazd',departs:'Wyjazd',nightsCol:'Noce',cleans:'ukończonych sprzątań',lastInspection:'Ostatnia inspekcja',none:'Brak zapisów',managedBy:'Zarządzane przez',language:'Język',actualIncome:'Faktycznie otrzymany przychód',afterFees:'po prowizji i opłatach platform',fromStatements:'Z wyciągów platform',estimated:'Szacowane z rezerwacji',period:'Okres',signOut:'Wyloguj',welcome:'Witaj ponownie',noStatements:'Nie wgrano jeszcze wyciągów z platform — zarządca wgrywa je co miesiąc.',occNote:'Udział zarezerwowanych nocy w ciągu ostatnich 12 miesięcy',uploadTitle:'Wyślij wyciąg',uploadHelp:'Jeśli otrzymujesz wyciągi, których my nie mamy — na przykład faktury Booking.com — wgraj PDF tutaj, a my dodamy dane do przychodu.',uploadBtn:'Wybierz PDF',uploading:'Wysyłanie…',uploaded:'Wysłano — dziękujemy',yourUploads:'Wysłane przez Ciebie',monthlyNights:'Zarezerwowane noce wg miesiąca',calendar:'Dostępność',platformMix:'Skąd pochodzą rezerwacje',free:'Wolne',booked:'Zajęte',ofNights:'nocy',noPlatform:'Bezpośrednie / inne',prevMonth:'Poprzedni',nextMonth:'Następny',avgStay:'Średni pobyt',bestMonth:'Najlepszy miesiąc',lights:'Oświetlenie',meter:'Licznik energii',notes:'Notatki',noPhotos:'Brak załączonych zdjęć',turnovers:'Sprzątania między pobytami',deepCleans:'Sprzątania generalne',lastClean:'Ostatnie sprzątanie',inspectedBy:'Kontrolę wykonał(a)',pool:'Basen',garden:'Ogród',breakage:'Wykryto uszkodzenie',condition:'Stan',allGood:'Wszystko w porządku',needsAttention:'Wymaga uwagi',inventory:'Kontrole inwentarza',allPresent:'Wszystko na miejscu',itemsFlagged:'zgłoszonych pozycji',lastCheck:'Ostatnia kontrola',showing:'Okres',m3:'3 miesiące',m6:'6 miesięcy',m12:'12 miesięcy',blockedLbl:'Niedostępne',stays:'Pobyty',revPerNight:'Średnio za noc'},
+  es:{title:'Su propiedad',income:'Ingresos',occupancy:'Ocupación',nights:'Noches reservadas',upcoming:'Próximas estancias',cleaning:'Limpieza',inspections:'Inspecciones',recent:'Reservas recientes',noBookings:'Sin reservas en este período',thisYear:'Últimos 12 meses',guest:'Huésped',arrives:'Llegada',departs:'Salida',nightsCol:'Noches',cleans:'limpiezas completadas',lastInspection:'Última inspección',none:'Aún sin registros',managedBy:'Gestionado por',language:'Idioma',actualIncome:'Ingresos realmente recibidos',afterFees:'tras comisiones y tarifas de plataforma',fromStatements:'De los extractos de plataforma',estimated:'Estimado a partir de reservas',period:'Período',signOut:'Cerrar sesión',welcome:'Bienvenido de nuevo',noStatements:'Aún no se han cargado extractos — su gestor los sube cada mes.',occNote:'Proporción de noches reservadas en los últimos 12 meses',uploadTitle:'Enviar un extracto',uploadHelp:'Si recibe extractos que nosotros no — facturas de Booking.com, por ejemplo — suba el PDF aquí y añadiremos las cifras a sus ingresos.',uploadBtn:'Elegir un PDF',uploading:'Subiendo…',uploaded:'Enviado — gracias',yourUploads:'Enviado por usted',monthlyNights:'Noches reservadas por mes',calendar:'Disponibilidad',platformMix:'De dónde vienen las reservas',free:'Libre',booked:'Reservado',ofNights:'de las noches',noPlatform:'Directo / otros',prevMonth:'Anterior',nextMonth:'Siguiente',avgStay:'Estancia media',bestMonth:'Mes más fuerte',lights:'Iluminación',meter:'Contador de luz',notes:'Notas',noPhotos:'Sin fotos adjuntas',turnovers:'Limpiezas entre estancias',deepCleans:'Limpiezas a fondo',lastClean:'Última limpieza',inspectedBy:'Inspeccionado por',pool:'Piscina',garden:'Jardín',breakage:'Daño detectado',condition:'Estado',allGood:'Todo correcto',needsAttention:'Requiere atención',inventory:'Revisiones de inventario',allPresent:'Todo presente',itemsFlagged:'artículos señalados',lastCheck:'Última revisión',showing:'Período',m3:'3 meses',m6:'6 meses',m12:'12 meses',blockedLbl:'No disponible',stays:'Estancias',revPerNight:'Media por noche'},
 };
 let clientLocale = 'en';
 const ct = k => (CLIENT_T[clientLocale] || CLIENT_T.en)[k] || CLIENT_T.en[k] || k;
@@ -10989,6 +11008,83 @@ let _clientChartMonths = 12;
 function setClientChartMonths(n) {
   _clientChartMonths = n;
   renderClientDashboard();
+}
+
+// ── Inspection reports ────────────────────────────────────────────
+// An inspection is a REPORT, not a date. The summary line carries the
+// headline judgements; everything the inspector actually wrote — the
+// per-area notes, the breakage, the meter reading, the photos — opens on
+// click. Collapsed by default because an owner scanning the page wants
+// "is anything wrong", and only then the detail.
+const _clientInspOpen = new Set();
+
+function toggleClientInspection(idx) {
+  if (_clientInspOpen.has(idx)) _clientInspOpen.delete(idx); else _clientInspOpen.add(idx);
+  const el = document.getElementById('client-insp-' + idx);
+  const car = document.getElementById('client-insp-caret-' + idx);
+  if (el) el.style.display = _clientInspOpen.has(idx) ? 'block' : 'none';
+  if (car) car.textContent = _clientInspOpen.has(idx) ? '▾' : '▸';
+}
+
+// "Needs attention" and friends are the inspector's own words, typed on
+// the staff side and never translated — so the STATUS is matched on
+// meaning rather than displayed as a colour alone.
+const _inspBad = v => /attention|bad|poor|broken|not work|issue|repair/i.test(String(v || ''));
+
+function renderClientInspection(i, idx) {
+  const when = i.inspection_date || String(i.submitted_at || '').slice(0, 10);
+  const who  = i.inspector_name || i.submitted_by || '';
+  const open = _clientInspOpen.has(idx);
+
+  const chip = (label, value) => value
+    ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:.74rem">
+         <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${_inspBad(value) ? 'var(--red)' : 'var(--green2)'}"></span>
+         ${escHtml(label)}: ${escHtml(String(value))}</span>` : '';
+
+  const note = (label, text) => text
+    ? `<div style="margin-top:8px">
+         <div style="font-size:.68rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em">${escHtml(label)}</div>
+         <div style="font-size:.78rem;white-space:pre-wrap">${escHtml(text)}</div>
+       </div>` : '';
+
+  // Photos may be stored either as full URLs or as bucket paths; only a
+  // usable URL is rendered, so a path never becomes a broken image.
+  const photos = (Array.isArray(i.photo_urls) ? i.photo_urls : [])
+    .map(u => typeof u === 'string' ? u : (u && (u.url || u.href)) || '')
+    .filter(u => /^https?:\/\//.test(u));
+
+  return `
+  <div style="border-bottom:1px solid var(--border)">
+    <div onclick="toggleClientInspection(${idx})" style="padding:10px 0;cursor:pointer">
+      <div style="display:flex;justify-content:space-between;gap:10px;font-size:.82rem;margin-bottom:6px;align-items:center">
+        <strong>${when ? fmtDate(when) : '—'}</strong>
+        <span class="text-muted" style="display:flex;align-items:center;gap:8px">
+          ${who ? `${ct('inspectedBy')} ${escHtml(who)}` : ''}
+          <span id="client-insp-caret-${idx}" style="font-size:.9rem">${open ? '▾' : '▸'}</span>
+        </span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:12px">
+        ${chip(ct('pool'), i.pool_status)}
+        ${chip(ct('garden'), i.garden_status)}
+        ${chip(ct('condition'), i.overall_condition)}
+        ${i.breakage_found ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:.74rem;color:var(--red)">
+          <span style="width:7px;height:7px;border-radius:50%;background:var(--red)"></span>${ct('breakage')}</span>` : ''}
+      </div>
+    </div>
+    <div id="client-insp-${idx}" style="display:${open ? 'block' : 'none'};padding:0 0 12px">
+      ${note(ct('breakage'), i.breakage_notes)}
+      ${note(ct('pool'), i.pool_notes)}
+      ${note(ct('garden'), i.garden_notes)}
+      ${note(ct('lights'), i.lights_notes)}
+      ${note(ct('notes'), i.general_notes || i.notes)}
+      ${i.electricity_meter ? `<div style="margin-top:8px;font-size:.78rem">
+        <span class="text-muted">${ct('meter')}:</span> <strong>${Number(i.electricity_meter).toLocaleString('en-ZA')}</strong></div>` : ''}
+      ${photos.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+        ${photos.map(u => `<a href="${escHtml(u)}" target="_blank" rel="noopener">
+          <img src="${escHtml(u)}" alt="" style="width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/></a>`).join('')}
+      </div>` : `<div class="text-muted" style="font-size:.72rem;margin-top:10px">${ct('noPhotos')}</div>`}
+    </div>
+  </div>`;
 }
 
 // 'YYYY-MM' → the month named in the client's own language, with the year
@@ -11288,7 +11384,7 @@ async function renderClientDashboard() {
                 'var(--teal)')}
       </div>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:24px;align-items:start">
+      <div class="client-two-col" style="margin-bottom:24px">
 
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:4px">
@@ -11299,10 +11395,10 @@ async function renderClientDashboard() {
             </div>
           </div>
           <div class="text-muted" style="font-size:.74rem;margin-bottom:14px">${escHtml(monthLabel(monthKeys[0], true))} — ${escHtml(monthLabel(monthKeys[monthKeys.length - 1], true))}</div>
-          <div style="display:flex;align-items:flex-end;gap:4px;height:130px">
+          <div class="client-chart">
             ${monthKeys.map((k, idx) => {
               const tot = monthTotal(k);
-              const h = Math.round((tot / peakMonth) * 108);
+              const pct = Math.round((tot / peakMonth) * 100);
               // The month alone was ambiguous — twelve bars reading Aug…Jul
               // never say which year you are looking at. January carries
               // its year, and so does the first bar whatever month it is,
@@ -11311,21 +11407,27 @@ async function renderClientDashboard() {
               const showYear = idx === 0 || k.endsWith('-01');
               const label = monthLabel(k, showYear);
               // Stacked in a fixed platform order so a colour means the
-              // same thing in every column.
-              const segs = CLIENT_PLAT_ORDER.filter(p => byMonth[k][p]).map(p => {
-                const sh = Math.max(2, Math.round((byMonth[k][p] / peakMonth) * 108));
-                return `<div title="${escHtml(clientPlatLabel(p))}: ${byMonth[k][p]}" style="height:${sh}px;background:${PLAT_COLORS[p] || PLAT_COLORS.direct};width:100%"></div>`;
-              }).join('');
+              // same thing in every column. Segments are a share of their
+              // own bar, so they always add up to it exactly.
+              const segs = CLIENT_PLAT_ORDER.filter(p => byMonth[k][p]).map(p =>
+                `<div title="${escHtml(clientPlatLabel(p))}: ${byMonth[k][p]}" style="height:${(byMonth[k][p] / tot) * 100}%;background:${PLAT_COLORS[p] || PLAT_COLORS.direct};width:100%"></div>`
+              ).join('');
               const tip = `${monthLabel(k, true)}: ${tot} ${ct('nightsCol').toLowerCase()}` +
                 CLIENT_PLAT_ORDER.filter(p => byMonth[k][p]).map(p => `\n${clientPlatLabel(p)}: ${byMonth[k][p]}`).join('');
-              return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
-                <div style="font-size:.6rem;color:var(--muted);font-weight:700">${tot || ''}</div>
-                <div title="${escHtml(tip)}" style="width:100%;height:${h}px;display:flex;flex-direction:column;justify-content:flex-end;border-radius:4px 4px 0 0;overflow:hidden;background:var(--surface-2)">${segs}</div>
-                <div style="font-size:.6rem;color:var(--muted);${showYear ? 'font-weight:700;color:var(--text)' : ''};white-space:nowrap">${escHtml(label)}</div>
+              // The count lives INSIDE the plot column, directly above its
+              // own bar. Sitting outside it, every number lined up along
+              // the top of the card instead — a "7" hanging far above the
+              // short bar it belonged to.
+              return `<div class="client-chart-col">
+                <div class="client-chart-plot">
+                  <div style="font-size:.6rem;color:var(--muted);font-weight:700;line-height:1.3;text-align:center">${tot || ''}</div>
+                  <div title="${escHtml(tip)}" style="width:100%;height:${pct}%;min-height:${tot ? 3 : 0}px;display:flex;flex-direction:column;border-radius:4px 4px 0 0;overflow:hidden;background:var(--surface-2)">${segs}</div>
+                </div>
+                <div class="client-chart-lbl${showYear ? ' on' : ''}">${escHtml(label)}</div>
               </div>`;
             }).join('')}
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+          <div class="client-card-foot" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
             <div><div class="text-muted" style="font-size:.68rem">${ct('avgStay')}</div>
                  <div style="font-weight:700;font-size:.9rem">${avgStay ? avgStay.toFixed(1) : '—'} ${ct('nightsCol').toLowerCase()}</div></div>
             <div><div class="text-muted" style="font-size:.68rem">${ct('bestMonth')}</div>
@@ -11426,34 +11528,7 @@ async function renderClientDashboard() {
 
         <div class="card">
           <div class="card-title" style="margin-bottom:10px">🔍 ${ct('inspections')}</div>
-          ${insps.length ? insps.map(i => {
-            // An inspection is a report, not a date. Showing only the day
-            // it happened told the owner nothing about their property —
-            // and with inspector_name empty on real rows, the line was a
-            // bare date next to blank space.
-            const when = i.inspection_date || String(i.submitted_at || '').slice(0, 10);
-            const who  = i.inspector_name || i.submitted_by || '';
-            const flag = (label, value, bad) => value
-              ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:.74rem">
-                   <span style="width:7px;height:7px;border-radius:50%;background:${bad ? 'var(--red)' : 'var(--green2)'}"></span>
-                   ${escHtml(label)}: ${escHtml(String(value))}</span>` : '';
-            const notes = i.general_notes || i.notes || i.breakage_notes || '';
-            return `
-            <div style="padding:9px 0;border-bottom:1px solid var(--border)">
-              <div style="display:flex;justify-content:space-between;gap:10px;font-size:.82rem;margin-bottom:6px">
-                <strong>${when ? fmtDate(when) : '—'}</strong>
-                ${who ? `<span class="text-muted">${ct('inspectedBy')} ${escHtml(who)}</span>` : ''}
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:12px">
-                ${flag(ct('pool'), i.pool_status, /attention|bad|poor/i.test(i.pool_status || ''))}
-                ${flag(ct('garden'), i.garden_status, /attention|bad|poor/i.test(i.garden_status || ''))}
-                ${flag(ct('condition'), i.overall_condition, /attention|bad|poor/i.test(i.overall_condition || ''))}
-                ${i.breakage_found ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:.74rem;color:var(--red)">
-                  <span style="width:7px;height:7px;border-radius:50%;background:var(--red)"></span>${ct('breakage')}</span>` : ''}
-              </div>
-              ${notes ? `<div class="text-muted" style="font-size:.75rem;margin-top:6px;white-space:pre-wrap">${escHtml(notes)}</div>` : ''}
-            </div>`;
-          }).join('')
+          ${insps.length ? insps.map((i, idx) => renderClientInspection(i, idx)).join('')
           : `<div class="text-muted" style="font-size:.82rem">${ct('none')}</div>`}
         </div>
 
