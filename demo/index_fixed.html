@@ -1754,7 +1754,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
 const CLIENT_BRAND = {
   name:       'S&N Apt. Management',
   shortName:  'S&N',
-  website:    'https://www.snapartments.co.za',
+  website:    BOOKING_SITE_URL,
   logo:       '🏠',
   whatsapp:   '27636021847',        // Nicole (testing) — change to Nina's for production
   email:      'sn_apt_management@outlook.com',
@@ -1768,6 +1768,22 @@ const SUPABASE_KEY = (window.HEP_CONFIG||{}).supabaseAnonKey;
 if(!SUPABASE_URL||!SUPABASE_KEY){ throw new Error('HEP: /demo/config.js missing or invalid — environment not configured'); }
 
 // ── Properties (hardcoded values below are the fallback if the DB fetch fails) ──
+// ── BOOKING SITE ───────────────────────────────────────────────
+// The guest-facing direct-booking site. Named "Sunset Coast Stays"
+// (owner's choice, 2026-07-31); it moves off snapartments.co.za onto its
+// own domain, since snapartments.co.za becomes the S&N property-
+// MANAGEMENT company site (roadmap p2-24).
+//
+// STILL POINTS AT THE OLD DOMAIN ON PURPOSE. The new domain is not
+// registered yet, and both of the API routes below are LIVE — calendar
+// imports and booking-confirmation emails run through them. Repointing
+// before the domain resolves would break both silently. When
+// sunsetcoaststays.co.za is registered and added in Vercel, change this
+// ONE line and every use follows: the guest RETURN10 link, the company
+// website field, the iCal proxy and the confirmation endpoint.
+const BOOKING_SITE_NAME = 'Sunset Coast Stays';
+const BOOKING_SITE_URL  = 'https://www.snapartments.co.za';  // TODO -> https://www.sunsetcoaststays.co.za once the domain is live
+
 let UUID_MAP = {
   'e9737638-d83a-4947-940a-8746789e4d9f': 'speranta',
   '83b2a84a-5451-4be5-a84f-2efc0d2602d5': 'tvhouse',
@@ -3363,7 +3379,7 @@ function renderSyncHealth() {
 }
 
 const CORS_PROXIES = [
-  url => `https://www.snapartments.co.za/api/ical-proxy?url=${encodeURIComponent(url)}`,
+  url => `${BOOKING_SITE_URL}/api/ical-proxy?url=${encodeURIComponent(url)}`,
   url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
@@ -5231,8 +5247,8 @@ const ROADMAP = [
   {k:'p2-21',t:'Pricing plans + income-only Budget (migration 740)',n:'DONE (2026-07-30) — pricing_plans holds the management-service price list, seeded with the tiers agreed in the pricing discussion: Apartment R3,500 (8 turnovers incl., R200 extra, R3,500 setup), House R5,500 (10, R200, R4,000), Villa/Estate R7,500 (12, R250, R5,000; real range R7,500-8,500, seeded at the floor). Shown as a table at the top of Business Info > Budget and editable there. Turnovers are a COLUMN not a note, because that is the one genuine flaw in fixed-fee pricing: workload scales with turnovers while income does not, so an allowance plus a per-turnover overage is what makes a flat fee safe rather than thin — and storing it as data makes it billable, since HEP already counts turnovers from bookings and the Management Invoice (p0-32) already computes per property per month. Budget is now INCOME ONLY per the owner\'s decision (\'I don\'t think expenses should be in there but stay part of the finances tab\'); the \'cost\' direction stays legal in the 710 schema but nothing writes it. business_budget.plan_id links an income line to the plan it is billed under, and picking a plan fills in its fee (only when the amount is blank, so a negotiated rate is never overwritten). Prices are ex-VAT — p1-6 (confirm VAT status) matters more now that several managed properties could approach the R1m compulsory-registration threshold.',c:'Business'},
   {k:'p2-22',t:'Role permissions with Confluence-style toggle grid (migration 750)',n:'DONE (2026-07-30) — role_permissions + has_permission(org, perm), with an owner-only grid under Settings > Permissions. Owner ask: \'a permission tab for the owners to manage for each their roles, a quick toggle who can do what like we know from Confluence.\' Permissions so far: website.edit, website.publish, budget.view, budget.edit, statements.upload. THE TOGGLES ARE REAL, NOT COSMETIC — site_content\'s INSERT/UPDATE/SELECT policies now read has_permission(), so unticking a box makes the database refuse the write; hiding a button would only stop the honest. Two deliberate safety properties: (1) owners ALWAYS pass regardless of the grid, because an owner who could revoke their own access could brick their account with no way back; (2) default is DENY, so adding a new permission key later cannot silently grant it to everyone. Admins keep access via is_org_admin OR-ed into every policy, so the org can always be administered. Marketing tab now includes \'host\' in its roles so editing can actually be delegated, with an explanatory locked state for a host who lacks the permission. Verified on staging against the real profiles: Nina (host) edit=true/publish=false, unknown permission denied, Nicole (owner) passes even with her toggle explicitly set false, and another org\'s owner is denied entirely. NEXT: only site_content is permission-gated so far — budget.* and statements.upload are enforced in the UI but their tables are still plain admin-only RLS, so those policies should be moved onto has_permission() too. UPDATE 2026-07-31 — the follow-up named above is now DONE via 770_permissions_budget_statements: business_budget, pricing_plans, finance_documents, platform_earnings and platform_statement_lines all read has_permission() too, so budget.view / budget.edit / statements.upload are enforced by the database rather than only by the UI. Before this the grid told a half-truth — unticking those hid buttons without refusing anything, and a non-admin could still have written through the API. Verified on staging with the real users: host sees 0 budget / 0 plans / 0 earnings; granting host budget.view alone makes budget and plans visible (1 and 3) while earnings STAY hidden, proving the grant is granular rather than all-or-nothing; owner and admin unaffected throughout, on both databases.',c:'Architecture'},
   {k:'p2-23',t:'Booking.com statement parser',n:'OPEN — the owner will share Booking.com statements \'a bit later\'. Airbnb and LekkeSlaap are done (p2-18); the parser dispatches on detectPlatform() and each platform is a self-contained function returning the same normalised shape, so adding a third is a contained change: write parseBooking(lines), add its detection string, and add fixtures + expected totals to scripts/tests/test_statement_parsers.js (which reads the parser source out of index_fixed.html, so it can never pass against a stale copy). The platform CHECK constraint on platform_earnings already allows \'booking\'.',c:'HEP'},
-  {k:'p2-24',t:'Split the two businesses onto separate sites',n:'OPEN, DECIDED 2026-07-30 — the owner\'s call: snapartments.co.za becomes the S&N property-MANAGEMENT company site (B2B, owners), and the guest booking site moves to a NEW Cape Town-sounding domain covering Tableview/Milnerton/Blouberg and listing only properties S&N manages. HEP stays the platform, sold to anyone. Practical consequence: the existing snapartments-frontend repo IS already the booking site (both properties, PayFast, availability) — so it is a RENAME plus a domain switch, not a rebuild (\'Nestora\' appears only 13 times across 9 files). THIS SUPERSEDES p0-8: do NOT rename Nestora to \'S&N Apartments\', because the booking site is not S&N — rename straight to the new name. Name candidates researched: \'Table Bay Stays\' was rejected despite tablebaystays.co.za having no DNS record, because Table Bay is heavily occupied in Cape Town hospitality (the landmark Table Bay Hotel at the V&A, just relaunched as InterContinental Table Bay after a R1bn redevelopment) — trademark exposure in the same class plus an unwinnable SEO fight. Front-runners now: \'Sunset Coast Stays\' (that coast faces west, Sunset Beach is a Milnerton suburb, covers the whole area) or \'Blouberg Beach Stays\' (stronger search term, narrower). Availability at a .co.za registrar and a CIPC name check still to be done by the owner.',c:'Website'},
-  {k:'p2-25',t:'Move HEP\'s hardcoded snapartments.co.za dependencies when the booking site moves',n:'OPEN, BLOCKS p2-24 — HEP calls www.snapartments.co.za for two LIVE things whose routes live in the booking repo, so they move with it: /api/ical-proxy for calendar imports (index_fixed.html:3291) and /api/confirm for booking confirmation emails (:6043). Guest-facing links point there too: the RETURN10 direct-booking discount in the post-stay WhatsApp message (:8090 EN, :8100 AF) and website: in the company constants (:1708) — after the split those would send GUESTS to the B2B company site. All of these need repointing to the new booking domain in the same change, or imports and confirmations break silently.',c:'Bug'},
+  {k:'p2-24',t:'Split the two businesses onto separate sites',n:'OPEN, DECIDED 2026-07-30 — the owner\'s call: snapartments.co.za becomes the S&N property-MANAGEMENT company site (B2B, owners), and the guest booking site moves to a NEW Cape Town-sounding domain covering Tableview/Milnerton/Blouberg and listing only properties S&N manages. HEP stays the platform, sold to anyone. Practical consequence: the existing snapartments-frontend repo IS already the booking site (both properties, PayFast, availability) — so it is a RENAME plus a domain switch, not a rebuild (\'Nestora\' appears only 13 times across 9 files). THIS SUPERSEDES p0-8: do NOT rename Nestora to \'S&N Apartments\', because the booking site is not S&N — rename straight to the new name. Name candidates researched: \'Table Bay Stays\' was rejected despite tablebaystays.co.za having no DNS record, because Table Bay is heavily occupied in Cape Town hospitality (the landmark Table Bay Hotel at the V&A, just relaunched as InterContinental Table Bay after a R1bn redevelopment) — trademark exposure in the same class plus an unwinnable SEO fight. Front-runners now: \'Sunset Coast Stays\' (that coast faces west, Sunset Beach is a Milnerton suburb, covers the whole area) or \'Blouberg Beach Stays\' (stronger search term, narrower). Availability at a .co.za registrar and a CIPC name check still to be done by the owner. NAME CHOSEN 2026-07-31: SUNSET COAST STAYS (sunsetcoaststays.co.za). Picked over Blouberg Beach Stays — which is the stronger search term — because the guest base is substantially foreign (German, Polish, Czech) and for a DIRECT-booking business the domain has to survive being said over WhatsApp and typed right first time; \'Blouberg\' fails that repeatedly. It also spans Milnerton through Big Bay without privileging one suburb, and Sunset Beach is a real suburb mid-patch so the name is literal, not decorative. All shortlisted domains were DNS-checked free and searched against existing Cape Town accommodation brands. Rejected: Table Bay Stays (landmark Table Bay Hotel at the V&A, relaunched as InterContinental after a R1bn refit — same-class trademark exposure plus an unwinnable SEO fight). DONE SO FAR: booking-site code renamed on branch rebrand/sunset-coast-stays in nyx-1992/snapartments-frontend (13 occurrences, 9 files, verified that ONLY the brand text changed — every structural character count is byte-identical to HEAD); seeded website copy rebranded via migration 810; HEP\'s scattered URLs consolidated behind BOOKING_SITE_URL. STILL WITH THE OWNER: register sunsetcoaststays.co.za, add it in Vercel, then flip the single BOOKING_SITE_URL line. Suggested: register the runner-up (bloubergbeachstays.co.za) too and redirect it — cheap insurance against a competitor taking the obvious neighbour name.',c:'Website'},
+  {k:'p2-25',t:'Move HEP\'s hardcoded snapartments.co.za dependencies when the booking site moves',n:'OPEN, BLOCKS p2-24 — HEP calls www.snapartments.co.za for two LIVE things whose routes live in the booking repo, so they move with it: /api/ical-proxy for calendar imports (index_fixed.html:3291) and /api/confirm for booking confirmation emails (:6043). Guest-facing links point there too: the RETURN10 direct-booking discount in the post-stay WhatsApp message (:8090 EN, :8100 AF) and website: in the company constants (:1708) — after the split those would send GUESTS to the B2B company site. All of these need repointing to the new booking domain in the same change, or imports and confirmations break silently. MITIGATED 2026-07-31: all five references now flow from ONE constant, BOOKING_SITE_URL, declared next to UUID_MAP — the guest RETURN10 link (EN + AF), the company website field, the iCal proxy and the /api/confirm endpoint. It DELIBERATELY still points at www.snapartments.co.za: the new domain is not registered yet and both API routes are live, so repointing early would silently break calendar imports and booking-confirmation emails. When the domain resolves, change that one line. This no longer blocks p2-24.',c:'Bug'},
   {k:'p2-26',t:'Wire the public website to read site_content',n:'OPEN, next step after p2-20 — the editing side is built and get_site_content(org_id, site_key) exists and is granted to anon, but snapartments-frontend does not call it yet: page copy is still hardcoded in the .tsx files. Needs the Supabase client added to the Next.js app with the anon key and org id in env, pages reading from the RPC, and ISR/revalidate (~60s) so an edit goes live without a deploy.',c:'Website'},
   {k:'p2-27',t:'Make property listings editable (the higher-value half of the CMS)',n:'OPEN — data/listings.ts still hardcodes descriptions, taglines, amenities, images AND seasonal rates (peak/shoulder/winter pricePerNight) for both properties, so changing a rate needs a developer and a deploy. This is where changes actually happen, so it is worth more than page copy. Bigger than site_content because it is structured data with pricing logic (getRateForDate/getTotalForRange) rather than free text, and the booking flow and PayFast totals depend on it — so it needs care, not just a jsonb blob. Owner\'s later note: agency clients may want a page per property OR one combined site; (org_id, site_key, page) already supports both, and makes per-site billing natural.',c:'Website'},
   {k:'p2-28',t:'Build the S&N management company site',n:'OPEN — the owner-facing pitch, to live at snapartments.co.za once p2-24 frees the domain. Differentiators to lead with: languages (English, German, Polish, some Spanish; Czech clients) for foreign owners who own SA property but live in Europe, and a real live owner dashboard (HEP), which almost no small manager can offer. The \'management\' page shape already exists in SITE_PAGES (headline, subhead, languages line, what\'s included, pricing note, CTA), so the content can be written in HEP before the site renders it. Decisions still open, previously asked and not yet answered: whether to publish \'from\' prices or full tiers or stay enquiry-only, and whether the page is English-only (fastest, and foreign owners searching SA property mostly search in English) or fully translated.',c:'GTM'},
@@ -6164,7 +6180,7 @@ async function approveBookingConfirmed(id) {
 
   if (guestEmail) {
     try {
-      const emailRes = await fetch('https://www.snapartments.co.za/api/confirm', {
+      const emailRes = await fetch(BOOKING_SITE_URL + '/api/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -8211,7 +8227,7 @@ const POST_STAY_MSG = {
 
 We hope you enjoyed your stay at ${propName(b.property_id)}! We'd love your feedback — it really helps us.
 
-🎁 And next time, book directly and save: use code *RETURN10* for 10% off at https://www.snapartments.co.za — no platform fees, best rate guaranteed.
+🎁 And next time, book directly and save: use code *RETURN10* for 10% off at ${BOOKING_SITE_URL} — no platform fees, best rate guaranteed.
 
 Hope to host you again soon! 🌊
 S&N Apt Management`;
@@ -8221,7 +8237,7 @@ S&N Apt Management`;
 
 Ons hoop jy het jou verblyf by ${propName(b.property_id)} geniet! Ons stel jou terugvoer opreg op prys — dit help ons regtig baie.
 
-🎁 En volgende keer, bespreek direk en bespaar: gebruik kode *RETURN10* vir 10% afslag by https://www.snapartments.co.za — geen platformfooie nie, beste tarief gewaarborg.
+🎁 En volgende keer, bespreek direk en bespaar: gebruik kode *RETURN10* vir 10% afslag by ${BOOKING_SITE_URL} — geen platformfooie nie, beste tarief gewaarborg.
 
 Hoop om jou binnekort weer te gasheer! 🌊
 S&N Apt Management`;
@@ -10869,7 +10885,7 @@ const SITE_PAGES = {
 // seeded with real copy (800). Defaulting to the empty 'company' key
 // would open the editor on blank fields, which is the opposite of the
 // point.
-const SITE_KEYS = {bookings:'Bookings site', company:'Company site'};
+const SITE_KEYS = {bookings:'Sunset Coast Stays (bookings)', company:'S&N Apartments (company)'};
 
 let siteContent = [];      // rows for the selected site
 let _siteDirty = {};       // page -> true when edited but not saved
@@ -11114,7 +11130,7 @@ function renderSitePreview() {
     body = `<div style="background:#fff;padding:22px">
         <div style="font-size:.7rem;color:var(--muted);margin-bottom:10px">How it looks in search results</div>
         <div style="font-family:arial,sans-serif;max-width:420px">
-          <div style="color:#202124;font-size:.72rem">snapartments.co.za</div>
+          <div style="color:#202124;font-size:.72rem">${document.getElementById('site-key-select').value === 'company' ? 'snapartments.co.za' : 'sunsetcoaststays.co.za'}</div>
           <div style="color:#1a0dab;font-size:1.02rem;line-height:1.3;margin:2px 0">${ph('title','Your page title')}</div>
           <div style="color:#4d5156;font-size:.8rem;line-height:1.5">${ph('description','The description search engines show under your title.')}</div>
         </div>
