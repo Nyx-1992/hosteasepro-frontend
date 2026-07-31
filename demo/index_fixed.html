@@ -2786,6 +2786,17 @@ function buildMobileNav() {
 }
 
 function switchTab(id) {
+  // Role check belongs HERE, not only in buildNav. Hiding a nav item
+  // stops it being clicked, but says nothing about the many other ways a
+  // tab gets opened — cross-tab buttons (Reports' "Upload a statement"
+  // jumps to Invoices), dashboard shortcuts, restored state. A host was
+  // landing on the Invoices pane with no Invoices item in her sidebar,
+  // which is how this was spotted.
+  const nav = NAV.find(n => n.id === id);
+  if (nav && currentUser && !nav.roles.includes(currentUser.role)) {
+    if (id !== 'dashboard') switchTab('dashboard');
+    return;
+  }
   currentTab=id;
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
   const pane = document.getElementById('tab-'+id);
@@ -5234,6 +5245,8 @@ const ROADMAP = [
   {k:'p2-29',t:'Migration files did not reproduce the live DB — current_org_id (fixed, 760)',n:'DONE (2026-07-31) via 760_current_org_id_profiles_fix. CORRECTION to how this was first written: the original note claimed is_org_admin was drifted, which was WRONG — 085_is_org_functions_profiles_fix already fixes is_org_admin AND is_org_member to read public.profiles, and is documented there as a corrective for exactly that incident. Do not re-open that part. The REAL gap, found by checking properly, was current_org_id: 030_rls_helpers defines it as plpgsql reading public.user_profiles (which is EMPTY — 0 rows on production, while public.profiles holds the three real users), 085 fixed the other two functions but never redefined it, and essentially every RLS policy in the project is gated on org_id = current_org_id(). A database rebuilt from the migration files alone would therefore have had every table read as empty for everyone. The live databases were always fine — the working definition had been applied directly at some point and only the files lagged. 760 reproduces the verified-live body (language sql, SECURITY DEFINER, against profiles.id) so the files now rebuild a working database. Verified after applying: current_org_id() returns non-null for owner, admin and host on production.',c:'Architecture'},
   {k:'p2-30',t:'Rotate the exposed TV House lockbox code and WiFi password',n:'OPEN, SCHEDULED — owner confirmed 2026-07-31 that the code will be changed AFTER THE NEXT CHECKOUT, roughly a month out, because guests are in the house now. That is the right call: changing a lockbox code mid-stay strands the current guests. 690 already moved the values out of the page source so nothing new is being exposed; what remains is that the old code (7021) and the WiFi password were publicly readable for as long as the pre-rotation page was live and are still in git history. When the guests leave: change the physical lockbox, then update Property Manual > Access & Welcome (a data edit, no deploy). Do not close this until the physical code has actually changed.',c:'Security'},
   {k:'p2-31',t:'Statement shape differs per platform — one file can cover several properties',n:'PARTLY DONE (2026-07-31). Observed by the owner on the first real upload: an Airbnb earnings report covers EVERY home on the account (the June 2026 file produced two rows, Speranta R2,466.56 and TV House R0.00), whereas a LekkeSlaap statement names a single property. So one document legitimately yields N earnings rows, and the document\'s own Property dropdown is only a label for the file — it deliberately does not constrain which properties the figures land against, since tying a multi-home report to one dropdown choice would silently discard the rest. BUILT: when a statement covers more than one property the review step now shows a checkbox per listing, all ticked by default (unticking by default would lose real data silently). Only ticked listings are saved, only they require a property mapping, and alias learning is restricted to them too — remembering the name of a listing the user deliberately excluded would auto-map it next time and quietly undo their choice. This covers the case that actually matters: a client whose Airbnb account also holds properties S&N does not manage. STILL OPEN, deliberately: zero-value rows are still saved by default. Keeping them distinguishes \'earned nothing\' from \'no data\', which is real information, but it does put R0.00 rows in Reports. Revisit if it becomes noisy with more properties.',c:'HEP'},
+  {k:'p2-32',t:'Staff and Contacts feel duplicated — consider merging, and an organogram',n:'OPEN, raised by the owner 2026-07-31 after using prod: \'I just feel staff and contacts are kinda duplicated. Not sure if we should rather have an organogram with the staff tab?\' The observation is correct at the data level — Staff (tab-staff) and Contacts (tab-team) are TWO NAV ENTRIES OVER ONE TABLE, public.team_contacts, differing only by lens: Staff shows employed people (management + domestic, with rate/payment/properties/birthday), Contacts shows everyone else (suppliers, maintenance contractors). The employed-vs-external split is real and worth keeping; two top-level nav items for one table is what feels redundant. Recommended direction: ONE \'People\' tab with a segmented filter (Team / Suppliers / All), which removes the duplication without losing the distinction, plus an organogram as a VIEW MODE inside it rather than a reason to keep two tabs — reporting lines (owners -> host manager -> cleaners/caretakers, with Tino as on-site caretaker at TV House) are genuinely easier to read as a chart than a list, and would be useful when onboarding a client who asks who actually looks after their property. Not started: this is a navigation change the owners use daily, so it wants their preference before building. Note team_contacts already carries the role/category fields an organogram would need; no schema change expected.',c:'Architecture'},
+  {k:'p2-33',t:'Website editor preview is an approximation until the site reads from site_content',n:'PARTLY DONE (2026-07-31). Owner feedback: \'for the marketing - it doesn\'t seem connected to the webpage yet, one should see the webpage and see a preview of what one edits!\' — correct, and the disconnect is p2-26. BUILT NOW: a live preview panel under the website editor that redraws as you type, in a browser-chrome frame, using the real site\'s palette and type taken from snapartments-frontend\'s tailwind config (ocean #0E4D6B, seafoam #4ABBA5, sand #F5EFE0, coral #E8604C, Playfair display face). Home and the management pitch render as a hero (badge/languages pill, headline, subhead, CTA) over the section beneath; About and Contact render their own shapes, with the WhatsApp number as a real-looking button; SEO renders as a Google search result with a character count that warns past 160, since a browser title and meta description are never seen on the page itself. It is LABELLED as an approximation in the UI rather than pretending to be the live page — a preview that quietly lies is worse than none. It becomes a TRUE preview once p2-26 lands and the Next.js site renders from site_content; at that point consider replacing this hand-drawn version with an iframe of the real page in draft mode, which is the only way for it to stay accurate as the site\'s design changes.',c:'Website'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
@@ -10836,6 +10849,7 @@ function renderSiteEditor() {
             ${f.hint ? `<div class="text-muted" style="font-size:.72rem;margin-top:3px">${f.hint}</div>` : ''}
           </div>`).join('')}
       </div>
+      <div id="sc-preview"></div>
       <div id="sc-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:10px"></div>
       <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" id="sc-save-btn" onclick="saveSiteContent(false)">${dirty?'Save draft •':'Save draft'}</button>
@@ -10850,14 +10864,117 @@ function renderSiteEditor() {
       </div>
       ${row && row.published_at ? `<div class="text-muted" style="font-size:.72rem;margin-top:8px">Last published ${fmtDate(String(row.published_at).slice(0,10))}</div>` : ''}
     </div>`;
+  renderSitePreview();
 }
 
 function markSiteDirty() {
   const page = document.getElementById('site-page-select').value;
+  renderSitePreview();
   if (_siteDirty[page]) return;
   _siteDirty[page] = true;
   const btn = document.getElementById('sc-save-btn');
   if (btn) btn.textContent = 'Save draft •';
+}
+
+// Live preview of the page being edited. Uses the real site's palette and
+// type (from snapartments-frontend's tailwind config: ocean #0E4D6B,
+// seafoam #4ABBA5, sand #F5EFE0, coral #E8604C, Playfair display face) so
+// it reads as the actual page rather than a form dump.
+//
+// Honest about what it is: an APPROXIMATION. The public site does not yet
+// render from site_content (roadmap p2-26), so this cannot be a true
+// preview of the live page — it shows the words you are editing in the
+// layout they will occupy. Labelled as such in the UI, because a preview
+// that quietly lies about being live is worse than none.
+const SITE_CSS = {
+  ocean:'#0E4D6B', seafoam:'#4ABBA5', sand:'#F5EFE0', coral:'#E8604C', ink:'#1C1A17', mist:'#F9F6F0',
+};
+function currentSiteFields() {
+  const page = document.getElementById('site-page-select').value;
+  const def = SITE_PAGES[page];
+  const out = {};
+  if (def) def.fields.forEach(f => {
+    const el = document.getElementById('sc-'+f.k);
+    if (el) out[f.k] = el.value.trim();
+  });
+  return { page, def, c: out };
+}
+
+function renderSitePreview() {
+  const el = document.getElementById('sc-preview');
+  if (!el) return;
+  const { page, c } = currentSiteFields();
+  const S = SITE_CSS;
+  const esc = escHtml;
+  const has = k => c[k] && c[k].length;
+  const ph = (k, fallback) => has(k) ? esc(c[k]) : `<span style="opacity:.45">${fallback}</span>`;
+
+  let body = '';
+  if (page === 'home' || page === 'management') {
+    body = `
+      <div style="background:linear-gradient(135deg,${S.ocean} 0%,${S.ocean} 55%,${S.seafoam} 140%);padding:34px 22px;text-align:center;color:#fff">
+        ${has('badge') ? `<div style="display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:5px 13px;font-size:.68rem;margin-bottom:14px">${esc(c.badge)}</div>` : ''}
+        ${has('languages') ? `<div style="display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:5px 13px;font-size:.68rem;margin-bottom:14px">${esc(c.languages)}</div>` : ''}
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.9rem;line-height:1.12;margin-bottom:10px">${ph('headline','Your headline appears here')}</div>
+        <div style="opacity:.75;font-size:.86rem;line-height:1.6;max-width:340px;margin:0 auto 16px">${ph('subhead','The sub-headline sits under it.')}</div>
+        ${has('cta_label') ? `<span style="display:inline-block;background:#fff;color:${S.ocean};font-weight:700;border-radius:999px;padding:10px 22px;font-size:.8rem">${esc(c.cta_label)}</span>` : ''}
+      </div>
+      ${(has('intro_title')||has('intro_body')||has('body')) ? `
+        <div style="background:${S.sand};padding:26px 22px;text-align:center">
+          ${has('intro_title') ? `<div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.25rem;color:${S.ink};margin-bottom:8px">${esc(c.intro_title)}</div>` : ''}
+          <div style="color:#4a4a4a;font-size:.84rem;line-height:1.75;white-space:pre-wrap;text-align:left">${esc(c.intro_body || c.body || '')}</div>
+          ${has('pricing_note') ? `<div style="margin-top:14px;padding-top:12px;border-top:1px solid ${S.coral}33;color:#6a6a6a;font-size:.76rem;white-space:pre-wrap;text-align:left">${esc(c.pricing_note)}</div>` : ''}
+        </div>` : ''}`;
+  } else if (page === 'about') {
+    body = `<div style="background:${S.mist};padding:30px 22px">
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.5rem;color:${S.ocean};margin-bottom:12px">${ph('headline','About us')}</div>
+        <div style="color:#4a4a4a;font-size:.84rem;line-height:1.8;white-space:pre-wrap">${ph('body','Your story goes here.')}</div>
+      </div>`;
+  } else if (page === 'contact') {
+    body = `<div style="background:${S.mist};padding:30px 22px">
+        <div style="font-family:'DM Serif Display',Georgia,serif;font-size:1.5rem;color:${S.ocean};margin-bottom:8px">${ph('headline','Get in touch')}</div>
+        <div style="color:#4a4a4a;font-size:.84rem;line-height:1.7;white-space:pre-wrap;margin-bottom:14px">${esc(c.body||'')}</div>
+        <div style="display:grid;gap:7px;font-size:.82rem">
+          ${has('email')    ? `<div>✉️ <a style="color:${S.ocean}">${esc(c.email)}</a></div>` : ''}
+          ${has('phone')    ? `<div>📞 ${esc(c.phone)}</div>` : ''}
+          ${has('whatsapp') ? `<div><span style="display:inline-block;background:#25D366;color:#fff;border-radius:999px;padding:6px 14px;font-size:.78rem;font-weight:600">💬 WhatsApp ${esc(c.whatsapp)}</span></div>` : ''}
+        </div>
+      </div>`;
+  } else if (page === 'seo') {
+    // SEO has no on-page rendering — show the Google result instead,
+    // which is the only place these two fields are ever seen.
+    body = `<div style="background:#fff;padding:22px">
+        <div style="font-size:.7rem;color:var(--muted);margin-bottom:10px">How it looks in search results</div>
+        <div style="font-family:arial,sans-serif;max-width:420px">
+          <div style="color:#202124;font-size:.72rem">snapartments.co.za</div>
+          <div style="color:#1a0dab;font-size:1.02rem;line-height:1.3;margin:2px 0">${ph('title','Your page title')}</div>
+          <div style="color:#4d5156;font-size:.8rem;line-height:1.5">${ph('description','The description search engines show under your title.')}</div>
+        </div>
+        ${has('description') ? `<div style="font-size:.7rem;color:${c.description.length>160?'var(--red)':'var(--muted)'};margin-top:8px">
+          ${c.description.length} characters${c.description.length>160?' — over 160, search engines will cut it off':''}
+        </div>` : ''}
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div style="margin-top:18px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">Preview</div>
+        <div style="font-size:.7rem;color:var(--muted)">— how your words will look</div>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.06)">
+        <div style="background:#e9e9e9;padding:7px 10px;display:flex;align-items:center;gap:6px">
+          <span style="width:9px;height:9px;border-radius:50%;background:#ff5f57;display:inline-block"></span>
+          <span style="width:9px;height:9px;border-radius:50%;background:#febc2e;display:inline-block"></span>
+          <span style="width:9px;height:9px;border-radius:50%;background:#28c840;display:inline-block"></span>
+          <span style="flex:1;text-align:center;font-size:.68rem;color:#666">${page === 'seo' ? 'search result' : (SITE_KEYS[document.getElementById('site-key-select').value]||'') + ' — /' + (page==='home'?'':page)}</span>
+        </div>
+        ${body}
+      </div>
+      <div class="text-muted" style="font-size:.7rem;margin-top:7px">
+        An impression of the layout, not the live page — the website doesn't read from here yet, so styling and images will differ.
+      </div>
+    </div>`;
 }
 
 async function saveSiteContent(publish) {
