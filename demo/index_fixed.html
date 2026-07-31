@@ -1397,6 +1397,20 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <!-- Permissions (owner only — see renderPermissions). A grid of
              per-role toggles, enforced in the database by has_permission()
              (750), not just hidden in the UI. -->
+        <!-- CLIENTS & OWNERS — who owns each property vs who manages it
+             (830). This is the commercial record; the login it grants is
+             read-only and scoped to that one property (820-824). -->
+        <div class="card" style="margin-bottom:18px" id="settings-clients-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+            <div style="font-weight:700;font-size:1rem">🤝 Clients &amp; property owners</div>
+            <button class="btn btn-sm btn-primary" onclick="openStakeholder()">+ Add owner</button>
+          </div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">
+            Who owns each property, and who manages it. An owner with a login sees only their own property — their bookings, income, cleaning and inspections — and nothing else of the business.
+          </div>
+          <div id="settings-clients"></div>
+        </div>
+
         <div class="card" style="margin-bottom:18px" id="settings-permissions-card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
             <div style="font-weight:700;font-size:1rem">🔑 Permissions</div>
@@ -1746,6 +1760,22 @@ function _buildMobileNavStub(){/* replaced by main script */}
 //  9. Deploy as a new Vercel project — done.
 // ════════════════════════════════════════════════════════════════
 
+// ── BOOKING SITE ───────────────────────────────────────────────
+// The guest-facing direct-booking site. Named "Sunset Coast Stays"
+// (owner's choice, 2026-07-31); it moves off snapartments.co.za onto its
+// own domain, since snapartments.co.za becomes the S&N property-
+// MANAGEMENT company site (roadmap p2-24).
+//
+// STILL POINTS AT THE OLD DOMAIN ON PURPOSE. The new domain is not
+// registered yet, and both of the API routes below are LIVE — calendar
+// imports and booking-confirmation emails run through them. Repointing
+// before the domain resolves would break both silently. When
+// sunsetcoaststays.co.za is registered and added in Vercel, change this
+// ONE line and every use follows: the guest RETURN10 link, the company
+// website field, the iCal proxy and the confirmation endpoint.
+const BOOKING_SITE_NAME = 'Sunset Coast Stays';
+const BOOKING_SITE_URL  = 'https://www.snapartments.co.za';  // TODO -> https://www.sunsetcoaststays.co.za once the domain is live
+
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  CLIENT CONFIG — S&N Apt. Management                        ║
 // ║  Replace this entire block for each new client              ║
@@ -1768,21 +1798,6 @@ const SUPABASE_KEY = (window.HEP_CONFIG||{}).supabaseAnonKey;
 if(!SUPABASE_URL||!SUPABASE_KEY){ throw new Error('HEP: /demo/config.js missing or invalid — environment not configured'); }
 
 // ── Properties (hardcoded values below are the fallback if the DB fetch fails) ──
-// ── BOOKING SITE ───────────────────────────────────────────────
-// The guest-facing direct-booking site. Named "Sunset Coast Stays"
-// (owner's choice, 2026-07-31); it moves off snapartments.co.za onto its
-// own domain, since snapartments.co.za becomes the S&N property-
-// MANAGEMENT company site (roadmap p2-24).
-//
-// STILL POINTS AT THE OLD DOMAIN ON PURPOSE. The new domain is not
-// registered yet, and both of the API routes below are LIVE — calendar
-// imports and booking-confirmation emails run through them. Repointing
-// before the domain resolves would break both silently. When
-// sunsetcoaststays.co.za is registered and added in Vercel, change this
-// ONE line and every use follows: the guest RETURN10 link, the company
-// website field, the iCal proxy and the confirmation endpoint.
-const BOOKING_SITE_NAME = 'Sunset Coast Stays';
-const BOOKING_SITE_URL  = 'https://www.snapartments.co.za';  // TODO -> https://www.sunsetcoaststays.co.za once the domain is live
 
 let UUID_MAP = {
   'e9737638-d83a-4947-940a-8746789e4d9f': 'speranta',
@@ -3195,7 +3210,7 @@ function renderTab(id) {
   }
   else if (id==='invoices')  renderInvoicesTab();
   else if (id==='roadmap')   renderRoadmapTab();
-  else if (id==='settings')  { renderSettingsPrefs(); loadPermissions(); }
+  else if (id==='settings')  { renderSettingsPrefs(); loadPermissions(); loadStakeholders(); }
 }
 
 
@@ -5425,6 +5440,11 @@ const ROADMAP = [
   {k:'p2-31',t:'Statement shape differs per platform — one file can cover several properties',n:'PARTLY DONE (2026-07-31). Observed by the owner on the first real upload: an Airbnb earnings report covers EVERY home on the account (the June 2026 file produced two rows, Speranta R2,466.56 and TV House R0.00), whereas a LekkeSlaap statement names a single property. So one document legitimately yields N earnings rows, and the document\'s own Property dropdown is only a label for the file — it deliberately does not constrain which properties the figures land against, since tying a multi-home report to one dropdown choice would silently discard the rest. BUILT: when a statement covers more than one property the review step now shows a checkbox per listing, all ticked by default (unticking by default would lose real data silently). Only ticked listings are saved, only they require a property mapping, and alias learning is restricted to them too — remembering the name of a listing the user deliberately excluded would auto-map it next time and quietly undo their choice. This covers the case that actually matters: a client whose Airbnb account also holds properties S&N does not manage. STILL OPEN, deliberately: zero-value rows are still saved by default. Keeping them distinguishes \'earned nothing\' from \'no data\', which is real information, but it does put R0.00 rows in Reports. Revisit if it becomes noisy with more properties.',c:'HEP'},
   {k:'p2-32',t:'Staff + Contacts merged into one People tab, with an organogram',n:'DONE (2026-07-31). The owner\'s read was right: Staff (tab-staff) and Contacts (tab-team) were TWO NAV ENTRIES OVER ONE TABLE, public.team_contacts, differing only by which categories each showed. Merged into a single People tab. The employed-vs-external distinction was worth keeping and survives as a filter (All / Team / Suppliers); only the duplicated navigation is gone. Employed people keep the richer staff card (rate, payment, assigned properties, birthday, portal access) since that detail was the reason Staff existed; suppliers and contractors keep the contact card with its sub-contacts. A Chart view renders the same people as an organogram: Owners / Management / Domestic tiers with connectors, each node showing assigned properties and portal access, and external people shown separately below a dashed rule as explicitly not employed. Tiers are INFERRED from cat plus owner/director/principal wording in the role field rather than a new reports_to column — at this team size an inferred hierarchy is correct and a schema change to state it would be ceremony; if it ever mis-sorts someone, the fix is an explicit reports_to column, not more pattern matching. The UI says the lines are inferred rather than implying they were configured. IMPLEMENTATION NOTE for whoever touches this next: renderTeam() and renderStaffTab() survive as delegating shims that call renderPeople(), because seven save/delete handlers across the file call them to refresh after a change — repointing every call site would have been seven edits and one missed call away from a silently stale list. The old \'team\' and \'staff\' tab ids also redirect to \'people\' so saved state and stray links still land somewhere sensible. Verified with representative data: all seven people appear in both views, Team/Suppliers split 5/2, and nobody is lost from either. UPDATE 2026-07-31 (owner testing): People is now visible to HOSTS too — "I would expect Nina to see the contacts if she needs to contact someone." No policy change was needed: team_contacts has always allowed any org member to SELECT and restricted writes to admins (520). What DID need care is that staff cards carry more than contact details — cleaner rate, payment method, birthday, portal-access flag, and free-text notes. The notes are why this became a permission rather than a plain role check: the real records write the rate out in prose ("Paid via ewallet directly. Rate: R350/clean."), so hiding the rate field while showing notes would have leaked precisely what was being hidden. New permission people.pay (780) gates all five together, ON for admin and OFF for host by default, so the owner can grant it in Settings > Permissions without a developer. Add/Invite buttons and the per-card edit/delete controls are hidden for non-admins, since those writes would fail at the policy anyway. IMPORTANT AND DELIBERATE LIMITATION: people.pay is enforced in the UI ONLY, unlike website.edit / budget.* / statements.upload which are backed by RLS. Postgres RLS gates ROWS, not COLUMNS, and the sensitive values sit in columns of a row the host is legitimately allowed to read — so a host who opened the browser console could still read the rate off the API response. Making it a real boundary needs column-level grants or an admin-only view; worth doing if pay data ever becomes genuinely sensitive here, and not worth pretending is already done. Also fixed while in there: the card\'s colour band now follows the CATEGORY rather than whether cleaner_rate happens to be filled in, which had been giving caretakers a different colour from cleaners for no reason a viewer could infer — the thing that made the Domestic group look jumbled. Owner confirmed the organogram tiers match reality: everyone reports to Nicole and Silja as owners, with Nina as manager.',c:'Architecture'},
   {k:'p2-33',t:'Website editor preview is an approximation until the site reads from site_content',n:'PARTLY DONE (2026-07-31). Owner feedback: \'for the marketing - it doesn\'t seem connected to the webpage yet, one should see the webpage and see a preview of what one edits!\' — correct, and the disconnect is p2-26. BUILT NOW: a live preview panel under the website editor that redraws as you type, in a browser-chrome frame, using the real site\'s palette and type taken from snapartments-frontend\'s tailwind config (ocean #0E4D6B, seafoam #4ABBA5, sand #F5EFE0, coral #E8604C, Playfair display face). Home and the management pitch render as a hero (badge/languages pill, headline, subhead, CTA) over the section beneath; About and Contact render their own shapes, with the WhatsApp number as a real-looking button; SEO renders as a Google search result with a character count that warns past 160, since a browser title and meta description are never seen on the page itself. It is LABELLED as an approximation in the UI rather than pretending to be the live page — a preview that quietly lies is worse than none. It becomes a TRUE preview once p2-26 lands and the Next.js site renders from site_content; at that point consider replacing this hand-drawn version with an iframe of the real page in draft mode, which is the only way for it to stay accurate as the site\'s design changes. UPDATE 2026-07-31 — owner: "the text should pre-populate of what\'s currently in and be like to like of the webpage." Both done. (1) PRE-POPULATED: migration 800 seeds site_content with the copy ACTUALLY ON THE SITE, transcribed verbatim from the live Next.js source (snapartments-frontend @ eb30ca7) — hero badge/headline/accent/subhead/both buttons, the whole \'why book direct\' band incl. all three benefit cards, the closing section, About, Contact and the SEO strings. 26 fields across four pages, verified none blank. Seeded under site_key \'bookings\' because that is what snapartments.co.za currently IS; the \'company\' key stays empty for the management pitch (p2-28). Seeded published=false on purpose — the public site does not read this table yet (p2-26), so marking it published would assert something untrue, and when the site IS wired up publishing should be a human decision rather than a side effect of an old migration. (2) LIKE-FOR-LIKE: SITE_PAGES was restructured to mirror the real page rather than a generic shape (headline + seafoam accent line, two CTAs, eyebrow, three benefit cards, closing band), grouped into labelled sections in the form; the preview now redraws that same structure in the site\'s own palette and order. NOTE the seed exposes the site\'s half-finished rebrand rather than hiding it: home and SEO still say \'Nestora\' while About already says \'S&N Apt Management\'. Left verbatim because this table\'s job is to reflect what visitors actually see — and it is now fixable in the editor without a deploy, once the new booking-site name is chosen (p2-24).',c:'Website'},
+  {k:'p2-34',t:'Domains to register — three businesses, three addresses',n:'OPEN, OWNER ACTION. (1) sunsetcoaststays.co.za — the guest booking site; pending Silja\'s sign-off. (2) snapartments.co.za — ALREADY OWNED, becomes the S&N management company site once design/two-brands is merged. (3) hosteasepro.com — the PLATFORM. All checked free at DNS level 2026-07-31 (also .co.za, .app, .io, hostease.pro). .com recommended for HEP: the product is not South-Africa-specific, and if it is ever sold or takes investment the .com is the asset. HEP\'s domain is not cosmetic — password resets and staff invites sent from a vercel.app domain land in spam (already happening, invites are live), the URL breaks if the project ever leaves Vercel, and no agency will pay monthly to log in at a preview URL. Suggested extra: register the runner-up booking name (bloubergbeachstays.co.za) as a redirect, ~R100/yr, so a competitor cannot take the obvious neighbour name.',c:'Business'},
+  {k:'p3-10',t:'HEP AS A PRODUCT — the four audiences',n:'OPEN, framing entry. The roadmap now has genuinely different target groups and they want separating. (A) AGENCY STAFF — owner / admin / host, email+password, full org access via HEP. (B) DOMESTIC STAFF — cleaners and caretakers, PIN on a shared phone, no password account (680). Deliberate: making cleaners manage passwords would be worse. Consequence: the login page has TWO doors, not one. (C) CLIENT PROPERTY OWNERS — read-only reporting on their own property, in their own language (820-824, 830). (D) GUESTS — not logins, but HEP sends them messages and confirmations, so they are the fourth audience the platform serves. MISSING TODAY, in priority order: a PLATFORM OPERATOR role above organisations (when agency #2 signs up, nobody can provision, support or debug them without direct Supabase access); BILLING enforcement (830 records plan/trial/status, but nothing acts on it — what happens when someone stops paying is undefined); SELF-SERVE SIGNUP (api/create-org.js exists, but no flow from \'I found HEP\' to \'my first property is set up\').',c:'Architecture'},
+  {k:'p3-11',t:'Platform marketing page + signup with 1-week trial',n:'OPEN, owner\'s ask 2026-07-31: \'I want people to see an overview of what the platform delivers to sign up for the monthly subscription (with a week trial plan).\' Needs: a public overview page for HEP (what it does, for whom, pricing), a signup flow creating an org + first admin + first property, and a 7-day trial. DATA IS READY (830): org_subscriptions holds plan, status (trialing/active/past_due/canceled/expired), trial_ends_at, and Stripe ids. trial_ends_at is stored PER ORG rather than assumed, so a longer trial can be granted to a design partner without a code change. Existing orgs are grandfathered as plan \'founder\', status \'active\', so no live org is dropped into a trial that expires under it. STILL TO DECIDE: price per month (roadmap p3-2 suggested Starter R350 / Growth R550 / Pro R750), whether the trial needs a card up front, and what a lapsed org sees — read-only, or locked out.',c:'GTM'},
+  {k:'p3-12',t:'Client reporting view, in the client\'s own language',n:'OPEN. Owner\'s ask: clients \'who only get a reporting overview\' must be able \'to change their page to any language so customers around the world can be served\'. First client is Czech (info@vineamea.cz, TV House). DATA LAYER DONE (820-824): a client sees only their property — verified on staging as TV House only, 163 of 374 bookings, 16 of 58 cleans, their earnings, and nothing of the business. profiles.locale added (830), set BY the user rather than inferred from the browser, because an owner living abroad usually prefers their mother tongue over the local one. STILL TO BUILD: the client dashboard itself (income, occupancy, cleaning, inspections, monthly statement), a language picker, and the translated strings. Note this is a THIRD translation surface — guest messages are already EN/AF (690) and the websites are English-only — so the strings want one shared mechanism, not a third bespoke one.',c:'HEP'},
+  {k:'p3-13',t:'Property stakeholders — who owns vs who manages (830)',n:'DONE (2026-07-31) as the lookup the owner asked for: \'a lookup table for each property for owner of property and managing agency\'. property_stakeholders records, per property, the OWNER (the person who gets a client login and a report) and the AGENCY (the business managing it). Until now a property had exactly ONE relationship — properties.org_id, meaning \'managed by\' — which conflated the two: TV House is managed by S&N but owned by someone else entirely. Kept separate from property_users on purpose: property_users answers \'which login may see this property\' (access control), this answers \'who are the real-world parties\' (commercial fact). An owner exists as a stakeholder from the moment a contract is signed, usually well before they log in, so email is recorded first and user_id is filled in when they accept. agency_org_id allows a property to be managed by an org other than the one holding the record, which is what a hand-over or white-label arrangement needs. SEEDED: TV House owner info@vineamea.cz (second owner email to follow), S&N as agency on both properties, Speranta marked as own-property where owner and agency are the same party.',c:'Architecture'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
@@ -10842,6 +10862,153 @@ function vaultCard(v) {
 function toggleVaultExpand(id) {
   if (_vaultExpanded.has(id)) _vaultExpanded.delete(id); else _vaultExpanded.add(id);
   renderVault();
+}
+
+// ── CLIENTS & PROPERTY OWNERS (migration 830) ──────────────────
+// The commercial record of who owns each property versus who manages
+// it. Distinct from property_users, which is the access-control fact:
+// an owner is recorded here the moment a contract is signed, usually
+// long before they ever log in.
+let stakeholders = [];
+const LOCALES = {en:'English', de:'Deutsch', pl:'Polski', es:'Español', cs:'Čeština', fr:'Français', nl:'Nederlands', af:'Afrikaans', it:'Italiano', pt:'Português'};
+
+async function loadStakeholders() {
+  const el = document.getElementById('settings-clients');
+  if (!el) return;
+  const card = document.getElementById('settings-clients-card');
+  if (currentUser && currentUser.role !== 'owner' && currentUser.role !== 'admin') {
+    if (card) card.style.display = 'none'; return;
+  }
+  if (card) card.style.display = '';
+  if (!db) { el.innerHTML = '<div class="text-muted">Not connected.</div>'; return; }
+  el.innerHTML = skeletonRows(2);
+  try {
+    const { data, error } = await db.from('property_stakeholders').select('*').order('party');
+    if (error) throw error;
+    stakeholders = data || [];
+    renderStakeholders();
+  } catch (e) { el.innerHTML = '<div style="color:var(--red)">Error: '+e.message+'</div>'; }
+}
+
+function renderStakeholders() {
+  const el = document.getElementById('settings-clients');
+  if (!el) return;
+  const props = Object.keys(PROPS);
+  if (!props.length) { el.innerHTML = '<div class="text-muted">No properties yet.</div>'; return; }
+
+  el.innerHTML = props.map(key => {
+    const uuid = PROPS[key].uuid;
+    const rows = stakeholders.filter(s => s.property_id === uuid);
+    const owners = rows.filter(s => s.party === 'owner');
+    const agency = rows.find(s => s.party === 'agency');
+    return `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:10px">
+        <div style="font-weight:700;font-size:.88rem;margin-bottom:8px">${escHtml(PROPS[key].name)}</div>
+        <div style="display:grid;gap:7px">
+          <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:.8rem">
+            <span style="color:var(--muted)">Managed by</span>
+            <span>${agency ? escHtml(agency.display_name) : '<span style="color:var(--red)">not recorded</span>'}</span>
+          </div>
+          ${owners.length ? owners.map(o => `
+            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;font-size:.8rem;background:var(--surface-2);border-radius:8px;padding:7px 9px">
+              <div style="min-width:0">
+                <div style="font-weight:600">${escHtml(o.display_name || o.email || 'Owner')}</div>
+                <div style="color:var(--muted);font-size:.74rem">
+                  ${escHtml(o.email||'no email')}
+                  · ${o.user_id ? '<span style="color:var(--green2)">login active</span>' : 'no login yet'}
+                </div>
+              </div>
+              <div style="display:flex;gap:6px">
+                ${!o.user_id && o.email ? `<button class="btn btn-sm btn-primary" onclick="inviteStakeholder('${o.id}')">Send login invite</button>` : ''}
+                <button class="btn btn-sm btn-ghost" onclick="openStakeholder('${o.id}')">✎</button>
+                <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="deleteStakeholder('${o.id}')">✕</button>
+              </div>
+            </div>`).join('')
+          : `<div style="font-size:.78rem;color:var(--muted)">No owner recorded — this is one of ours.</div>`}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function openStakeholder(id) {
+  const s = id ? stakeholders.find(x => x.id === id) : null;
+  const propOpts = Object.keys(PROPS).map(k =>
+    `<option value="${PROPS[k].uuid}" ${s&&s.property_id===PROPS[k].uuid?'selected':''}>${escHtml(PROPS[k].name)}</option>`).join('');
+  document.getElementById('day-modal-title').textContent = s ? 'Edit property owner' : 'Add property owner';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field span-full"><label>Property *</label><select id="sh-prop">${propOpts}</select></div>
+      <div class="form-field"><label>Name</label>
+        <input id="sh-name" value="${s?escHtml(s.display_name).replace(/"/g,'&quot;'):''}" placeholder="e.g. Vineamea s.r.o."/></div>
+      <div class="form-field"><label>Email *</label>
+        <input id="sh-email" type="email" value="${s?escHtml(s.email||'').replace(/"/g,'&quot;'):''}" placeholder="owner@example.com"/></div>
+      <div class="form-field"><label>Phone</label>
+        <input id="sh-phone" value="${s?escHtml(s.phone||'').replace(/"/g,'&quot;'):''}"/></div>
+      <div class="form-field span-full"><label>Notes</label>
+        <textarea id="sh-notes" rows="2">${s?escHtml(s.notes||''):''}</textarea></div>
+    </div>
+    <div class="text-muted" style="font-size:.74rem;margin-top:8px">
+      Recording an owner does not create a login. Send the invite separately once you're ready — they'll get read-only access to this property only.
+    </div>
+    <div id="sh-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" id="sh-save" onclick="saveStakeholder(${s?`'${s.id}'`:'null'})">${s?'Save':'Add owner'}</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+    </div>`;
+  openModal('day-modal');
+}
+
+async function saveStakeholder(id) {
+  const err = document.getElementById('sh-error');
+  const email = document.getElementById('sh-email').value.trim();
+  if (!email) { err.textContent = 'An email is needed — it is how the login invite reaches them.'; err.style.display='block'; return; }
+  if (!db) { err.textContent = 'Not connected.'; err.style.display='block'; return; }
+  const row = {
+    org_id: getOrgId(),
+    property_id: document.getElementById('sh-prop').value,
+    party: 'owner',
+    display_name: document.getElementById('sh-name').value.trim(),
+    email, phone: document.getElementById('sh-phone').value.trim(),
+    notes: document.getElementById('sh-notes').value.trim(),
+  };
+  try {
+    const { error } = id
+      ? await db.from('property_stakeholders').update(row).eq('id', id)
+      : await db.from('property_stakeholders').insert([row]);
+    if (error) throw error;
+    toast(id ? 'Owner updated ✓' : 'Owner added ✓','success');
+    closeModal('day-modal');
+    loadStakeholders();
+  } catch (e) { err.textContent = 'Could not save: ' + e.message; err.style.display='block'; }
+}
+
+function deleteStakeholder(id) {
+  const s = stakeholders.find(x => x.id === id);
+  if (!s) return;
+  confirmAction(`Remove ${s.display_name || s.email} as an owner? Their login, if any, loses access to the property.`, async () => {
+    if (db) {
+      const { error } = await db.from('property_stakeholders').delete().eq('id', id);
+      if (error) { toast('Delete error: '+error.message,'error'); return; }
+      // Access follows the stakeholder record: drop the property_users
+      // grant too, or a removed owner would keep their login working.
+      if (s.user_id) await db.from('property_users').delete().eq('user_id', s.user_id).eq('property_id', s.property_id);
+    }
+    toast('Owner removed','info');
+    loadStakeholders();
+  }, 'Remove');
+}
+
+// Invite flow is intentionally a stub until the client dashboard exists:
+// creating a login that lands on the staff interface would be worse than
+// not having one. Recorded so the button's absence is not mistaken for
+// an oversight.
+function inviteStakeholder(id) {
+  const s = stakeholders.find(x => x.id === id);
+  if (!s) return;
+  confirmAction(
+    `Send ${s.email} a login?\n\nThe client dashboard isn't built yet — they would land on the staff interface with almost everything empty. The access rules are ready and tested; the screen they'd see is not.`,
+    async () => { toast('Not sent — client dashboard still to build (roadmap p3-12)','info'); },
+    'I understand');
 }
 
 // ── PERMISSIONS (migration 750) ────────────────────────────────
