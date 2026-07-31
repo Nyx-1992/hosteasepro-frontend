@@ -2942,6 +2942,7 @@ async function _afterLogin(user) {
     return;
   }
 
+  await loadSubscription();
   // Branding is loaded at LOGIN, not only when the invoice tabs open.
   // It drives the sidebar, guest-message sign-offs and the WhatsApp
   // number messages are sent from — all of which are used long before
@@ -4360,6 +4361,69 @@ let INV_COMPANY = {
   bank:{name:'',bank:'',acc:'',type:'',branch:'',ref_email:''}
 };
 
+// ── Subscription state (830 + 880) ────────────────────────────────
+// The banner is the honest face of a rule the DATABASE enforces
+// (880's write gate). It is not the enforcement — hiding buttons would
+// only stop the honest — it is the explanation, so a refused save reads
+// as "your trial ended" rather than "the app is broken".
+let orgSubscription = null;
+
+async function loadSubscription() {
+  if (!db) return;
+  const { data, error } = await db.from('org_subscriptions').select('*').limit(1);
+  if (error) { console.warn('loadSubscription:', error.message); return; }
+  orgSubscription = (data || [])[0] || null;
+  renderSubscriptionBanner();
+}
+
+// Days left on a trial, or null when not trialling.
+function trialDaysLeft() {
+  if (!orgSubscription || orgSubscription.status !== 'trialing' || !orgSubscription.trial_ends_at) return null;
+  const ms = new Date(orgSubscription.trial_ends_at) - new Date();
+  return Math.ceil(ms / 86400000);
+}
+
+function subscriptionLapsed() {
+  if (!orgSubscription) return false;
+  if (['past_due', 'canceled', 'expired'].includes(orgSubscription.status)) return true;
+  const left = trialDaysLeft();
+  return left !== null && left <= 0;
+}
+
+function renderSubscriptionBanner() {
+  let el = document.getElementById('sub-banner');
+  if (!el) {
+    const host = document.querySelector('#app-screen .main') || document.querySelector('.main');
+    if (!host) return;
+    el = document.createElement('div');
+    el.id = 'sub-banner';
+    host.insertBefore(el, host.firstChild);
+  }
+  const left = trialDaysLeft();
+  const lapsed = subscriptionLapsed();
+
+  if (lapsed) {
+    el.innerHTML = `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start">
+      <span style="font-size:1.1rem">🔒</span>
+      <div style="font-size:.86rem;line-height:1.5">
+        <strong>Read-only — your subscription has lapsed.</strong><br>
+        Everything is still here and you can look at all of it. New bookings, messages and uploads need a live
+        subscription. Your banking and business details stay editable so you can reactivate.
+      </div></div>`;
+    return;
+  }
+  // Quiet until the last stretch. A countdown from day seven is nagging;
+  // from day three it is useful.
+  if (left !== null && left <= 3) {
+    el.innerHTML = `<div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:.86rem">
+      ⏳ <strong>${left} day${left === 1 ? '' : 's'} left</strong> on your HostEase Pro trial. After that the app stays
+      readable, but you will not be able to add or change anything until you subscribe.
+    </div>`;
+    return;
+  }
+  el.innerHTML = '';
+}
+
 // Paints the org's identity onto the app shell. "HostEase Pro" stays as
 // the product name — it is the platform, not the agency — and the
 // subtitle beneath it is the agency, which is what used to be hardcoded
@@ -5767,6 +5831,7 @@ const ROADMAP = [
   {k:"p3-18",t:"A new org saw S&N's properties on its dashboard",n:"DONE (2026-07-31) - reported live by the owner: 'i just logged into the test-owner email and it shows the same dashboard as for the tv house owners.. that's wrong'. NOT a data leak, and that was checked FIRST by impersonating that account against RLS: it returns 0 properties, 0 bookings, 0 tasks, 0 cleans, 0 inspections, 0 earnings and 1 profile (its own). The database is correctly isolated. The defect was in the UI: loadProperties() kept the HARDCODED PROPS/UUID_MAP fallback whenever the fetch succeeded but returned zero rows, on the reasoning that a brand-new org legitimately has no properties yet. The effect was that another agency's owner saw 'Speranta Flat' and 'TV House' - with S&N's real street addresses - in their property switcher and across their dashboard. Indefensible in a product sold to other agencies, and alarming enough that it was first read as a leak. Zero rows now clears PROPS and UUID_MAP and shows an explicit 'No properties yet' state with a button to add one. The hardcoded values remain as a fallback for a FAILED fetch, which is a real resilience case - a working fetch returning nothing is not. NOTE the same class of problem remains in CLIENT_BRAND: a new org still sees S&N's name, WhatsApp number and email as the app chrome. That is p3-5 (white-label per org) and should be treated as a blocker before any agency other than S&N is given a login.",c:"Bug"},
   {k:"p3-19",t:"Which platforms the agency collects money for (860)",n:"DONE (2026-07-31). Owner, correcting a wrong conclusion of mine: \"I don't know if it needs to be flagged. Maybe it should be in the settings of agencies report on their clients finances. As we don't do that with the TV house and hence we don't care if their numbers come in. They set up bookingcom themselves (most their revenue), whereas we set up Airbnb and LekkeSlaap. So that money only comes through us and we report back to them.\" I had read TV House's 16 Booking.com bookings with zero revenue as BROKEN DATA and was about to add a warning to Reports for it. It is not broken - it is OUT OF SCOPE, and the warning would have nagged forever about something nobody wants. properties.revenue_platforms (860) records which platforms' MONEY flows through the agency, which is a different question from which platforms a property is LISTED on; conflating the two is what produced the wrong conclusion. For TV House the agency manages the stays on every channel - cleaning, guests, turnovers, calendar - but the money only on Airbnb, LekkeSlaap and direct. NULL means all platforms, so every existing property behaves as before and a new one needs no decision until the arrangement actually differs. Set from Settings > Properties with a tick per platform; all four ticked stores NULL rather than the full list, so a platform added later is included automatically instead of silently excluded by a list written before it existed. THE CLIENT-FACING HALF MATTERS MOST: without this the TV House owner logs in, sees a total covering Airbnb and LekkeSlaap only, and reasonably concludes their manager has lost most of their money. The income card now names both sides - 'Airbnb, LekkeSlaap, Direct - collected by us on your behalf' and 'Booking.com - paid directly to you, not shown here' - in all five languages, and the stat card subtitle says what the figure covers. Average per night also now divides by the nights on platforms the agency is actually PAID for; including the Booking.com nights would have reported a nightly rate a fraction of the real one. Nights, occupancy and the platform mix deliberately still count EVERY channel, because the agency does manage those stays - only the money is scoped. GENERALISES: every agency HEP is sold to will have this split, some properties where they run all the channels and some where the owner keeps one.",c:"Business"},
   {k:"p3-20",t:"White-label: the app belongs to the org, not to S&N (870)",n:"DONE (2026-07-31). Closes the blocker recorded in p3-18. HEP is sold to other agencies but still hardcoded S&N everywhere: the sidebar subtitle, the WhatsApp number guest messages are SENT from, the sign-off on those messages, and - the one that is not cosmetic - INV_COMPANY, whose fallback carried S&N's registration number, tax number and NEDBANK ACCOUNT. org_settings already existed and invoices already read it, but every field fell back to S&N's value when the row was missing or blank, and only S&N had a row. A second agency would have invoiced its customers into S&N's bank account. That is a money-routing bug wearing a branding bug's clothes, and the same shape of mistake as the hardcoded PROPS fallback: A DEFAULT THAT IS ONE TENANT'S REAL DATA IS NEVER A SAFE DEFAULT. 870 adds short_name, logo, whatsapp, website and country to org_settings, backfills S&N from the values that were hardcoded so nothing changes for them, and gives EVERY org a row so 'no row' stops meaning 'inherit S&N'. In the app, CLIENT_BRAND and INV_COMPANY now default to neutral/blank and are filled from the org at LOGIN rather than only when an invoice tab opens - branding drives the sidebar and guest messaging, which are used long before anyone opens an invoice. Blank is deliberate for banking: an invoice with no account number is visibly incomplete and gets fixed, while an invoice with someone else's account number looks perfect and sends the money to the wrong company. Editing is SPLIT across two screens on purpose - identity in Settings, and address, registration, tax and banking under Business Info, which is admin-only. That honours the existing decision that moved banking off the general Settings page, and each screen saves only its own fields so editing a business name cannot blank the bank account. A warning shows when banking is incomplete. VERIFIED in a browser with two orgs: S&N unchanged (name, WhatsApp 27636021847, account 1292867345, reg 2024/643198/07, sidebar), and a fresh org sees its OWN name with empty WhatsApp, empty bank account and empty registration number - nothing inherited. STILL HARDCODED and tracked in p2-18: the domestic staff portal URL and its S&N-scoped RPCs, which need org-scoped portal links rather than a settings field.",c:"Architecture"},
+  {k:"p3-21",t:"Trial countdown and lapsed read-only, enforced in the database (880)",n:"DONE (2026-07-31), implementing the owner's rule from p3-14: 'Lapsed account needs definitely limited view, but not lock out.' The line is READ EVERYTHING, WRITE NOTHING - the business keeps running on what is already there, but new work needs a live subscription. WHY TRIGGERS AND NOT RLS, which is the whole design decision: the obvious move is to AND a subscription check into the existing policies the way 824 added is_org_member, and it is WRONG here. Most of those policies are FOR ALL, and a FOR ALL policy's USING clause governs SELECT as well as UPDATE and DELETE - so the check would remove READ too, the exact opposite of the rule. Restricting only WITH CHECK does not work either, because WITH CHECK is never consulted for DELETE. A BEFORE INSERT/UPDATE/DELETE trigger cannot make that mistake: it runs on writes and only writes, so 'read everything' holds by construction. org_can_write(org) is false once a subscription is past_due/canceled/expired OR a trial's end date has passed - checking the date in the function means nothing has to sweep the table on a timer. FAIL-OPEN when no subscription row exists: a missing row means nobody has billed that org yet, and the cost of getting it wrong the other way is bricking a paying customer over a data gap. Three tables stay writable so a lapsed org can dig itself out - org_subscriptions (resubscribing is a write), org_settings (fixing billing details is a write) and profiles (blocking those risks locking the account rather than limiting it). Service-role callers are exempt, or the very webhook that REACTIVATES an org would be blocked by the lapse it is clearing. VERIFIED on staging by lapsing S&N and acting as Nicole: 418 bookings and 58 cleans still readable, UPDATE booking and INSERT task both refused with the plain-English message, org_settings still writable - then restored to active. The in-app banner is the honest FACE of the rule, not the enforcement: quiet until three days remain, then a countdown, then a read-only notice. All four existing orgs are grandfathered founder/active, so nothing changes for anyone until a real trial expires.",c:"Business"},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
