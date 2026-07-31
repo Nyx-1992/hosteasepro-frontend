@@ -2727,6 +2727,34 @@ async function doLogin() {
     if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
   }
 }
+// Puts the page into client mode: their dashboard visible, every staff
+// pane and every piece of staff chrome gone.
+//
+// Extracted so it can be called from more than one place. It used to run
+// only once, inside _afterLogin — which meant anything that later opened
+// a staff tab left the client sitting in the staff interface with no way
+// back, and the login path is not the only way a tab gets opened.
+function showClientOnly() {
+  const auth = document.getElementById('auth-screen');
+  const app  = document.getElementById('app-screen');
+  if (auth) auth.style.display = 'none';
+  if (app)  app.style.display  = 'block';
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  const pane = document.getElementById('tab-client');
+  if (pane) pane.classList.add('active');
+  // Hide the staff chrome. Selected by CLASS, not id — the sidebar is
+  // <div class="sidebar"> with no id at all, so an earlier
+  // getElementById('sidebar') silently did nothing and the client was
+  // left with the staff sidebar sitting on top of their dashboard,
+  // hiding the first card.
+  document.querySelectorAll('.sidebar, .mob-drawer, .mob-drawer-overlay, .mob-bar, .topbar')
+    .forEach(n => { n.style.display = 'none'; });
+  // .main reserves 240px for the fixed sidebar (see .main{margin-left:240px}).
+  // Without clearing it the content stays pushed off-screen on mobile.
+  document.querySelectorAll('.main').forEach(n => { n.style.marginLeft = '0'; });
+  currentTab = 'client';
+}
+
 async function _afterLogin(user) {
   CURRENT_ORG_ID = user.org_id || null;
 
@@ -2738,21 +2766,7 @@ async function _afterLogin(user) {
   // whole data load) which would only produce empty results and noise in
   // the console.
   if (user.role === 'client') {
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('app-screen').style.display = 'block';
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    const pane = document.getElementById('tab-client');
-    if (pane) pane.classList.add('active');
-    // Hide the staff chrome. Selected by CLASS, not id — the sidebar is
-    // <div class="sidebar"> with no id at all, so an earlier
-    // getElementById('sidebar') silently did nothing and the client was
-    // left with the staff sidebar sitting on top of their dashboard,
-    // hiding the first card.
-    document.querySelectorAll('.sidebar, .mob-drawer, .mob-drawer-overlay, .mob-bar, .topbar')
-      .forEach(n => { n.style.display = 'none'; });
-    // .main reserves 240px for the fixed sidebar (see .main{margin-left:240px}).
-    // Without clearing it the content stays pushed off-screen on mobile.
-    document.querySelectorAll('.main').forEach(n => { n.style.marginLeft = '0'; });
+    showClientOnly();
     await renderClientDashboard();
     return;
   }
@@ -2893,6 +2907,17 @@ function switchTab(id) {
   // jumps to Invoices), dashboard shortcuts, restored state. A host was
   // landing on the Invoices pane with no Invoices item in her sidebar,
   // which is how this was spotted.
+  // A CLIENT has exactly one screen and no business on any staff tab.
+  // Handled before the NAV lookup because the check below could not do
+  // it: no NAV entry lists 'client', so a client failed every role test
+  // and was bounced to 'dashboard' — which a client also fails, so the
+  // recursion guard returned having done NOTHING, leaving them on
+  // whatever pane was open. A silent no-op is the worst possible
+  // outcome for an access check.
+  if (currentUser && currentUser.role === 'client') {
+    showClientOnly();
+    return;
+  }
   const nav = NAV.find(n => n.id === id);
   if (nav && currentUser && !nav.roles.includes(currentUser.role)) {
     if (id !== 'dashboard') switchTab('dashboard');

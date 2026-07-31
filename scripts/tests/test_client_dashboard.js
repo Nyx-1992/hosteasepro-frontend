@@ -298,5 +298,27 @@ Object.entries(REAL_COLUMNS).forEach(([table, cols]) => {
     bogus.length === 0, `${table} has no column(s): ${bogus.join(', ')}`);
 });
 
+// ── A client cannot reach a staff tab ─────────────────────────────
+// The role check in switchTab used to be a silent no-op for a client:
+// no NAV entry lists 'client', so a client failed every role test and
+// was redirected to 'dashboard' — which a client also fails, so the
+// recursion guard returned having changed nothing, leaving them on
+// whatever pane happened to be open. Checked here by reading the guard
+// out of the page, because "the access check quietly did nothing" is
+// indistinguishable from "the access check passed" at a glance.
+console.log('\n── Client tab guard ──');
+const switchTabSrc = grabFn('switchTab');
+checkTrue('switchTab handles a client BEFORE the NAV role test',
+  switchTabSrc.indexOf("role === 'client'") > -1 &&
+  switchTabSrc.indexOf("role === 'client'") < switchTabSrc.indexOf('NAV.find'),
+  'the client case must come first — a client matches no NAV entry, so the generic check cannot help them');
+checkTrue('the client case redirects rather than falling through',
+  /role === 'client'[\s\S]{0,200}showClientOnly\(\)[\s\S]{0,40}return/.test(switchTabSrc),
+  'a client must be put back on their own screen, not silently left where they were');
+const clientOnlySrc = grabFn('showClientOnly');
+['tab-client', '.sidebar', '.topbar', '.mob-bar', '.mob-drawer'].forEach(sel =>
+  checkTrue(`showClientOnly deals with ${sel}`, clientOnlySrc.includes(sel),
+    `${sel} would stay on screen for a client`));
+
 console.log(fail ? `\n${fail} failed, ${pass} passed` : `\nAll ${pass} checks passed`);
 process.exit(fail ? 1 : 0);
