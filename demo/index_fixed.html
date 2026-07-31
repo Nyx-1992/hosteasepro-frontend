@@ -1406,6 +1406,19 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;font-weight:700">Settings &amp; Links</div>
         </div>
 
+        <!-- Permissions (owner only — see renderPermissions). A grid of
+             per-role toggles, enforced in the database by has_permission()
+             (750), not just hidden in the UI. -->
+        <div class="card" style="margin-bottom:18px" id="settings-permissions-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+            <div style="font-weight:700;font-size:1rem">🔑 Permissions</div>
+          </div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:14px">
+            Who can do what. Tick to grant. Owners always keep full access, so you can't lock yourself out.
+          </div>
+          <div id="settings-permissions"></div>
+        </div>
+
         <!-- Properties -->
         <div class="card" style="margin-bottom:18px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -2695,7 +2708,10 @@ const NAV = [
   {id:'inspections',label:'Inspections', icon:'🔍',roles:['owner','admin','host']},
   {id:'team',     label:'Contacts',     icon:'👥',roles:['owner','admin']},
   {id:'staff',    label:'Staff',        icon:'🧑‍🔧',roles:['owner','admin']},
-  {id:'marketing',label:'Marketing',   icon:'📣',roles:['owner','admin']},
+  // Host is included so website editing can be DELEGATED (750) — the tab
+  // itself then checks the permission, since a host without it should see
+  // an explanation rather than an editor that silently fails to save.
+  {id:'marketing',label:'Marketing',   icon:'📣',roles:['owner','admin','host']},
   {id:'vault',    label:'Business Info',icon:'🔐',roles:['owner','admin']},
   {id:'invoices', label:'Invoices',     icon:'🧾',roles:['owner','admin']},
   {id:'roadmap',  label:'Roadmap',      icon:'🗺️',roles:['owner']},
@@ -3158,7 +3174,7 @@ function renderTab(id) {
   }
   else if (id==='invoices')  renderInvoicesTab();
   else if (id==='roadmap')   renderRoadmapTab();
-  else if (id==='settings')  renderSettingsPrefs();
+  else if (id==='settings')  { renderSettingsPrefs(); loadPermissions(); }
 }
 
 
@@ -5173,6 +5189,16 @@ const ROADMAP = [
   {k:'p3-1',t:'HEP marketing landing page + waitlist',n:'Value clear to a stranger in 10 seconds',c:'GTM'},
   {k:'p2-19',t:'Business budgeting in Business Info (migration 710)',n:'DONE (2026-07-30) — Business Info gained Records/Budget sub-tabs. Budget holds recurring income and cost lines with a frequency (monthly/quarterly/annual/once); monthly_amount is a GENERATED column so a quarterly or annual line can never drift out of sync with its own normalisation, and once-offs contribute 0 to the run rate but are surfaced separately rather than silently inflating a normal month. direction is explicit rather than inferred from the sign of the amount, because transposing an income and an expense is easy and would silently double apparent profit. Matters more under the fixed-fee management model than it would under a percentage one: charging a flat R6,000 rather than a cut of revenue means the run rate IS the picture. Admin-only RLS matching business_vault. Seeded with the one arrangement known to be real (TV House R6,000/month). Deliberately a planner, not a ledger — no double entry, no bank reconciliation; actuals stay in Reports and platform_earnings. NOTE recorded on the seed row: Tino costs nothing in cash (paid in accommodation, pays R500/month electricity back to the property owners), which is specific to TV House and must NOT be assumed when pricing other clients\' properties — a client villa would need a paid caretaker.',c:'Business'},
   {k:'p2-20',t:'Website content editor — Marketing tab (migrations 720 + 730)',n:'DONE (2026-07-30) — new Marketing tab (nav group "Grow") with a Website sub-tab: edit home/about/contact/management/SEO copy with draft-vs-publish, so saving is safe and only publishing goes live. site_content is org-scoped and site-keyed FROM THE FIRST MIGRATION rather than retrofitted, because the plan is to sell websites to management clients who edit their own content from their own login — and (owner\'s later note) an agency client may want one site per property OR one combined site, which (org_id, site_key, page) already supports with no schema change, and makes per-site billing natural. 730 corrects 720\'s public read path, which testing showed was wrong twice over: the plain RLS policy USING (published) was INERT because anon has no SELECT grant (so the website could never have read a row), and it LEAKED ACROSS TENANTS because site_key is not unique across orgs — two clients both using the default \'main\' would have served each other\'s pages. Replaced with get_site_content(org_id, site_key), a SECURITY DEFINER function returning published rows only, granted to anon — matching this codebase\'s existing convention (get_outside_clean_info 390, get_staff_portal_roster 660) that anon never gets direct table access. Verified: anon sees the published page only, not the draft and not the other org\'s page, and cannot read the table directly at all. STILL OPEN: the Next.js site (snapartments-frontend) does not yet CALL get_site_content — the editing side is built, the rendering side is the next step, and property/listing content (data/listings.ts, incl. seasonal rates) is not yet editable.',c:'Website'},
+  {k:'p2-21',t:'Pricing plans + income-only Budget (migration 740)',n:'DONE (2026-07-30) — pricing_plans holds the management-service price list, seeded with the tiers agreed in the pricing discussion: Apartment R3,500 (8 turnovers incl., R200 extra, R3,500 setup), House R5,500 (10, R200, R4,000), Villa/Estate R7,500 (12, R250, R5,000; real range R7,500-8,500, seeded at the floor). Shown as a table at the top of Business Info > Budget and editable there. Turnovers are a COLUMN not a note, because that is the one genuine flaw in fixed-fee pricing: workload scales with turnovers while income does not, so an allowance plus a per-turnover overage is what makes a flat fee safe rather than thin — and storing it as data makes it billable, since HEP already counts turnovers from bookings and the Management Invoice (p0-32) already computes per property per month. Budget is now INCOME ONLY per the owner\'s decision (\'I don\'t think expenses should be in there but stay part of the finances tab\'); the \'cost\' direction stays legal in the 710 schema but nothing writes it. business_budget.plan_id links an income line to the plan it is billed under, and picking a plan fills in its fee (only when the amount is blank, so a negotiated rate is never overwritten). Prices are ex-VAT — p1-6 (confirm VAT status) matters more now that several managed properties could approach the R1m compulsory-registration threshold.',c:'Business'},
+  {k:'p2-22',t:'Role permissions with Confluence-style toggle grid (migration 750)',n:'DONE (2026-07-30) — role_permissions + has_permission(org, perm), with an owner-only grid under Settings > Permissions. Owner ask: \'a permission tab for the owners to manage for each their roles, a quick toggle who can do what like we know from Confluence.\' Permissions so far: website.edit, website.publish, budget.view, budget.edit, statements.upload. THE TOGGLES ARE REAL, NOT COSMETIC — site_content\'s INSERT/UPDATE/SELECT policies now read has_permission(), so unticking a box makes the database refuse the write; hiding a button would only stop the honest. Two deliberate safety properties: (1) owners ALWAYS pass regardless of the grid, because an owner who could revoke their own access could brick their account with no way back; (2) default is DENY, so adding a new permission key later cannot silently grant it to everyone. Admins keep access via is_org_admin OR-ed into every policy, so the org can always be administered. Marketing tab now includes \'host\' in its roles so editing can actually be delegated, with an explanatory locked state for a host who lacks the permission. Verified on staging against the real profiles: Nina (host) edit=true/publish=false, unknown permission denied, Nicole (owner) passes even with her toggle explicitly set false, and another org\'s owner is denied entirely. NEXT: only site_content is permission-gated so far — budget.* and statements.upload are enforced in the UI but their tables are still plain admin-only RLS, so those policies should be moved onto has_permission() too.',c:'Architecture'},
+  {k:'p2-23',t:'Booking.com statement parser',n:'OPEN — the owner will share Booking.com statements \'a bit later\'. Airbnb and LekkeSlaap are done (p2-18); the parser dispatches on detectPlatform() and each platform is a self-contained function returning the same normalised shape, so adding a third is a contained change: write parseBooking(lines), add its detection string, and add fixtures + expected totals to scripts/tests/test_statement_parsers.js (which reads the parser source out of index_fixed.html, so it can never pass against a stale copy). The platform CHECK constraint on platform_earnings already allows \'booking\'.',c:'HEP'},
+  {k:'p2-24',t:'Split the two businesses onto separate sites',n:'OPEN, DECIDED 2026-07-30 — the owner\'s call: snapartments.co.za becomes the S&N property-MANAGEMENT company site (B2B, owners), and the guest booking site moves to a NEW Cape Town-sounding domain covering Tableview/Milnerton/Blouberg and listing only properties S&N manages. HEP stays the platform, sold to anyone. Practical consequence: the existing snapartments-frontend repo IS already the booking site (both properties, PayFast, availability) — so it is a RENAME plus a domain switch, not a rebuild (\'Nestora\' appears only 13 times across 9 files). THIS SUPERSEDES p0-8: do NOT rename Nestora to \'S&N Apartments\', because the booking site is not S&N — rename straight to the new name. Name candidates researched: \'Table Bay Stays\' was rejected despite tablebaystays.co.za having no DNS record, because Table Bay is heavily occupied in Cape Town hospitality (the landmark Table Bay Hotel at the V&A, just relaunched as InterContinental Table Bay after a R1bn redevelopment) — trademark exposure in the same class plus an unwinnable SEO fight. Front-runners now: \'Sunset Coast Stays\' (that coast faces west, Sunset Beach is a Milnerton suburb, covers the whole area) or \'Blouberg Beach Stays\' (stronger search term, narrower). Availability at a .co.za registrar and a CIPC name check still to be done by the owner.',c:'Website'},
+  {k:'p2-25',t:'Move HEP\'s hardcoded snapartments.co.za dependencies when the booking site moves',n:'OPEN, BLOCKS p2-24 — HEP calls www.snapartments.co.za for two LIVE things whose routes live in the booking repo, so they move with it: /api/ical-proxy for calendar imports (index_fixed.html:3291) and /api/confirm for booking confirmation emails (:6043). Guest-facing links point there too: the RETURN10 direct-booking discount in the post-stay WhatsApp message (:8090 EN, :8100 AF) and website: in the company constants (:1708) — after the split those would send GUESTS to the B2B company site. All of these need repointing to the new booking domain in the same change, or imports and confirmations break silently.',c:'Bug'},
+  {k:'p2-26',t:'Wire the public website to read site_content',n:'OPEN, next step after p2-20 — the editing side is built and get_site_content(org_id, site_key) exists and is granted to anon, but snapartments-frontend does not call it yet: page copy is still hardcoded in the .tsx files. Needs the Supabase client added to the Next.js app with the anon key and org id in env, pages reading from the RPC, and ISR/revalidate (~60s) so an edit goes live without a deploy.',c:'Website'},
+  {k:'p2-27',t:'Make property listings editable (the higher-value half of the CMS)',n:'OPEN — data/listings.ts still hardcodes descriptions, taglines, amenities, images AND seasonal rates (peak/shoulder/winter pricePerNight) for both properties, so changing a rate needs a developer and a deploy. This is where changes actually happen, so it is worth more than page copy. Bigger than site_content because it is structured data with pricing logic (getRateForDate/getTotalForRange) rather than free text, and the booking flow and PayFast totals depend on it — so it needs care, not just a jsonb blob. Owner\'s later note: agency clients may want a page per property OR one combined site; (org_id, site_key, page) already supports both, and makes per-site billing natural.',c:'Website'},
+  {k:'p2-28',t:'Build the S&N management company site',n:'OPEN — the owner-facing pitch, to live at snapartments.co.za once p2-24 frees the domain. Differentiators to lead with: languages (English, German, Polish, some Spanish; Czech clients) for foreign owners who own SA property but live in Europe, and a real live owner dashboard (HEP), which almost no small manager can offer. The \'management\' page shape already exists in SITE_PAGES (headline, subhead, languages line, what\'s included, pricing note, CTA), so the content can be written in HEP before the site renders it. Decisions still open, previously asked and not yet answered: whether to publish \'from\' prices or full tiers or stay enquiry-only, and whether the page is English-only (fastest, and foreign owners searching SA property mostly search in English) or fully translated.',c:'GTM'},
+  {k:'p2-29',t:'Repo/database drift on is_org_admin',n:'OPEN, FOUND 2026-07-30 while building 750 — the repo\'s 070_is_org_admin_fix.sql reads public.user_profiles (p.user_id = auth.uid()), but the LIVE function in BOTH databases reads public.profiles (p.id = auth.uid()). user_profiles is empty in prod; profiles holds the three real users. The live definition is the one that works, and every admin-only policy in the system depends on it — so a rebuild from the repo\'s migrations alone would produce a database where is_org_admin returns false for everyone and every admin-only tab silently empties. has_permission (750) deliberately matches the LIVE definition. Fix is to reconcile the migration file with reality (and check whether current_org_id has drifted the same way — its live body also reads profiles), but that touches every admin policy so it deserves its own change and its own verification.',c:'Architecture'},
+  {k:'p2-30',t:'Rotate the exposed TV House lockbox code and WiFi password',n:'OPEN, OWNER ACTION — p2-17 moved these out of the page source, but that stops FUTURE exposure only. The lockbox code (7021) and the WiFi password were served in the public HTML to every visitor for as long as the page was live, and they remain in git history. They should be CHANGED at the property. Since 690 the change is a data edit in Property Manual > Access & Welcome rather than a code deploy, so this is now a two-minute job.',c:'Security'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
@@ -10456,6 +10482,142 @@ function toggleVaultExpand(id) {
   renderVault();
 }
 
+// ── PERMISSIONS (migration 750) ────────────────────────────────
+// A grid of per-role toggles, the owner's ask: "a permission tab for the
+// owners to manage for each their roles, a quick toggle who can do what
+// like we know from Confluence."
+//
+// The toggles are NOT merely cosmetic. Every one of them is read by
+// has_permission() inside RLS, so switching website editing off actually
+// stops the database accepting the write — hiding a button would only
+// stop the honest. The UI mirrors the database rule rather than being
+// the rule.
+//
+// Owner is shown as permanently granted and is not editable: if an owner
+// could revoke their own access they could lock themselves out of their
+// own account with no way back, so has_permission() short-circuits for
+// them and the grid says so plainly.
+const PERMISSIONS = [
+  {key:'website.edit',      label:'Edit website content',   hint:'Change the words on the site (saved as a draft)'},
+  {key:'website.publish',   label:'Publish website changes',hint:'Make edits visible to the public'},
+  {key:'budget.view',       label:'See the budget',         hint:'Business Info → Budget, incl. plans and fees'},
+  {key:'budget.edit',       label:'Change the budget',      hint:'Add or edit income lines and pricing plans'},
+  {key:'statements.upload', label:'Upload platform statements', hint:'Add statements and save real income figures'},
+];
+// Roles the grid manages. 'owner' is listed but locked on.
+const PERM_ROLES = [
+  {key:'owner', label:'Owner', locked:true},
+  {key:'admin', label:'Admin'},
+  {key:'host',  label:'Host'},
+];
+let rolePermissions = [];
+
+function permAllowed(role, key) {
+  if (role === 'owner') return true;
+  const row = rolePermissions.find(r => r.role === role && r.permission === key);
+  return !!(row && row.allowed);
+}
+
+// Client-side mirror of has_permission(), used only to decide what to
+// show. Never a security boundary — the database makes the real call, so
+// a wrong answer here is a cosmetic bug, not a hole. Loads the grid
+// lazily the first time something asks.
+function uiCan(key) {
+  const role = currentUser && currentUser.role;
+  if (!role) return false;
+  if (role === 'owner' || role === 'admin') return true;
+  return permAllowed(role, key);
+}
+
+// Fetching is separate from rendering on purpose. The GRID is owner-only,
+// but the DATA is needed by any role to decide which buttons to draw — a
+// host who has been granted publishing must actually see the button
+// without first visiting a Settings page they aren't allowed to open.
+// Every authenticated org member may read this table (750).
+let _rolePermsLoaded = false;
+async function ensureRolePermissions(force) {
+  if (_rolePermsLoaded && !force) return;
+  if (!db) return;
+  try {
+    const { data, error } = await db.from('role_permissions').select('*');
+    if (error) throw error;
+    rolePermissions = data || [];
+    _rolePermsLoaded = true;
+  } catch (e) { console.warn('ensureRolePermissions:', e); }
+}
+
+async function loadPermissions() {
+  const el = document.getElementById('settings-permissions');
+  const card = document.getElementById('settings-permissions-card');
+  if (!el) return;
+  // Owner-only surface. Everyone else simply doesn't see the grid — the
+  // database enforces the rules regardless of who is looking.
+  if (currentUser && currentUser.role !== 'owner') { if (card) card.style.display = 'none'; return; }
+  if (card) card.style.display = '';
+  if (!db) { el.innerHTML = '<div class="text-muted">Not connected.</div>'; return; }
+  el.innerHTML = skeletonRows(3);
+  await ensureRolePermissions(true);
+  renderPermissions();
+}
+
+function renderPermissions() {
+  const el = document.getElementById('settings-permissions');
+  if (!el) return;
+  el.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem;min-width:460px">
+        <thead>
+          <tr style="text-align:left;color:var(--muted)">
+            <th style="padding:8px;font-weight:600">Can…</th>
+            ${PERM_ROLES.map(r => `<th style="padding:8px;font-weight:600;text-align:center">${r.label}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${PERMISSIONS.map((p,i) => `
+            <tr style="${i%2?'background:var(--surface-2)':''}">
+              <td style="padding:9px 8px">
+                <div style="font-weight:600">${p.label}</div>
+                <div style="color:var(--muted);font-size:.72rem">${p.hint}</div>
+              </td>
+              ${PERM_ROLES.map(r => {
+                const on = permAllowed(r.key, p.key);
+                if (r.locked) return `<td style="padding:9px 8px;text-align:center" title="Owners always have full access">
+                  <span style="color:var(--green2);font-size:1rem">✓</span>
+                  <div style="font-size:.62rem;color:var(--muted)">always</div></td>`;
+                return `<td style="padding:9px 8px;text-align:center">
+                  <input type="checkbox" ${on?'checked':''}
+                    onchange="setPermission('${r.key}','${p.key}',this.checked)"
+                    style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)"/>
+                </td>`;
+              }).join('')}
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="text-muted" style="font-size:.72rem;margin-top:10px">
+      These are enforced by the database, not just the screen — an unticked box means the change is refused, not merely hidden.
+      Admins keep access to everything regardless, so the app can always be administered.
+    </div>`;
+}
+
+async function setPermission(role, permission, allowed) {
+  if (!db) { toast('Not connected — changes need a live connection to save.','error'); return; }
+  try {
+    // Upsert on (org_id, role, permission), the table's unique key.
+    const { error } = await db.from('role_permissions')
+      .upsert([{ org_id: getOrgId(), role, permission, allowed }], { onConflict: 'org_id,role,permission' });
+    if (error) throw error;
+    const row = rolePermissions.find(r => r.role === role && r.permission === permission);
+    if (row) row.allowed = allowed; else rolePermissions.push({ role, permission, allowed });
+    const label = (PERMISSIONS.find(p => p.key === permission)||{}).label || permission;
+    toast(`${label} — ${allowed ? 'granted to' : 'removed from'} ${role}`, 'success');
+    renderPermissions();
+  } catch (e) {
+    toast('Could not save: ' + e.message, 'error');
+    renderPermissions(); // snap the checkbox back to the stored state
+  }
+}
+
 // ── MARKETING / WEBSITE CONTENT (migration 720) ────────────────
 // Lets the people who own the words change them. Today the booking site
 // (snapartments-frontend, Next.js) has all its copy hardcoded in .tsx
@@ -10549,6 +10711,13 @@ async function loadMarketingTab() {
     siteSel.innerHTML = Object.keys(SITE_KEYS).map(k => `<option value="${k}">${SITE_KEYS[k]}</option>`).join('');
     pageSel.innerHTML = Object.keys(SITE_PAGES).map(p => `<option value="${p}">${SITE_PAGES[p].label}</option>`).join('');
   }
+  await ensureRolePermissions();  // needed before deciding whether to show Publish
+  if (!uiCan('website.edit')) {
+    document.getElementById('site-editor').innerHTML = emptyState('🔒',
+      'You don\'t have access to website editing',
+      '<div class="text-muted" style="font-size:.8rem;max-width:400px;margin:0 auto">An owner can grant this under Settings → Permissions.</div>');
+    return;
+  }
   await loadSiteContent();
 }
 
@@ -10584,6 +10753,10 @@ function renderSiteEditor() {
   const dirty = !!_siteDirty[page];
   const hasUnpublished = row && !row.published;
   const editedSincePublish = row && row.published && row.published_at && row.updated_at > row.published_at;
+  // Editing and publishing are separate rights (750) — the cautious
+  // default lets a host fix copy but not push it live. The database
+  // enforces this too; hiding the button is only the courtesy.
+  const canPublish = uiCan('website.publish');
 
   el.innerHTML = `
     <div class="card">
@@ -10614,10 +10787,14 @@ function renderSiteEditor() {
       <div id="sc-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:10px"></div>
       <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" id="sc-save-btn" onclick="saveSiteContent(false)">${dirty?'Save draft •':'Save draft'}</button>
-        <button class="btn btn-sm" style="background:var(--green2);color:#fff" onclick="saveSiteContent(true)">
-          ${hasUnpublished || editedSincePublish ? '↑ Save & publish' : '↑ Publish'}
-        </button>
-        ${row && row.published ? `<button class="btn btn-ghost btn-sm" onclick="unpublishSiteContent()">Unpublish</button>` : ''}
+        ${canPublish ? `
+          <button class="btn btn-sm" style="background:var(--green2);color:#fff" onclick="saveSiteContent(true)">
+            ${hasUnpublished || editedSincePublish ? '↑ Save & publish' : '↑ Publish'}
+          </button>
+          ${row && row.published ? `<button class="btn btn-ghost btn-sm" onclick="unpublishSiteContent()">Unpublish</button>` : ''}
+        ` : `<div class="text-muted" style="font-size:.74rem;align-self:center">
+              Someone with publishing rights needs to put this live — you can save drafts.
+            </div>`}
       </div>
       ${row && row.published_at ? `<div class="text-muted" style="font-size:.72rem;margin-top:8px">Last published ${fmtDate(String(row.published_at).slice(0,10))}</div>` : ''}
     </div>`;
@@ -10681,11 +10858,15 @@ async function unpublishSiteContent() {
 // tracks it. Actuals deliberately stay where they already live (Reports,
 // platform statements) — the panel shows recorded income beside the
 // budget for context rather than pretending to reconcile the two.
+// INCOME ONLY, by the owner's decision (2026-07-30): "I don't think
+// expenses should be in there but stay part of the finances tab." So this
+// answers "what should the business earn each month" — costs live in
+// Finance. The 'cost' direction remains legal in the schema (710) but is
+// not offered here; nothing writes it.
 let businessBudget = [];
+let pricingPlans = [];
 const BUDGET_CATS = {
-  management_fee:'Management fee', rental:'Rental income', website:'Website',
-  cleaning:'Cleaning', maintenance:'Maintenance', staff:'Staff', software:'Software',
-  marketing:'Marketing', accounting:'Accounting', insurance:'Insurance', other:'Other',
+  management_fee:'Management fee', rental:'Rental income', website:'Website', other:'Other',
 };
 const BUDGET_FREQ = {monthly:'per month', quarterly:'per quarter', annual:'per year', once:'once-off'};
 
@@ -10715,9 +10896,13 @@ async function loadBusinessBudget() {
   if (!db) { el.innerHTML = '<div class="text-muted">Not connected.</div>'; return; }
   el.innerHTML = skeletonRows(4);
   try {
-    const { data, error } = await db.from('business_budget').select('*').order('sort_order').order('created_at');
-    if (error) throw error;
-    businessBudget = data || [];
+    const [budgetRes, plansRes] = await Promise.all([
+      db.from('business_budget').select('*').order('sort_order').order('created_at'),
+      db.from('pricing_plans').select('*').order('sort_order'),
+    ]);
+    if (budgetRes.error) throw budgetRes.error;
+    businessBudget = budgetRes.data || [];
+    pricingPlans = plansRes.error ? [] : (plansRes.data || []);
     renderBusinessBudget();
   } catch (e) {
     el.innerHTML = '<div style="color:var(--red)">Error: '+e.message+'</div>';
@@ -10728,23 +10913,61 @@ function renderBusinessBudget() {
   const el = document.getElementById('budget-content');
   if (!el) return;
   const money = n => 'R ' + Number(n||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const active = businessBudget.filter(b => b.active);
-  const income = active.filter(b => b.direction === 'income');
-  const costs  = active.filter(b => b.direction === 'cost');
-  const sumM = rows => rows.reduce((s,b) => s + Number(b.monthly_amount||0), 0);
-  const incomeM = sumM(income), costsM = sumM(costs), netM = incomeM - costsM;
+  const active = businessBudget.filter(b => b.active && b.direction === 'income');
+  const recurring = active.filter(b => b.frequency !== 'once');
+  const incomeM = recurring.reduce((s,b) => s + Number(b.monthly_amount||0), 0);
   // Once-offs are real planned money but not part of the run rate, so
   // they're surfaced separately instead of being folded into the monthly
   // totals (which would overstate a normal month).
   const onceOffs = active.filter(b => b.frequency === 'once');
-  const onceTotal = onceOffs.reduce((s,b) => s + (b.direction==='income'?1:-1) * Number(b.amount||0), 0);
+  const onceTotal = onceOffs.reduce((s,b) => s + Number(b.amount||0), 0);
+  const inactive = businessBudget.filter(b => !b.active && b.direction === 'income');
 
-  if (!businessBudget.length) {
-    el.innerHTML = emptyState('📈', 'No budget lines yet',
-      `<div class="text-muted" style="font-size:.8rem;max-width:420px;margin:0 auto 12px">
-         Add what the business earns and spends each month — management fees, rental income, software, accounting — and see the run rate.
+  // ── The price list itself (740) ──
+  const plans = pricingPlans.filter(p => p.active);
+  const plansHtml = !plans.length ? '' : `
+    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:4px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">
+      Management plans — what you charge
+    </div>
+    <div style="overflow-x:auto;margin-bottom:6px">
+      <table style="width:100%;border-collapse:collapse;font-size:.78rem;min-width:560px">
+        <thead><tr style="text-align:left;color:var(--muted)">
+          <th style="padding:6px 8px;font-weight:600">Plan</th>
+          <th style="padding:6px 8px;font-weight:600;text-align:right">Per month</th>
+          <th style="padding:6px 8px;font-weight:600;text-align:center">Turnovers incl.</th>
+          <th style="padding:6px 8px;font-weight:600;text-align:right">Extra turnover</th>
+          <th style="padding:6px 8px;font-weight:600;text-align:right">Setup</th>
+          <th style="padding:6px 8px"></th>
+        </tr></thead>
+        <tbody>
+        ${plans.map((p,i) => `
+          <tr style="${i%2?'background:var(--surface-2)':''};vertical-align:top">
+            <td style="padding:8px">
+              <div style="font-weight:700">${escHtml(p.name)}</div>
+              <div style="color:var(--muted);font-size:.74rem">${escHtml(p.property_type||'')}</div>
+            </td>
+            <td style="padding:8px;text-align:right;font-weight:700;color:var(--green2);white-space:nowrap">${money(p.monthly_fee)}</td>
+            <td style="padding:8px;text-align:center">${p.included_turnovers == null ? '<span style="color:var(--muted)">unlimited</span>' : p.included_turnovers}</td>
+            <td style="padding:8px;text-align:right;white-space:nowrap">${money(p.extra_turnover_fee)}</td>
+            <td style="padding:8px;text-align:right;white-space:nowrap">${p.setup_fee ? money(p.setup_fee) : '—'}</td>
+            <td style="padding:8px;text-align:right"><button class="btn btn-sm btn-ghost" onclick="openPricingPlan('${p.id}')" title="Edit plan">✎</button></td>
+          </tr>
+          ${p.notes ? `<tr style="${i%2?'background:var(--surface-2)':''}"><td colspan="6" style="padding:0 8px 8px;color:var(--muted);font-size:.72rem">${escHtml(p.notes)}</td></tr>` : ''}
+        `).join('')}
+        </tbody>
+      </table>
+    </div>
+    <div class="text-muted" style="font-size:.72rem;margin-bottom:18px">
+      Prices exclude VAT. Turnover allowances are what keep a fixed fee safe — HEP already counts turnovers from bookings, so anything over the allowance can be billed on the Management Invoice instead of quietly becoming free work.
+      <button class="btn btn-sm btn-ghost" onclick="openPricingPlan()" style="margin-left:6px">+ Add plan</button>
+    </div>`;
+
+  if (!businessBudget.length && !plans.length) {
+    el.innerHTML = emptyState('📈', 'Nothing budgeted yet',
+      `<div class="text-muted" style="font-size:.8rem;max-width:440px;margin:0 auto 12px">
+         Set out what the business earns each month — management fees, rental income — and see the run rate. Costs stay in Finance.
        </div>
-       <button class="btn btn-sm btn-primary" onclick="openBudgetLine()">+ Add Budget Line</button>`);
+       <button class="btn btn-sm btn-primary" onclick="openBudgetLine()">+ Add Income Line</button>`);
     return;
   }
 
@@ -10753,12 +10976,15 @@ function renderBusinessBudget() {
     return `
       <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">${title}</div>
       <div style="display:grid;gap:6px">
-        ${rows.map(b => `
+        ${rows.map(b => {
+          const plan = pricingPlans.find(p => p.id === b.plan_id);
+          return `
           <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10px;background:var(--surface-2);border-radius:8px;flex-wrap:wrap">
             <div style="min-width:0">
               <div style="font-weight:600;font-size:.84rem">${escHtml(b.label)}</div>
               <div style="font-size:.74rem;color:var(--muted)">
                 ${BUDGET_CATS[b.category]||b.category}
+                ${plan ? ' · '+escHtml(plan.name)+' plan' : ''}
                 ${b.property_id ? ' · '+propName(b.property_id) : ''}
                 ${b.frequency !== 'monthly' ? ' · '+money(b.amount)+' '+BUDGET_FREQ[b.frequency] : ''}
               </div>
@@ -10772,27 +10998,115 @@ function renderBusinessBudget() {
               <button class="btn btn-sm btn-ghost" onclick="openBudgetLine('${b.id}')" title="Edit">✎</button>
               <button class="btn btn-sm btn-ghost" style="color:var(--red)" onclick="deleteBudgetLine('${b.id}')" title="Delete">✕</button>
             </div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>`;
   };
 
-  const inactive = businessBudget.filter(b => !b.active);
   el.innerHTML = `
+    ${plansHtml}
     <div class="dash-console" style="margin-bottom:6px">
-      ${sCard('Income / month', money(incomeM), income.length+' line'+(income.length===1?'':'s'), 'var(--green2)')}
-      ${sCard('Costs / month', money(costsM), costs.length+' line'+(costs.length===1?'':'s'), 'var(--red)')}
-      ${sCard('Net / month', money(netM), netM>=0?'projected profit':'projected shortfall', netM>=0?'var(--accent)':'var(--red)')}
-      ${sCard('Net / year', money(netM*12), 'at the current run rate', 'var(--blue)')}
+      ${sCard('Expected income / month', money(incomeM), recurring.length+' recurring line'+(recurring.length===1?'':'s'), 'var(--green2)')}
+      ${sCard('Expected income / year', money(incomeM*12), 'at the current run rate', 'var(--blue)')}
+      ${onceOffs.length ? sCard('Once-off income', money(onceTotal), 'not in the monthly figure', 'var(--accent)') : ''}
     </div>
-    ${onceOffs.length ? `<div class="text-muted" style="font-size:.76rem;margin-bottom:4px">
-      Plus ${onceOffs.length} once-off ${onceOffs.length===1?'line':'lines'} totalling <strong style="color:${onceTotal>=0?'var(--green2)':'var(--red)'}">${money(Math.abs(onceTotal))}</strong> ${onceTotal>=0?'in':'out'} — not counted in the monthly figures above.
-    </div>` : ''}
-    ${section('Income', income, 'var(--green2)')}
-    ${section('Costs', costs, 'var(--red)')}
+    ${section('Recurring income', recurring, 'var(--green2)')}
+    ${section('Once-off', onceOffs, 'var(--accent)')}
     ${inactive.length ? section('Paused', inactive, 'var(--muted)') : ''}
     <div class="text-muted" style="font-size:.72rem;margin-top:14px">
-      A plan, not a ledger — what a normal month should look like. Quarterly and annual lines are shown as their monthly share. Your actual recorded income is in Reports.
+      Income only — costs live in the Finance tab. Quarterly and annual lines are shown as their monthly share. Your actual recorded income is in Reports.
     </div>`;
+}
+
+// ── Pricing plan editor (740) ──
+function openPricingPlan(id) {
+  const p = id ? pricingPlans.find(x => x.id === id) : null;
+  const v = (k, d) => p ? (p[k] ?? d) : d;
+  document.getElementById('day-modal-title').textContent = p ? 'Edit plan' : 'Add plan';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field"><label>Plan name *</label>
+        <input id="pp-name" value="${escHtml(v('name','')).replace(/"/g,'&quot;')}" placeholder="e.g. Apartment"/></div>
+      <div class="form-field"><label>Suits</label>
+        <input id="pp-type" value="${escHtml(v('property_type','')).replace(/"/g,'&quot;')}" placeholder="e.g. 1–2 bed, no pool"/></div>
+      <div class="form-field"><label>Fee per month (R) *</label>
+        <input id="pp-fee" type="number" step="0.01" min="0" value="${v('monthly_fee','')}"/></div>
+      <div class="form-field"><label>Setup fee (R)</label>
+        <input id="pp-setup" type="number" step="0.01" min="0" value="${v('setup_fee','')}"/></div>
+      <div class="form-field"><label>Turnovers included</label>
+        <input id="pp-incl" type="number" min="0" value="${v('included_turnovers','') ?? ''}" placeholder="leave blank for unlimited"/></div>
+      <div class="form-field"><label>Each extra turnover (R)</label>
+        <input id="pp-extra" type="number" step="0.01" min="0" value="${v('extra_turnover_fee','')}"/></div>
+      <div class="form-field span-full"><label>What's included</label>
+        <textarea id="pp-desc" rows="3">${escHtml(v('description',''))}</textarea></div>
+      <div class="form-field span-full"><label>Internal notes</label>
+        <textarea id="pp-notes" rows="2" placeholder="Not shown to clients">${escHtml(v('notes',''))}</textarea></div>
+      <div class="form-field"><label>Status</label>
+        <select id="pp-active">
+          <option value="true" ${!p||p.active?'selected':''}>Active</option>
+          <option value="false" ${p&&!p.active?'selected':''}>Retired</option>
+        </select></div>
+    </div>
+    <div id="pp-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" id="pp-save-btn" onclick="savePricingPlan(${p?`'${p.id}'`:'null'})">${p?'Save changes':'Add plan'}</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+      ${p?`<button class="btn btn-ghost btn-sm" style="color:var(--red);margin-left:auto" onclick="deletePricingPlan('${p.id}')">Delete</button>`:''}
+    </div>`;
+  openModal('day-modal');
+}
+
+async function savePricingPlan(id) {
+  const errEl = document.getElementById('pp-error');
+  const name = document.getElementById('pp-name').value.trim();
+  const fee = parseFloat(document.getElementById('pp-fee').value);
+  if (!name) { errEl.textContent = 'Give the plan a name.'; errEl.style.display='block'; return; }
+  if (!(fee >= 0)) { errEl.textContent = 'Enter the monthly fee.'; errEl.style.display='block'; return; }
+  if (!db) { errEl.textContent = 'Not connected — changes need a live connection to save.'; errEl.style.display='block'; return; }
+  const inclRaw = document.getElementById('pp-incl').value.trim();
+  const row = {
+    org_id: getOrgId(), name,
+    property_type: document.getElementById('pp-type').value.trim(),
+    monthly_fee: fee,
+    setup_fee: parseFloat(document.getElementById('pp-setup').value) || 0,
+    // Blank means unlimited, not zero — zero would make every turnover
+    // chargeable, which is an expensive difference to get wrong.
+    included_turnovers: inclRaw === '' ? null : parseInt(inclRaw, 10),
+    extra_turnover_fee: parseFloat(document.getElementById('pp-extra').value) || 0,
+    description: document.getElementById('pp-desc').value.trim(),
+    notes: document.getElementById('pp-notes').value.trim(),
+    active: document.getElementById('pp-active').value === 'true',
+  };
+  const btn = document.getElementById('pp-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const { error } = id
+      ? await db.from('pricing_plans').update(row).eq('id', id)
+      : await db.from('pricing_plans').insert([row]);
+    if (error) throw error;
+    toast(id ? 'Plan updated ✓' : 'Plan added ✓','success');
+    closeModal('day-modal');
+    loadBusinessBudget();
+  } catch (e) {
+    errEl.textContent = 'Could not save: ' + e.message; errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = id ? 'Save changes' : 'Add plan';
+  }
+}
+
+function deletePricingPlan(id) {
+  const p = pricingPlans.find(x => x.id === id);
+  if (!p) return;
+  // Budget lines referencing this plan are not deleted — the FK is
+  // ON DELETE SET NULL, so an income line survives losing its plan.
+  confirmAction(`Delete the "${p.name}" plan? Income lines using it stay, but lose the link.`, async () => {
+    if (db) {
+      const { error } = await db.from('pricing_plans').delete().eq('id', id);
+      if (error) { toast('Delete error: '+error.message,'error'); return; }
+    }
+    closeModal('day-modal');
+    toast('Plan deleted','info');
+    loadBusinessBudget();
+  }, 'Delete');
 }
 
 function openBudgetLine(id) {
@@ -10804,16 +11118,17 @@ function openBudgetLine(id) {
   const propOpts = Object.keys(PROPS).map(k =>
     `<option value="${k}" ${b&&b.property_id===k?'selected':''}>${PROPS[k].short||PROPS[k].name}</option>`).join('');
 
-  document.getElementById('day-modal-title').textContent = b ? 'Edit budget line' : 'Add budget line';
+  const planOpts = pricingPlans.filter(p => p.active).map(p =>
+    `<option value="${p.id}" ${b&&b.plan_id===p.id?'selected':''}>${escHtml(p.name)} — R${Number(p.monthly_fee).toLocaleString('en-ZA')}/mo</option>`).join('');
+
+  document.getElementById('day-modal-title').textContent = b ? 'Edit income line' : 'Add income line';
   document.getElementById('day-modal-body').innerHTML = `
     <div class="form-grid" style="gap:10px">
-      <div class="form-field"><label>Type *</label>
-        <select id="bl-direction">
-          <option value="income" ${!b||b.direction==='income'?'selected':''}>Money in</option>
-          <option value="cost" ${b&&b.direction==='cost'?'selected':''}>Money out</option>
-        </select>
-      </div>
       <div class="form-field"><label>Category</label><select id="bl-category">${catOpts}</select></div>
+      <div class="form-field"><label>On which plan</label>
+        <select id="bl-plan" onchange="budgetPlanPicked()">
+          <option value="">— no plan —</option>${planOpts}
+        </select></div>
       <div class="form-field span-full"><label>Description *</label>
         <input id="bl-label" value="${b?escHtml(b.label).replace(/"/g,'&quot;'):''}" placeholder="e.g. Speranta — management fee"/></div>
       <div class="form-field"><label>Amount (R) *</label>
@@ -10831,7 +11146,7 @@ function openBudgetLine(id) {
         <textarea id="bl-notes" rows="2" placeholder="Anything worth remembering about this line">${b?escHtml(b.notes||''):''}</textarea></div>
     </div>
     <div class="text-muted" style="font-size:.74rem;margin-top:8px">
-      Enter the amount as a positive number — "Money in" or "Money out" decides which way it counts.
+      Money coming in only — costs belong in the Finance tab. Picking a plan fills in its monthly fee.
     </div>
     <div id="bl-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:8px"></div>
     <div style="display:flex;gap:8px;margin-top:16px">
@@ -10839,6 +11154,16 @@ function openBudgetLine(id) {
       <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
     </div>`;
   openModal('day-modal');
+}
+
+// Picking a plan fills in its fee, so the budget and the price list can't
+// silently disagree. Only fills a blank amount — it never overwrites a
+// figure already typed, since a client may be on a negotiated rate.
+function budgetPlanPicked() {
+  const sel = document.getElementById('bl-plan');
+  const amt = document.getElementById('bl-amount');
+  const plan = pricingPlans.find(p => p.id === sel.value);
+  if (plan && amt && !amt.value) amt.value = plan.monthly_fee;
 }
 
 async function saveBudgetLine(id) {
@@ -10853,12 +11178,13 @@ async function saveBudgetLine(id) {
   btn.disabled = true; btn.textContent = 'Saving…';
   const row = {
     org_id: getOrgId(),
-    direction: document.getElementById('bl-direction').value,
+    direction: 'income',   // costs live in Finance — see the note on businessBudget
     category: document.getElementById('bl-category').value,
     label,
     amount,
     frequency: document.getElementById('bl-frequency').value,
     property_id: document.getElementById('bl-property').value || null,
+    plan_id: document.getElementById('bl-plan').value || null,
     active: document.getElementById('bl-active').value === 'true',
     notes: document.getElementById('bl-notes').value.trim(),
   };
