@@ -73,10 +73,11 @@ const src = [
   grabFn('isCaretaker'),
   grabFn('clientNormalise'),
   grabFn('stayNights'),
+  grabFn('propHandlesPlatform'),
   grabLine(/^const CLIENT_PLAT_ORDER = .*$/m, 'CLIENT_PLAT_ORDER'),
   grabLine(/^const clientPlat = .*$/m, 'clientPlat'),
   'let _clientDays = {}; let _clientCalMonth = ""; let _clientChartMonths = 12;',
-  'function compute(bookings, from, today, netTotal, earnings) {',
+  'function compute(bookings, from, today, netTotal, earnings, prop) {',
   dayMathSrc,
   '  return { nightsBooked, occupancy, windowDays, mix, mixOrder, byMonth, monthKeys,',
   '           bestKey, avgStay, perNight, paidNights, days: _clientDays, lettable, blocks };',
@@ -163,7 +164,10 @@ const EARNINGS = [
   { platform: 'lekkeslaap', period_start: '2026-04-01', period_end: '2026-04-30', net_earnings: 5500 },
 ];
 const NET = EARNINGS.reduce((s, e) => s + e.net_earnings, 0);
-const r = compute(BOOKINGS, FROM, TODAY, NET, EARNINGS);
+// TV House as it really is: S&N collects Airbnb, LekkeSlaap and direct;
+// the owner runs Booking.com themselves and is paid for it directly.
+const TV_HOUSE = { short_key: 'tvhouse', revenue_platforms: ['airbnb', 'lekkeslaap', 'direct'] };
+const r = compute(BOOKINGS, FROM, TODAY, NET, EARNINGS, TV_HOUSE);
 
 // ── Checks ────────────────────────────────────────────────────────
 let pass = 0, fail = 0;
@@ -238,11 +242,15 @@ checkTrue('every month total is within the days of that month',
 console.log('\n── Averages ──');
 checkTrue('average stay is a plausible length',
   r.avgStay > 1 && r.avgStay < 30, `got ${r.avgStay}`);
-// April and May 2026 hold 24 + 8 booked nights. Two April statements
-// cover the same April nights, so April must be counted once.
-check('per-night divides by the nights the statements cover', r.paidNights, 32);
+// Two April statements cover the same April nights, so April counts once.
+// And only nights on platforms S&N is PAID for count: TV House's
+// Booking.com nights are managed but paid direct to the owner, so
+// including them would report a nightly rate a fraction of the truth.
+checkTrue('per-night counts only nights S&N is actually paid for',
+  r.paidNights > 0 && r.paidNights < 32,
+  `got ${r.paidNights}; 32 would mean Booking.com nights were counted`);
 checkTrue('per-night is the real nightly rate, not a 12-month dilution',
-  Math.round(r.perNight) === Math.round(NET / 32),
+  Math.round(r.perNight) === Math.round(NET / r.paidNights) && r.perNight > NET / r.nightsBooked,
   `got ${r.perNight}, diluted figure would be ${NET / r.nightsBooked}`);
 
 console.log('\n── Stay length comes from the dates ──');
@@ -258,7 +266,7 @@ console.log('\n── The 3 / 6 / 12 month filter ──');
 // chart button is pressed would be worse than not offering the filter.
 [3, 6, 12].forEach(n => {
   setChartMonths(n);
-  const rn = compute(BOOKINGS, FROM, TODAY, NET, EARNINGS);
+  const rn = compute(BOOKINGS, FROM, TODAY, NET, EARNINGS, TV_HOUSE);
   check(`${n}-month view draws ${n} bars`, rn.monthKeys.length, n);
   check(`${n}-month view still reports 12-month occupancy`, rn.occupancy, 52);
   check(`${n}-month view still reports 12-month nights`, rn.nightsBooked, 191);
