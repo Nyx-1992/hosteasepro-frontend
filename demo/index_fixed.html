@@ -1760,6 +1760,22 @@ function _buildMobileNavStub(){/* replaced by main script */}
 //  9. Deploy as a new Vercel project — done.
 // ════════════════════════════════════════════════════════════════
 
+// ── BOOKING SITE ───────────────────────────────────────────────
+// The guest-facing direct-booking site. Named "Sunset Coast Stays"
+// (owner's choice, 2026-07-31); it moves off snapartments.co.za onto its
+// own domain, since snapartments.co.za becomes the S&N property-
+// MANAGEMENT company site (roadmap p2-24).
+//
+// STILL POINTS AT THE OLD DOMAIN ON PURPOSE. The new domain is not
+// registered yet, and both of the API routes below are LIVE — calendar
+// imports and booking-confirmation emails run through them. Repointing
+// before the domain resolves would break both silently. When
+// sunsetcoaststays.co.za is registered and added in Vercel, change this
+// ONE line and every use follows: the guest RETURN10 link, the company
+// website field, the iCal proxy and the confirmation endpoint.
+const BOOKING_SITE_NAME = 'Sunset Coast Stays';
+const BOOKING_SITE_URL  = 'https://www.snapartments.co.za';  // TODO -> https://www.sunsetcoaststays.co.za once the domain is live
+
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  CLIENT CONFIG — S&N Apt. Management                        ║
 // ║  Replace this entire block for each new client              ║
@@ -1782,21 +1798,6 @@ const SUPABASE_KEY = (window.HEP_CONFIG||{}).supabaseAnonKey;
 if(!SUPABASE_URL||!SUPABASE_KEY){ throw new Error('HEP: /demo/config.js missing or invalid — environment not configured'); }
 
 // ── Properties (hardcoded values below are the fallback if the DB fetch fails) ──
-// ── BOOKING SITE ───────────────────────────────────────────────
-// The guest-facing direct-booking site. Named "Sunset Coast Stays"
-// (owner's choice, 2026-07-31); it moves off snapartments.co.za onto its
-// own domain, since snapartments.co.za becomes the S&N property-
-// MANAGEMENT company site (roadmap p2-24).
-//
-// STILL POINTS AT THE OLD DOMAIN ON PURPOSE. The new domain is not
-// registered yet, and both of the API routes below are LIVE — calendar
-// imports and booking-confirmation emails run through them. Repointing
-// before the domain resolves would break both silently. When
-// sunsetcoaststays.co.za is registered and added in Vercel, change this
-// ONE line and every use follows: the guest RETURN10 link, the company
-// website field, the iCal proxy and the confirmation endpoint.
-const BOOKING_SITE_NAME = 'Sunset Coast Stays';
-const BOOKING_SITE_URL  = 'https://www.snapartments.co.za';  // TODO -> https://www.sunsetcoaststays.co.za once the domain is live
 
 let UUID_MAP = {
   'e9737638-d83a-4947-940a-8746789e4d9f': 'speranta',
