@@ -11781,9 +11781,19 @@ async function renderClientDashboard() {
       const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
       monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
     }
+    // Counts EVERY booked night in the month, including ones still to
+    // come — unlike occupancy, which is a trailing figure and stops at
+    // today. A night booked for next week is booked, and the chart is
+    // titled "nights booked", not "nights already stayed".
+    //
+    // Reading only past nights made the current month read zero while the
+    // calendar beside it showed that month nearly full — two panels on
+    // one screen flatly contradicting each other, which is how it was
+    // spotted.
     const byMonth = {};
     monthKeys.forEach(k => { byMonth[k] = {}; });
-    bookedNights.forEach(iso => {
+    Object.keys(_clientDays).forEach(iso => {
+      if (_clientDays[iso].blocked) return;
       const k = iso.slice(0, 7);
       if (!byMonth[k]) return;
       const p = _clientDays[iso].p;
@@ -11922,7 +11932,7 @@ async function renderClientDashboard() {
                  <div style="font-weight:700;font-size:.9rem">${avgStay ? avgStay.toFixed(1) : '—'} ${ct('nightsCol').toLowerCase()}</div></div>
             <div><div class="text-muted" style="font-size:.68rem">${ct('bestMonth')}</div>
                  <div style="font-weight:700;font-size:.9rem">${escHtml(monthLabel(bestKey, true))} <span class="text-muted" style="font-weight:400">· ${monthTotal(bestKey)}</span></div></div>
-            ${earnings.length ? `<div><div class="text-muted" style="font-size:.68rem">${ct('revPerNight')}</div>
+            ${perNight > 0 ? `<div><div class="text-muted" style="font-size:.68rem">${ct('revPerNight')}</div>
                  <div style="font-weight:700;font-size:.9rem;color:var(--green2)">${money(perNight)}</div></div>` : ''}
           </div>
         </div>

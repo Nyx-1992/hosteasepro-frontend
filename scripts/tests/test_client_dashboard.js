@@ -314,6 +314,20 @@ Object.entries(REAL_COLUMNS).forEach(([table, cols]) => {
 // whatever pane happened to be open. Checked here by reading the guard
 // out of the page, because "the access check quietly did nothing" is
 // indistinguishable from "the access check passed" at a glance.
+// The chart counts nights booked for a month, INCLUDING ones still to
+// come. Reading only past nights made the current month show zero while
+// the availability calendar beside it showed that same month nearly
+// full — two panels on one screen contradicting each other.
+console.log('\n── Chart agrees with the calendar ──');
+const curMonth = TODAY.slice(0, 7);
+const calNightsThisMonth = Object.keys(r.days)
+  .filter(d => d.startsWith(curMonth) && !r.days[d].blocked).length;
+const chartThisMonth = Object.values(r.byMonth[curMonth] || {}).reduce((s, n) => s + n, 0);
+check('current month: chart total matches the calendar', chartThisMonth, calNightsThisMonth);
+checkTrue('a month of future bookings is not drawn as empty',
+  calNightsThisMonth === 0 || chartThisMonth > 0,
+  `calendar shows ${calNightsThisMonth} booked nights in ${curMonth} but the chart shows ${chartThisMonth}`);
+
 console.log('\n── Client tab guard ──');
 const switchTabSrc = grabFn('switchTab');
 checkTrue('switchTab handles a client BEFORE the NAV role test',
