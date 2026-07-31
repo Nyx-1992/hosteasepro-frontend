@@ -2647,7 +2647,9 @@ async function fetchProfile(userId, email) {
     const { data, error } = await db.from('profiles').select('*').eq('id', userId).limit(1);
     if (error || !data || !data.length) return null;
     const p = data[0];
-    return { id: userId, email, name: p.name, role: p.role, initials: p.initials, org_id: p.org_id };
+    // locale must come through, or a client's chosen language is lost on
+    // every login and the picker appears to do nothing.
+    return { id: userId, email, name: p.name, role: p.role, initials: p.initials, org_id: p.org_id, locale: p.locale || 'en' };
   } catch(e) { console.warn('fetchProfile:', e); return null; }
 }
 function applyRoleUI() {
@@ -2700,12 +2702,19 @@ async function _afterLogin(user) {
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
     const pane = document.getElementById('tab-client');
     if (pane) pane.classList.add('active');
-    // Hide the staff chrome entirely rather than showing an empty shell.
-    ['sidebar','mobile-nav','mobile-drawer','topbar-props'].forEach(id => {
-      const n = document.getElementById(id); if (n) n.style.display = 'none';
-    });
-    const main = document.querySelector('.main') || document.getElementById('app-screen');
-    if (main) main.style.marginLeft = '0';
+    // Hide the staff chrome. Selected by CLASS, not id — the sidebar is
+    // <div class="sidebar"> with no id at all, so an earlier
+    // getElementById('sidebar') silently did nothing and the client was
+    // left with the staff sidebar overlapping their dashboard.
+    // Selected by CLASS, not id — the sidebar is <div class="sidebar">
+    // with no id at all, so an earlier getElementById('sidebar') silently
+    // did nothing and the client was left with the staff sidebar sitting
+    // on top of their dashboard, hiding the first card.
+    document.querySelectorAll('.sidebar, .mob-drawer, .mob-drawer-overlay, .mob-bar, .topbar')
+      .forEach(n => { n.style.display = 'none'; });
+    // .main reserves 240px for the fixed sidebar (see .main{margin-left:240px}).
+    // Without clearing it the content stays pushed off-screen on mobile.
+    document.querySelectorAll('.main').forEach(n => { n.style.marginLeft = '0'; });
     await renderClientDashboard();
     return;
   }
@@ -10911,11 +10920,11 @@ function toggleVaultExpand(id) {
 // the world can be served". Strings live in one map rather than being
 // scattered, so adding a language is a data edit.
 const CLIENT_T = {
-  en:{title:'Your property',income:'Income',occupancy:'Occupancy',nights:'Nights booked',upcoming:'Upcoming stays',cleaning:'Cleaning',inspections:'Inspections',recent:'Recent bookings',noBookings:'No bookings in this period',thisYear:'Last 12 months',guest:'Guest',arrives:'Arrives',departs:'Departs',nightsCol:'Nights',cleans:'cleans completed',lastInspection:'Last inspection',none:'None recorded yet',managedBy:'Managed by',language:'Language',actualIncome:'Actual income received',afterFees:'after platform commission and fees',fromStatements:'From platform statements',estimated:'Estimated from bookings',period:'Period',signOut:'Sign out',welcome:'Welcome back',noStatements:'No platform statements loaded yet — your manager uploads these each month.',occNote:'Share of nights booked over the last 12 months'},
-  de:{title:'Ihre Immobilie',income:'Einnahmen',occupancy:'Auslastung',nights:'Gebuchte Nächte',upcoming:'Kommende Aufenthalte',cleaning:'Reinigung',inspections:'Inspektionen',recent:'Letzte Buchungen',noBookings:'Keine Buchungen in diesem Zeitraum',thisYear:'Letzte 12 Monate',guest:'Gast',arrives:'Anreise',departs:'Abreise',nightsCol:'Nächte',cleans:'Reinigungen abgeschlossen',lastInspection:'Letzte Inspektion',none:'Noch nichts erfasst',managedBy:'Verwaltet von',language:'Sprache',actualIncome:'Tatsächlich erhaltene Einnahmen',afterFees:'nach Plattformprovision und Gebühren',fromStatements:'Aus Plattformabrechnungen',estimated:'Geschätzt aus Buchungen',period:'Zeitraum',signOut:'Abmelden',welcome:'Willkommen zurück',noStatements:'Noch keine Plattformabrechnungen geladen — Ihr Verwalter lädt diese monatlich hoch.',occNote:'Anteil gebuchter Nächte in den letzten 12 Monaten'},
-  cs:{title:'Vaše nemovitost',income:'Příjmy',occupancy:'Obsazenost',nights:'Rezervované noci',upcoming:'Nadcházející pobyty',cleaning:'Úklid',inspections:'Kontroly',recent:'Poslední rezervace',noBookings:'V tomto období žádné rezervace',thisYear:'Posledních 12 měsíců',guest:'Host',arrives:'Příjezd',departs:'Odjezd',nightsCol:'Nocí',cleans:'dokončených úklidů',lastInspection:'Poslední kontrola',none:'Zatím nic nezaznamenáno',managedBy:'Spravuje',language:'Jazyk',actualIncome:'Skutečně přijaté příjmy',afterFees:'po provizi a poplatcích platforem',fromStatements:'Z výpisů platforem',estimated:'Odhad z rezervací',period:'Období',signOut:'Odhlásit se',welcome:'Vítejte zpět',noStatements:'Zatím nebyly nahrány žádné výpisy z platforem — váš správce je nahrává každý měsíc.',occNote:'Podíl obsazených nocí za posledních 12 měsíců'},
-  pl:{title:'Twoja nieruchomość',income:'Przychód',occupancy:'Obłożenie',nights:'Zarezerwowane noce',upcoming:'Nadchodzące pobyty',cleaning:'Sprzątanie',inspections:'Inspekcje',recent:'Ostatnie rezerwacje',noBookings:'Brak rezerwacji w tym okresie',thisYear:'Ostatnie 12 miesięcy',guest:'Gość',arrives:'Przyjazd',departs:'Wyjazd',nightsCol:'Noce',cleans:'ukończonych sprzątań',lastInspection:'Ostatnia inspekcja',none:'Brak zapisów',managedBy:'Zarządzane przez',language:'Język',actualIncome:'Faktycznie otrzymany przychód',afterFees:'po prowizji i opłatach platform',fromStatements:'Z wyciągów platform',estimated:'Szacowane z rezerwacji',period:'Okres',signOut:'Wyloguj',welcome:'Witaj ponownie',noStatements:'Nie wgrano jeszcze wyciągów z platform — zarządca wgrywa je co miesiąc.',occNote:'Udział zarezerwowanych nocy w ciągu ostatnich 12 miesięcy'},
-  es:{title:'Su propiedad',income:'Ingresos',occupancy:'Ocupación',nights:'Noches reservadas',upcoming:'Próximas estancias',cleaning:'Limpieza',inspections:'Inspecciones',recent:'Reservas recientes',noBookings:'Sin reservas en este período',thisYear:'Últimos 12 meses',guest:'Huésped',arrives:'Llegada',departs:'Salida',nightsCol:'Noches',cleans:'limpiezas completadas',lastInspection:'Última inspección',none:'Aún sin registros',managedBy:'Gestionado por',language:'Idioma',actualIncome:'Ingresos realmente recibidos',afterFees:'tras comisiones y tarifas de plataforma',fromStatements:'De los extractos de plataforma',estimated:'Estimado a partir de reservas',period:'Período',signOut:'Cerrar sesión',welcome:'Bienvenido de nuevo',noStatements:'Aún no se han cargado extractos — su gestor los sube cada mes.',occNote:'Proporción de noches reservadas en los últimos 12 meses'},
+  en:{title:'Your property',income:'Income',occupancy:'Occupancy',nights:'Nights booked',upcoming:'Upcoming stays',cleaning:'Cleaning',inspections:'Inspections',recent:'Recent bookings',noBookings:'No bookings in this period',thisYear:'Last 12 months',guest:'Guest',arrives:'Arrives',departs:'Departs',nightsCol:'Nights',cleans:'cleans completed',lastInspection:'Last inspection',none:'None recorded yet',managedBy:'Managed by',language:'Language',actualIncome:'Actual income received',afterFees:'after platform commission and fees',fromStatements:'From platform statements',estimated:'Estimated from bookings',period:'Period',signOut:'Sign out',welcome:'Welcome back',noStatements:'No platform statements loaded yet — your manager uploads these each month.',occNote:'Share of nights booked over the last 12 months',uploadTitle:'Send us a statement',uploadHelp:'If you receive statements we don\'t — Booking.com invoices, for example — upload the PDF here and we will add the figures to your income.',uploadBtn:'Choose a PDF',uploading:'Uploading…',uploaded:'Sent — thank you',yourUploads:'Sent by you'},
+  de:{title:'Ihre Immobilie',income:'Einnahmen',occupancy:'Auslastung',nights:'Gebuchte Nächte',upcoming:'Kommende Aufenthalte',cleaning:'Reinigung',inspections:'Inspektionen',recent:'Letzte Buchungen',noBookings:'Keine Buchungen in diesem Zeitraum',thisYear:'Letzte 12 Monate',guest:'Gast',arrives:'Anreise',departs:'Abreise',nightsCol:'Nächte',cleans:'Reinigungen abgeschlossen',lastInspection:'Letzte Inspektion',none:'Noch nichts erfasst',managedBy:'Verwaltet von',language:'Sprache',actualIncome:'Tatsächlich erhaltene Einnahmen',afterFees:'nach Plattformprovision und Gebühren',fromStatements:'Aus Plattformabrechnungen',estimated:'Geschätzt aus Buchungen',period:'Zeitraum',signOut:'Abmelden',welcome:'Willkommen zurück',noStatements:'Noch keine Plattformabrechnungen geladen — Ihr Verwalter lädt diese monatlich hoch.',occNote:'Anteil gebuchter Nächte in den letzten 12 Monaten',uploadTitle:'Abrechnung senden',uploadHelp:'Falls Sie Abrechnungen erhalten, die wir nicht bekommen — etwa Booking.com-Rechnungen — laden Sie das PDF hier hoch und wir übernehmen die Zahlen.',uploadBtn:'PDF auswählen',uploading:'Wird hochgeladen…',uploaded:'Gesendet — vielen Dank',yourUploads:'Von Ihnen gesendet'},
+  cs:{title:'Vaše nemovitost',income:'Příjmy',occupancy:'Obsazenost',nights:'Rezervované noci',upcoming:'Nadcházející pobyty',cleaning:'Úklid',inspections:'Kontroly',recent:'Poslední rezervace',noBookings:'V tomto období žádné rezervace',thisYear:'Posledních 12 měsíců',guest:'Host',arrives:'Příjezd',departs:'Odjezd',nightsCol:'Nocí',cleans:'dokončených úklidů',lastInspection:'Poslední kontrola',none:'Zatím nic nezaznamenáno',managedBy:'Spravuje',language:'Jazyk',actualIncome:'Skutečně přijaté příjmy',afterFees:'po provizi a poplatcích platforem',fromStatements:'Z výpisů platforem',estimated:'Odhad z rezervací',period:'Období',signOut:'Odhlásit se',welcome:'Vítejte zpět',noStatements:'Zatím nebyly nahrány žádné výpisy z platforem — váš správce je nahrává každý měsíc.',occNote:'Podíl obsazených nocí za posledních 12 měsíců',uploadTitle:'Zaslat výpis',uploadHelp:'Pokud dostáváte výpisy, které my nemáme — například faktury Booking.com — nahrajte PDF zde a my čísla doplníme.',uploadBtn:'Vybrat PDF',uploading:'Nahrávání…',uploaded:'Odesláno — děkujeme',yourUploads:'Odeslané vámi'},
+  pl:{title:'Twoja nieruchomość',income:'Przychód',occupancy:'Obłożenie',nights:'Zarezerwowane noce',upcoming:'Nadchodzące pobyty',cleaning:'Sprzątanie',inspections:'Inspekcje',recent:'Ostatnie rezerwacje',noBookings:'Brak rezerwacji w tym okresie',thisYear:'Ostatnie 12 miesięcy',guest:'Gość',arrives:'Przyjazd',departs:'Wyjazd',nightsCol:'Noce',cleans:'ukończonych sprzątań',lastInspection:'Ostatnia inspekcja',none:'Brak zapisów',managedBy:'Zarządzane przez',language:'Język',actualIncome:'Faktycznie otrzymany przychód',afterFees:'po prowizji i opłatach platform',fromStatements:'Z wyciągów platform',estimated:'Szacowane z rezerwacji',period:'Okres',signOut:'Wyloguj',welcome:'Witaj ponownie',noStatements:'Nie wgrano jeszcze wyciągów z platform — zarządca wgrywa je co miesiąc.',occNote:'Udział zarezerwowanych nocy w ciągu ostatnich 12 miesięcy',uploadTitle:'Wyślij wyciąg',uploadHelp:'Jeśli otrzymujesz wyciągi, których my nie mamy — na przykład faktury Booking.com — wgraj PDF tutaj, a my dodamy dane do przychodu.',uploadBtn:'Wybierz PDF',uploading:'Wysyłanie…',uploaded:'Wysłano — dziękujemy',yourUploads:'Wysłane przez Ciebie'},
+  es:{title:'Su propiedad',income:'Ingresos',occupancy:'Ocupación',nights:'Noches reservadas',upcoming:'Próximas estancias',cleaning:'Limpieza',inspections:'Inspecciones',recent:'Reservas recientes',noBookings:'Sin reservas en este período',thisYear:'Últimos 12 meses',guest:'Huésped',arrives:'Llegada',departs:'Salida',nightsCol:'Noches',cleans:'limpiezas completadas',lastInspection:'Última inspección',none:'Aún sin registros',managedBy:'Gestionado por',language:'Idioma',actualIncome:'Ingresos realmente recibidos',afterFees:'tras comisiones y tarifas de plataforma',fromStatements:'De los extractos de plataforma',estimated:'Estimado a partir de reservas',period:'Período',signOut:'Cerrar sesión',welcome:'Bienvenido de nuevo',noStatements:'Aún no se han cargado extractos — su gestor los sube cada mes.',occNote:'Proporción de noches reservadas en los últimos 12 meses',uploadTitle:'Enviar un extracto',uploadHelp:'Si recibe extractos que nosotros no — facturas de Booking.com, por ejemplo — suba el PDF aquí y añadiremos las cifras a sus ingresos.',uploadBtn:'Elegir un PDF',uploading:'Subiendo…',uploaded:'Enviado — gracias',yourUploads:'Enviado por usted'},
 };
 let clientLocale = 'en';
 const ct = k => (CLIENT_T[clientLocale] || CLIENT_T.en)[k] || CLIENT_T.en[k] || k;
@@ -10936,7 +10945,7 @@ async function renderClientDashboard() {
     // would imply the restriction lives in the UI, which it does not.
     const [propRes, bookRes, earnRes, cleanRes, inspRes, stakeRes] = await Promise.all([
       db.from('properties').select('*'),
-      db.from('bookings').select('*').gte('check_in_date', from).order('check_in_date'),
+      db.from('bookings').select('*').eq('is_active', true).gte('check_in_date', from).order('check_in_date'),
       db.from('platform_earnings').select('*').order('period_start', {ascending:false}),
       db.from('domestics').select('*').gte('service_date', from),
       db.from('property_inspections').select('*').order('created_at', {ascending:false}).limit(5),
@@ -10954,10 +10963,33 @@ async function renderClientDashboard() {
     const netTotal = earnings.reduce((s,e) => s + Number(e.net_earnings||0), 0);
     const grossTotal = earnings.reduce((s,e) => s + Number(e.gross_earnings||0), 0);
     const feesTotal = grossTotal - netTotal;
-    const nightsBooked = bookings.reduce((s,b) => s + (Number(b.nights)||0), 0);
-    const occupancy = Math.min(100, Math.round((nightsBooked / 365) * 100));
-    const upcoming = bookings.filter(b => (b.check_in_date||'') >= today);
-    const recent = bookings.filter(b => (b.check_in_date||'') < today).slice(-6).reverse();
+    // Occupancy the honest way: count nights that actually FALL INSIDE the
+    // last 12 months, not the full length of every booking that started in
+    // it. Naively summing b.nights gave 9,393 nights in a 365-day year —
+    // because the data contains long iCal blocks (the longest is 333
+    // nights) and stale rows. That produced a meaningless 100%.
+    //
+    // Owner stays and caretaker blocks are excluded too: they are not
+    // lettings, and counting them would flatter the figure the owner is
+    // most likely to check.
+    const winStart = new Date(from + 'T00:00:00');
+    const winEnd   = new Date(today + 'T00:00:00');
+    const DAY = 86400000;
+    const lettable = bookings.filter(b => !isOwnerStay(b) && !isCaretaker(b));
+    let nightsBooked = 0;
+    lettable.forEach(b => {
+      if (!b.check_in_date || !b.check_out_date) return;
+      const inD  = new Date(b.check_in_date + 'T00:00:00');
+      const outD = new Date(b.check_out_date + 'T00:00:00');
+      const start = inD  > winStart ? inD  : winStart;
+      const end   = outD < winEnd   ? outD : winEnd;
+      const nights = Math.round((end - start) / DAY);
+      if (nights > 0) nightsBooked += nights;
+    });
+    const windowDays = Math.max(1, Math.round((winEnd - winStart) / DAY));
+    const occupancy = Math.min(100, Math.round((nightsBooked / windowDays) * 100));
+    const upcoming = lettable.filter(b => (b.check_in_date||'') >= today);
+    const recent = lettable.filter(b => (b.check_in_date||'') < today).slice(-6).reverse();
 
     const langOpts = Object.keys(LOCALES).filter(l => CLIENT_T[l])
       .map(l => `<option value="${l}" ${clientLocale===l?'selected':''}>${LOCALES[l]}</option>`).join('');
@@ -11025,6 +11057,15 @@ async function renderClientDashboard() {
         : `<div class="text-muted" style="font-size:.82rem">${ct('noBookings')}</div>`}
       </div>
 
+      <div class="card mb-6">
+        <div class="card-title" style="margin-bottom:4px">📤 ${ct('uploadTitle')}</div>
+        <div class="text-muted" style="font-size:.78rem;margin-bottom:12px">${ct('uploadHelp')}</div>
+        <input type="file" id="client-file" accept="application/pdf" style="font-size:.82rem"/>
+        <button class="btn btn-primary btn-sm" id="client-upload-btn" style="margin-left:8px" onclick="clientUploadStatement()">${ct('uploadBtn')}</button>
+        <div id="client-upload-msg" style="font-size:.8rem;margin-top:9px"></div>
+        <div id="client-uploads" style="margin-top:10px"></div>
+      </div>
+
       <div class="card">
         <div class="card-title" style="margin-bottom:10px">🔍 ${ct('inspections')}</div>
         ${insps.length ? insps.map(i => `
@@ -11038,9 +11079,66 @@ async function renderClientDashboard() {
       <div class="text-muted" style="font-size:.72rem;margin-top:18px;text-align:center">
         ${escHtml(prop ? prop.name : '')} · ${agency ? escHtml(agency.display_name) : ''}
       </div>`;
+    renderClientUploads();
   } catch (e) {
     el.innerHTML = '<div style="color:var(--red)">Error: '+escHtml(e.message)+'</div>';
   }
+}
+
+// A client uploading a statement is providing EVIDENCE, not declaring
+// income: the file is stored and flagged, and S&N still reads it, checks
+// the parsed figures and saves them. Clients cannot write
+// platform_earnings (840), which is deliberate — restating what you are
+// owed should not be a one-click action.
+async function clientUploadStatement() {
+  const input = document.getElementById('client-file');
+  const msg   = document.getElementById('client-upload-msg');
+  const btn   = document.getElementById('client-upload-btn');
+  const file  = input.files[0];
+  if (!file) { msg.style.color = 'var(--red)'; msg.textContent = ct('uploadBtn'); return; }
+  btn.disabled = true; msg.style.color = 'var(--muted)'; msg.textContent = ct('uploading');
+  try {
+    const { data: sess } = await db.auth.getSession();
+    const uid = sess?.session?.user?.id;
+    const orgId = currentUser.org_id;
+    const props = await db.from('properties').select('id,short_key').limit(1);
+    const prop = (props.data || [])[0];
+    const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = orgId + '/' + Date.now() + '-' + safe;
+
+    const { error: upErr } = await db.storage.from('finance-documents').upload(path, file);
+    if (upErr) throw upErr;
+
+    const { error: insErr } = await db.from('finance_documents').insert([{
+      org_id: orgId,
+      doc_type: 'statement',
+      property_id: prop ? prop.short_key : null,
+      description: 'Uploaded by owner',
+      file_path: path,
+      file_name: file.name,
+      uploaded_by: uid,
+    }]);
+    if (insErr) {
+      await db.storage.from('finance-documents').remove([path]);
+      throw insErr;
+    }
+    msg.style.color = 'var(--green2)'; msg.textContent = ct('uploaded');
+    input.value = '';
+    renderClientUploads();
+  } catch (e) {
+    msg.style.color = 'var(--red)'; msg.textContent = e.message;
+  } finally { btn.disabled = false; }
+}
+
+async function renderClientUploads() {
+  const el = document.getElementById('client-uploads');
+  if (!el || !db) return;
+  const { data } = await db.from('finance_documents').select('*').order('created_at', {ascending:false});
+  const rows = data || [];
+  el.innerHTML = rows.length ? `<div style="font-size:.74rem;color:var(--muted);margin-bottom:4px">${ct('yourUploads')}</div>` +
+    rows.map(d => `<div style="font-size:.8rem;padding:4px 0;border-bottom:1px solid var(--border)">
+      📄 ${escHtml(d.file_name)} <span class="text-muted">· ${fmtDate(String(d.created_at).slice(0,10))}</span>
+    </div>`).join('') : '';
 }
 
 // Language is stored on the profile, so it follows the client to any
