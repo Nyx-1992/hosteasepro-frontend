@@ -558,6 +558,13 @@ function _buildMobileNavStub(){/* replaced by main script */}
       <!-- DASHBOARD — attention hierarchy: what needs action now, loudest and
            first; movements (check-ins/outs) right below; calendars/arrivals
            last, since those are for browsing rather than acting on. -->
+      <!-- CLIENT DASHBOARD — what a property OWNER sees. Replaces the
+           whole staff interface for role 'client' (820-824): their
+           property only, read-only, in their own language. -->
+      <div class="tab-pane" id="tab-client">
+        <div id="client-content"></div>
+      </div>
+
       <div class="tab-pane active" id="tab-dashboard">
         <!-- Pending alert -->
         <div id="dash-pending-alert" style="display:none;background:var(--amber-light);border:1.5px solid var(--amber);border-radius:12px;padding:14px 18px;margin-bottom:16px"></div>
@@ -2679,6 +2686,30 @@ async function doLogin() {
 }
 async function _afterLogin(user) {
   CURRENT_ORG_ID = user.org_id || null;
+
+  // A CLIENT is an external property owner, not staff. They get their own
+  // screen instead of the staff interface — which for them would be a
+  // sidebar of tabs they cannot open over data they cannot see. The
+  // database already restricts them (820-824); this decides what they
+  // are SHOWN, and skips the staff bootstrap (iCal sync, manuals, the
+  // whole data load) which would only produce empty results and noise in
+  // the console.
+  if (user.role === 'client') {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'block';
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    const pane = document.getElementById('tab-client');
+    if (pane) pane.classList.add('active');
+    // Hide the staff chrome entirely rather than showing an empty shell.
+    ['sidebar','mobile-nav','mobile-drawer','topbar-props'].forEach(id => {
+      const n = document.getElementById(id); if (n) n.style.display = 'none';
+    });
+    const main = document.querySelector('.main') || document.getElementById('app-screen');
+    if (main) main.style.marginLeft = '0';
+    await renderClientDashboard();
+    return;
+  }
+
   await loadProperties();
   await loadIcalFeeds();
   await loadPropertyManuals();
@@ -5443,8 +5474,9 @@ const ROADMAP = [
   {k:'p2-34',t:'Domains to register — three businesses, three addresses',n:'OPEN, OWNER ACTION. (1) sunsetcoaststays.co.za — the guest booking site; pending Silja\'s sign-off. (2) snapartments.co.za — ALREADY OWNED, becomes the S&N management company site once design/two-brands is merged. (3) hosteasepro.com — the PLATFORM. All checked free at DNS level 2026-07-31 (also .co.za, .app, .io, hostease.pro). .com recommended for HEP: the product is not South-Africa-specific, and if it is ever sold or takes investment the .com is the asset. HEP\'s domain is not cosmetic — password resets and staff invites sent from a vercel.app domain land in spam (already happening, invites are live), the URL breaks if the project ever leaves Vercel, and no agency will pay monthly to log in at a preview URL. Suggested extra: register the runner-up booking name (bloubergbeachstays.co.za) as a redirect, ~R100/yr, so a competitor cannot take the obvious neighbour name.',c:'Business'},
   {k:'p3-10',t:'HEP AS A PRODUCT — the four audiences',n:'OPEN, framing entry. The roadmap now has genuinely different target groups and they want separating. (A) AGENCY STAFF — owner / admin / host, email+password, full org access via HEP. (B) DOMESTIC STAFF — cleaners and caretakers, PIN on a shared phone, no password account (680). Deliberate: making cleaners manage passwords would be worse. Consequence: the login page has TWO doors, not one. (C) CLIENT PROPERTY OWNERS — read-only reporting on their own property, in their own language (820-824, 830). (D) GUESTS — not logins, but HEP sends them messages and confirmations, so they are the fourth audience the platform serves. MISSING TODAY, in priority order: a PLATFORM OPERATOR role above organisations (when agency #2 signs up, nobody can provision, support or debug them without direct Supabase access); BILLING enforcement (830 records plan/trial/status, but nothing acts on it — what happens when someone stops paying is undefined); SELF-SERVE SIGNUP (api/create-org.js exists, but no flow from \'I found HEP\' to \'my first property is set up\').',c:'Architecture'},
   {k:'p3-11',t:'Platform marketing page + signup with 1-week trial',n:'OPEN, owner\'s ask 2026-07-31: \'I want people to see an overview of what the platform delivers to sign up for the monthly subscription (with a week trial plan).\' Needs: a public overview page for HEP (what it does, for whom, pricing), a signup flow creating an org + first admin + first property, and a 7-day trial. DATA IS READY (830): org_subscriptions holds plan, status (trialing/active/past_due/canceled/expired), trial_ends_at, and Stripe ids. trial_ends_at is stored PER ORG rather than assumed, so a longer trial can be granted to a design partner without a code change. Existing orgs are grandfathered as plan \'founder\', status \'active\', so no live org is dropped into a trial that expires under it. STILL TO DECIDE: price per month (roadmap p3-2 suggested Starter R350 / Growth R550 / Pro R750), whether the trial needs a card up front, and what a lapsed org sees — read-only, or locked out.',c:'GTM'},
-  {k:'p3-12',t:'Client reporting view, in the client\'s own language',n:'OPEN. Owner\'s ask: clients \'who only get a reporting overview\' must be able \'to change their page to any language so customers around the world can be served\'. First client is Czech (info@vineamea.cz, TV House). DATA LAYER DONE (820-824): a client sees only their property — verified on staging as TV House only, 163 of 374 bookings, 16 of 58 cleans, their earnings, and nothing of the business. profiles.locale added (830), set BY the user rather than inferred from the browser, because an owner living abroad usually prefers their mother tongue over the local one. STILL TO BUILD: the client dashboard itself (income, occupancy, cleaning, inspections, monthly statement), a language picker, and the translated strings. Note this is a THIRD translation surface — guest messages are already EN/AF (690) and the websites are English-only — so the strings want one shared mechanism, not a third bespoke one.',c:'HEP'},
+  {k:'p3-12',t:'Client reporting view, in the client\'s own language',n:'OPEN. Owner\'s ask: clients \'who only get a reporting overview\' must be able \'to change their page to any language so customers around the world can be served\'. First client is Czech (info@vineamea.cz, TV House). DATA LAYER DONE (820-824): a client sees only their property — verified on staging as TV House only, 163 of 374 bookings, 16 of 58 cleans, their earnings, and nothing of the business. profiles.locale added (830), set BY the user rather than inferred from the browser, because an owner living abroad usually prefers their mother tongue over the local one. STILL TO BUILD: the client dashboard itself (income, occupancy, cleaning, inspections, monthly statement), a language picker, and the translated strings. Note this is a THIRD translation surface — guest messages are already EN/AF (690) and the websites are English-only — so the strings want one shared mechanism, not a third bespoke one. BUILT 2026-07-31. A client login now lands on its OWN screen, not a trimmed staff view: the sidebar, mobile nav and property switcher are hidden entirely, and the staff bootstrap (iCal sync, manuals, full data load) is skipped — for a client it would only produce empty results and console noise. The dashboard answers the four questions an owner actually has: what did it earn (actual figures from platform statements, with the gross-minus-fees line shown), how full is it (occupancy over 12 months), is it being looked after (cleans completed, recent inspections), and what is coming up (upcoming stays). LANGUAGE: a picker in the header, stored on profiles.locale so it follows the client to any device rather than living in one browser. English, German, Czech, Polish and Spanish translated in full — Czech because the first client is. Strings live in ONE map so adding a language is a data edit. api/invite-client.js creates the login server-side: Auth user + a \'client\' profile + a property_users grant for exactly one property, with the property verified to belong to the caller\'s own org (without that check, an admin could grant access to another org\'s property by passing its id) and full rollback if any step fails, so a half-created client never lingers as a login that works but sees nothing. Settings > Clients now has a working \'Send login invite\' that shows the password once. STILL OPEN: guest names are deliberately not shown on the client\'s booking list (privacy — the owner does not need them), monthly statement PDFs are not downloadable there yet, and the client cannot message their manager from the dashboard.',c:'HEP'},
   {k:'p3-13',t:'Property stakeholders — who owns vs who manages (830)',n:'DONE (2026-07-31) as the lookup the owner asked for: \'a lookup table for each property for owner of property and managing agency\'. property_stakeholders records, per property, the OWNER (the person who gets a client login and a report) and the AGENCY (the business managing it). Until now a property had exactly ONE relationship — properties.org_id, meaning \'managed by\' — which conflated the two: TV House is managed by S&N but owned by someone else entirely. Kept separate from property_users on purpose: property_users answers \'which login may see this property\' (access control), this answers \'who are the real-world parties\' (commercial fact). An owner exists as a stakeholder from the moment a contract is signed, usually well before they log in, so email is recorded first and user_id is filled in when they accept. agency_org_id allows a property to be managed by an org other than the one holding the record, which is what a hand-over or white-label arrangement needs. SEEDED: TV House owner info@vineamea.cz (second owner email to follow), S&N as agency on both properties, Speranta marked as own-property where owner and agency are the same party.',c:'Architecture'},
+  {k:'p3-14',t:'HEP pricing and trial — decided',n:'DECIDED 2026-07-31 by the owner. PRICE: Starter R350 / Growth R550 / Pro R750 per month, confirming the earlier p3-2 baseline. TRIAL: one week, and NO CARD UP FRONT — the owner\'s reasoning was \'people are wary of adding such info, myself included\', which is the right instinct: asking for a card before anyone has seen the product costs signups, and at this stage usage feedback is worth more than filtering out tyre-kickers. Consequence to expect: more trials that never convert, which is fine and should not be mistaken for the product failing. LAPSED ACCOUNTS: limited view, NOT locked out. Locking someone out of their own operational data makes them hostile and makes paying again feel like a ransom; leaving it readable makes returning easy. Proposed line — read everything, write nothing: no new bookings, no messages sent, no uploads, so the business keeps running on what is already there but any NEW work needs a live subscription. Owner to confirm that line. Data is in place (830): org_subscriptions carries plan, status, trial_ends_at and Stripe ids, with existing orgs grandfathered as \'founder\'/\'active\'. STILL TO BUILD: the signup flow, the trial countdown in the UI, and the enforcement that actually applies the limited view.',c:'Business'},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
   {k:'p3-4',t:'First 3–5 paying customers active',n:'The milestone that proves HEP is sellable',c:'GTM'},
@@ -10864,6 +10896,165 @@ function toggleVaultExpand(id) {
   renderVault();
 }
 
+// ── CLIENT DASHBOARD ───────────────────────────────────────────
+// What a property OWNER sees. Not a trimmed-down staff view — a
+// different screen answering the four questions an owner actually has:
+// what did it earn, how full is it, is it being looked after, and what
+// is coming up.
+//
+// Everything here is read-only and already restricted at the database
+// level (820-824), so this UI is presentation, not protection. A client
+// querying the API directly gets exactly the same rows.
+//
+// Translated because the first client is Czech and the owner's ask was
+// that clients "change their page to any language so customers around
+// the world can be served". Strings live in one map rather than being
+// scattered, so adding a language is a data edit.
+const CLIENT_T = {
+  en:{title:'Your property',income:'Income',occupancy:'Occupancy',nights:'Nights booked',upcoming:'Upcoming stays',cleaning:'Cleaning',inspections:'Inspections',recent:'Recent bookings',noBookings:'No bookings in this period',thisYear:'Last 12 months',guest:'Guest',arrives:'Arrives',departs:'Departs',nightsCol:'Nights',cleans:'cleans completed',lastInspection:'Last inspection',none:'None recorded yet',managedBy:'Managed by',language:'Language',actualIncome:'Actual income received',afterFees:'after platform commission and fees',fromStatements:'From platform statements',estimated:'Estimated from bookings',period:'Period',signOut:'Sign out',welcome:'Welcome back',noStatements:'No platform statements loaded yet — your manager uploads these each month.',occNote:'Share of nights booked over the last 12 months'},
+  de:{title:'Ihre Immobilie',income:'Einnahmen',occupancy:'Auslastung',nights:'Gebuchte Nächte',upcoming:'Kommende Aufenthalte',cleaning:'Reinigung',inspections:'Inspektionen',recent:'Letzte Buchungen',noBookings:'Keine Buchungen in diesem Zeitraum',thisYear:'Letzte 12 Monate',guest:'Gast',arrives:'Anreise',departs:'Abreise',nightsCol:'Nächte',cleans:'Reinigungen abgeschlossen',lastInspection:'Letzte Inspektion',none:'Noch nichts erfasst',managedBy:'Verwaltet von',language:'Sprache',actualIncome:'Tatsächlich erhaltene Einnahmen',afterFees:'nach Plattformprovision und Gebühren',fromStatements:'Aus Plattformabrechnungen',estimated:'Geschätzt aus Buchungen',period:'Zeitraum',signOut:'Abmelden',welcome:'Willkommen zurück',noStatements:'Noch keine Plattformabrechnungen geladen — Ihr Verwalter lädt diese monatlich hoch.',occNote:'Anteil gebuchter Nächte in den letzten 12 Monaten'},
+  cs:{title:'Vaše nemovitost',income:'Příjmy',occupancy:'Obsazenost',nights:'Rezervované noci',upcoming:'Nadcházející pobyty',cleaning:'Úklid',inspections:'Kontroly',recent:'Poslední rezervace',noBookings:'V tomto období žádné rezervace',thisYear:'Posledních 12 měsíců',guest:'Host',arrives:'Příjezd',departs:'Odjezd',nightsCol:'Nocí',cleans:'dokončených úklidů',lastInspection:'Poslední kontrola',none:'Zatím nic nezaznamenáno',managedBy:'Spravuje',language:'Jazyk',actualIncome:'Skutečně přijaté příjmy',afterFees:'po provizi a poplatcích platforem',fromStatements:'Z výpisů platforem',estimated:'Odhad z rezervací',period:'Období',signOut:'Odhlásit se',welcome:'Vítejte zpět',noStatements:'Zatím nebyly nahrány žádné výpisy z platforem — váš správce je nahrává každý měsíc.',occNote:'Podíl obsazených nocí za posledních 12 měsíců'},
+  pl:{title:'Twoja nieruchomość',income:'Przychód',occupancy:'Obłożenie',nights:'Zarezerwowane noce',upcoming:'Nadchodzące pobyty',cleaning:'Sprzątanie',inspections:'Inspekcje',recent:'Ostatnie rezerwacje',noBookings:'Brak rezerwacji w tym okresie',thisYear:'Ostatnie 12 miesięcy',guest:'Gość',arrives:'Przyjazd',departs:'Wyjazd',nightsCol:'Noce',cleans:'ukończonych sprzątań',lastInspection:'Ostatnia inspekcja',none:'Brak zapisów',managedBy:'Zarządzane przez',language:'Język',actualIncome:'Faktycznie otrzymany przychód',afterFees:'po prowizji i opłatach platform',fromStatements:'Z wyciągów platform',estimated:'Szacowane z rezerwacji',period:'Okres',signOut:'Wyloguj',welcome:'Witaj ponownie',noStatements:'Nie wgrano jeszcze wyciągów z platform — zarządca wgrywa je co miesiąc.',occNote:'Udział zarezerwowanych nocy w ciągu ostatnich 12 miesięcy'},
+  es:{title:'Su propiedad',income:'Ingresos',occupancy:'Ocupación',nights:'Noches reservadas',upcoming:'Próximas estancias',cleaning:'Limpieza',inspections:'Inspecciones',recent:'Reservas recientes',noBookings:'Sin reservas en este período',thisYear:'Últimos 12 meses',guest:'Huésped',arrives:'Llegada',departs:'Salida',nightsCol:'Noches',cleans:'limpiezas completadas',lastInspection:'Última inspección',none:'Aún sin registros',managedBy:'Gestionado por',language:'Idioma',actualIncome:'Ingresos realmente recibidos',afterFees:'tras comisiones y tarifas de plataforma',fromStatements:'De los extractos de plataforma',estimated:'Estimado a partir de reservas',period:'Período',signOut:'Cerrar sesión',welcome:'Bienvenido de nuevo',noStatements:'Aún no se han cargado extractos — su gestor los sube cada mes.',occNote:'Proporción de noches reservadas en los últimos 12 meses'},
+};
+let clientLocale = 'en';
+const ct = k => (CLIENT_T[clientLocale] || CLIENT_T.en)[k] || CLIENT_T.en[k] || k;
+
+async function renderClientDashboard() {
+  const el = document.getElementById('client-content');
+  if (!el || !db) return;
+  clientLocale = (currentUser && currentUser.locale) || 'en';
+  el.innerHTML = skeletonRows(4);
+
+  const since = new Date(); since.setMonth(since.getMonth() - 12);
+  const from = since.toISOString().slice(0,10);
+  const today = todaySAST();
+
+  try {
+    // RLS already limits every one of these to the client's own
+    // property, so no property filter is needed here — and adding one
+    // would imply the restriction lives in the UI, which it does not.
+    const [propRes, bookRes, earnRes, cleanRes, inspRes, stakeRes] = await Promise.all([
+      db.from('properties').select('*'),
+      db.from('bookings').select('*').gte('check_in_date', from).order('check_in_date'),
+      db.from('platform_earnings').select('*').order('period_start', {ascending:false}),
+      db.from('domestics').select('*').gte('service_date', from),
+      db.from('property_inspections').select('*').order('created_at', {ascending:false}).limit(5),
+      db.from('property_stakeholders').select('*'),
+    ]);
+
+    const prop = (propRes.data || [])[0];
+    const bookings = (bookRes.data || []).filter(b => b.status !== 'cancelled');
+    const earnings = earnRes.data || [];
+    const cleans = cleanRes.data || [];
+    const insps = inspRes.data || [];
+    const agency = (stakeRes.data || []).find(s => s.party === 'agency');
+
+    const money = n => 'R ' + Number(n||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const netTotal = earnings.reduce((s,e) => s + Number(e.net_earnings||0), 0);
+    const grossTotal = earnings.reduce((s,e) => s + Number(e.gross_earnings||0), 0);
+    const feesTotal = grossTotal - netTotal;
+    const nightsBooked = bookings.reduce((s,b) => s + (Number(b.nights)||0), 0);
+    const occupancy = Math.min(100, Math.round((nightsBooked / 365) * 100));
+    const upcoming = bookings.filter(b => (b.check_in_date||'') >= today);
+    const recent = bookings.filter(b => (b.check_in_date||'') < today).slice(-6).reverse();
+
+    const langOpts = Object.keys(LOCALES).filter(l => CLIENT_T[l])
+      .map(l => `<option value="${l}" ${clientLocale===l?'selected':''}>${LOCALES[l]}</option>`).join('');
+
+    el.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+        <div>
+          <div class="text-muted" style="font-size:.78rem">${ct('welcome')}</div>
+          <h2 style="font-size:1.4rem;font-family:'DM Serif Display',serif;margin:2px 0">${escHtml(prop ? prop.name : ct('title'))}</h2>
+          ${agency ? `<div class="text-muted" style="font-size:.76rem">${ct('managedBy')} ${escHtml(agency.display_name)}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label class="text-muted" style="font-size:.74rem">${ct('language')}</label>
+          <select onchange="setClientLocale(this.value)" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.82rem;font-family:inherit">${langOpts}</select>
+          <button class="btn btn-sm btn-ghost" onclick="doLogout()">${ct('signOut')}</button>
+        </div>
+      </div>
+
+      <div class="dash-console" style="margin-bottom:18px">
+        ${sCard(ct('actualIncome'), money(netTotal), earnings.length ? ct('afterFees') : ct('estimated'), 'var(--green2)')}
+        ${sCard(ct('occupancy'), occupancy + '%', ct('occNote'), 'var(--accent)')}
+        ${sCard(ct('nights'), String(nightsBooked), ct('thisYear'), 'var(--blue)')}
+        ${sCard(ct('cleaning'), String(cleans.length), ct('cleans'), 'var(--teal)')}
+      </div>
+
+      ${earnings.length ? `
+        <div class="card mb-6">
+          <div class="card-title" style="margin-bottom:4px">💰 ${ct('income')}</div>
+          <div class="text-muted" style="font-size:.76rem;margin-bottom:12px">${ct('fromStatements')}</div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:.8rem;min-width:420px">
+              <thead><tr style="text-align:left;color:var(--muted)">
+                <th style="padding:6px 8px;font-weight:600">${ct('period')}</th>
+                <th style="padding:6px 8px;font-weight:600;text-align:right">${ct('income')}</th>
+              </tr></thead>
+              <tbody>${earnings.map((e,i) => `
+                <tr style="${i%2?'background:var(--surface-2)':''}">
+                  <td style="padding:7px 8px">${e.period_start?fmtDate(e.period_start):'—'} → ${e.period_end?fmtDate(e.period_end):'—'}
+                    <span class="text-muted" style="font-size:.72rem">· ${PLATFORM_LABELS[e.platform]||e.platform}</span></td>
+                  <td style="padding:7px 8px;text-align:right;font-weight:700;color:var(--green2)">${money(e.net_earnings)}</td>
+                </tr>`).join('')}
+                <tr><td style="padding:8px;font-weight:700;border-top:2px solid var(--border)">Total</td>
+                    <td style="padding:8px;text-align:right;font-weight:700;border-top:2px solid var(--border);color:var(--green2)">${money(netTotal)}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          ${feesTotal > 0 ? `<div class="text-muted" style="font-size:.72rem;margin-top:8px">${money(grossTotal)} − ${money(feesTotal)} ${ct('afterFees')}</div>` : ''}
+        </div>`
+      : `<div class="card mb-6"><div class="text-muted" style="font-size:.84rem">${ct('noStatements')}</div></div>`}
+
+      <div class="card mb-6">
+        <div class="card-title" style="margin-bottom:12px">📅 ${ct('upcoming')} <span class="text-muted" style="font-weight:400">· ${upcoming.length}</span></div>
+        ${upcoming.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.8rem;min-width:440px">
+          <thead><tr style="text-align:left;color:var(--muted)">
+            <th style="padding:6px 8px;font-weight:600">${ct('arrives')}</th>
+            <th style="padding:6px 8px;font-weight:600">${ct('departs')}</th>
+            <th style="padding:6px 8px;font-weight:600;text-align:center">${ct('nightsCol')}</th>
+          </tr></thead>
+          <tbody>${upcoming.slice(0,10).map((b,i) => `
+            <tr style="${i%2?'background:var(--surface-2)':''}">
+              <td style="padding:7px 8px">${fmtDate(b.check_in_date)}</td>
+              <td style="padding:7px 8px">${b.check_out_date?fmtDate(b.check_out_date):'—'}</td>
+              <td style="padding:7px 8px;text-align:center">${b.nights||'—'}</td>
+            </tr>`).join('')}</tbody></table></div>`
+        : `<div class="text-muted" style="font-size:.82rem">${ct('noBookings')}</div>`}
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px">🔍 ${ct('inspections')}</div>
+        ${insps.length ? insps.map(i => `
+          <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:.82rem">
+            <span>${fmtDate(String(i.created_at).slice(0,10))}</span>
+            <span class="text-muted">${escHtml(i.inspector_name || i.notes || '')}</span>
+          </div>`).join('')
+        : `<div class="text-muted" style="font-size:.82rem">${ct('none')}</div>`}
+      </div>
+
+      <div class="text-muted" style="font-size:.72rem;margin-top:18px;text-align:center">
+        ${escHtml(prop ? prop.name : '')} · ${agency ? escHtml(agency.display_name) : ''}
+      </div>`;
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--red)">Error: '+escHtml(e.message)+'</div>';
+  }
+}
+
+// Language is stored on the profile, so it follows the client to any
+// device rather than living in one browser.
+async function setClientLocale(loc) {
+  clientLocale = loc;
+  if (currentUser) currentUser.locale = loc;
+  renderClientDashboard();
+  if (db && currentUser) {
+    const { error } = await db.from('profiles').update({ locale: loc }).eq('id', currentUser.id);
+    if (error) console.warn('setClientLocale:', error);
+  }
+}
+
 // ── CLIENTS & PROPERTY OWNERS (migration 830) ──────────────────
 // The commercial record of who owns each property versus who manages
 // it. Distinct from property_users, which is the access-control fact:
@@ -10998,17 +11189,75 @@ function deleteStakeholder(id) {
   }, 'Remove');
 }
 
-// Invite flow is intentionally a stub until the client dashboard exists:
-// creating a login that lands on the staff interface would be worse than
-// not having one. Recorded so the button's absence is not mistaken for
-// an oversight.
+// Creates the client's login: Auth user + a 'client' profile + a grant
+// for exactly one property, all server-side via api/invite-client.js so
+// the service-role key never reaches the browser.
 function inviteStakeholder(id) {
-  const s = stakeholders.find(x => x.id === id);
-  if (!s) return;
-  confirmAction(
-    `Send ${s.email} a login?\n\nThe client dashboard isn't built yet — they would land on the staff interface with almost everything empty. The access rules are ready and tested; the screen they'd see is not.`,
-    async () => { toast('Not sent — client dashboard still to build (roadmap p3-12)','info'); },
-    'I understand');
+  const sh = stakeholders.find(x => x.id === id);
+  if (!sh) return;
+  const propName = (Object.values(PROPS).find(p => p.uuid === sh.property_id) || {}).name || 'this property';
+  const langOpts = Object.keys(LOCALES).filter(l => CLIENT_T[l])
+    .map(l => `<option value="${l}">${LOCALES[l]}</option>`).join('');
+
+  document.getElementById('day-modal-title').textContent = 'Create client login';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="text-muted" style="font-size:.82rem;margin-bottom:14px">
+      Creates a read-only login for <strong>${escHtml(sh.email)}</strong>, showing
+      <strong>${escHtml(propName)}</strong> only — its income, bookings, cleaning and inspections.
+      They will see nothing else of the business.
+    </div>
+    <div class="form-grid" style="gap:10px">
+      <div class="form-field span-full"><label>Their name *</label>
+        <input id="ci-name" value="${escHtml(sh.display_name||'').replace(/"/g,'&quot;')}" placeholder="e.g. Vineamea s.r.o."/></div>
+      <div class="form-field"><label>Temporary password *</label>
+        <input id="ci-pw" value="${Math.random().toString(36).slice(2,10)}Tv!${Math.floor(Math.random()*90+10)}"/></div>
+      <div class="form-field"><label>Their language</label>
+        <select id="ci-locale">${langOpts}</select></div>
+    </div>
+    <div class="text-muted" style="font-size:.74rem;margin-top:8px">
+      Send them the password yourself — it is shown here once and not stored anywhere you can read it back.
+    </div>
+    <div id="ci-error" style="display:none;color:var(--red);font-size:.8rem;margin-top:8px"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary" id="ci-go" onclick="createClientLogin('${sh.id}')">Create login</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('day-modal')">Cancel</button>
+    </div>`;
+  openModal('day-modal');
+}
+
+async function createClientLogin(id) {
+  const sh = stakeholders.find(x => x.id === id);
+  const err = document.getElementById('ci-error');
+  const name = document.getElementById('ci-name').value.trim();
+  const password = document.getElementById('ci-pw').value;
+  if (!name) { err.textContent = 'A name is needed.'; err.style.display='block'; return; }
+  const btn = document.getElementById('ci-go');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const { data: sess } = await db.auth.getSession();
+    const res = await fetch('/api/invite-client', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', Authorization: 'Bearer ' + (sess?.session?.access_token||'') },
+      body: JSON.stringify({
+        email: sh.email, password, name,
+        property_id: sh.property_id,
+        locale: document.getElementById('ci-locale').value,
+      }),
+    });
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || 'Could not create the login');
+    closeModal('day-modal');
+    toast('Client login created ✓','success');
+    // Shown once, deliberately: the password is not stored anywhere
+    // retrievable, so this is the only chance to copy it.
+    confirmAction(
+      `Login ready for ${sh.email}\n\nPassword: ${password}\n\nSend this to them now — it cannot be shown again. They can change it after signing in.`,
+      async () => {}, 'Copied it');
+    loadStakeholders();
+  } catch (e) {
+    err.textContent = e.message; err.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Create login';
+  }
 }
 
 // ── PERMISSIONS (migration 750) ────────────────────────────────
