@@ -75,18 +75,20 @@ const src = [
   grabFn('stayNights'),
   grabLine(/^const CLIENT_PLAT_ORDER = .*$/m, 'CLIENT_PLAT_ORDER'),
   grabLine(/^const clientPlat = .*$/m, 'clientPlat'),
-  'let _clientDays = {}; let _clientCalMonth = "";',
+  'let _clientDays = {}; let _clientCalMonth = ""; let _clientChartMonths = 12;',
   'function compute(bookings, from, today, netTotal, earnings) {',
   dayMathSrc,
   '  return { nightsBooked, occupancy, windowDays, mix, mixOrder, byMonth, monthKeys,',
   '           bestKey, avgStay, perNight, paidNights, days: _clientDays, lettable, blocks };',
   '}',
-  'module.exports = { compute, clientNormalise, clientPlat, isCaretaker, isOwnerStay, stayNights };',
+  'module.exports = { compute, clientNormalise, clientPlat, isCaretaker, isOwnerStay, stayNights,',
+  '  setChartMonths: n => { _clientChartMonths = n; } };',
 ].join('\n\n');
 
 const mod = { exports: {} };
 new Function('module', 'exports', src)(mod, mod.exports);
 const { compute, clientPlat, stayNights } = mod.exports;
+const setChartMonths = n => mod.exports.setChartMonths(n);
 
 // ── The real rows, as the client's browser receives them ──────────
 // Straight from the staging database: every TV House booking whose
@@ -249,6 +251,52 @@ check('31 Jul → 28 Aug is 28 nights, not the 17 the column claims',
   stayNights({ check_in_date: '2026-07-31', check_out_date: '2026-08-28' }), 28);
 check('a missing check-out yields 0, not NaN',
   stayNights({ check_in_date: '2026-07-31', check_out_date: null }), 0);
+
+console.log('\n── The 3 / 6 / 12 month filter ──');
+// Narrowing the chart must narrow ONLY the chart. Occupancy and the mix
+// are stated as 12-month figures, and quietly redefining them when a
+// chart button is pressed would be worse than not offering the filter.
+[3, 6, 12].forEach(n => {
+  setChartMonths(n);
+  const rn = compute(BOOKINGS, FROM, TODAY, NET, EARNINGS);
+  check(`${n}-month view draws ${n} bars`, rn.monthKeys.length, n);
+  check(`${n}-month view still reports 12-month occupancy`, rn.occupancy, 52);
+  check(`${n}-month view still reports 12-month nights`, rn.nightsBooked, 191);
+});
+setChartMonths(12);
+
+// ── The columns the dashboard actually asks the database for ──────
+// Two queries named columns that do not exist — domestics.service_date
+// and property_inspections.created_at — so PostgREST rejected both, .data
+// came back null, `|| []` turned that into "nothing to show", and a real
+// inspection report from Nina sat invisible while the cleaning count read
+// zero. Nothing failed loudly, which is exactly why this check exists.
+console.log('\n── Queries name real columns ──');
+const REAL_COLUMNS = {
+  domestics: ['id','cleaner','property_id','date','time','type','status','notes','checklist',
+    'booking_ref','created_at','amount_paid','linked_booking_id','cleaner_name',
+    'cancellation_acknowledged_at','cleaner_phone','link_sent_at','access_token','org_id'],
+  property_inspections: ['id','org_id','property_id','property_name','inspection_date','submitted_by',
+    'submitted_at','electricity_meter','pool_status','pool_notes','garden_status','garden_notes',
+    'irrigation_status','terrace_status','lights_ok','lights_notes','breakage_found','breakage_notes',
+    'pests_found','overall_condition','cleanliness_ok','appliances_ok','general_notes','photo_urls',
+    'task_created','reviewed','flagged','inspector_name','checklist','issues','breakages','notes'],
+  inventory_reports: ['id','org_id','domestic_id','property_id','cleaner','clean_date','submitted_at',
+    'flagged_items','all_ok','reviewed','task_created','notes'],
+  bookings: ['check_in_date','check_out_date','is_active','platform','status','guest_name','notes','nights'],
+  platform_earnings: ['platform','period_start','period_end','gross_earnings','net_earnings','property_id'],
+};
+// Read the client dashboard's own fetch block out of the page.
+const fetchBlock = html.slice(html.indexOf('const [propRes, bookRes'),
+                              html.indexOf('const prop = (propRes.data'));
+Object.entries(REAL_COLUMNS).forEach(([table, cols]) => {
+  const line = fetchBlock.split('\n').find(l => l.includes(`from('${table}')`));
+  if (!line) return;
+  const named = [...line.matchAll(/\.(?:eq|gte|lte|order|neq|lt|gt)\('([a-z_]+)'/g)].map(m => m[1]);
+  const bogus = named.filter(c => !cols.includes(c));
+  checkTrue(`${table}: filters and ordering name real columns`,
+    bogus.length === 0, `${table} has no column(s): ${bogus.join(', ')}`);
+});
 
 console.log(fail ? `\n${fail} failed, ${pass} passed` : `\nAll ${pass} checks passed`);
 process.exit(fail ? 1 : 0);
