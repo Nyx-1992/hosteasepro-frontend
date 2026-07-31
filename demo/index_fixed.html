@@ -5739,7 +5739,10 @@ function renderDashboard() {
   const fb = currentProp==='all' ? bookings : bookings.filter(b=>b.property_id===currentProp);
 
   // ── Base stats ──
-  const active    = fb.filter(b=>b.check_in<=today&&b.check_out>=today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
+  // check_out > today, not >=: someone leaving this morning is not
+  // occupying the place tonight, and counting them made a property look
+  // full on the very day it came free.
+  const active    = fb.filter(b=>b.check_in<=today&&b.check_out>today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
   const checkIns  = fb.filter(b=>b.check_in===today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
   const checkOuts = fb.filter(b=>b.check_out===today&&b.status!=='cancelled'&&b.status!=='blocked'&&!isCaretaker(b)&&!isOwnerStay(b));
   const checkInLabels  = checkIns.map(b=>b.display_name+' ('+propName(b.property_id)+')').join(', ')||'None today';
@@ -5748,7 +5751,13 @@ function renderDashboard() {
   document.getElementById('dash-stats').innerHTML =
     statCard("Today's Check-ins",  checkIns.length,  checkInLabels,  'var(--accent)') +
     statCard("Today's Check-outs", checkOuts.length, checkOutLabels, 'var(--blue)') +
-    statCard('Occupied Now', active.length, 'of '+(currentProp==='all'?Object.keys(PROPS).length:1)+' properties', 'var(--green2)');
+    // PROPERTIES occupied, not bookings in residence. Counting bookings
+    // read "3 of 2 properties": two feeds can carry the same stay under
+    // different guest names, and back-to-back rows overlap on a changeover
+    // day, so the numerator could exceed the number of properties that
+    // exist. A property is occupied or it is not.
+    statCard('Occupied Now', new Set(active.map(b=>b.property_id)).size,
+             'of '+(currentProp==='all'?Object.keys(PROPS).length:1)+' properties', 'var(--green2)');
 
   // ── Pending alert ──
   const pendingDirect = bookings.filter(b=>b.platform==='direct'&&b.status==='pending'&&b.is_active!==false);
@@ -8203,6 +8212,13 @@ async function toggleTaskClientVisible(taskId) {
   const t = tasks.find(x => String(x.id) === String(taskId));
   if (!t) return;
   const next = !t.client_visible;
+  // An owner only ever sees tasks on their own property, so a task set to
+  // "Both Properties" (property_id null) can be shared and still reach
+  // nobody. Refuse rather than let it look shared.
+  if (next && (!t.property_id || t.property_id === 'all')) {
+    toast('Set this task to a single property first — an owner only sees tasks on their own property.', 'error');
+    return;
+  }
   if (db) {
     const { error } = await db.from('tasks').update({ client_visible: next }).eq('id', taskId);
     // The card is only repainted once the database has agreed, so the
@@ -12975,6 +12991,25 @@ function renderModalAssignees() {
 }
 let _drawerTaskId = null;
 let _drawerAssignees = [];
+// Says plainly which state the checkbox is in. "Shared" and "not shared"
+// are worth spelling out — a bare tickbox next to a customer-facing
+// setting is the kind of thing people leave on by accident.
+function drawerClientHint() {
+  const cv   = document.getElementById('drawer-client-visible');
+  const hint = document.getElementById('drawer-client-hint');
+  const row  = document.getElementById('drawer-client-row');
+  if (!cv || !hint) return;
+  if (cv.checked) {
+    hint.textContent = 'On — the owner sees this task and its status on their dashboard.';
+    hint.style.color = 'var(--green2)';
+    if (row) { row.style.borderColor = 'var(--green2)'; row.style.background = '#dcfce744'; }
+  } else {
+    hint.textContent = 'Off — this task is internal to the team.';
+    hint.style.color = 'var(--muted)';
+    if (row) { row.style.borderColor = 'var(--border)'; row.style.background = 'transparent'; }
+  }
+}
+
 function openTaskDrawer(taskId) {
   const t = tasks.find(x => String(x.id) === String(taskId));
   if (!t) return;
@@ -12987,6 +13022,8 @@ function openTaskDrawer(taskId) {
   document.getElementById('drawer-due').value      = t.due || t.due_at || t.task_date || '';
   document.getElementById('drawer-notes').value    = t.notes || t.description || '';
   document.getElementById('drawer-title-display').textContent = t.title || 'Task';
+  const cv = document.getElementById('drawer-client-visible');
+  if (cv) { cv.checked = !!t.client_visible; drawerClientHint(); }
   // Load comments from DB column (array of {author, text, time})
   if (!t._comments && t.comments) {
     t._comments = Array.isArray(t.comments) ? t.comments : [];
@@ -13113,12 +13150,22 @@ async function saveTaskDrawer() {
   const newDue      = document.getElementById('drawer-due').value;
   const newNotes    = document.getElementById('drawer-notes').value;
   const newAssigned = _drawerAssignees.join(',');
+  const newClientVisible = !!(document.getElementById('drawer-client-visible') || {}).checked;
   if (!newTitle) { toast('Title is required','error'); return; }
+
+  // A shared task reaches the owner through their PROPERTY grant, so a
+  // task set to "Both Properties" saves property_id as null and no client
+  // can ever match it. Saying so beats silently sharing into the void.
+  if (newClientVisible && (!newProp || newProp === 'all')) {
+    toast('Pick a single property — an owner only sees tasks on their own property.', 'error');
+    return;
+  }
 
   // Update local task object
   Object.assign(t, {title:newTitle, priority:newPriority, kanban_status:newStatus,
     property_id:newProp, due:newDue, due_at:newDue, task_date:newDue,
-    notes:newNotes, description:newNotes, assigned:newAssigned});
+    notes:newNotes, description:newNotes, assigned:newAssigned,
+    client_visible:newClientVisible});
   document.getElementById('drawer-title-display').textContent = newTitle;
 
   if (db) {
@@ -13138,6 +13185,7 @@ async function saveTaskDrawer() {
       due_at:        newDue || null,
       task_date:     newDue || null,
       assigned:      newAssigned,
+      client_visible: newClientVisible,
       comments:      Array.isArray(t._comments) && t._comments.length > 0 ? t._comments : [],
     };
 
@@ -13272,6 +13320,21 @@ function deleteTaskFromDrawer() {
         <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px">Due Date</div>
         <input type="date" id="drawer-due" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem;outline:none;background:var(--input-bg)"/>
       </div>
+    </div>
+
+    <!-- Share with the property owner. Lives here as well as on the
+         kanban card because the drawer is where you go when you open a
+         task to work on it — a toggle only on the card is a toggle
+         nobody finds. -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Property owner</div>
+      <label id="drawer-client-row" style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer">
+        <input type="checkbox" id="drawer-client-visible" onchange="drawerClientHint()" style="width:16px;height:16px;cursor:pointer"/>
+        <span style="flex:1">
+          <span style="font-size:.84rem;font-weight:600">Share with the property owner</span>
+          <span id="drawer-client-hint" class="text-muted" style="display:block;font-size:.72rem">Off — this task is internal to the team.</span>
+        </span>
+      </label>
     </div>
 
     <!-- Assignees -->
