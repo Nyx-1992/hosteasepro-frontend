@@ -70,6 +70,29 @@ input:focus{outline:none;border-color:var(--accent);background:#fff}
 .form-msg{font-size:.88rem;margin-top:12px;min-height:20px}
 .form-note{font-size:.78rem;color:var(--muted);margin-top:12px;text-align:center}
 
+/* Product shot in a browser frame. The image is a tall full-page
+   capture, so the frame shows the top of it and crops the rest — a
+   screenshot squeezed to fit is unreadable, which defeats the point. */
+.shot{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 18px 44px rgba(18,35,58,.13)}
+.shot-bar{display:flex;align-items:center;gap:7px;padding:11px 14px;background:#eef2f6;border-bottom:1px solid var(--line)}
+.shot-bar span{width:10px;height:10px;border-radius:50%;background:#cbd5e1}
+.shot-bar em{margin-left:10px;font-style:normal;font-size:.76rem;color:var(--muted)}
+.shot-view{max-height:560px;overflow:hidden}
+.shot-view img{width:100%;display:block}
+.shot-note{text-align:center;font-size:.78rem;color:var(--muted);margin-top:12px}
+
+/* Comparison table. Scrolls sideways on a phone rather than squashing —
+   a four-column table at 380px wide is illegible. */
+.cmp-wrap{margin-top:34px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.cmp{width:100%;min-width:620px;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;font-size:.9rem}
+.cmp th,.cmp td{padding:12px 14px;text-align:center;border-bottom:1px solid var(--line)}
+.cmp th{background:#f2f5f8;font-weight:700;font-size:.82rem}
+.cmp th span{display:block;font-family:"DM Serif Display",serif;font-size:1.15rem;font-weight:700;margin-top:2px}
+.cmp th:first-child,.cmp td:first-child{text-align:left;color:var(--muted);width:44%}
+.cmp .hi{background:rgba(200,146,46,.07)}
+.cmp th.hi{background:rgba(200,146,46,.16)}
+.cmp tbody tr:last-child td{border-bottom:none}
+
 footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:var(--muted);font-size:.85rem}
 @media(max-width:640px){.hero{padding:48px 0 40px}section{padding:40px 0}.owner-band{padding:32px 20px}}
 </style>
@@ -79,6 +102,7 @@ footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:v
 <nav><div class="wrap">
   <div class="logo">🏠 HostEase <span>Pro</span></div>
   <div style="display:flex;gap:10px;align-items:center">
+    <a class="btn btn-ghost" href="#tour" style="padding:9px 18px;font-size:.88rem">See it</a>
     <a class="btn btn-ghost" href="/" style="padding:9px 18px;font-size:.88rem">Sign in</a>
     <a class="btn btn-primary" href="#start" style="padding:9px 18px;font-size:.88rem">Start free</a>
   </div>
@@ -131,6 +155,18 @@ footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:v
   </div>
 </div></section>
 
+<section id="tour"><div class="wrap">
+  <div class="section-head">
+    <h2>This is what your owners see</h2>
+    <p>Their property, their numbers, their language — and nothing else of your business.</p>
+  </div>
+  <div class="shot">
+    <div class="shot-bar"><span></span><span></span><span></span><em>Ocean Terrace Apartment · owner view</em></div>
+    <div class="shot-view"><img src="/demo/img/shot-owner-dashboard.png" alt="The owner dashboard: income, occupancy, nights booked, a monthly chart and an availability calendar colour-coded by booking platform." loading="lazy"/></div>
+  </div>
+  <p class="shot-note">Sample data. Your owners see only the property you have given them access to.</p>
+</div></section>
+
 <section id="pricing"><div class="wrap">
   <div class="section-head">
     <h2>Pricing</h2>
@@ -156,6 +192,35 @@ footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:v
       <a class="btn btn-ghost" href="#start">Start free</a>
     </div>
   </div>
+  <!-- The plan cards say what you get; this says what the words mean.
+       "Growth" is meaningless on its own — an agency deciding between
+       tiers needs the line item, not the adjective. -->
+  <div class="cmp-wrap">
+    <table class="cmp">
+      <thead><tr>
+        <th></th>
+        <th>Starter<span>R350</span></th>
+        <th class="hi">Growth<span>R550</span></th>
+        <th>Pro<span>R750</span></th>
+      </tr></thead>
+      <tbody>
+        <tr><td>Properties</td><td>3</td><td class="hi">10</td><td>Unlimited</td></tr>
+        <tr><td>Calendar sync — Airbnb, Booking.com, LekkeSlaap</td><td>✓</td><td class="hi">✓</td><td>✓</td></tr>
+        <tr><td>Cleaning schedule &amp; staff portal</td><td>✓</td><td class="hi">✓</td><td>✓</td></tr>
+        <tr><td>Guest messaging with door codes &amp; WiFi</td><td>✓</td><td class="hi">✓</td><td>✓</td></tr>
+        <tr><td>Owner dashboards, in five languages</td><td>✓</td><td class="hi">✓</td><td>✓</td></tr>
+        <tr><td>Inspections &amp; inventory checks</td><td>✓</td><td class="hi">✓</td><td>✓</td></tr>
+        <tr><td>Read platform statements into real income</td><td>—</td><td class="hi">✓</td><td>✓</td></tr>
+        <tr><td>Reports &amp; reconciliation against your bookings</td><td>—</td><td class="hi">✓</td><td>✓</td></tr>
+        <tr><td>Roles &amp; permissions for your team</td><td>—</td><td class="hi">✓</td><td>✓</td></tr>
+        <tr><td>Task board shared with owners</td><td>—</td><td class="hi">✓</td><td>✓</td></tr>
+        <tr><td>Your branding on invoices</td><td>—</td><td class="hi">—</td><td>✓</td></tr>
+        <tr><td>Edit your property website from inside HEP</td><td>—</td><td class="hi">—</td><td>✓</td></tr>
+        <tr><td>Priority support</td><td>—</td><td class="hi">—</td><td>✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+
   <p style="text-align:center;color:var(--muted);font-size:.85rem;margin-top:22px">
     Prices exclude VAT. If your trial ends the app stays readable — your data is never held hostage.
   </p>
