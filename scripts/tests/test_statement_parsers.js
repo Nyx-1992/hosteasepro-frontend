@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '../../demo/index_fixed.html'), 'utf8');
-const start = html.indexOf('// "1 344.00" / "-1 110.90"');
+const start = html.indexOf('// Money parsing across three platforms');
 const end = html.indexOf('// \u2500\u2500 FINANCE DOCUMENTS');
 if (start < 0 || end < 0 || end <= start) {
   console.error('Could not locate the statement-parser block in demo/index_fixed.html.');
@@ -21,7 +21,7 @@ if (start < 0 || end < 0 || end <= start) {
 const sandbox = { window: {} };
 const src = html.slice(start, end) +
   '\nmodule.exports = { parseStatementText, parseMoney, parseStatementDate, round2, detectPlatform };';
-const { parseStatementText, round2 } = (function () {
+const { parseStatementText, round2, parseMoney } = (function () {
   const module = { exports: {} };
   new Function('module', 'window', 'PROPS', src)(module, sandbox.window, {});
   return module.exports;
@@ -192,6 +192,51 @@ check('TV House net', tvh.net_earnings, 0);
 check('TV House nights', tvh.nights_booked, 0);
 check('summary row captured separately', ab.summary ? ab.summary.net_earnings : -1, 2466.56);
 check('per-home totals sum to summary', round2(ab.listings.reduce((s,l)=>s+l.net_earnings,0)), 2466.56);
+
+
+const BOOKING = `Calm Blouberg Beach Apt - Gated & Lift Access
+35 Athens Road
+7439 Cape Town
+South Africa
+Booking.com B.V.
+Oosterdokskade 163
+1011 DL Amsterdam
+Niederlande
+VAT ZA: 4550286035
+Unterkunftsnummer: 12975087
+Rechnungsnummer: 1655853915
+Datum: 03/06/2026
+Zeitraum: 01/05/2026 - 31/05/2026
+RECHNUNG
+Beschreibung Zimmerverkäufe Kommission
+Buchungen ZAR 6.358,22 ZAR 953,74
+Servicegebühr für Zahlungen ZAR 133,52
+15% MwSt. auf 1.087,26 ZAR ZAR 163,08
+Fälliger Gesamtbetrag ZAR 1.250,34
+Zahlung fällig: 16. Juni 2026`.split('\n');
+
+console.log('\n===== Booking.com (German invoice) =====');
+const bk = parseStatementText(BOOKING);
+console.log('platform:', bk.platform, '| listing:', JSON.stringify(bk.listings[0].listing_name));
+console.log('period:', bk.period_start, '->', bk.period_end);
+const b0 = bk.listings[0];
+check('German thousands parsed (6.358,22 not 6.358)', b0.gross_earnings, 6358.22);
+check('commission', b0.commission, 953.74);
+check('service fee + VAT (133.52 + 163.08)', b0.fees, 296.60);
+check('net = sales - total deducted', b0.net_earnings, 5107.88);
+check('invoice total matches statement', bk.invoice_total, 1250.34);
+check('commission+fees reconciles to invoice total', round2(b0.commission + b0.fees), 1250.34);
+console.log('warnings:', bk.warnings.length ? bk.warnings.join(' | ') : '(none)');
+
+console.log('\n===== number-format regression =====');
+[['6.358,22 German', '6.358,22', 6358.22],
+ ['3,001.60 English', 'R 3,001.60 ZAR', 3001.60],
+ ['45 432.00 spaced', '45 432.00', 45432.00],
+ ['1.087,26 German', '1.087,26', 1087.26],
+ ['-1 110.90 negative', '-1 110.90', -1110.90],
+ ['92.30 plain', '92.30', 92.30],
+ ['133,52 comma-decimal', '133,52', 133.52]
+].forEach(([label, raw, want]) => check(label, parseMoney(raw), want));
 
 console.log(failures ? `\n${failures} FAILURE(S)` : '\nAll checks passed');
 process.exit(failures ? 1 : 0);
