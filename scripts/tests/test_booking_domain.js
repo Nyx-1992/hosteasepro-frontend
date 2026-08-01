@@ -109,6 +109,7 @@ console.log('\n── The platform\'s own address ──');
 // screen it was read off. Everything in the app the user can click or copy
 // must come from location.origin.
 const domestic = fs.readFileSync(path.join(ROOT, 'demo', 'domestic.html'), 'utf8');
+const welcome  = fs.readFileSync(path.join(ROOT, 'demo', 'welcome.html'), 'utf8');
 const codeOnly = (src) => src.split('\n')
   .filter(l => !/^\s*(\/\/|\*|<!--)/.test(l))
   .join('\n');
@@ -132,6 +133,27 @@ const SN_STAFF = ['Blessing', 'Fatima', 'Patricia', 'Spiwe'];
 const seeded = SN_STAFF.filter(n => new RegExp(`\\b${n}\\b`).test(codeOnly(html)));
 ok('no real staff name survives outside a comment',
    seeded.length === 0 || (console.log('    found: ' + seeded.join(', ')), false));
+
+// The same rule for the two people who own the business. The signup page is
+// the sharpest case: it offered "e.g. Nicole Babczyk" as the example name to
+// every prospective customer, right next to an invented example company.
+const SN_OWNERS = ['Nicole', 'Babczyk', 'Silja', 'Faltin'];
+const inSignup = SN_OWNERS.filter(n => new RegExp(`\\b${n}\\b`).test(codeOnly(welcome)));
+const inPortal = SN_OWNERS.filter(n => new RegExp(`\\b${n}\\b`).test(codeOnly(domestic)));
+ok('the public signup page names nobody real', inSignup.length === 0 ||
+   (console.log('    found: ' + inSignup.join(', ')), false));
+ok('the staff portal names nobody real', inPortal.length === 0 ||
+   (console.log('    found: ' + inPortal.join(', ')), false));
+
+// KNOWN GAP, NOT COVERED HERE. index_fixed.html still hardcodes
+// ['Nicole','Silja','Nina Williams','Tino'] as the task assignee list, in the
+// filter bar, the modal, the drawer and ASSIGNEE_COLORS. Another agency's
+// Tasks tab therefore offers them S&N's people to assign work to. It is the
+// same bug as the property list and wants the same fix — read the team from
+// team_contacts (cat='management') — but it spans five call sites plus static
+// markup in a tab that gets daily use, so it is a deliberate follow-up rather
+// than something to bolt on. Asserting it here would just fail on purpose;
+// this comment is the record.
 
 ok('the staff-portal card is populated at render time',
    /id="url-domestic"/.test(html) &&
