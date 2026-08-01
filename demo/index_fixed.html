@@ -1895,9 +1895,15 @@ function _buildMobileNavStub(){/* replaced by main script */}
 // sunsetcoaststays.co.za was bought 2026-08-01. Change the one line below
 // once it actually resolves to the booking site — not when it is bought,
 // not while it is provisioning.
+//
+// Note the /stays on the end. www.snapartments.co.za/ is the S&N company
+// page as of 2026-08-01 — a B2B pitch about property management. Sending
+// a past guest there with a discount code would be worse than sending
+// nothing, so the guest link points at the listings, which are still
+// served from this host until the new domain resolves.
 const BOOKING_SITE_NAME = 'Sunset Coast Stays';
-const BOOKING_API_URL   = 'https://www.snapartments.co.za';  // stays put — see above
-const BOOKING_SITE_URL  = 'https://www.snapartments.co.za';  // TODO -> https://www.sunsetcoaststays.co.za once the domain resolves
+const BOOKING_API_URL   = 'https://www.snapartments.co.za';        // stays put — see above
+const BOOKING_SITE_URL  = 'https://www.snapartments.co.za/stays';  // TODO -> https://www.sunsetcoaststays.co.za once the domain resolves
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  WHO IS RUNNING THIS APP                                     ║

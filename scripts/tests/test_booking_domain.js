@@ -49,8 +49,15 @@ const siteUrl = constOf('BOOKING_SITE_URL');
 
 ok('BOOKING_API_URL is defined',  !!apiUrl);
 ok('BOOKING_SITE_URL is defined', !!siteUrl);
-ok('both are absolute https URLs with no trailing slash',
-   /^https:\/\/[^/]+$/.test(apiUrl || '') && /^https:\/\/[^/]+$/.test(siteUrl || ''));
+// The API host must be BARE — '/api/ical-proxy' is appended to it, so a
+// path on the end silently produces /stays/api/ical-proxy and a 404 that
+// looks like a broken calendar feed rather than a typo.
+ok('the API host is a bare origin, no path', /^https:\/\/[^/]+$/.test(apiUrl || ''));
+
+// The guest link IS allowed a path, and currently needs one: the company
+// host's root is the B2B page now, so the listings live at /stays.
+ok('the guest link is absolute https with no trailing slash',
+   /^https:\/\/[^/]+(\/[^/]+)*$/.test(siteUrl || ''));
 
 // The API host is the one proven to serve /api today. It is allowed to be
 // either domain once both resolve — what it must never be is a host that
