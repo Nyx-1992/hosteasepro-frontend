@@ -61,27 +61,22 @@ ok('ROADMAP is a let, filled from the database at load time', /\blet ROADMAP = \
 ok('nothing renders from the seed directly — only ROADMAP is read',
    !/ROADMAP_SEED\s*\.\s*(map|filter|forEach)/.test(html.replace(grabFn('rmLoadContent'), '')));
 
-// ── THE STEP THAT IS NOT DONE YET ─────────────────────────────────
-// Emptying ROADMAP_SEED is what actually takes the notes out of the
-// page, and it cannot happen until they are safely in the database. The
-// seed moves them there the first time the owner opens the Roadmap tab.
-//
-// This is reported, loudly, rather than asserted: a red test for work
-// that is deliberately staged teaches people to ignore red tests. Once
-// the array is emptied, turn these two into ok() calls — they are the
-// real end state, and they should fail if the notes ever come back.
-const seedEmpty = !!seedMatch && seedMatch[1].trim() === '';
-const stillInPage = ['info@vineamea.cz', 'Nedbank'].filter(s => html.includes(s));
-if (!seedEmpty || stillInPage.length) {
-  console.log('\n  ⚠ PENDING — the notes are still in the page source.');
-  console.log('    ROADMAP_SEED is populated' +
-              (stillInPage.length ? ', and note text is present (' + stillInPage.join(', ') + ')' : ''));
-  console.log('    Sign in as the owner and open Roadmap once: that copies the notes');
-  console.log('    into roadmap_items. Then empty ROADMAP_SEED and make these asserts.');
-} else {
-  ok('ROADMAP_SEED is empty — no notes ship in the page source', true);
-  ok('no roadmap note text left in the page', true);
-}
+// The end state, asserted. All 112 notes were copied into roadmap_items
+// on 2026-08-01 — verified by comparing an md5 of the keys and an md5 of
+// the concatenated title+note of every row against the array they came
+// from, both identical — and the array was then emptied. From here the
+// database is the only copy, and these two checks are what stop the
+// notes quietly reappearing in a page anyone can view-source.
+ok('ROADMAP_SEED is empty — no notes ship in the page source',
+   !!seedMatch && seedMatch[1].trim() === '');
+
+// Identifiers that appeared only inside roadmap notes. Finding one means
+// note text is back in the page. Deliberately the identifiers themselves
+// and not words like "Nedbank" — that appears in an ordinary code comment
+// explaining the white-label fix, and a bank's name is not a secret. A
+// check that fires on innocent prose gets deleted by the next person.
+['info@vineamea.cz', '1292867345', '2024/643198/07'].forEach(s =>
+  ok('no roadmap note text left in the page: ' + JSON.stringify(s), !html.includes(s)));
 
 // ── 2..4. rmLoadContent, run against a stub ───────────────────────
 console.log('\n── rmLoadContent ──');
@@ -169,7 +164,7 @@ const legacy = () => JSON.parse(JSON.stringify(LEGACY));
   await mod.exports.run(null, stubDb({ roadmap_phases: [], roadmap_items: [] }, log), legacy());
   ok('a signed-out session never writes the roadmap', log.length === 0);
 
-  const total = 3 + 12;
+  const total = 6 + 12;
   console.log(fail.length ? '\n' + fail.length + ' FAILED\n' : '\nAll ' + total + ' checks passed\n');
   process.exit(fail.length ? 1 : 0);
 })();
