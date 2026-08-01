@@ -28,6 +28,8 @@
 // org to it, which would otherwise be a way to graft yourself onto
 // somebody else's login.
 
+import { sendWelcomeEmail } from './_lib/welcomeEmail.js';
+
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const TRIAL_DAYS = 7;
 
@@ -57,6 +59,7 @@ export default async function handler(req, res) {
 
   let orgId = null;
   let userId = null;
+  let portalKey = '';
 
   try {
     // 1. The org. Created first so the profile has somewhere to belong.
@@ -65,7 +68,12 @@ export default async function handler(req, res) {
       body: JSON.stringify([{ name: String(business).trim().slice(0, 120) }]),
     });
     if (!orgRes.ok) throw new Error(await orgRes.text());
-    orgId = (await orgRes.json())[0].id;
+    // return=representation gives back the whole row, including the
+    // portal_key the 903 trigger generates — so the welcome email can carry
+    // their staff portal link without a second round trip.
+    const orgRow = (await orgRes.json())[0];
+    orgId = orgRow.id;
+    portalKey = orgRow.portal_key || '';
 
     // 2. The owner login. A duplicate email fails here, before anything
     //    is attached to an account that already exists.
@@ -114,6 +122,25 @@ export default async function handler(req, res) {
         address: '', currency: 'ZAR', country: 'ZA',
       }]),
     }).catch(e => console.warn('signup: org_settings', e));
+
+    // 5. Welcome them. AFTER everything that matters, and awaited only so
+    //    the serverless function is not torn down mid-request — never in a
+    //    way that can fail the signup. sendWelcomeEmail() does not throw,
+    //    and does nothing at all until RESEND_API_KEY exists, so this ships
+    //    inert and starts working when the key and DNS are in place.
+    //
+    //    The origin comes from the request rather than a constant: this
+    //    same code answers on hosteasepro.com, the vercel.app address and
+    //    every preview deployment, and a welcome email that links to the
+    //    wrong one is worse than plain.
+    const proto  = (req.headers['x-forwarded-proto'] || 'https').split(',')[0];
+    const host   = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0];
+    const origin = host ? `${proto}://${host}` : 'https://hosteasepro.com';
+    const mailed = await sendWelcomeEmail({
+      email, name, business: String(business).trim(), origin,
+      portalKey, trialEndsAt: trialEnds,
+    });
+    if (mailed && mailed.error) console.warn('signup: welcome email', mailed.error);
 
     return res.status(200).json({ success: true, trialEndsAt: trialEnds, trialDays: TRIAL_DAYS });
   } catch (e) {
