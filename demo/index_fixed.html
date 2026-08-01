@@ -1868,15 +1868,36 @@ function _buildMobileNavStub(){/* replaced by main script */}
 // own domain, since snapartments.co.za becomes the S&N property-
 // MANAGEMENT company site (roadmap p2-24).
 //
-// STILL POINTS AT THE OLD DOMAIN ON PURPOSE. The new domain is not
-// registered yet, and both of the API routes below are LIVE — calendar
-// imports and booking-confirmation emails run through them. Repointing
-// before the domain resolves would break both silently. When
-// sunsetcoaststays.co.za is registered and added in Vercel, change this
-// ONE line and every use follows: the guest RETURN10 link, the company
-// website field, the iCal proxy and the confirmation endpoint.
+// TWO CONSTANTS, NOT ONE, BECAUSE THEY MOVE ON DIFFERENT DAYS.
+//
+// They point at the same host today and will not tomorrow, and the
+// difference is the whole risk of the move:
+//
+//   BOOKING_API_URL  — service endpoints this app CALLS. Calendar imports
+//                      and booking-confirmation emails run through them,
+//                      live, right now. Both domains are served by the
+//                      same Vercel project and the booking site's
+//                      middleware never rewrites /api, so this host keeps
+//                      answering after the brand switch. It therefore has
+//                      no reason to change, and every reason not to:
+//                      repointing it at a domain whose DNS is still
+//                      settling breaks calendar sync and guest emails
+//                      SILENTLY, with no error anyone would notice.
+//
+//   BOOKING_SITE_URL — the public address shown to GUESTS, in the RETURN10
+//                      rebooking offer. This one must change on switch
+//                      day, because after the switch www.snapartments.co.za
+//                      shows the B2B property-management page, and sending
+//                      a past guest a discount code that lands on a page
+//                      about managing their property is worse than sending
+//                      nothing.
+//
+// sunsetcoaststays.co.za was bought 2026-08-01. Change the one line below
+// once it actually resolves to the booking site — not when it is bought,
+// not while it is provisioning.
 const BOOKING_SITE_NAME = 'Sunset Coast Stays';
-const BOOKING_SITE_URL  = 'https://www.snapartments.co.za';  // TODO -> https://www.sunsetcoaststays.co.za once the domain is live
+const BOOKING_API_URL   = 'https://www.snapartments.co.za';  // stays put — see above
+const BOOKING_SITE_URL  = 'https://www.snapartments.co.za';  // TODO -> https://www.sunsetcoaststays.co.za once the domain resolves
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  WHO IS RUNNING THIS APP                                     ║
@@ -4400,7 +4421,7 @@ function renderSyncHealth() {
 }
 
 const CORS_PROXIES = [
-  url => `${BOOKING_SITE_URL}/api/ical-proxy?url=${encodeURIComponent(url)}`,
+  url => `${BOOKING_API_URL}/api/ical-proxy?url=${encodeURIComponent(url)}`,
   url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
 ];
@@ -7601,7 +7622,7 @@ async function approveBookingConfirmed(id) {
 
   if (guestEmail) {
     try {
-      const emailRes = await fetch(BOOKING_SITE_URL + '/api/confirm', {
+      const emailRes = await fetch(BOOKING_API_URL + '/api/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
