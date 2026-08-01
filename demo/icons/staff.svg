@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#14161D"/>
+  <g fill="none" stroke="#C17F3C" stroke-width="22" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M162 196 L256 118 L350 196"/>
+    <path d="M188 182 V286 H324 V182"/>
+  </g>
+  <text x="256" y="378" text-anchor="middle" dominant-baseline="middle"
+        font-family="Helvetica, Arial, sans-serif" font-size="86" font-weight="700"
+        letter-spacing="4" fill="#C17F3C">STAFF</text>
+</svg>
