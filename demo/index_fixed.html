@@ -1578,11 +1578,11 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <!-- Staff portal -->
         <div class="card" style="margin-bottom:18px">
           <div style="font-weight:700;font-size:1rem;margin-bottom:4px">🧹 Domestic Staff Portal</div>
-          <div style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Share with Blessing, Fatima, Patricia and Spiwe. They use it to log cleans, submit inventory and mark availability.</div>
+          <div id="portal-share-with" style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Share with your cleaning staff. They use it to log cleans, submit inventory and mark availability.</div>
           <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <code id="url-domestic" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.78rem;color:var(--ink);word-break:break-all">https://hosteasepro-frontend.vercel.app/domestic</code>
+            <code id="url-domestic" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.78rem;color:var(--ink);word-break:break-all">/domestic</code>
             <button onclick="copyUrl('url-domestic',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--sand);font-size:.78rem;cursor:pointer;font-family:inherit;white-space:nowrap">📋 Copy</button>
-            <a href="https://hosteasepro-frontend.vercel.app/domestic" target="_blank" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--ocean);color:var(--ocean);font-size:.78rem;text-decoration:none;white-space:nowrap">↗ Open</a>
+            <a id="url-domestic-open" href="/domestic" target="_blank" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--ocean);color:var(--ocean);font-size:.78rem;text-decoration:none;white-space:nowrap">↗ Open</a>
           </div>
         </div>
 
@@ -3137,9 +3137,45 @@ async function saveSpend() {
   if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
 }
 
+// The staff-portal card had two things baked into the markup that had no
+// business being constants.
+//
+// The URL was https://hosteasepro-frontend.vercel.app/domestic. That is
+// the address handed to a cleaner over WhatsApp, so it outlives whatever
+// is on screen — and it is now wrong, because hosteasepro.com was
+// registered on 2026-08-01. Reading it off location.origin means the box
+// always offers the address the person is actually looking at, and never
+// needs editing again when the domain moves.
+//
+// The names were "Blessing, Fatima, Patricia and Spiwe" — S&N's real
+// cleaning staff, spelled out in a page every other agency also loads.
+// A DEFAULT THAT IS ONE TENANT'S REAL DATA IS NEVER A SAFE DEFAULT: the
+// same mistake as the hardcoded property list, except these are people's
+// names rather than an address. Their own staff, or nothing.
+function renderStaffPortalCard() {
+  // A non-http origin (opening the file directly) has no shareable
+  // address. Falling back to the bare path is honest — the Open link
+  // still resolves — where pasting "file:///…/domestic" into WhatsApp
+  // would look like a working link and be useless to whoever taps it.
+  const origin = /^https?:/.test(location.origin) ? location.origin : '';
+  const url = origin + '/domestic';
+  const box = document.getElementById('url-domestic');
+  if (box) box.textContent = url;
+  const open = document.getElementById('url-domestic-open');
+  if (open) open.href = url;
+
+  const names = getDomesticStaff().map(s => s.name).filter(Boolean);
+  const who = names.length === 0 ? 'your cleaning staff'
+            : names.length === 1 ? names[0]
+            : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+  const line = document.getElementById('portal-share-with');
+  if (line) line.textContent = `Share with ${who}. They use it to log cleans, submit inventory and mark availability.`;
+}
+
 function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
+  renderStaffPortalCard();
   renderPropertiesSettings();
   renderSocialShareSettings();
   renderBrandSettings();
@@ -11287,7 +11323,14 @@ function hideChartTooltip() {
 }
 async function renderCleanerEarningsReport() {
   const el=document.getElementById('cleaner-earnings'); if(!el)return;
-  const COLORS={Blessing:'#C9962E',Fatima:'#F0563B',Patricia:'#0FA898',Spiwe:'#2F6FED'};
+  // Was a literal {Blessing:…, Fatima:…, Patricia:…, Spiwe:…} — S&N's four
+  // cleaners, hardcoded, so every other agency's staff fell through to the
+  // same fallback accent and their earnings cards were indistinguishable.
+  // getCleanerColors() builds the same map from the org's own staff and was
+  // already in use by the Cleaning tab's earnings summary; this report just
+  // never called it. Same palette in the same order, so S&N's report comes
+  // out in exactly the colours it does today.
+  const COLORS = getCleanerColors();
   let data = domestics.filter(d=>d.status==='completed');
   if (db) { try { const res=await db.from('domestics').select('cleaner,date,amount_paid,property_id,status').eq('status','completed').order('date',{ascending:false}); if(res.data&&res.data.length>0)data=res.data; } catch(e){} }
   const earnings={};

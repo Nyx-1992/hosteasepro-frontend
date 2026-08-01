@@ -92,5 +92,50 @@ const stray = [...html.matchAll(/https:\/\/www\.(snapartments|sunsetcoaststays)\
 ok('no hardcoded booking/company URL outside the two constants',
    stray.length === 0 || (console.log('    found: ' + stray.map(s => s[0]).join(', ')), false));
 
+// ── The platform's own address ────────────────────────────────────
+console.log('\n── The platform\'s own address ──');
+
+// hosteasepro.com was registered 2026-08-01, which made a hardcoded
+// hosteasepro-frontend.vercel.app a link that goes stale. The one that
+// mattered was the domestic staff portal URL in Settings: that address is
+// copied into WhatsApp and handed to a cleaner, so it long outlives the
+// screen it was read off. Everything in the app the user can click or copy
+// must come from location.origin.
+const domestic = fs.readFileSync(path.join(ROOT, 'demo', 'domestic.html'), 'utf8');
+const codeOnly = (src) => src.split('\n')
+  .filter(l => !/^\s*(\/\/|\*|<!--)/.test(l))
+  .join('\n');
+
+ok('the app never hardcodes its own vercel.app host',
+   !/vercel\.app/.test(codeOnly(html)) && !/vercel\.app/.test(codeOnly(domestic)));
+
+// The same card also listed "Blessing, Fatima, Patricia and Spiwe" — S&N's
+// real cleaners, in a page every other agency on the platform loads. The
+// cleaner-earnings report had the same four names again, as the keys of a
+// colour map, so every other agency's staff fell through to one fallback
+// accent. Same rule as the property list and the invoice branding: A
+// DEFAULT THAT IS ONE TENANT'S REAL DATA IS NEVER A SAFE DEFAULT. Here it
+// is people's names.
+//
+// Comments are excluded, deliberately — the reason these were wrong is
+// worth keeping next to the code that no longer does it, and a rule that
+// forbids writing down what went wrong gets satisfied by deleting the
+// explanation.
+const SN_STAFF = ['Blessing', 'Fatima', 'Patricia', 'Spiwe'];
+const seeded = SN_STAFF.filter(n => new RegExp(`\\b${n}\\b`).test(codeOnly(html)));
+ok('no real staff name survives outside a comment',
+   seeded.length === 0 || (console.log('    found: ' + seeded.join(', ')), false));
+
+ok('the staff-portal card is populated at render time',
+   /id="url-domestic"/.test(html) &&
+   /id="url-domestic-open"/.test(html) &&
+   /id="portal-share-with"/.test(html) &&
+   /function renderStaffPortalCard\(\)/.test(html));
+
+// A render function nothing calls is the failure this repo has already had
+// once, with the Spending tab: present in the source, invisible in the app.
+ok('renderSettingsPrefs calls it',
+   /function renderSettingsPrefs\(\)[\s\S]{0,400}?renderStaffPortalCard\(\)/.test(html));
+
 console.log(fail.length ? `\n${fail.length} FAILED\n` : '\nAll passed\n');
 process.exit(fail.length ? 1 : 0);
