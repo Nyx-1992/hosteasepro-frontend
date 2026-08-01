@@ -446,11 +446,10 @@ h1,h2,h3{font-family:Syne,sans-serif}
       <div id="nina-insp-step1">
         <div class="nina-form-row">
           <label>Property</label>
-          <select id="nina-insp-property">
-            <option value="">Select…</option>
-            <option value="e9737638-d83a-4947-940a-8746789e4d9f" data-key="speranta">Speranta Flat</option>
-            <option value="83b2a84a-5451-4be5-a84f-2efc0d2602d5" data-key="tvhouse">TV House</option>
-          </select>
+          <!-- Options are filled by renderPropertyPickers() from the
+               agency's own properties. They used to be two <option>s naming
+               S&N's flats, typed into the markup. -->
+          <select id="nina-insp-property"><option value="">Select…</option></select>
         </div>
         <div class="nina-form-row"><label>Date</label><input type="date" id="nina-insp-date"/></div>
         <button class="nina-btn-primary" onclick="ninaInspNext(1)">Continue →</button>
@@ -581,54 +580,43 @@ h1,h2,h3{font-family:Syne,sans-serif}
 const SUPABASE_URL = (window.HEP_CONFIG||{}).supabaseUrl;
 const SUPABASE_KEY = (window.HEP_CONFIG||{}).supabaseAnonKey;
 if(!SUPABASE_URL||!SUPABASE_KEY){ throw new Error('HEP: /demo/config.js missing or invalid — environment not configured'); }
-const ORG_ID = '5966bc67-5c2f-45ae-8519-9b7eaeee09f4';
+// ══ WHICH AGENCY IS THIS? ═════════════════════════════════════════
+//
+// Was `const ORG_ID = '5966bc67-…'` with a PROPS map holding S&N's two
+// property UUIDs, so this portal only ever worked for one agency — and
+// HEP hands the link to every agency from its Settings page.
+//
+// The key comes from the path: /domestic/<portal_key>. It has to come from
+// somewhere OUTSIDE a session, because the first thing this page draws is a
+// list of that agency's staff to pick from, before anyone has signed in.
+const PORTAL_KEY = (function () {
+  const m = location.pathname.match(/\/domestic\/([a-z0-9-]+)/i);
+  if (m) return m[1].toLowerCase();
+  // Cleaners who installed the portal before it had keys have /domestic on
+  // their home screen. Remembering the last key that worked keeps them
+  // signed in through the change instead of stranding them on a screen
+  // asking for a link they were never sent.
+  try { return localStorage.getItem('hep_portal_key') || ''; } catch (e) { return ''; }
+})();
 
-const PROPS = {
-  'e9737638-d83a-4947-940a-8746789e4d9f': {name:'Speranta Flat', short:'Speranta'},
-  '83b2a84a-5451-4be5-a84f-2efc0d2602d5': {name:'TV House',      short:'TV House'},
-};
+let ORG_ID = null;   // resolved from PORTAL_KEY before anything renders
+let PROPS  = {};     // { uuid: {name, short, key} } for this agency only
+let ORG_NAME = '';
 
-// Offline roster fallback: names, colours and rates only. It carries NO
-// PINs. It used to carry all five, in the source of a page anyone can
-// open, in a public repository — which made the server-side check added
-// in 680 decorative. A PIN opens the staff portal: the cleaning
-// schedule, guest names and property access notes.
-const CLEANERS = [
-  {name:'Blessing', color:'#f59e0b', initials:'BL',
-   rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350, default:350}},
-  {name:'Fatima',   color:'#8b5cf6', initials:'FA',
-   rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350,'83b2a84a-5451-4be5-a84f-2efc0d2602d5':450, default:350}},
-  {name:'Patricia', color:'#2dd4a0', initials:'PM',
-   rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350,'83b2a84a-5451-4be5-a84f-2efc0d2602d5':450, default:350}},
-  {name:'Spiwe',    color:'#5b8ef0', initials:'SP',
-   rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350, default:350}},
-  {name:'Nina',     color:'#6c47ff', initials:'NW',
-   rate:{default:0}},
-];
-
-// Fallback only — the live roster (who cleans, which properties, what
-// rate) comes from team_contacts via get_staff_portal_roster() (migration
-// 660), i.e. whatever the admin app's Staff tab says. These hardcoded
-// lists are used ONLY if that fetch fails, so the portal still works
-// offline-ish — but they can drift (they're why Blessing didn't show up
-// for TV House after being assigned it in the Staff tab).
-const NINA_CLEANERS_BY_PROP = {
-  speranta: ['Blessing','Fatima','Patricia','Spiwe'],
-  tvhouse:  ['Fatima','Patricia'], // caretakers are exceptions via 'Other…', never regulars
-};
-
+// No offline roster fallback any more. It used to list S&N's five staff
+// with their names, colours and per-property rates — one agency's real
+// people, in a page HEP serves to all of them.
 // [{name:'Blessing', properties:['speranta','tvhouse'], rate:350|{speranta:350,...}}]
 let STAFF_ROSTER = null;
 async function loadStaffRoster() {
   if(!db) return;
   try {
-    const {data,error}=await db.rpc('get_staff_portal_roster');
+    const {data,error}=await db.rpc('get_staff_portal_roster',{p_portal_key:PORTAL_KEY});
     if(!error && data && data.length) STAFF_ROSTER=data;
   } catch(e){ console.warn('staff roster:',e); }
 }
 function rosterCleanerNames() {
-  return STAFF_ROSTER ? STAFF_ROSTER.map(r=>r.name)
-                      : ['Blessing','Fatima','Patricia','Spiwe'];
+  return STAFF_ROSTER ? STAFF_ROSTER.map(r=>r.name) : [];
 }
 // Cleaners assignable to one property (short key). Empty assignment lists
 // fall back to the full roster so the assign modal can never go blank —
@@ -638,7 +626,7 @@ function rosterCleanersFor(propKey) {
     const assigned=STAFF_ROSTER.filter(r=>(r.properties||[]).includes(propKey)).map(r=>r.name);
     return assigned.length ? assigned : rosterCleanerNames();
   }
-  return NINA_CLEANERS_BY_PROP[propKey]||['Blessing','Fatima','Patricia','Spiwe'];
+  return [];  // no roster loaded yet — the picker shows nothing rather than someone else's staff
 }
 
 const NINA_CHECKLISTS = {
@@ -747,22 +735,29 @@ function daysFromNow(ds) {
   return Math.round((d-now)/86400000);
 }
 function propKeyFromId(id) {
-  if(id==='e9737638-d83a-4947-940a-8746789e4d9f'||id==='speranta') return 'speranta';
-  if(id==='83b2a84a-5451-4be5-a84f-2efc0d2602d5'||id==='tvhouse') return 'tvhouse';
-  return id;
+  if (PROPS[id] && PROPS[id].key) return PROPS[id].key;   // uuid -> short key
+  return id;                                              // already a key, or unknown
 }
 // Inverse of propKeyFromId — domestics.property_id has been seen stored as
 // both the UUID and the short key depending on code path/vintage (see
 // propKeyFromId above), so anything indexing UUID-keyed data (like
 // INVENTORY_DATA, loaded from property_manuals) needs this same
 // either-format tolerance.
+// These three mapped S&N's two short keys to S&N's two UUIDs, names and
+// rates. They now read the agency's own properties, loaded on boot.
 function propUuidFromKey(id) {
-  if(id==='speranta'||id==='e9737638-d83a-4947-940a-8746789e4d9f') return 'e9737638-d83a-4947-940a-8746789e4d9f';
-  if(id==='tvhouse'||id==='83b2a84a-5451-4be5-a84f-2efc0d2602d5') return '83b2a84a-5451-4be5-a84f-2efc0d2602d5';
-  return id;
+  if (PROPS[id]) return id;                       // already a uuid
+  const hit = Object.keys(PROPS).find(u => PROPS[u].key === id);
+  return hit || id;
 }
-function propNameFromKey(k) { return k==='speranta'?'Speranta Flat':'TV House'; }
-function propRateFromKey(k) { return k==='tvhouse'?450:350; }
+function propNameFromKey(k) {
+  const p = PROPS[propUuidFromKey(k)];
+  return p ? p.name : (k || 'Property');
+}
+// Rate belongs to the CLEANER, not the property — it comes from the roster
+// (team_contacts.cleaner_rate). Returning a number here was a guess that
+// happened to be right for one agency.
+function propRateFromKey(k) { return 0; }
 
 // ── One-off ("Other…") cleaner: WhatsApp inventory link + guide ────────────────
 // Mirrors demo/index_fixed.html's outside-cleaner send (see that file for the
@@ -808,11 +803,11 @@ function sendOutsideCleanerWhatsApp(row, waWin) {
 // CLEANERS array, PINs no longer ship in this page's source. CLEANERS
 // above remains only as the offline/RPC-failure fallback.
 const PORTAL_PALETTE=['#f59e0b','#8b5cf6','#2dd4a0','#5b8ef0','#f472b6','#38bdf8'];
-let PORTAL_USERS = CLEANERS.map(c=>({name:c.name, initials:c.initials, color:c.color, is_coordinator:c.name==='Nina'}));
+let PORTAL_USERS = [];  // filled by loadPortalLogins() from this agency's team_contacts
 async function loadPortalLogins() {
   if(!db) return;
   try {
-    const {data,error}=await db.rpc('get_staff_portal_logins');
+    const {data,error}=await db.rpc('get_staff_portal_logins',{p_portal_key:PORTAL_KEY});
     if(!error && data && data.length){
       PORTAL_USERS=data.map((r,i)=>({
         name:r.name,
@@ -895,7 +890,7 @@ async function checkPin() {
   // itself is unreachable (offline / DB down), not on a wrong PIN.
   if(db){
     try {
-      const {data,error}=await db.rpc('staff_portal_login',{p_name:selectedCleaner.name,p_pin:entered});
+      const {data,error}=await db.rpc('staff_portal_login',{p_portal_key:PORTAL_KEY,p_name:selectedCleaner.name,p_pin:entered});
       if(!error){
         if(data && data.length){
           const u=data[0];
@@ -1249,7 +1244,7 @@ async function loadNinaLastInspections() {
     if(error) throw error;
     const latest={};
     (data||[]).forEach(r=>{if(!latest[r.property_id])latest[r.property_id]=r;});
-    const propIds=['e9737638-d83a-4947-940a-8746789e4d9f','83b2a84a-5451-4be5-a84f-2efc0d2602d5'];
+    const propIds=Object.keys(PROPS);
     el.innerHTML=propIds.map(pid=>{
       const pk=propKeyFromId(pid);
       const rec=latest[pid];
@@ -1513,11 +1508,7 @@ async function loadNinaRepInspections() {
     if (error) throw error;
     let rows = (data || []);
     if (ninaReportPropFilter !== 'all') {
-      const pidMap = {
-        speranta: 'e9737638-d83a-4947-940a-8746789e4d9f',
-        tvhouse:  '83b2a84a-5451-4be5-a84f-2efc0d2602d5',
-      };
-      rows = rows.filter(r => r.property_id === pidMap[ninaReportPropFilter]);
+      rows = rows.filter(r => r.property_id === propUuidFromKey(ninaReportPropFilter));
     }
     if (!rows.length) { el.innerHTML = '<div class="nina-loading">No inspections found.</div>'; return; }
     const ratingColors = {excellent:'var(--green)',good:'var(--blue)',fair:'var(--accent)',poor:'var(--red)'};
@@ -1558,11 +1549,7 @@ async function loadNinaRepInventory() {
     if (error) throw error;
     let rows = (data || []);
     if (ninaReportPropFilter !== 'all') {
-      const pidMap = {
-        speranta: 'e9737638-d83a-4947-940a-8746789e4d9f',
-        tvhouse:  '83b2a84a-5451-4be5-a84f-2efc0d2602d5',
-      };
-      rows = rows.filter(r => r.property_id === pidMap[ninaReportPropFilter] || r.property_id === ninaReportPropFilter);
+      rows = rows.filter(r => r.property_id === propUuidFromKey(ninaReportPropFilter) || r.property_id === ninaReportPropFilter);
     }
     if (!rows.length) { el.innerHTML = '<div class="nina-loading">No inventory reports found.</div>'; return; }
     el.innerHTML = rows.map(r => {
@@ -1837,7 +1824,7 @@ function openInventory(cleanId) {
   document.getElementById('inv-note').value='';
   const propUuid=propUuidFromKey(clean.property_id);
   const rooms=INVENTORY_DATA[propUuid]?.length ? INVENTORY_DATA[propUuid]
-    : (FALLBACK_INVENTORY[propUuid]||FALLBACK_INVENTORY['e9737638-d83a-4947-940a-8746789e4d9f']);
+    : (FALLBACK_INVENTORY[propUuid]||[]);  // no default: another agency's list is not a fallback for this one
   document.getElementById('inventory-form').innerHTML=rooms.map(room=>`
     <div class="room-section">
       <div class="room-header"><span class="room-icon">${room.icon}</span><span class="room-name">${room.room}</span></div>
@@ -1882,7 +1869,7 @@ async function submitInventory() {
   const report={
     org_id:ORG_ID,
     domestic_id:String(currentInventoryClean.id),
-    property_id:currentInventoryClean.property_id==='speranta'?'e9737638-d83a-4947-940a-8746789e4d9f':currentInventoryClean.property_id==='tvhouse'?'83b2a84a-5451-4be5-a84f-2efc0d2602d5':currentInventoryClean.property_id,
+    property_id:propUuidFromKey(currentInventoryClean.property_id),
     cleaner:currentCleaner.name,
     clean_date:currentInventoryClean.date,
     submitted_at:new Date().toISOString(),
@@ -1999,9 +1986,71 @@ function renderEarnings() {
     </div>`;
 }
 
-buildAuth();
-loadStaffRoster();  // async — done long before Nina can reach the assign modal
-loadPortalLogins(); // async — re-renders the login grid from team_contacts
+// ══ BOOT ══════════════════════════════════════════════════════════
+//
+// Nothing renders until we know whose portal this is. The sign-in screen
+// IS agency data — a list of that agency's staff — so drawing it first and
+// correcting it afterwards would show the wrong people to the wrong person,
+// which is the whole bug this replaced.
+async function bootstrapPortal() {
+  if (!db || !PORTAL_KEY) return false;
+  try {
+    const { data, error } = await db.rpc('staff_portal_bootstrap', { p_portal_key: PORTAL_KEY });
+    if (error || !data || !data.length) return false;
+    const row   = data[0];
+    ORG_ID      = row.org_id;
+    ORG_NAME    = row.org_name || '';
+    PROPS       = row.properties || {};
+    // The key resolved, so remember it. A cleaner who opened /domestic/<key>
+    // once keeps working if they later tap a bare /domestic bookmark or the
+    // home-screen icon they installed before keys existed.
+    try { localStorage.setItem('hep_portal_key', PORTAL_KEY); } catch (e) {}
+    const logo = document.querySelector('.auth-logo');
+    if (logo && ORG_NAME) logo.textContent = ORG_NAME;
+    renderPropertyPickers();
+    return true;
+  } catch (e) { console.warn('portal bootstrap:', e); return false; }
+}
+
+// Every property <select> in this page, filled from the agency's own list.
+function renderPropertyPickers() {
+  const uuids = Object.keys(PROPS);
+  document.querySelectorAll('#nina-insp-property').forEach(sel => {
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Select…</option>' +
+      uuids.map(u => `<option value="${u}" data-key="${PROPS[u].key || ''}">${PROPS[u].name}</option>`).join('');
+    if (current) sel.value = current;
+  });
+}
+
+// Shown when there is no key, or a key nobody recognises. Deliberately not
+// an error page: the cleaner has done nothing wrong, and the fix is a
+// message to their manager, so say that.
+function showNoPortalKey() {
+  const auth = document.getElementById('auth');
+  if (!auth) return;
+  auth.innerHTML = `
+    <div class="auth-logo">HEP Staff Portal</div>
+    <div class="auth-card">
+      <div class="auth-title">Almost there 👋</div>
+      <div class="auth-sub" style="margin-bottom:18px">
+        This link is missing the part that says which company you work for.
+      </div>
+      <div style="font-size:.86rem;line-height:1.7;color:var(--muted)">
+        Ask your manager to send you your own portal link. It ends with your
+        company's name, like <code style="color:var(--accent)">/domestic/your-company</code>.
+        Open that once and your phone will remember it.
+      </div>
+    </div>`;
+}
+
+(async function boot() {
+  const ok = await bootstrapPortal();
+  if (!ok) { showNoPortalKey(); return; }
+  buildAuth();
+  loadStaffRoster();  // async — done long before Nina can reach the assign modal
+  loadPortalLogins(); // async — re-renders the login grid from team_contacts
+})();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',function(){

@@ -3165,17 +3165,34 @@ async function saveSpend() {
 // A DEFAULT THAT IS ONE TENANT'S REAL DATA IS NEVER A SAFE DEFAULT: the
 // same mistake as the hardcoded property list, except these are people's
 // names rather than an address. Their own staff, or nothing.
+let _portalKey = null;   // null = not fetched yet, '' = none on this org
 function renderStaffPortalCard() {
   // A non-http origin (opening the file directly) has no shareable
   // address. Falling back to the bare path is honest — the Open link
   // still resolves — where pasting "file:///…/domestic" into WhatsApp
   // would look like a working link and be useless to whoever taps it.
   const origin = /^https?:/.test(location.origin) ? location.origin : '';
-  const url = origin + '/domestic';
   const box = document.getElementById('url-domestic');
-  if (box) box.textContent = url;
   const open = document.getElementById('url-domestic-open');
-  if (open) open.href = url;
+
+  // The link now carries this agency's portal key: /domestic/<key>. Without
+  // it the portal cannot tell whose staff to show, because it draws that
+  // list BEFORE anyone signs in. A bare /domestic used to work only because
+  // the portal was hardcoded to one agency.
+  const paint = (key) => {
+    const url = origin + '/domestic' + (key ? '/' + key : '');
+    if (box) box.textContent = url;
+    if (open) open.href = url;
+  };
+  paint(_portalKey);
+  if (_portalKey === null && db) {
+    // Fetched once per session and cached — this card re-renders on every
+    // visit to Settings and the key never changes.
+    _portalKey = '';
+    db.from('organizations').select('portal_key').eq('id', getOrgId()).maybeSingle()
+      .then(({ data }) => { _portalKey = (data && data.portal_key) || ''; paint(_portalKey); })
+      .catch(() => {});
+  }
 
   const names = getDomesticStaff().map(s => s.name).filter(Boolean);
   const who = names.length === 0 ? 'your cleaning staff'
