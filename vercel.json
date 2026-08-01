@@ -57,6 +57,14 @@
       "destination": "/demo/sw.js"
     },
     {
+      "source": "/icons/(.*)",
+      "destination": "/demo/icons/$1"
+    },
+    {
+      "source": "/hep-manifest.json",
+      "destination": "/demo/hep-manifest.json"
+    },
+    {
       "source": "/(.*)",
       "destination": "/demo/index_fixed.html"
     }

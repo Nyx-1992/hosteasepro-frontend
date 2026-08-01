@@ -13,7 +13,9 @@
 <meta name="apple-mobile-web-app-title" content="Staff Portal"/>
 <meta name="theme-color" content="#c17f3c"/>
 <link rel="manifest" href="/manifest.json"/>
-<link rel="apple-touch-icon" href="/icons/icon-192.png"/>
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/staff-180.png"/>
+<link rel="icon" type="image/png" sizes="32x32" href="/icons/staff-32.png"/>
+<link rel="icon" type="image/svg+xml" href="/icons/staff.svg"/>
 <title>Staff Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <script src="/demo/config.js"></script>
@@ -2009,22 +2011,12 @@ if('serviceWorker' in navigator){
   });
 }
 
-(function generateIcon(){
-  try{
-    [192,512].forEach(function(size){
-      var c=document.createElement('canvas');c.width=size;c.height=size;
-      var ctx=c.getContext('2d');
-      ctx.fillStyle='#0f1117';ctx.fillRect(0,0,size,size);
-      ctx.fillStyle='#1a1d27';var r=size*0.15;
-      ctx.beginPath();ctx.moveTo(r,0);ctx.lineTo(size-r,0);ctx.quadraticCurveTo(size,0,size,r);ctx.lineTo(size,size-r);ctx.quadraticCurveTo(size,size,size-r,size);ctx.lineTo(r,size);ctx.quadraticCurveTo(0,size,0,size-r);ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);ctx.closePath();ctx.fill();
-      // The home-screen tile. It drew 'S&N' in gold — one agency's initials,
-      // on the phone of every cleaner at every agency using HEP.
-      ctx.fillStyle='#c17f3c';ctx.font='bold '+Math.round(size*0.26)+'px Syne,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('STAFF',size/2,size*0.42);
-      ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font=Math.round(size*0.11)+'px sans-serif';ctx.fillText('PORTAL',size/2,size*0.65);
-      if(size===192){var link=document.querySelector('link[rel="apple-touch-icon"]');if(link)link.href=c.toDataURL('image/png');}
-    });
-  }catch(e){}
-})();
+// The home-screen tile used to be drawn here in canvas and assigned over
+// the apple-touch-icon link at runtime. It lettered 'S&N', it only ever
+// produced the 192 size, and because it overwrote the link element a real
+// icon file could never win. Replaced by /icons/staff-*.png, which iOS,
+// Android and the manifest can all read, and which is in the repo where it
+// can be looked at.
 </script>
 </body>
 </html>
