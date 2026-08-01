@@ -25,6 +25,10 @@
       "destination": "/demo/domestic.html"
     },
     {
+      "source": "/domestic/:key",
+      "destination": "/demo/domestic.html"
+    },
+    {
       "source": "/outside-cleaner.html",
       "destination": "/demo/outside-cleaner.html"
     },
