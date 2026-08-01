@@ -1516,28 +1516,16 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div style="font-size:.82rem;color:var(--muted)">Internal tool — spins up a brand-new customer organization plus its first owner login in one step. Not visible to customer orgs.</div>
         </div>
 
-        <!-- iCal Feed URLs — hardcoded to S&N's two properties (Roadmap
-             p1-1: outbound feeds aren't generated per-org yet), so this
-             must not show to any other org's Settings page. -->
-        <div class="card" id="settings-sn-ical-card" style="margin-bottom:18px;display:none">
+        <!-- OUTBOUND iCAL FEEDS (897). One row per property, built by
+             renderIcalFeeds() from the org's own list. This used to be
+             two <code> blocks naming S&N's properties, hidden from
+             everyone else — so no other agency had the feature at all,
+             which for a multi-property host means their calendars drift
+             apart until a double booking turns up. -->
+        <div class="card" id="settings-ical-card" style="margin-bottom:18px">
           <div style="font-weight:700;font-size:1rem;margin-bottom:4px">📡 Outbound iCal Feeds</div>
-          <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px">Paste these into Airbnb, Booking.com and LekkeSlaap to automatically block dates when you add bookings in HEP.</div>
-          <div style="margin-bottom:14px">
-            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">🏠 Speranta Flat</div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <code id="url-speranta" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.78rem;color:var(--ink);word-break:break-all">https://hosteasepro-frontend.vercel.app/api/calendar/speranta.ics</code>
-              <button onclick="copyUrl('url-speranta',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--sand);font-size:.78rem;cursor:pointer;font-family:inherit;white-space:nowrap">📋 Copy</button>
-              <a href="https://hosteasepro-frontend.vercel.app/api/calendar/speranta.ics" target="_blank" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--ocean);color:var(--ocean);font-size:.78rem;text-decoration:none;white-space:nowrap">↗ Test</a>
-            </div>
-          </div>
-          <div>
-            <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">🏡 TV House</div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <code id="url-tvhouse" style="flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.78rem;color:var(--ink);word-break:break-all">https://hosteasepro-frontend.vercel.app/api/calendar/tvhouse.ics</code>
-              <button onclick="copyUrl('url-tvhouse',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--sand);font-size:.78rem;cursor:pointer;font-family:inherit;white-space:nowrap">📋 Copy</button>
-              <a href="https://hosteasepro-frontend.vercel.app/api/calendar/tvhouse.ics" target="_blank" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--ocean);color:var(--ocean);font-size:.78rem;text-decoration:none;white-space:nowrap">↗ Test</a>
-            </div>
-          </div>
+          <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px">Paste these into Airbnb, Booking.com and LekkeSlaap so a booking taken here blocks the dates everywhere else. Dates only — no guest names ever leave in these.</div>
+          <div id="ical-feed-list"></div>
         </div>
 
         <!-- Platform setup guide -->
@@ -1885,6 +1873,10 @@ async function loadProperties() {
     if (error) { console.warn('loadProperties:', error); return; }
     _propertiesRaw = data || [];
     renderPropertiesSettings();
+    // The feed list is built from these rows, so it has to be redrawn
+    // whenever they change — adding a property should show its feed
+    // address without a reload.
+    renderIcalFeeds();
     if (!data || !data.length) {
       // A BRAND-NEW ORG MUST NOT INHERIT S&N'S PROPERTIES.
       //
@@ -2729,6 +2721,39 @@ async function setBillingLive(on) {
   renderBilling();
 }
 
+// ── OUTBOUND iCAL FEEDS (897) ─────────────────────────────────────
+// One row per property, from the org's own list. _propertiesRaw carries
+// ical_token, which the properties fetch already selects with '*'.
+function renderIcalFeeds() {
+  const el = document.getElementById('ical-feed-list');
+  if (!el) return;
+  const rows = (_propertiesRaw || []).filter(p => p.ical_token);
+
+  if (!rows.length) {
+    el.innerHTML = '<div class="text-muted" style="font-size:.84rem">' +
+      ((_propertiesRaw || []).length
+        ? 'Feed addresses are being generated — reload in a moment.'
+        : 'Add a property first and its feed address will appear here.') + '</div>';
+    return;
+  }
+
+  el.innerHTML = rows.map((p, i) => {
+    const url = `${location.origin}/api/calendar/${p.ical_token}.ics`;
+    const id = 'url-feed-' + i;
+    return `<div style="margin-bottom:14px">
+      <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">🏠 ${escHtml(p.name || 'Property')}</div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <code id="${id}" style="flex:1;min-width:240px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:.78rem;overflow-wrap:anywhere">${escHtml(url)}</code>
+        <button onclick="copyUrl('${id}',this)" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:var(--sand);font-size:.8rem;cursor:pointer">Copy</button>
+        <a href="${escAttr(url)}" target="_blank" rel="noopener" style="padding:7px 14px;border-radius:8px;border:1.5px solid var(--border);background:#fff;font-size:.8rem;text-decoration:none;color:var(--ink)">Open</a>
+      </div>
+    </div>`;
+  }).join('') +
+  `<div style="font-size:.74rem;color:var(--muted);border-top:1px solid var(--border);padding-top:10px">
+     Treat these like passwords: anyone with the address can see which dates are booked, though never who by.
+   </div>`;
+}
+
 function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
@@ -2736,11 +2761,10 @@ function renderSettingsPrefs() {
   renderSocialShareSettings();
   renderBrandSettings();
   renderBilling();
+  renderIcalFeeds();
   const isSNOrg = getOrgId() === SN_OWNER_ORG_ID;
   const orgCard = document.getElementById('settings-org-card');
   if (orgCard) orgCard.style.display = isSNOrg ? '' : 'none';
-  const icalCard = document.getElementById('settings-sn-ical-card');
-  if (icalCard) icalCard.style.display = isSNOrg ? '' : 'none';
 }
 
 // ── Per-platform rate calculator (Task 5) ──
