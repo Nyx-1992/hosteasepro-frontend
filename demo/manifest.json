@@ -1,6 +1,6 @@
 {
-  "name": "Staff Portal",
-  "short_name": "Staff Portal",
+  "name": "HEP Staff Portal",
+  "short_name": "HEP Staff Portal",
   "description": "Log your cleans, submit inventory reports and set your availability.",
   "start_url": "/domestic",
   "display": "standalone",
