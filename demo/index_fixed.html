@@ -2890,9 +2890,16 @@ function renderSpendingFilters() {
 
   // Months that actually have spend, newest first, plus the current one
   // so a fresh org has something to select rather than an empty list.
-  const months = [...new Set([todaySAST().slice(0, 7), ...spendRows.map(r => spendMonthKey(r.date))])]
-    .filter(Boolean).sort().reverse();
-  const curMonth = monthEl.value && months.includes(monthEl.value) ? monthEl.value : months[0];
+  const withSpend = [...new Set(spendRows.map(r => spendMonthKey(r.date)))].filter(Boolean).sort().reverse();
+  const months = [...new Set([todaySAST().slice(0, 7), ...withSpend])].filter(Boolean).sort().reverse();
+  // Open on the most recent month that HAS something in it, not on today.
+  // Defaulting to the current month meant landing on "Nothing logged here
+  // yet" whenever nothing had been bought this month — which reads as the
+  // screen being broken rather than as an empty month, and hides the
+  // history sitting one click away.
+  const curMonth = monthEl.value && months.includes(monthEl.value)
+    ? monthEl.value
+    : (withSpend[0] || months[0]);
   monthEl.innerHTML = '<option value="all">All months</option>' +
     months.map(m => `<option value="${m}">${monthLabel(m, true)}</option>`).join('');
   monthEl.value = curMonth;
