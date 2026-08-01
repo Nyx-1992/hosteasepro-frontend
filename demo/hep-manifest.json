@@ -1,6 +1,6 @@
 {
   "name": "HostEase Pro",
-  "short_name": "HostEase",
+  "short_name": "HostEase Pro",
   "description": "Run every property, cleaner and booking from one place.",
   "start_url": "/",
   "display": "standalone",

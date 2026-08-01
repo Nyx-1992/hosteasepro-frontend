@@ -165,9 +165,11 @@ ok('HEP carries no version number in its title', !/v?\d+\.\d+/.test(titleOf(html
 ok('nothing a phone installs names one agency',
    ![manifest.name, manifest.short_name, manifest.description, titleOf(domestic), appleTitle]
      .some(v => /S&N|snapartments/i.test(v || '')));
-// iOS truncates the label under an icon at roughly a dozen characters.
-ok('the home-screen label fits without being cut off',
-   (manifest.short_name || '').length > 0 && manifest.short_name.length <= 12);
+// What the labels actually SAY is pinned in test_app_icons.js, which owns
+// that question. This file only cares that they name no single agency.
+// A length rule used to live here too; it was removed when the owner chose
+// the labels — iOS clipping "HEP Staff Portal" is a known, accepted trade,
+// not a bug for a test to keep reporting.
 // The tile is drawn in canvas at runtime; it used to letter "S&N".
 ok('the generated icon letters no agency',
    !/fillText\(\s*['"][^'"]*S&N/.test(domestic));

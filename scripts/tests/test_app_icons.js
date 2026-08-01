@@ -54,13 +54,37 @@ for (const [page, brand] of [['index_fixed.html','hep'], ['welcome.html','hep'],
 
 // ── Manifests ─────────────────────────────────────────────────────
 console.log('\n── Manifests ──');
+// The labels are the owner's, chosen deliberately (2026-08-01). They are
+// pinned exactly rather than checked against a length rule: an earlier
+// version of this file capped short_name at 12 characters because iOS
+// truncates there, which is true but is not a reason to overrule what the
+// brand is called. "HEP Staff Portal" will show clipped on a home screen
+// and that is the accepted trade.
+const LABELS = {
+  'hep-manifest.json': 'HostEase Pro',
+  'manifest.json':     'HEP Staff Portal',
+};
 for (const [file, brand] of [['manifest.json','staff'], ['hep-manifest.json','hep']]) {
   const m = JSON.parse(read('demo', file));
   ok(`${file}: icons exist on disk`, m.icons.length >= 2 && m.icons.every(i => exists(i.src)));
   ok(`${file}: uses the ${brand} mark`, m.icons.every(i => i.src.includes(`/${brand}-`)));
-  // iOS truncates the label under an icon at roughly a dozen characters.
-  ok(`${file}: short_name fits under an icon`, m.short_name.length > 0 && m.short_name.length <= 12);
+  ok(`${file}: reads "${LABELS[file]}"`, m.name === LABELS[file] && m.short_name === LABELS[file]);
   ok(`${file}: names no single agency`, !/S&N|snapartments/i.test(JSON.stringify(m)));
+}
+
+// ── The label a phone puts under the icon ─────────────────────────
+// apple-mobile-web-app-title, not <title> — iOS only falls back to the
+// title when this is absent, and the marketing page's title is a full
+// sentence about property management software for small agencies.
+console.log('\n── Home-screen labels ──');
+const APPLE = {
+  'index_fixed.html': 'HostEase Pro',
+  'welcome.html':     'HostEase Pro',
+  'domestic.html':    'HEP Staff Portal',
+};
+for (const [page, want] of Object.entries(APPLE)) {
+  const got = (read('demo', page).match(/apple-mobile-web-app-title"\s+content="([^"]*)"/) || [])[1];
+  ok(`${page} installs as "${want}"`, got === want);
 }
 
 // The generator that made a real file impossible.
