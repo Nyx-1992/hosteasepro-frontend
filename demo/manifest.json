@@ -1,7 +1,7 @@
 {
-  "name": "S&N Staff Portal",
-  "short_name": "S&N Staff",
-  "description": "S&N Apt Management — Domestic Staff Portal",
+  "name": "Staff Portal",
+  "short_name": "Staff Portal",
+  "description": "Log your cleans, submit inventory reports and set your availability.",
   "start_url": "/domestic",
   "display": "standalone",
   "background_color": "#0f1117",

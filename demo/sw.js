@@ -1,5 +1,8 @@
-// S&N Staff Portal — Service Worker
-const CACHE = 'sn-staff-v2';
+// Staff Portal — Service Worker
+// Bump CACHE on any change to the portal shell. Phones that already have
+// it installed serve the cached copy first, so without a new name they
+// would keep the old S&N-branded page indefinitely.
+const CACHE = 'staff-portal-v3';
 const ASSETS = ['/domestic'];
 
 self.addEventListener('install', e => {

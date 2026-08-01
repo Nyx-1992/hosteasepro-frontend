@@ -151,6 +151,27 @@ ok('the staff portal names nobody real', inPortal.length === 0 ||
 // comments explaining what was wrong, which is why the check above reads
 // code only.
 
+// ── What the app calls itself on a phone ──────────────────────────
+// Spotted by the owner adding both to her home screen: HEP's tab read
+// "HostEase Pro v2.4" — a version nobody bumps, so wrong by definition on a
+// continuously deployed app — and the staff portal installed itself as
+// "S&N Staff", with a tile that drew "S&N" in gold. Every cleaner at every
+// agency would have had one agency's initials on their phone.
+const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'demo', 'manifest.json'), 'utf8'));
+const titleOf  = (src) => (src.match(/<title>([^<]*)<\/title>/) || [])[1] || '';
+const appleTitle = (domestic.match(/apple-mobile-web-app-title"\s+content="([^"]*)"/) || [])[1] || '';
+
+ok('HEP carries no version number in its title', !/v?\d+\.\d+/.test(titleOf(html)));
+ok('nothing a phone installs names one agency',
+   ![manifest.name, manifest.short_name, manifest.description, titleOf(domestic), appleTitle]
+     .some(v => /S&N|snapartments/i.test(v || '')));
+// iOS truncates the label under an icon at roughly a dozen characters.
+ok('the home-screen label fits without being cut off',
+   (manifest.short_name || '').length > 0 && manifest.short_name.length <= 12);
+// The tile is drawn in canvas at runtime; it used to letter "S&N".
+ok('the generated icon letters no agency',
+   !/fillText\(\s*['"][^'"]*S&N/.test(domestic));
+
 ok('the staff-portal card is populated at render time',
    /id="url-domestic"/.test(html) &&
    /id="url-domestic-open"/.test(html) &&
