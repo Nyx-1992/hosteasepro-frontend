@@ -3629,7 +3629,9 @@ async function doLogin() {
     }
     const profile = await fetchProfile(data.user.id, data.user.email);
     if (!profile) {
-      errEl.textContent = 'Signed in, but no profile found for this account. Contact Nicole.';
+      // "Contact Nicole" was correct advice for exactly one agency. Everyone
+      // else was told to contact a stranger.
+      errEl.textContent = 'Signed in, but no profile found for this account. Contact your administrator.';
       errEl.style.display = 'block';
       await db.auth.signOut();
       return;
@@ -14433,7 +14435,10 @@ async function addDrawerComment() {
   if (!t._comments) t._comments = [];
   const now = new Date();
   const comment = {
-    author: currentUser?.name || 'Nicole',
+    // Not 'Nicole'. A missing name is not evidence of whose comment it is,
+    // and in any other agency that fallback signs their staff's notes with
+    // a stranger's name.
+    author: currentUser?.name || 'Unknown',
     text,
     time: now.toLocaleDateString('en-ZA',{day:'numeric',month:'short'}) + ' ' +
           now.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'}),
