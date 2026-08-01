@@ -1627,6 +1627,11 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div class="form-field"><label>Category</label><select id="sp-category"></select></div>
         <div class="form-field span-full"><label>What was it for? *</label><input id="sp-description" placeholder="e.g. Replacement kettle, Builders Warehouse"/></div>
         <div class="form-field span-full">
+          <label>Paid from</label>
+          <select id="sp-paidby"></select>
+          <div style="font-size:.74rem;color:var(--muted);margin-top:4px">If someone paid out of their own pocket, say who — that is how the app knows they are owed it back.</div>
+        </div>
+        <div class="form-field span-full">
           <label>Slip</label>
           <!-- capture= opens the camera straight away on a phone, which is
                where this is actually used: standing at the till, not at a
@@ -2844,6 +2849,14 @@ const SPEND_CATEGORIES = [
 ];
 const SPEND_CAT_LABEL = Object.fromEntries(SPEND_CATEGORIES);
 
+// Everyone in the org who could have paid for something. Spending is NOT
+// one person's job — the owner's correction: "spending is not limited to
+// nina only, since we also pay for repairs etc." Three people spend, and
+// a list of amounts with nobody attached cannot answer the question that
+// gets asked at month end, which is not what was spent but who is out of
+// pocket.
+let orgPeople = [];
+
 let spendRows = [];      // finance_transactions, expenses only
 let spendSlips = {};     // transaction_id -> [finance_documents]
 let _spendBusy = false;
@@ -2853,10 +2866,12 @@ function spendMonthKey(d) { return String(d).slice(0, 7); }
 async function loadSpending() {
   if (!db) return;
   try {
-    const [tx, docs] = await Promise.all([
+    const [tx, docs, people] = await Promise.all([
       db.from('finance_transactions').select('*').eq('type', 'expense').order('date', { ascending: false }).limit(500),
       db.from('finance_documents').select('*').eq('doc_type', 'receipt'),
+      db.from('profiles').select('id,name,role').order('name'),
     ]);
+    if (!people.error) orgPeople = people.data || [];
     if (tx.error)   { console.warn('loadSpending tx:', tx.error.message); return; }
     if (docs.error) { console.warn('loadSpending docs:', docs.error.message); }
     spendRows = tx.data || [];
@@ -2924,7 +2939,7 @@ function renderSpending() {
   const byProp = {};
   rows.forEach(r => { const k = propKeyOf(r.property_id) || '_none'; (byProp[k] = byProp[k] || []).push(r); });
 
-  el.innerHTML = Object.entries(byProp).map(([key, list]) => {
+  el.innerHTML = spendOwedHtml(rows) + Object.entries(byProp).map(([key, list]) => {
     const sub = list.reduce((t, r) => t + Number(r.amount || 0), 0);
     return `<div class="card" style="margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -2937,12 +2952,38 @@ function renderSpending() {
   }).join('');
 }
 
+function personName(id) {
+  const p = orgPeople.find(x => x.id === id);
+  return p ? (p.name || 'Someone') : 'Someone';
+}
+
+// What is actually needed at month end. Sits above the list because it
+// is the thing you came to find out, not a footnote to it.
+function spendOwedHtml(rows) {
+  const owed = {};
+  rows.forEach(r => {
+    if (!r.paid_by || r.reimbursed) return;
+    owed[r.paid_by] = (owed[r.paid_by] || 0) + Number(r.amount || 0);
+  });
+  const entries = Object.entries(owed);
+  if (!entries.length) return '';
+  return `<div class="card" style="margin-bottom:14px;background:#fff7ed;border:1px solid #fed7aa">
+    <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#9a3412;margin-bottom:8px">Owed back</div>
+    ${entries.map(([id, amt]) => `<div style="display:flex;justify-content:space-between;font-size:.88rem;padding:3px 0">
+        <span>${escHtml(personName(id))}</span>
+        <strong>R${amt.toLocaleString('en-ZA', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>
+      </div>`).join('')}
+    <div style="font-size:.74rem;color:#9a3412;margin-top:7px">Paid out of pocket and not yet repaid, for the months shown.</div>
+  </div>`;
+}
+
 function spendRowHtml(r) {
   const slips = spendSlips[r.id] || [];
   return `<div style="display:flex;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--border)">
     <div style="flex:1;min-width:0">
       <div style="font-size:.88rem;font-weight:600;overflow-wrap:anywhere">${escHtml(r.description || SPEND_CAT_LABEL[r.category] || 'Spend')}</div>
-      <div style="font-size:.75rem;color:var(--muted)">${escHtml(fmtDay(r.date))} · ${escHtml(SPEND_CAT_LABEL[r.category] || r.category || '—')}</div>
+      <div style="font-size:.75rem;color:var(--muted)">${escHtml(fmtDay(r.date))} · ${escHtml(SPEND_CAT_LABEL[r.category] || r.category || '—')}${
+        r.paid_by ? ` · <span style="color:${r.reimbursed ? 'var(--muted)' : 'var(--coral)'}">${escHtml(personName(r.paid_by))} paid${r.reimbursed ? ', repaid' : ''}</span>` : ''}</div>
     </div>
     ${slips.length
       ? `<button class="btn btn-sm btn-ghost" onclick="openSlip('${escAttr(slips[0].file_path)}')" title="View the slip">🧾${slips.length > 1 ? ' ×' + slips.length : ''}</button>`
@@ -2976,6 +3017,14 @@ function openSpendModal() {
   if (prop) {
     prop.innerHTML = propKeys().map(k => `<option value="${k}">${escHtml(PROPS[k].name)}</option>`).join('');
     prop.value = currentProp !== 'all' && PROPS[currentProp] ? currentProp : defaultPropKey();
+  }
+  const payer = document.getElementById('sp-paidby');
+  if (payer) {
+    // Business account first and selected: it is the common case, and it
+    // is the one where nobody is owed anything.
+    payer.innerHTML = '<option value="">The business account</option>' +
+      orgPeople.map(p => `<option value="${p.id}">${escHtml(p.name || 'Someone')} paid personally</option>`).join('');
+    payer.value = '';
   }
   openModal('spend-modal');
 }
@@ -3011,6 +3060,8 @@ async function saveSpend() {
     const { data: txRows, error: txErr } = await db.from('finance_transactions').insert([{
       org_id: orgId, date, month: spendMonthKey(date), description: desc,
       category: cat, type: 'expense', amount, property_id: propUuid, source: 'app',
+      created_by: currentUser ? currentUser.id : null,
+      paid_by: document.getElementById('sp-paidby').value || null,
     }]).select();
     if (txErr) throw txErr;
     const tx = (txRows || [])[0];
