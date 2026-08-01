@@ -3020,11 +3020,19 @@ function openSpendModal() {
   }
   const payer = document.getElementById('sp-paidby');
   if (payer) {
-    // Business account first and selected: it is the common case, and it
-    // is the one where nobody is owed anything.
     payer.innerHTML = '<option value="">The business account</option>' +
       orgPeople.map(p => `<option value="${p.id}">${escHtml(p.name || 'Someone')} paid personally</option>`).join('');
-    payer.value = '';
+    // The default follows who is logging it, because the two cases are
+    // genuinely different people: the owner and admin hold the business
+    // card, so their spend is the business account and nobody is owed.
+    // A host is spending their own money and invoicing for it monthly —
+    // so defaulting THEM to the business account means remembering to
+    // change it every single time, and forgetting means not being paid
+    // back. Wrong in that direction costs someone real money; wrong in
+    // the other direction shows up as an "owed" line that is obviously
+    // wrong and gets corrected. Overridable either way.
+    const meIsStaff = currentUser && !['owner', 'admin'].includes(currentUser.role);
+    payer.value = meIsStaff && orgPeople.some(p => p.id === currentUser.id) ? currentUser.id : '';
   }
   openModal('spend-modal');
 }
