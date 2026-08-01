@@ -1328,6 +1328,11 @@ function _buildMobileNavStub(){/* replaced by main script */}
             <div style="margin:16px 0 10px;font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Deductible costs</div>
             <div id="ownstmt-costs"></div>
             <button onclick="ownStmtAddCost()" style="margin-top:6px;text-align:left;background:transparent;border:1.5px dashed var(--border);border-radius:8px;padding:8px 10px;font-size:.8rem;color:var(--muted);cursor:pointer;width:100%">+ Add cost line</button>
+            <!-- The whole point of the Spending tab: what Nina logged
+                 during the month lands here instead of being retyped from
+                 a WhatsApp thread. -->
+            <button onclick="ownStmtPullSpend()" id="ownstmt-pull" style="margin-top:6px;text-align:left;background:var(--sand);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:.8rem;color:var(--ink);cursor:pointer;width:100%">🧾 Pull in this month's logged spend</button>
+            <div id="ownstmt-pull-msg" style="font-size:.76rem;color:var(--muted);margin-top:5px"></div>
             <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
               <div style="font-size:.85rem;color:var(--muted)">Total due from owner(s)</div>
               <div id="ownstmt-net" style="font-family:'DM Serif Display',serif;font-size:1.6rem;color:var(--ink)"></div>
@@ -1421,6 +1426,29 @@ function _buildMobileNavStub(){/* replaced by main script */}
       </div><!-- /tab-roadmap -->
 
 <!-- ══ SETTINGS ══════════════════════════════════════════════════════ -->
+      <!-- SPENDING (900). Silja: "the slips we prep for the owner's
+           invoice, collected somewhere — what Nina spends on the TV House
+           or Speranta." The point of this screen is that the person who
+           bought the thing files the slip while holding it, instead of
+           WhatsApping a photo that someone else reconciles a month later. -->
+      <div class="tab-pane" id="tab-spending">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+          <div>
+            <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;font-weight:700">Spending</div>
+            <div style="font-size:.83rem;color:var(--muted)">What was spent on each property, with the slip attached.</div>
+          </div>
+          <button class="btn btn-primary" onclick="openSpendModal()">+ Log a spend</button>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px">
+          <select id="spend-month" class="form-input" style="max-width:190px" onchange="renderSpending()"></select>
+          <select id="spend-prop"  class="form-input" style="max-width:220px" onchange="renderSpending()"></select>
+          <div id="spend-total" style="margin-left:auto;font-size:.9rem"></div>
+        </div>
+
+        <div id="spend-list"></div>
+      </div>
+
       <div class="tab-pane" id="tab-settings">
         <div style="margin-bottom:24px">
           <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;font-weight:700">Settings &amp; Links</div>
@@ -1588,6 +1616,35 @@ function _buildMobileNavStub(){/* replaced by main script */}
 </div>
 
 <!-- MODALS -->
+<div class="modal-overlay" id="spend-modal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title">Log a spend</div><button class="modal-close" onclick="closeModal('spend-modal')">×</button></div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-field"><label>Amount (ZAR) *</label><input type="number" id="sp-amount" placeholder="0.00" step="0.01" min="0" inputmode="decimal"/></div>
+        <div class="form-field"><label>Date *</label><input type="date" id="sp-date"/></div>
+        <div class="form-field"><label>Property *</label><select id="sp-prop"></select></div>
+        <div class="form-field"><label>Category</label><select id="sp-category"></select></div>
+        <div class="form-field span-full"><label>What was it for? *</label><input id="sp-description" placeholder="e.g. Replacement kettle, Builders Warehouse"/></div>
+        <div class="form-field span-full">
+          <label>Slip</label>
+          <!-- capture= opens the camera straight away on a phone, which is
+               where this is actually used: standing at the till, not at a
+               desk later. Still a normal file picker on a laptop. -->
+          <input type="file" id="sp-slip" accept="image/*,application/pdf" capture="environment"/>
+          <div style="font-size:.74rem;color:var(--muted);margin-top:4px">Photograph the receipt now — it is kept for your records and never shown to the owner unless you turn that on in Settings.</div>
+          <div id="sp-slip-preview" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div id="sp-error" style="font-size:.82rem;color:var(--red);margin-top:8px"></div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('spend-modal')">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="sp-save" onclick="saveSpend()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="booking-modal">
   <div class="modal">
     <div class="modal-header"><div class="modal-title">New Booking</div><button class="modal-close" onclick="closeModal('booking-modal')">×</button></div>
@@ -2460,6 +2517,9 @@ const BRAND_FIELDS = [
   { k: 'signatories',    label: 'Signed off by',   ph: 'Jane Smith, Director',        group: 'Documents',       where: 'settings',
     type: 'signatories',
     hint: 'One per line as "Name, Title". Leave blank for no signature block — most invoices have none.' },
+  { k: 'invoice_include_receipts', label: 'Attach receipt images to owner invoices', group: 'Documents', where: 'settings',
+    type: 'checkbox',
+    hint: 'Off by default. The itemised spend always appears on the invoice — this is only about whether the photographs go with it.' },
   { k: 'address',        label: 'Address',         ph: 'Street, suburb, city',        group: 'Registered details', where: 'vault' },
   { k: 'reg_number',     label: 'Company reg. no', ph: '',                            group: 'Registered details', where: 'vault' },
   { k: 'tax_number',     label: 'Tax / VAT no',    ph: '',                            group: 'Registered details', where: 'vault' },
@@ -2522,10 +2582,14 @@ async function renderOrgFields(where, elId, cardId) {
         <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">${g}</div>
         <div class="form-grid" style="gap:10px">
           ${fields.filter(f => f.group === g).map(f => `
-            <div class="form-field${f.k === 'address' || f.type === 'signatories' ? ' span-full' : ''}">
+            <div class="form-field${f.k === 'address' || f.type === 'signatories' || f.type === 'checkbox' ? ' span-full' : ''}">
               <label>${f.label}</label>
               ${f.type === 'signatories'
                 ? `<textarea id="brand-${f.k}" rows="2" placeholder="${escAttr(f.ph)}">${escHtml(signatoriesToText(_brandRow[f.k]))}</textarea>`
+                : f.type === 'checkbox'
+                ? `<label style="display:flex;gap:8px;align-items:center;font-size:.86rem;cursor:pointer">
+                     <input type="checkbox" id="brand-${f.k}" ${_brandRow[f.k] ? 'checked' : ''}/> Yes, send them
+                   </label>`
                 : `<input id="brand-${f.k}" placeholder="${escAttr(f.ph)}" value="${escAttr(_brandRow[f.k] || '')}"/>`}
               ${f.hint ? `<div style="font-size:.7rem;color:var(--muted);margin-top:3px">${f.hint}</div>` : ''}
             </div>`).join('')}
@@ -2544,7 +2608,9 @@ async function saveBrandSettings(where) {
   BRAND_FIELDS.filter(f => f.where === where).forEach(f => {
     const el = document.getElementById('brand-' + f.k);
     if (!el) return;
-    row[f.k] = f.type === 'signatories' ? textToSignatories(el.value) : el.value.trim();
+    row[f.k] = f.type === 'signatories' ? textToSignatories(el.value)
+             : f.type === 'checkbox'      ? !!el.checked
+             : el.value.trim();
   });
   if (row.whatsapp === undefined) delete row.whatsapp;
   // Digits only — a number stored as "+27 63 602 1847" produces a dead
@@ -2752,6 +2818,231 @@ function renderIcalFeeds() {
   `<div style="font-size:.74rem;color:var(--muted);border-top:1px solid var(--border);padding-top:10px">
      Treat these like passwords: anyone with the address can see which dates are booked, though never who by.
    </div>`;
+}
+
+// ── SPENDING (900) ────────────────────────────────────────────────
+//
+// Silja's ask, and the reason it is its own screen rather than a corner
+// of Reports: the person who bought the thing has to be able to file the
+// slip while still holding it. Nina is a host, so this tab is open to
+// hosts and 900 scopes her to receipts only — she can record spend and
+// see slips, not the platform statements that carry what the properties
+// earn.
+//
+// Categories match finance_transactions.category, which has held real
+// data since October 2024 — so a spend logged here lands in the same
+// bucket the existing reports already total.
+const SPEND_CATEGORIES = [
+  ['maintenance',   'Maintenance & repairs'],
+  ['cleaning',      'Cleaning'],
+  ['gardener',      'Gardener'],
+  ['electricity',   'Electricity'],
+  ['wifi_internet', 'WiFi / internet'],
+  ['levies',        'Levies'],
+  ['city_rates',    'City rates'],
+  ['other_expense', 'Something else'],
+];
+const SPEND_CAT_LABEL = Object.fromEntries(SPEND_CATEGORIES);
+
+let spendRows = [];      // finance_transactions, expenses only
+let spendSlips = {};     // transaction_id -> [finance_documents]
+let _spendBusy = false;
+
+function spendMonthKey(d) { return String(d).slice(0, 7); }
+
+async function loadSpending() {
+  if (!db) return;
+  try {
+    const [tx, docs] = await Promise.all([
+      db.from('finance_transactions').select('*').eq('type', 'expense').order('date', { ascending: false }).limit(500),
+      db.from('finance_documents').select('*').eq('doc_type', 'receipt'),
+    ]);
+    if (tx.error)   { console.warn('loadSpending tx:', tx.error.message); return; }
+    if (docs.error) { console.warn('loadSpending docs:', docs.error.message); }
+    spendRows = tx.data || [];
+    spendSlips = {};
+    (docs.data || []).forEach(d => {
+      if (!d.transaction_id) return;
+      (spendSlips[d.transaction_id] = spendSlips[d.transaction_id] || []).push(d);
+    });
+  } catch (e) { console.warn('loadSpending:', e); }
+}
+
+function renderSpendingFilters() {
+  const monthEl = document.getElementById('spend-month');
+  const propEl  = document.getElementById('spend-prop');
+  if (!monthEl || !propEl) return;
+
+  // Months that actually have spend, newest first, plus the current one
+  // so a fresh org has something to select rather than an empty list.
+  const months = [...new Set([todaySAST().slice(0, 7), ...spendRows.map(r => spendMonthKey(r.date))])]
+    .filter(Boolean).sort().reverse();
+  const curMonth = monthEl.value && months.includes(monthEl.value) ? monthEl.value : months[0];
+  monthEl.innerHTML = '<option value="all">All months</option>' +
+    months.map(m => `<option value="${m}">${monthLabel(m, true)}</option>`).join('');
+  monthEl.value = curMonth;
+
+  const curProp = propEl.value;
+  propEl.innerHTML = '<option value="all">All properties</option>' +
+    propKeys().map(k => `<option value="${k}">${escHtml(PROPS[k].name)}</option>`).join('');
+  propEl.value = (curProp && (curProp === 'all' || PROPS[curProp])) ? curProp : 'all';
+}
+
+async function renderSpendingTab() {
+  await loadSpending();
+  renderSpendingFilters();
+  renderSpending();
+}
+
+function renderSpending() {
+  const el = document.getElementById('spend-list');
+  if (!el) return;
+  const month = (document.getElementById('spend-month') || {}).value || 'all';
+  const prop  = (document.getElementById('spend-prop')  || {}).value || 'all';
+
+  const rows = spendRows.filter(r =>
+    (month === 'all' || spendMonthKey(r.date) === month) &&
+    (prop  === 'all' || propKeyOf(r.property_id) === prop));
+
+  const total = rows.reduce((t, r) => t + Number(r.amount || 0), 0);
+  const totalEl = document.getElementById('spend-total');
+  if (totalEl) totalEl.innerHTML = rows.length
+    ? `<span style="color:var(--muted)">${rows.length} item${rows.length === 1 ? '' : 's'} ·</span> <strong>R${total.toLocaleString('en-ZA', {minimumFractionDigits:2, maximumFractionDigits:2})}</strong>`
+    : '';
+
+  if (!rows.length) {
+    el.innerHTML = `<div style="text-align:center;padding:48px 20px;color:var(--muted)">
+      <div style="font-size:2rem;margin-bottom:10px">🧾</div>
+      <div style="font-weight:700;color:var(--ink);margin-bottom:6px">Nothing logged here yet</div>
+      <div style="font-size:.84rem">Tap <strong>Log a spend</strong> when you buy something for a property, and photograph the slip while you have it.</div>
+    </div>`;
+    return;
+  }
+
+  // Grouped by property so "what went on the TV House" is one glance
+  // rather than a filtering exercise — that was the actual question.
+  const byProp = {};
+  rows.forEach(r => { const k = propKeyOf(r.property_id) || '_none'; (byProp[k] = byProp[k] || []).push(r); });
+
+  el.innerHTML = Object.entries(byProp).map(([key, list]) => {
+    const sub = list.reduce((t, r) => t + Number(r.amount || 0), 0);
+    return `<div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <span style="width:10px;height:10px;border-radius:50%;background:${key === '_none' ? 'var(--muted)' : propColor(key)}"></span>
+        <div style="font-weight:700">${escHtml(key === '_none' ? 'No property' : propFullName(key))}</div>
+        <div style="margin-left:auto;font-weight:700">R${sub.toLocaleString('en-ZA', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+      </div>
+      ${list.map(spendRowHtml).join('')}
+    </div>`;
+  }).join('');
+}
+
+function spendRowHtml(r) {
+  const slips = spendSlips[r.id] || [];
+  return `<div style="display:flex;gap:12px;align-items:center;padding:9px 0;border-top:1px solid var(--border)">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:.88rem;font-weight:600;overflow-wrap:anywhere">${escHtml(r.description || SPEND_CAT_LABEL[r.category] || 'Spend')}</div>
+      <div style="font-size:.75rem;color:var(--muted)">${escHtml(fmtDay(r.date))} · ${escHtml(SPEND_CAT_LABEL[r.category] || r.category || '—')}</div>
+    </div>
+    ${slips.length
+      ? `<button class="btn btn-sm btn-ghost" onclick="openSlip('${escAttr(slips[0].file_path)}')" title="View the slip">🧾${slips.length > 1 ? ' ×' + slips.length : ''}</button>`
+      : `<span style="font-size:.72rem;color:var(--muted);border:1px dashed var(--border);border-radius:10px;padding:2px 8px">no slip</span>`}
+    <div style="font-weight:700;min-width:92px;text-align:right">R${Number(r.amount || 0).toLocaleString('en-ZA', {minimumFractionDigits:2, maximumFractionDigits:2})}</div>
+  </div>`;
+}
+
+// The bucket is private, so a stored path is not a URL. A signed link is
+// minted per view and expires — which is the point of keeping tax records
+// somewhere other than a public folder.
+async function openSlip(path) {
+  try {
+    const { data, error } = await db.storage.from('finance-documents').createSignedUrl(path, 300);
+    if (error) throw error;
+    window.open(data.signedUrl, '_blank', 'noopener');
+  } catch (e) { toast('Could not open that slip: ' + (e.message || e), 'error'); }
+}
+
+function openSpendModal() {
+  const d = document.getElementById('sp-date');
+  if (d) d.value = todaySAST();
+  ['sp-amount', 'sp-description'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const slip = document.getElementById('sp-slip'); if (slip) slip.value = '';
+  const prev = document.getElementById('sp-slip-preview'); if (prev) prev.innerHTML = '';
+  const err  = document.getElementById('sp-error'); if (err) err.textContent = '';
+
+  const cat = document.getElementById('sp-category');
+  if (cat) cat.innerHTML = SPEND_CATEGORIES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  const prop = document.getElementById('sp-prop');
+  if (prop) {
+    prop.innerHTML = propKeys().map(k => `<option value="${k}">${escHtml(PROPS[k].name)}</option>`).join('');
+    prop.value = currentProp !== 'all' && PROPS[currentProp] ? currentProp : defaultPropKey();
+  }
+  openModal('spend-modal');
+}
+
+async function saveSpend() {
+  if (_spendBusy) return;
+  const err  = document.getElementById('sp-error');
+  const btn  = document.getElementById('sp-save');
+  const fail = (m) => { err.textContent = m; _spendBusy = false; if (btn) { btn.disabled = false; btn.textContent = 'Save'; } };
+
+  const amount = parseFloat(document.getElementById('sp-amount').value);
+  const date   = document.getElementById('sp-date').value;
+  const propK  = document.getElementById('sp-prop').value;
+  const cat    = document.getElementById('sp-category').value;
+  const desc   = document.getElementById('sp-description').value.trim();
+  const file   = (document.getElementById('sp-slip').files || [])[0];
+
+  err.textContent = '';
+  if (!(amount > 0))  return fail('Enter what it cost.');
+  if (!date)          return fail('Pick the date.');
+  if (!propK)         return fail('Add a property first — a spend has to belong to one.');
+  if (!desc)          return fail('Say what it was for, so it makes sense on the owner’s invoice.');
+
+  _spendBusy = true;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  try {
+    const orgId = getOrgId();
+    // The spend is stored against the property's UUID, matching every
+    // other table; only domestics still uses the short key.
+    const propUuid = (PROPS[propK] || {}).uuid || propK;
+
+    const { data: txRows, error: txErr } = await db.from('finance_transactions').insert([{
+      org_id: orgId, date, month: spendMonthKey(date), description: desc,
+      category: cat, type: 'expense', amount, property_id: propUuid, source: 'app',
+    }]).select();
+    if (txErr) throw txErr;
+    const tx = (txRows || [])[0];
+
+    // The slip is optional on purpose. A spend recorded without a photo
+    // is still worth having; refusing to save it would mean the amount
+    // goes unrecorded too, and then nothing reconciles.
+    if (file && tx) {
+      const ext  = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const path = `${orgId}/receipts/${tx.id}-${Date.now()}.${ext}`;
+      const up = await db.storage.from('finance-documents').upload(path, file, { upsert: false });
+      if (up.error) {
+        toast('Spend saved, but the slip did not upload: ' + up.error.message, 'error');
+      } else {
+        const { data: { user } } = await db.auth.getUser();
+        const docErr = (await db.from('finance_documents').insert([{
+          org_id: orgId, doc_type: 'receipt', property_id: propK, doc_date: date,
+          description: desc, file_path: path, file_name: file.name,
+          uploaded_by: user ? user.id : null, transaction_id: tx.id,
+        }])).error;
+        if (docErr) toast('Spend saved, but the slip was not filed: ' + docErr.message, 'error');
+      }
+    }
+
+    closeModal('spend-modal');
+    toast('Spend logged', 'success');
+    await renderSpendingTab();
+  } catch (e) {
+    return fail(e.message || 'Could not save that.');
+  }
+  _spendBusy = false;
+  if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
 }
 
 function renderSettingsPrefs() {
@@ -3324,6 +3615,11 @@ const NAV = [
   // itself then checks the permission, since a host without it should see
   // an explanation rather than an editor that silently fails to save.
   {id:'marketing',label:'Marketing',   icon:'📣',roles:['owner','admin','host']},
+  // Host included deliberately: Nina is the one buying things, so she
+  // is the one holding the slip. 900 scopes her access to receipts —
+  // she can file and see spend, not the platform statements that
+  // carry what the properties earn.
+  {id:'spending', label:'Spending',     icon:'🧾',roles:['owner','admin','host']},
   {id:'vault',    label:'Business Info',icon:'🔐',roles:['owner','admin']},
   {id:'invoices', label:'Invoices',     icon:'🧾',roles:['owner','admin']},
   // PLATFORM-ONLY. The roadmap is the platform owner's private working
@@ -3344,11 +3640,16 @@ const NAV = [
 // group here since a group is a label, not a tab; ids not present for the
 // current role (see buildNav/buildMobileDrawerNav's role filter) are simply
 // skipped, so 'People' collapses to just Contacts for a host, for example.
+// A tab must appear in BOTH this list and NAV. renderNavGroups() walks
+// the groups and looks each id up, so anything listed in NAV but not in a
+// group is silently dropped — permitted, routable, and invisible. That is
+// how the Spending tab first shipped, and the only reason it was noticed
+// is that a test asserted a host could see it.
 const NAV_GROUPS = [
   {label:null,      items:['dashboard']},
   {label:'Operate', items:['bookings','calendar','cleaning','tasks','messages']},
   {label:'Property',items:['knowledge','inspections']},
-  {label:'Money',   items:['invoices','reports']},
+  {label:'Money',   items:['spending','invoices','reports']},
   // Grow holds the outward-facing work. Website content lives here now;
   // social media (roadmap p2-10) joins it as a sibling sub-tab rather
   // than needing its own place in the nav.
@@ -3841,6 +4142,7 @@ function renderTab(id) {
     if (feeConfigLoaded) { renderFeeInputs(); renderRateCalcResults(); }
     else loadFeeConfig();
   }
+  else if (id==='spending')  renderSpendingTab();
   else if (id==='invoices')  renderInvoicesTab();
   else if (id==='roadmap')   renderRoadmapTab();
   else if (id==='settings')  { renderSettingsPrefs(); loadPermissions(); loadStakeholders(); }
@@ -10639,6 +10941,51 @@ function computeOwnerStatementCosts() {
 }
 
 function ownStmtAddCost() { ownerStmtCosts.push({desc:'', amount:0}); renderOwnerStatementPreview(); }
+
+// Fills the cost lines from what was actually logged against this
+// property in this month (900). Silja was preparing these by hand from
+// slips sent over WhatsApp; this is the same list, already reconciled.
+//
+// It ADDS rather than replaces, and skips anything already on the
+// statement, so pressing it twice does not double-bill an owner — the
+// mistake that would matter most here.
+async function ownStmtPullSpend() {
+  const msg = document.getElementById('ownstmt-pull-msg');
+  const btn = document.getElementById('ownstmt-pull');
+  if (btn) { btn.disabled = true; }
+  try {
+    const { start, end } = ownStmtMonthRange();
+    const propUuid = (PROPS[ownerStmtProp] || {}).uuid || ownerStmtProp;
+    const { data, error } = await db.from('finance_transactions')
+      .select('id,date,description,category,amount,property_id')
+      .eq('type', 'expense').gte('date', start).lte('date', end);
+    if (error) throw error;
+
+    const mine = (data || []).filter(r => {
+      const k = propKeyOf(r.property_id);
+      return k === ownerStmtProp || r.property_id === propUuid;
+    });
+
+    let added = 0, skipped = 0;
+    mine.forEach(r => {
+      const desc = `${r.description || SPEND_CAT_LABEL[r.category] || 'Spend'} (${fmtDay(r.date)})`;
+      const amount = Number(r.amount) || 0;
+      // Same wording and same amount already present: assume it is this
+      // one, already pulled.
+      if (ownerStmtCosts.some(c => c.desc === desc && Number(c.amount) === amount)) { skipped++; return; }
+      ownerStmtCosts.push({ desc, amount });
+      added++;
+    });
+
+    renderOwnerStatementPreview();
+    if (msg) msg.textContent = !mine.length
+      ? 'Nothing was logged against this property for that month.'
+      : `Added ${added} line${added === 1 ? '' : 's'}` + (skipped ? `, skipped ${skipped} already on the statement.` : '.');
+  } catch (e) {
+    if (msg) { msg.style.color = 'var(--red)'; msg.textContent = e.message || 'Could not load the spend.'; }
+  }
+  if (btn) btn.disabled = false;
+}
 function ownStmtDeleteCost(i) { ownerStmtCosts.splice(i,1); renderOwnerStatementPreview(); }
 function ownStmtUpdateCost(i, field, val) {
   ownerStmtCosts[i][field] = field==='amount' ? (Number(val)||0) : val;
