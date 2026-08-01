@@ -1629,7 +1629,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div class="form-field span-full">
           <label>Paid from</label>
           <select id="sp-paidby"></select>
-          <div style="font-size:.74rem;color:var(--muted);margin-top:4px">If someone paid out of their own pocket, say who — that is how the app knows they are owed it back.</div>
+          <div style="font-size:.74rem;color:var(--muted);margin-top:4px">Asked every time on purpose — it varies per purchase, and a wrong guess here is someone not getting paid back.</div>
         </div>
         <div class="form-field span-full">
           <label>Slip</label>
@@ -3020,19 +3020,20 @@ function openSpendModal() {
   }
   const payer = document.getElementById('sp-paidby');
   if (payer) {
-    payer.innerHTML = '<option value="">The business account</option>' +
+    // NO DEFAULT, deliberately. Two attempts at one were both wrong:
+    // "always the business account" leaves Nina unpaid when she used her
+    // own money, and "staff pay for themselves" is wrong too, because
+    // she sometimes pays on the business account. There is no rule here
+    // to encode — it genuinely varies per purchase.
+    //
+    // A pre-selected wrong answer is silently wrong: nobody re-reads a
+    // field that already looks filled in, and the mistake only surfaces
+    // as money not paid back. One tap, chosen every time, costs a second
+    // and cannot be wrong by omission.
+    payer.innerHTML = '<option value="" disabled selected>Choose…</option>' +
+      '<option value="business">The business account</option>' +
       orgPeople.map(p => `<option value="${p.id}">${escHtml(p.name || 'Someone')} paid personally</option>`).join('');
-    // The default follows who is logging it, because the two cases are
-    // genuinely different people: the owner and admin hold the business
-    // card, so their spend is the business account and nobody is owed.
-    // A host is spending their own money and invoicing for it monthly —
-    // so defaulting THEM to the business account means remembering to
-    // change it every single time, and forgetting means not being paid
-    // back. Wrong in that direction costs someone real money; wrong in
-    // the other direction shows up as an "owed" line that is obviously
-    // wrong and gets corrected. Overridable either way.
-    const meIsStaff = currentUser && !['owner', 'admin'].includes(currentUser.role);
-    payer.value = meIsStaff && orgPeople.some(p => p.id === currentUser.id) ? currentUser.id : '';
+    payer.value = '';
   }
   openModal('spend-modal');
 }
@@ -3055,6 +3056,8 @@ async function saveSpend() {
   if (!date)          return fail('Pick the date.');
   if (!propK)         return fail('Add a property first — a spend has to belong to one.');
   if (!desc)          return fail('Say what it was for, so it makes sense on the owner’s invoice.');
+  const payer = document.getElementById('sp-paidby').value;
+  if (!payer)         return fail('Say who paid — the business account, or whose own money it was.');
 
   _spendBusy = true;
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
@@ -3069,7 +3072,9 @@ async function saveSpend() {
       org_id: orgId, date, month: spendMonthKey(date), description: desc,
       category: cat, type: 'expense', amount, property_id: propUuid, source: 'app',
       created_by: currentUser ? currentUser.id : null,
-      paid_by: document.getElementById('sp-paidby').value || null,
+      // 'business' is the explicit "nobody is owed" answer; the column
+      // stores null for it, so the owed-back sums stay unchanged.
+      paid_by: payer === 'business' ? null : payer,
     }]).select();
     if (txErr) throw txErr;
     const tx = (txRows || [])[0];
