@@ -550,8 +550,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
     <div class="s-prop">
       <select id="prop-select" onchange="switchProperty(this.value)">
         <option value="all">All Properties</option>
-        <option value="speranta">Speranta Flat</option>
-        <option value="tvhouse">TV House</option>
       </select>
     </div>
     <nav class="s-nav" id="sidebar-nav"></nav>
@@ -779,8 +777,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
             <div class="form-field">
               <label>Property *</label>
               <select id="insp-prop" onchange="renderInspectionChecklist()">
-                <option value="speranta">Speranța Flat</option>
-                <option value="tvhouse">TV House</option>
               </select>
             </div>
             <div class="form-field">
@@ -1023,7 +1019,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div id="rsub-revenue">
         <!-- Time frame selector -->
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px">
-          <div style="font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Speranta Flat · S&N Income Only</div>
+          <div style="font-size:.75rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em" id="report-scope-label">Income Overview</div>
           <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <div style="display:flex;gap:6px;flex-wrap:wrap" id="report-timeframe-btns">
               <button class="btn btn-sm btn-primary" onclick="setReportTimeframe(3,this)">3 months</button>
@@ -1088,10 +1084,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
            <!-- Platform Revenue Summary — Monthly Breakdown -->
         <div class="card" style="margin-top:12px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-            <div class="card-title" style="margin:0">📊 Net Revenue by Month — Speranta (completed months only)</div>
+            <div class="card-title" style="margin:0">📊 Net Revenue by Month <span id="report-net-scope"></span>(completed months only)</div>
             <span style="font-size:.72rem;color:var(--muted);font-style:italic">Updated after each month closes</span>
           </div>
-          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🏠 Speranta — S&N Rental Income</div>
+          <div style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px"><span id="report-net-prop"></span>Rental Income</div>
           <div class="table-wrap"><table id="report-monthly-net-table">
             <thead><tr>
               <th>Month</th>
@@ -1111,7 +1107,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <!-- TV House Mgmt Income + Pricing Insight -->
         <div class="grid-2 mb-6" style="margin-top:12px">
           <div class="card">
-            <div class="card-title">🏠 TV House — Mgmt Income</div>
+            <div class="card-title">🏠 Management Fee Income</div>
             <div id="report-tv-occ"></div>
           </div>
           <div class="card">
@@ -1138,8 +1134,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
             <div class="card-title" style="margin:0">🔍 Property Inspection Reports</div>
             <div style="display:flex;gap:6px">
               <button class="btn btn-sm btn-ghost" id="insp-filter-all" onclick="setInspFilter('all',this)" style="background:var(--ocean);color:#fff">All</button>
-              <button class="btn btn-sm btn-ghost" id="insp-filter-speranta" onclick="setInspFilter('speranta',this)">Speranța</button>
-              <button class="btn btn-sm btn-ghost" id="insp-filter-tvhouse" onclick="setInspFilter('tvhouse',this)">TV House</button>
+              <!-- One button per property, built by buildInspFilterButtons() -->
             </div>
           </div>
           <div id="report-inspection-list"></div>
@@ -1234,10 +1229,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
               <div style="margin-bottom:12px"><label class="form-label">Address (optional)</label><textarea class="form-input" id="inv-addr" placeholder="Leave blank or add if needed" rows="2" style="resize:vertical" oninput="invRender()"></textarea></div>
 
              <div style="margin-bottom:12px"><label class="form-label">Property</label>
-                <select class="form-input" id="inv-prop" oninput="invUpdateAutoLines();invRender();invRenderDatePicker()">
-                  <option>Speranta Flat — 35 Athens Road, Tableview</option>
-                  <option>TV House</option>
-                </select>
+                <select class="form-input" id="inv-prop" oninput="invUpdateAutoLines();invRender();invRenderDatePicker()"></select>
               </div>
             <div style="margin-bottom:12px;position:relative">
                 <label class="form-label">Check-in / Check-out</label>
@@ -1304,7 +1296,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div id="isub-outgoing" style="display:none">
           <div class="card mb-6">
             <div class="card-title">📤 Outgoing — Management Fee Payments Received</div>
-            <div style="font-size:.83rem;color:var(--muted);margin-bottom:16px">Monthly R6,000 management fee billed to Mirka &amp; Antonin (TV House owners), reconciled against actual bank statement entries. Future clients will appear here once added.</div>
+            <div style="font-size:.83rem;color:var(--muted);margin-bottom:16px">Management fees billed to property owners, reconciled against actual bank statement entries. Future clients will appear here once added.</div>
             <div id="inv-outgoing-list"><div class="text-muted">Loading…</div></div>
           </div>
 
@@ -1315,7 +1307,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
                changes at all — this is a pure relocation. -->
           <div class="card mb-6" style="background:#fef3c7;border:1px solid #f59e0b">
             <div style="font-size:.84rem;color:#92400e;line-height:1.6">
-              🧾 For pass-through ownership properties — rental income belongs to the owners, not S&amp;N. This bills the owner for cleaning + management costs; it's separate from Reports, which only reports S&amp;N's own income (Speranta).
+              🧾 For pass-through ownership properties — rental income belongs to the owners, not to you. This bills the owner for cleaning + management costs; it's separate from Reports, which only reports S&amp;N's own income (Speranta).
             </div>
           </div>
           <div class="card mb-6">
@@ -1362,7 +1354,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
               <div class="card-title" style="margin:0">📥 Expense Ledger</div>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <select class="form-input" id="inv-exp-prop" onchange="loadIncoming()" style="width:auto;font-size:.8rem">
-                  <option value="all">All properties</option><option value="speranta">Speranta</option><option value="tvhouse">TV House</option><option value="both">Shared</option>
+                  <option value="all">All properties</option><option value="both">Shared</option>
                 </select>
                 <select class="form-input" id="inv-exp-cat" onchange="loadIncoming()" style="width:auto;font-size:.8rem">
                   <option value="all">All categories</option>
@@ -1407,8 +1399,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
               <div class="form-field"><label>Property</label>
                 <select id="fd-prop">
                   <option value="">— (not property-specific)</option>
-                  <option value="speranta">Speranta</option>
-                  <option value="tvhouse">TV House</option>
                 </select>
               </div>
               <div class="form-field"><label>Date</label><input type="date" id="fd-date"/></div>
@@ -1607,7 +1597,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-field span-full"><label>Guest Name *</label><input id="b-guest" placeholder="Full name"/></div>
-        <div class="form-field"><label>Property</label><select id="b-prop"><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select></div>
+        <div class="form-field"><label>Property</label><select id="b-prop"></select></div>
         <div class="form-field"><label>Platform</label><select id="b-platform"><option value="airbnb">Airbnb</option><option value="booking">Booking.com</option><option value="lekkeslaap">LekkeSlaap</option><option value="manual">Manual/Direct</option></select></div>
         <div class="form-field"><label>Check-in *</label><input type="date" id="b-checkin"/></div>
         <div class="form-field"><label>Check-out *</label><input type="date" id="b-checkout"/></div>
@@ -1639,8 +1629,6 @@ function _buildMobileNavStub(){/* replaced by main script */}
       <div class="form-grid">
         <div class="form-field"><label>Property</label>
           <select id="d-prop" onchange="populateBookingLinkDropdown('')">
-            <option value="speranta">Speranța Flat</option>
-            <option value="tvhouse">TV House</option>
           </select>
         </div>
         <div class="form-field"><label>Cleaning Date *</label>
@@ -1695,7 +1683,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-field span-full"><label>Task Title *</label><input id="t-title" placeholder="What needs to be done?"/></div>
-        <div class="form-field"><label>Property</label><select id="t-prop"><option value="all">Both Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select></div>
+        <div class="form-field"><label>Property</label><select id="t-prop"><option value="all">Both Properties</option></select></div>
         <div class="form-field"><label>Priority</label><select id="t-priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></div>
         <div class="form-field span-full">
           <label>Assignees</label>
@@ -1729,7 +1717,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
     <div class="modal-body">
       <div class="form-grid">
         <div class="form-field"><label>Category</label><select id="kb-cat"><option>Procedures</option><option>Access</option><option>WiFi</option><option>Maintenance</option><option>Guest Info</option><option>Emergency</option></select></div>
-        <div class="form-field"><label>Property</label><select id="kb-prop"><option value="all">Both Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option></select></div>
+        <div class="form-field"><label>Property</label><select id="kb-prop"><option value="all">Both Properties</option></select></div>
         <div class="form-field span-full"><label>Tags (comma separated)</label><input id="kb-tags" placeholder="access, keys"/></div>
         <div class="form-field span-full"><label>Title *</label><input id="kb-title" placeholder="Article title"/></div>
         <div class="form-field span-full"><label>Content *</label><textarea id="kb-content-input" rows="5" style="resize:vertical" placeholder="Write content here…"></textarea></div>
@@ -1781,7 +1769,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
   <div class="s-logo" style="padding:24px 20px 16px;flex-shrink:0"><span class="s-logo-text">HostEase Pro</span><small>Property Management</small></div>
   <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0">
     <select id="mob-prop-select" onchange="switchProperty(this.value);closeDrawer()" style="width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#fff;padding:8px 10px;font-family:inherit;font-size:.82rem;outline:none">
-      <option value="all">All Properties</option><option value="speranta">Speranta Flat</option><option value="tvhouse">TV House</option>
+      <option value="all">All Properties</option>
     </select>
   </div>
   <nav id="mob-nav-list" style="flex:1;overflow-y:auto;padding:10px 0"></nav>
@@ -1867,16 +1855,17 @@ const SUPABASE_URL = (window.HEP_CONFIG||{}).supabaseUrl;
 const SUPABASE_KEY = (window.HEP_CONFIG||{}).supabaseAnonKey;
 if(!SUPABASE_URL||!SUPABASE_KEY){ throw new Error('HEP: /demo/config.js missing or invalid — environment not configured'); }
 
-// ── Properties (hardcoded values below are the fallback if the DB fetch fails) ──
-
-let UUID_MAP = {
-  'e9737638-d83a-4947-940a-8746789e4d9f': 'speranta',
-  '83b2a84a-5451-4be5-a84f-2efc0d2602d5': 'tvhouse',
-};
-let PROPS = {
-  speranta: {name:'Speranta Flat', short:'Speranta', address:'35 Athens Road, Blouberg',    uuid:'e9737638-d83a-4947-940a-8746789e4d9f', cleaningFee:400},
-  tvhouse:  {name:'TV House',      short:'TV House',  address:'110 Athens Road, Tableview', uuid:'83b2a84a-5451-4be5-a84f-2efc0d2602d5', cleaningFee:450},
-};
+// ── Properties ────────────────────────────────────────────────────
+//
+// Both start EMPTY and are filled by loadProperties() from the org's own
+// rows. They used to be seeded with S&N's two properties, real street
+// addresses included, "as a fallback if the DB fetch fails" — which meant
+// any other agency whose fetch hiccuped saw one customer's property list
+// as their own. A default that is one tenant's real data is never a safe
+// default; this is the same lesson as the branding fallback (p3-20) and
+// the calendar tab bar (p3-24).
+let UUID_MAP = {};   // property uuid -> short key
+let PROPS = {};      // short key -> {name, short, address, uuid, cleaningFee}
 
 let _propertiesRaw = [];
 
@@ -1912,9 +1901,18 @@ async function loadProperties() {
       return;
     }
     const newProps = {}, newUuidMap = {};
-    data.forEach(p => {
-      const n = (p.name||'').toLowerCase();
-      const key = n.includes('speranta') ? 'speranta' : n.includes('tv') ? 'tvhouse' : (p.code||p.id).toLowerCase();
+    // The key comes from properties.short_key, which the database keeps
+    // stable and unique per org (894). It used to be derived here with
+    // `name.includes('speranta') ? ... : name.includes('tv') ? ...`,
+    // two matches on one customer's property names — so another agency's
+    // "TV Lounge" or "TV Room" silently took S&N's 'tvhouse' key and
+    // filed its cleans against a stranger's property. It did not error;
+    // it just put the record in the wrong place.
+    //
+    // The key is an IDENTITY, not a label: domestics.property_id stores
+    // it, so it must not move when a property is renamed.
+    data.slice().sort((a,b) => (a.name||'').localeCompare(b.name||'')).forEach(p => {
+      const key = p.short_key || p.code || p.id;
       const old = PROPS[key] || {};
       newProps[key] = {
         name: p.name || old.name,
@@ -1935,19 +1933,136 @@ async function loadProperties() {
   } catch(e) { console.warn('loadProperties:', e); }
 }
 
-function propSelectOptionsHtml() {
-  let html = '<option value="all">All Properties</option>';
-  Object.keys(PROPS).forEach(key => { html += `<option value="${key}">${PROPS[key].name}</option>`; });
+// ── PROPERTY HELPERS ──────────────────────────────────────────────
+//
+// Everything below replaces a hardcoded two-property assumption. The app
+// was written when S&N had exactly Speranta and TV House, so "the other
+// one" was a meaningful idea: colours were `pid==='speranta' ? pink :
+// teal`, tags were `'SP'` or `'TV'`, and a missing property fell back to
+// 'speranta'. None of that survives contact with a third property, let
+// alone another agency's first.
+
+// Ordered list of this org's property keys — alphabetical by name, which
+// is how loadProperties() builds PROPS, so colours and tags stay put
+// between renders instead of shuffling with fetch order.
+function propKeys() { return Object.keys(PROPS); }
+
+// Accepts a uuid, a short key, or a property name, and returns the short
+// key. Rows arrive keyed both ways: bookings and tasks store the uuid,
+// domestics stores the short key.
+function propKeyOf(id) {
+  if (!id) return '';
+  if (PROPS[id]) return id;
+  if (UUID_MAP[id]) return UUID_MAP[id];
+  const needle = String(id).toLowerCase();
+  return propKeys().find(k => (PROPS[k].name || '').toLowerCase() === needle) || '';
+}
+
+// What to use when nothing is selected. Was 'speranta' — a literal that
+// silently pointed a new agency's form at a property they do not own.
+function defaultPropKey() { return propKeys()[0] || ''; }
+
+function propFullName(id) {
+  const k = propKeyOf(id);
+  return k && PROPS[k] ? (PROPS[k].name || k) : (id === 'all' ? 'All Properties' : (id || '—'));
+}
+function propShortName(id) {
+  const k = propKeyOf(id);
+  return k && PROPS[k] ? (PROPS[k].short || PROPS[k].name || k) : (id || '—');
+}
+
+// Two-letter tag for dense lists, e.g. [SP] / [TV]. Derived from the
+// name — initials of the first two words, or the first two letters —
+// and made unique across the org so two properties never share a tag.
+function propTagOf(id) {
+  const k = propKeyOf(id);
+  if (!k) return '??';
+  const tagOf = (name) => {
+    const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+    const t = words.length >= 2 ? words[0][0] + words[1][0] : (words[0] || '?').slice(0, 2);
+    return t.toUpperCase();
+  };
+  const seen = {};
+  let mine = '??';
+  propKeys().forEach(key => {
+    let t = tagOf(PROPS[key].name);
+    if (seen[t]) { const n = String(seen[t] + 1); t = t[0] + n; }
+    seen[t] = (seen[t] || 0) + 1;
+    if (key === k) mine = t;
+  });
+  return mine;
+}
+
+// A stable colour per property, by position. The old code hardcoded
+// Airbnb pink for Speranta and teal for TV House; these are the same two
+// first, so S&N's calendar looks exactly as it did.
+const PROP_PALETTE = ['#FF385C', '#4ABBA5', '#5B8EF0', '#F59E0B', '#8B5CF6', '#EC4899', '#10B981', '#F43F5E'];
+function propColor(id) {
+  const i = propKeys().indexOf(propKeyOf(id));
+  return PROP_PALETTE[(i < 0 ? 0 : i) % PROP_PALETTE.length];
+}
+
+function propCleaningFee(id) {
+  const k = propKeyOf(id);
+  return (k && PROPS[k] && PROPS[k].cleaningFee) || 0;
+}
+
+function propSelectOptionsHtml(lead) {
+  let html = (lead || []).map(o => `<option value="${o[0]}">${escHtml(o[1])}</option>`).join('');
+  propKeys().forEach(key => { html += `<option value="${key}">${escHtml(PROPS[key].name)}</option>`; });
   return html;
 }
+
+// EVERY property picker in the app, and what non-property choices each
+// one leads with. Only prop-select and mob-prop-select were ever rebuilt;
+// the other eight kept the two <option>s that were typed into the markup,
+// so a second agency's Add Booking form offered them a choice between
+// "Speranta Flat" and "TV House" and nothing else. The options are gone
+// from the markup now — this is the only thing that fills them.
+const PROP_SELECTS = {
+  'prop-select':     [['all', 'All Properties']],
+  'mob-prop-select': [['all', 'All Properties']],
+  'drawer-prop':     [['all', 'All Properties']],
+  't-prop':          [['all', 'All Properties']],
+  'kb-prop':         [['all', 'All Properties']],
+  'inv-exp-prop':    [['all', 'All properties'], ['both', 'Shared']],
+  'fd-prop':         [['',    '— (not property-specific)']],
+  'insp-prop':       [],
+  'b-prop':          [],
+  'd-prop':          [],
+  'inv-prop':        [],
+};
+
+// The inspection report filter had one hardcoded button per S&N property,
+// so another agency got two buttons naming properties they do not own and
+// no way to filter their own.
+function buildInspFilterButtons() {
+  const all = document.getElementById('insp-filter-all');
+  if (!all || !all.parentNode) return;
+  all.parentNode.querySelectorAll('[id^=insp-filter-]').forEach(b => { if (b !== all) b.remove(); });
+  propKeys().forEach(key => {
+    const b = document.createElement('button');
+    b.className = 'btn btn-sm btn-ghost';
+    b.id = 'insp-filter-' + key;
+    b.textContent = PROPS[key].short || PROPS[key].name || key;
+    b.onclick = () => setInspFilter(key, b);
+    all.parentNode.appendChild(b);
+  });
+}
+
 function refreshPropSelects() {
-  ['prop-select', 'mob-prop-select'].forEach(id => {
+  Object.entries(PROP_SELECTS).forEach(([id, lead]) => {
     const el = document.getElementById(id);
     if (!el) return;
     const cur = el.value;
-    el.innerHTML = propSelectOptionsHtml();
-    el.value = PROPS[cur] ? cur : 'all';
+    el.innerHTML = propSelectOptionsHtml(lead);
+    // Keep the current choice if it still exists, otherwise fall back to
+    // whatever this particular picker leads with — 'all' for a filter,
+    // the first property for a form that must name one.
+    const keep = PROPS[cur] || (lead || []).some(o => o[0] === cur);
+    el.value = keep ? cur : ((lead || [])[0] ? lead[0][0] : defaultPropKey());
   });
+  buildInspFilterButtons();
 }
 
 // ── Properties management (Settings tab) ──────────────────────────────────
@@ -2261,11 +2376,13 @@ let calProp = 'all';
 let showCancelledOnCal = false;
 let bookings = [], tasks = [], domestics = [], kbArticles = [], contacts = [], vault = [];
 let _liveDataPending = false; // true from the first render until the real Supabase fetch resolves — see renderDashboard()'s urgent-actions guard
-let messages = [
-  {id:'m1',from:'Nicole',   role:'admin',text:'Speranta: Joe Ladlow arrives 17 Apr. Welcome pack ready?',       time:'09:14'},
-  {id:'m2',from:'Nina Williams',role:'host', text:'On it! Blessing confirmed cleaning after Hedda on the 17th.',time:'09:32'},
-  {id:'m3',from:'Silja',    role:'admin',text:'TV House: Clare Lang in from 13 Apr for 9 nights. All good.',    time:'10:05'},
-];
+// The team chat starts empty. It used to open with three seeded messages
+// naming S&N's staff and three real guests, shown to every org as if they
+// were that org's own conversation — the same mistake as the sample
+// booking and contact arrays, in a place nobody thought to look because
+// it reads as decoration. Nothing here is persisted, so seeding it only
+// ever showed one customer's week to another.
+let messages = [];
 // Per-booking Nina task progress stored locally
 let ninaBTaskProgress = {};
 
@@ -2624,8 +2741,13 @@ function isRealGuestName(name) {
 function nb(b) {
   let pid = b.property_id || '';
   if (UUID_MAP[pid]) pid = UUID_MAP[pid];
-  else if (b.property_name) { const pn = b.property_name.toLowerCase(); pid = pn.includes('speranta') ? 'speranta' : pn.includes('tv') ? 'tvhouse' : 'speranta'; }
-  if (pid !== 'speranta' && pid !== 'tvhouse') pid = 'speranta';
+  else if (b.property_name) { pid = propKeyOf(b.property_name) || pid; }
+  // An unrecognised property stays unset. This used to fall through to
+  // 'speranta' twice over — once when the name did not match, once as a
+  // blanket "if it isn't one of our two, call it Speranta" — so every row
+  // the matcher missed silently became a Speranta booking. For another
+  // agency it became a booking against a property they do not own.
+  if (!PROPS[pid]) pid = '';
   const gn = b.guest_name || [b.guest_first_name, b.guest_last_name].filter(Boolean).join(' ') || null;
   // Safety net: a 'blocked' row that actually carries a real guest name is a
   // misclassified booking (iCal feed quirk), not a true placeholder block — treat it as confirmed.
@@ -3184,7 +3306,7 @@ let _inspPhotoData = []; // base64 photos for current form
 function renderInspectionChecklist() {
   const el = document.getElementById('insp-checklist-grid');
   if (!el) return;
-  const prop = document.getElementById('insp-prop')?.value || 'speranta';
+  const prop = document.getElementById('insp-prop')?.value || defaultPropKey();
   el.innerHTML = getInspChecklist(prop).map(item => `
     <label style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface-2);border-radius:8px;cursor:pointer;font-size:.82rem;border:1px solid var(--border)">
       <input type="checkbox" id="insp-chk-${item.key}" style="width:16px;height:16px;accent-color:var(--ocean);flex-shrink:0"/>
@@ -3269,7 +3391,7 @@ function clearInspectionForm() {
   document.getElementById('insp-notes').value = '';
   document.getElementById('insp-condition').value = 'good';
   document.getElementById('insp-inspector').value = 'Nina';
-  getInspChecklist(document.getElementById('insp-prop')?.value || 'speranta').forEach(item => {
+  getInspChecklist(document.getElementById('insp-prop')?.value || defaultPropKey()).forEach(item => {
     const el = document.getElementById('insp-chk-'+item.key);
     if (el) el.checked = false;
   });
@@ -3450,9 +3572,10 @@ function renderReportInspections() {
     return;
   }
   // Group by property
-  const byProp = {speranta: filtered.filter(r=>r.property_id==='speranta'), tvhouse: filtered.filter(r=>r.property_id==='tvhouse')};
+  const byProp = {};
+  propKeys().forEach(k => { byProp[k] = filtered.filter(r => propKeyOf(r.property_id) === k); });
   let out = '';
-  ['speranta','tvhouse'].forEach(pid => {
+  propKeys().forEach(pid => {
     const recs = byProp[pid];
     if (!recs.length) return;
     out += `<div style="font-size:.76rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:10px;margin-top:${out?'20px':'0'}">${propName(pid)}</div>`;
@@ -4197,7 +4320,7 @@ const PROPERTY_SEASON_RATES = {
 };
 
 function invPropKey() {
-  return invV('inv-prop').includes('TV House') ? 'tvhouse' : 'speranta';
+  return propKeyOf(invV('inv-prop')) || defaultPropKey();
 }
 
 function invSeasonForDate(dateStr, propKey) {
@@ -4215,7 +4338,9 @@ function invPropCleaningFee() {
   // override.
   const key = invPropKey();
   const fee = PROPS[key] && PROPS[key].cleaningFee;
-  return fee || (key === 'tvhouse' ? 450 : 400);
+  // No configured fee is a real answer — zero, shown as zero — rather
+  // than one of S&N's two rates applied to a stranger's property.
+  return fee || 0;
 }
 
 function invUpdateAutoLines() {
@@ -4595,7 +4720,7 @@ async function invLoadBookings() {
     // ever invoice.
     const realBookings = data.filter(b => b.status!=='blocked' && !isCaretaker(b) && !isOwnerStay(b));
     sel.innerHTML = '<option value="">— select to auto-fill —</option>' + realBookings.map(b => {
-      const propKey  = UUID_MAP[b.property_id] || b.property_id || 'speranta';
+      const propKey  = propKeyOf(b.property_id);
       const propInfo = PROPS[propKey];
       const prop = propInfo ? (propInfo.name + (propInfo.address ? ' — '+propInfo.address : '')) : (b.property_id || '—');
       const nights = b.nights||1;
@@ -4634,9 +4759,9 @@ function invPullBooking() {
   // so an exact-text match silently failed and always left the dropdown on
   // Speranta (index 0). Uses the same loose text.includes('TV House') rule
   // invPropKey() reads back later, so both directions stay consistent.
-  const wantKey = opt.dataset.propkey || 'speranta';
+  const wantKey = opt.dataset.propkey || defaultPropKey();
   for(let i=0;i<propEl.options.length;i++){
-    const optKey = propEl.options[i].text.includes('TV House') ? 'tvhouse' : 'speranta';
+    const optKey = propEl.options[i].value;
     if (optKey===wantKey) { propEl.selectedIndex=i; break; }
   }
   const platEl = document.getElementById('inv-platform');
@@ -4870,7 +4995,7 @@ async function loadIncoming() {
         '<div class="stat-card" style="border-left:3px solid var(--red)"><div class="stat-label">Total expenses</div><div class="stat-value" style="color:var(--red)">R'+Math.round(total).toLocaleString('en-ZA')+'</div><div class="stat-sub">'+data.length+' entries</div></div>'+
         topCat.map(function(e){ return '<div class="stat-card"><div class="stat-label">'+(CAT_LABELS[e[0]]||e[0])+'</div><div class="stat-value">R'+Math.round(e[1]).toLocaleString('en-ZA')+'</div><div class="stat-sub">'+Math.round(e[1]/total*100)+'% of total</div></div>'; }).join('');
     }
-    const propName = function(id){ return id==='speranta'?'Speranta':id==='tvhouse'?'TV House':id==='both'?'Shared':id||'—'; };
+    const propName = function(id){ return id==='both' ? 'Shared' : (id==='all' ? 'All Properties' : (propShortName(id) || id || '—')); };
     body.innerHTML = data.map(function(r,i){
       return '<tr style="'+(i%2===1?'background:var(--surface-2)':'')+'"><td style="font-size:.8rem;white-space:nowrap">'+(r.date||'—')+'</td><td style="font-size:.8rem">'+(r.description||'—')+'</td><td><span style="font-size:.72rem;padding:2px 8px;border-radius:10px;background:var(--warm);color:var(--ink)">'+(CAT_LABELS[r.category]||r.category)+'</span></td><td style="font-size:.78rem;color:var(--muted)">'+propName(r.property_id||r.subcategory)+'</td><td style="text-align:right;font-size:.8rem;font-weight:600;color:var(--red)">R'+Number(r.amount).toLocaleString('en-ZA')+'</td></tr>';
     }).join('');
@@ -6181,8 +6306,11 @@ function renderDashboard() {
 
       let bg='transparent', col='var(--ink)', fw='400', border='none', dotColor='';
       if (isToday)    { border='2px solid var(--accent)'; fw='700'; }
-      if (hasBooked)  { bg=pid==='speranta'?'#FF385C22':'#4ABBA522'; col=pid==='speranta'?'#FF385C':'#4ABBA5'; fw='600'; }
-      if (isCheckIn)  { bg=pid==='speranta'?'#FF385C':'#4ABBA5'; col='#fff'; fw='700'; }
+      // One colour per property, by position, instead of "Speranta is
+      // pink and everything else is teal". The first two entries of the
+      // palette are those same two colours, so S&N's calendar is unchanged.
+      if (hasBooked)  { bg=propColor(pid)+'22'; col=propColor(pid); fw='600'; }
+      if (isCheckIn)  { bg=propColor(pid); col='#fff'; fw='700'; }
       if (hasClean)   { dotColor='#06b6d4'; }
 
       grid += `<div style="position:relative;padding:4px 0;border-radius:4px;background:${bg};color:${col};font-weight:${fw};border:${border};cursor:pointer;line-height:1.5;text-align:center;min-width:0;overflow:hidden"
@@ -7049,8 +7177,10 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
   const firstDay = new Date(year,month,1).getDay();
   const dim = new Date(year,month+1,0).getDate();
   const weeks = Math.ceil((firstDay+dim)/7);
-  const showProp = bkgs.filter(x=>!isCaretaker(x)&&x.property_id==='speranta').length>0 &&
-                   bkgs.filter(x=>!isCaretaker(x)&&x.property_id==='tvhouse').length>0;
+  // Tag the rows only when more than one property is actually present —
+  // was "Speranta AND TV House both have rows", which is never true for
+  // an agency with one property or with three.
+  const showProp = new Set(bkgs.filter(x=>!isCaretaker(x)).map(x=>propKeyOf(x.property_id)).filter(Boolean)).size > 1;
   const birthdays = getDomesticBirthdays().map(c=>{const b=c.birthday?.slice(5);return b?{date:String(year)+'-'+b,name:c.name}:null;}).filter(Boolean);
 
   // Assign each booking a fixed lane (0,1,2) for the whole month
@@ -7134,7 +7264,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
                       effectivelyBlocked ? PLAT_COLORS['blocked'] :
                       isCancelled      ? '#9ca3af' :
                       PLAT_COLORS[b.platform]||'#A8702E';
-        const propTag = showProp ? '['+(b.property_id==='speranta'?'SP':'TV')+'] ' : '';
+        const propTag = showProp ? '['+propTagOf(b.property_id)+'] ' : '';
         // Short name for mobile — first name only, max 10 chars
         const fullName = b.display_name || b.guest_name || b.platform || 'Guest';
         const shortName = fullName.split(' ')[0].slice(0,10);
@@ -7224,7 +7354,7 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
 
       // Cleaning — always show property tag
       doms.filter(d2=>d2.date===ds).forEach(d2=>{
-        const pt='['+(d2.property_id==='speranta'?'SP':'TV')+'] ';
+        const pt='['+propTagOf(d2.property_id)+'] ';
         const ev=document.createElement('div'); ev.className='cal-event ev-cleaning';
         ev.title='🧹 '+d2.cleaner+' — '+propName(d2.property_id);
         ev.textContent='🧹 '+pt+d2.cleaner.split(' ')[0];
@@ -7567,7 +7697,7 @@ function renderDomesticCalView() {
         <div style="font-size:.7rem;font-weight:${isToday?'700':'400'};color:${isToday?'var(--accent)':'var(--ink)'}">${d}</div>
         ${dayDoms.slice(0,2).map(dom=>`
           <div style="background:${COLORS[dom.cleaner]||'#64748b'};color:#fff;font-size:.55rem;font-weight:600;padding:1px 3px;border-radius:3px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            ${dom.property_id==='speranta'?'SP':'TV'} · ${(dom.cleaner||'Clean').slice(0,7)}
+            ${propTagOf(dom.property_id)} · ${(dom.cleaner||'Clean').slice(0,7)}
           </div>`).join('')}
         ${dayDoms.length>2?`<div style="font-size:.55rem;color:var(--muted);margin-top:1px">+${dayDoms.length-2} more</div>`:''}
       </div>`;
@@ -7899,7 +8029,7 @@ async function editCleaning(id) {
   closeModal('day-modal');
   setCleanerFieldValue(d.cleaner || '', d.cleaner_phone || '');
   updateOutsideCleanerSendUI(d);
-  document.getElementById('d-prop').value    = d.property_id || 'speranta';
+  document.getElementById('d-prop').value    = d.property_id || defaultPropKey();
   document.getElementById('d-date').value    = d.date || '';
   document.getElementById('d-time').value    = d.time || '10:00';
   document.getElementById('d-type').value    = d.type || 'turnover';
@@ -9721,7 +9851,13 @@ async function renderReports(monthsBack) {
     cutoff = d.toISOString().slice(0,10);
   }
 
-const spAll  = allBookings.filter(b => b.property_id==='speranta' && b.status!=='cancelled');
+  // Was hardcoded to 'speranta', so the Reports tab showed one property's
+  // revenue no matter which was selected — and for any other agency, an
+  // empty report with a Speranta heading. Follows the property switcher
+  // now: one property, or all of them.
+  const spAll = allBookings.filter(b =>
+    b.status !== 'cancelled' &&
+    (currentProp === 'all' || propKeyOf(b.property_id) === currentProp));
   const spPaidAll = spAll.filter(b => (b.revenue||0) > 0 && (!cutoff || b.check_in >= cutoff));
   const spPaid = _includePipeline ? spPaidAll : spPaidAll.filter(b => b.check_in <= today);
 const platOrder = ['airbnb','booking','lekkeslaap','manual'];
@@ -9739,16 +9875,46 @@ const platOrder = ['airbnb','booking','lekkeslaap','manual'];
   const totalNights = spPaid.reduce((s,b) => s+(b.nights||0), 0);
   const avgNight    = totalNights ? Math.round(totalRev/totalNights) : 0;
   const upcoming    = spAll.filter(b => b.check_in > today && !isOwnerStay(b));
-  const airbnbAvg   = byPlat.airbnb?.nights     ? Math.round(byPlat.airbnb.revenue/byPlat.airbnb.nights)        : 0;
-  const bookingAvg  = byPlat.booking?.nights    ? Math.round(byPlat.booking.revenue/byPlat.booking.nights)      : 0;
-  const lsAvg       = byPlat.lekkeslaap?.nights ? Math.round(byPlat.lekkeslaap.revenue/byPlat.lekkeslaap.nights): 0;
+
+  // "Best Platform" was three hardcoded assumptions in one card: that
+  // Airbnb is the best, that LekkeSlaap is the runner-up, and that both
+  // are in use at all. It said "Airbnb · R0 more than LekkeSlaap" for an
+  // agency that used neither. Now it reads the numbers.
+  function bestPlatformCard(byPlatform) {
+    const ranked = Object.entries(byPlatform)
+      .filter(([, v]) => v.nights > 0)
+      .map(([p, v]) => ({ p, perNight: Math.round(v.revenue / v.nights) }))
+      .sort((a, b) => b.perNight - a.perNight);
+    if (!ranked.length) return sCard('Best Platform', '—', 'no paid nights yet', '#E14666');
+    const top = ranked[0], next = ranked[1];
+    const label = (PLATFORM_LABELS && PLATFORM_LABELS[top.p]) || top.p;
+    const sub = next
+      ? label + ' · R' + (top.perNight - next.perNight) + ' more than ' +
+        ((PLATFORM_LABELS && PLATFORM_LABELS[next.p]) || next.p)
+      : label + ' · only platform with paid nights';
+    return sCard('Best Platform', fmt(top.perNight) + '/night', sub, '#E14666');
+  }
+
+  // These two headings were typed into the markup as "Speranta Flat ·
+  // S&N Income Only" and "Net Revenue by Month — Speranta", so the
+  // Reports tab always named one property whatever was selected.
+  const scopeEl = document.getElementById('report-scope-label');
+  if (scopeEl) scopeEl.textContent =
+    (currentProp === 'all' ? 'All properties' : propFullName(currentProp)) + ' · Income Overview';
+  const netPropEl = document.getElementById('report-net-prop');
+  if (netPropEl) netPropEl.textContent =
+    currentProp === 'all' ? '🏠 ' : '🏠 ' + propShortName(currentProp) + ' — ';
+  const netScopeEl = document.getElementById('report-net-scope');
+  if (netScopeEl) netScopeEl.textContent =
+    currentProp === 'all' ? '' : '— ' + propShortName(currentProp) + ' ';
 
   // ── STAT CARDS ──
   const upcomingNights = upcoming.reduce((s,b)=>s+(b.nights||0),0);
   document.getElementById('report-stats').innerHTML =
-    sCard('Speranta Revenue', fmt(totalRev), spPaid.length+' paid bookings · '+totalNights+' nights', 'var(--green2)') +
+    sCard((currentProp === 'all' ? 'Revenue' : propShortName(currentProp)+' Revenue'),
+          fmt(totalRev), spPaid.length+' paid bookings · '+totalNights+' nights', 'var(--green2)') +
     sCard('Avg Per Night', fmt(avgNight), 'all platforms combined', 'var(--accent)') +
-    sCard('Best Platform', fmt(airbnbAvg)+'/night', 'Airbnb · R'+(airbnbAvg-lsAvg)+' more than LekkeSlaap', '#E14666') +
+    bestPlatformCard(byPlat) +
     (_includePipeline ? sCard('Pipeline', upcoming.length+' bookings', upcomingNights+' upcoming nights', 'var(--blue)') : '');
 
   // ── ACTUAL INCOME (uploaded platform statements, migration 700) ──
@@ -9857,16 +10023,26 @@ const isPast = m < todayMo;
     const worstMonth = months.reduce((worst,m) => monthlyData[m].total < (monthlyData[worst]?.total||Infinity) ? m : worst, months[0]);
     // Revenue per booking
     const revPerBooking = spPaid.length ? Math.round(totalRev/spPaid.length) : 0;
-    // Airbnb vs LekkeSlaap opportunity cost
-    const lsBookings = byPlat.lekkeslaap?.bookings||0;
-    const lsNights   = byPlat.lekkeslaap?.nights||0;
-    const opportunityCost = lsNights * (airbnbAvg - lsAvg);
+    // Opportunity cost of the weakest channel. Was Airbnb vs LekkeSlaap
+    // by name — it vanished quietly for anyone not on both, and told
+    // anyone who was that Airbnb is the benchmark whichever way the
+    // numbers fell. Now it takes the org's own best and worst earning
+    // platforms, whatever those turn out to be.
+    const perNight = Object.entries(byPlat)
+      .filter(([, v]) => v.nights > 0)
+      .map(([pl, v]) => ({ pl, avg: Math.round(v.revenue / v.nights), nights: v.nights }))
+      .sort((a, b) => b.avg - a.avg);
+    const bestPl  = perNight[0];
+    const worstPl = perNight.length > 1 ? perNight[perNight.length - 1] : null;
+    const gap     = worstPl ? bestPl.avg - worstPl.avg : 0;
+    const opportunityCost = worstPl ? worstPl.nights * gap : 0;
+    const plName = pl => (PLATFORM_LABELS && PLATFORM_LABELS[pl]) || pl;
 
     insightsEl.innerHTML = [
       bestMonth  ? `<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Best Month</div><div style="font-weight:700">${moLabel(bestMonth)}</div><div style="font-size:.78rem;color:var(--green)">${fmt(monthlyData[bestMonth].total)}</div></div>` : '',
       worstMonth && worstMonth!==bestMonth ? `<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Lowest Month</div><div style="font-weight:700">${moLabel(worstMonth)}</div><div style="font-size:.78rem;color:var(--red)">${fmt(monthlyData[worstMonth].total)}</div></div>` : '',
       `<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Avg Revenue/Booking</div><div style="font-weight:700">${fmt(revPerBooking)}</div><div style="font-size:.78rem;color:var(--muted)">across ${spPaid.length} paid stays</div></div>`,
-      opportunityCost > 0 ? `<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">LekkeSlaap Opportunity Cost</div><div style="font-weight:700;color:var(--red)">${fmt(opportunityCost)}</div><div style="font-size:.78rem;color:var(--muted)">${lsNights} nights at R${airbnbAvg-lsAvg}/night less than Airbnb</div></div>` : '',
+      opportunityCost > 0 ? `<div style="padding:9px 0;border-bottom:1px solid var(--border)"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">${escHtml(plName(worstPl.pl))} Opportunity Cost</div><div style="font-weight:700;color:var(--red)">${fmt(opportunityCost)}</div><div style="font-size:.78rem;color:var(--muted)">${worstPl.nights} nights at R${gap}/night less than ${escHtml(plName(bestPl.pl))}</div></div>` : '',
       `<div style="padding:9px 0"><div style="font-size:.72rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Monthly Average</div><div style="font-weight:700">${months.length ? fmt(Math.round(totalRev/months.length)) : 'R0'}</div><div style="font-size:.78rem;color:var(--muted)">over ${months.length} months</div></div>`,
     ].filter(Boolean).join('');
   }
@@ -9916,27 +10092,48 @@ const isPast = m < todayMo;
         if (r.data) mgmtTotal = r.data.reduce((s,x)=>s+Number(x.amount),0);
       } catch(e) {}
     }
-    const months_mgmt = mgmtTotal ? Math.round(mgmtTotal/6000) : 0;
-    tvEl.innerHTML = `
+    // Was a card about one specific arrangement: R6,000 a month, named
+    // owners, and a list of what S&N's fee covers, shown to every agency.
+    // The only part that generalises is the total actually recorded.
+    tvEl.innerHTML = mgmtTotal ? `
       <div style="text-align:center;padding:12px 0 14px">
-        <div style="font-size:2rem;font-weight:700;font-family:'DM Serif Display',serif;color:var(--blue)">${mgmtTotal ? fmt(mgmtTotal) : 'R6,000'}</div>
-        <div style="font-size:.8rem;color:var(--muted)">${mgmtTotal ? 'total · ~'+months_mgmt+' months · from Mirka & Antonin' : 'per month management fee'}</div>
+        <div style="font-size:2rem;font-weight:700;font-family:'DM Serif Display',serif;color:var(--blue)">${fmt(mgmtTotal)}</div>
+        <div style="font-size:.8rem;color:var(--muted)">management fees recorded to date</div>
       </div>
       <div style="font-size:.82rem;line-height:1.7;background:var(--sand);border-radius:8px;padding:12px">
-        Rental income → owners.<br>
-        S&N earns <strong>R6,000/month</strong> management fee.<br>
-        Pool, gardener & maintenance covered by fee.
+        For pass-through properties the rental income belongs to the owner;
+        what you earn is the management fee billed to them.
+      </div>` : `
+      <div style="text-align:center;padding:18px 0;color:var(--muted);font-size:.84rem">
+        No management fees recorded yet.<br>They appear here once you bill an owner.
       </div>`;
   }
 
   // ── PRICING INSIGHT ──
+  //
+  // This used to be advice written for one beach flat in Blouberg: named
+  // platforms in a fixed order, and invented price bands — "push Airbnb
+  // to R1,500–1,800/night" — shown to every agency regardless of what
+  // they let, where, or on which channels. Confident and wrong is worse
+  // than nothing, so it now says only what this org's own numbers say,
+  // and stays quiet when they do not say anything yet.
   const m = new Date().getMonth();
+  const season = [5,6,7].includes(m)      ? ['❄️', 'Low season (Jun–Aug)']
+               : [11,0,1,2].includes(m)   ? ['🌞', 'Peak summer (Dec–Mar)']
+                                          : ['🍂', 'Shoulder season (Apr–May, Sep–Nov)'];
+  const ranked = Object.entries(byPlat)
+    .filter(([, v]) => v.nights > 0)
+    .map(([pl, v]) => ({ pl, perNight: Math.round(v.revenue / v.nights), nights: v.nights }))
+    .sort((a, b) => b.perNight - a.perNight);
+  const plLabel = pl => (PLATFORM_LABELS && PLATFORM_LABELS[pl]) || pl;
   document.getElementById('pricing-insight').innerHTML =
-    [5,6,7].includes(m)
-      ? `❄️ <strong>Low season (Jun–Aug).</strong> Your Airbnb avg is ${fmt(airbnbAvg)}/night — consider R900–1,100 to maintain occupancy. Use LekkeSlaap to fill gaps. 2-night minimums work better than 3 in winter.`
-    : [11,0,1,2].includes(m)
-      ? `🌞 <strong>Peak summer (Dec–Mar).</strong> Push Airbnb to R1,500–1,800/night. Your data shows guests pay well above avg in this period. Set 3-night minimums. Airbnb consistently outperforms — prioritise it.`
-      : `🍂 <strong>Shoulder season (Apr–May, Sep–Nov).</strong> Airbnb at ${fmt(airbnbAvg)}/night, Booking.com at ${fmt(bookingAvg)}/night. Try raising Booking.com 10%. LekkeSlaap at ${fmt(lsAvg)}/night — use only to fill gaps; each night on LekkeSlaap instead of Airbnb costs you R${airbnbAvg-lsAvg}.`;
+    !ranked.length
+      ? `${season[0]} <strong>${season[1]}.</strong> Not enough paid nights ${currentProp === 'all' ? '' : 'for ' + escHtml(propShortName(currentProp)) + ' '}to compare platforms yet.`
+      : `${season[0]} <strong>${season[1]}.</strong> ` +
+        ranked.map(r => `${escHtml(plLabel(r.pl))} ${fmt(r.perNight)}/night`).join(' · ') +
+        (ranked.length > 1
+          ? `. ${escHtml(plLabel(ranked[0].pl))} is earning R${ranked[0].perNight - ranked[ranked.length-1].perNight} more a night than ${escHtml(plLabel(ranked[ranked.length-1].pl))} — worth checking the gap is deliberate.`
+          : '.');
 
 // ── MONTHLY NET TABLE ──
   const netBody = document.getElementById('report-monthly-net-body');
@@ -10389,7 +10586,7 @@ function openModal(id){
     document.getElementById('b-notes').value    = '';
     document.getElementById('b-status').value   = 'confirmed';
     document.getElementById('b-platform').value = 'manual';
-    document.getElementById('b-prop').value     = 'speranta';
+    document.getElementById('b-prop').value     = defaultPropKey();
     if (document.getElementById('b-email')) document.getElementById('b-email').value = '';
     if (document.getElementById('b-phone')) document.getElementById('b-phone').value = '';
   }
@@ -10921,7 +11118,7 @@ function openStaffModal(id) {
           ${STAFF_EMPLOYED_CATS.map(k=>`<option value="${k}" ${cat===k?'selected':''}>${STAFF_CAT_LABELS[k]}</option>`).join('')}
         </select>
       </div>
-      <div class="form-field"><label>Role</label><input id="st-role" placeholder="e.g. Cleaner — Speranta" value="${escAttr(existing?existing.role:'')}"/></div>
+      <div class="form-field"><label>Role</label><input id="st-role" placeholder="e.g. Cleaner" value="${escAttr(existing?existing.role:'')}"/></div>
       <div class="form-field"><label>Phone</label><input id="st-phone" placeholder="+27 ..." value="${escAttr(existing?existing.phone:'')}"/></div>
       <div class="form-field"><label>Email</label><input id="st-email" type="email" placeholder="email@domain.co.za" value="${escAttr(existing?existing.email:'')}"/></div>
       <div class="form-field"><label>WhatsApp number</label><input id="st-wa" placeholder="27821234567 (no + or spaces)" value="${escAttr(existing?existing.wa:'')}"/></div>
@@ -13161,7 +13358,7 @@ function openBudgetLine(id) {
           <option value="">— no plan —</option>${planOpts}
         </select></div>
       <div class="form-field span-full"><label>Description *</label>
-        <input id="bl-label" value="${b?escHtml(b.label).replace(/"/g,'&quot;'):''}" placeholder="e.g. Speranta — management fee"/></div>
+        <input id="bl-label" value="${b?escHtml(b.label).replace(/"/g,'&quot;'):''}" placeholder="e.g. management fee"/></div>
       <div class="form-field"><label>Amount (R) *</label>
         <input id="bl-amount" type="number" step="0.01" min="0" value="${b?b.amount:''}" placeholder="0.00"/></div>
       <div class="form-field"><label>How often</label><select id="bl-frequency">${freqOpts}</select></div>
@@ -13672,8 +13869,6 @@ function deleteTaskFromDrawer() {
         <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px">Property</div>
         <select id="drawer-prop" style="width:100%;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem;outline:none;background:var(--input-bg)">
           <option value="all">Both Properties</option>
-          <option value="speranta">Speranta Flat</option>
-          <option value="tvhouse">TV House</option>
         </select>
       </div>
       <div>
