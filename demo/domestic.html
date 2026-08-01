@@ -421,7 +421,11 @@ h1,h2,h3{font-family:Syne,sans-serif}
       </div>
       <div id="nina-last-inspections"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
       <div style="margin-top:10px;text-align:right;">
-        <a href="https://hosteasepro-frontend.vercel.app" target="_blank" class="nina-link">View all reports in HEP →</a>
+        <!-- Relative on purpose. This portal and HEP are the same deployment,
+             so "/" is always the right way home — a hardcoded host goes stale
+             the moment the domain changes, which it did when hosteasepro.com
+             was registered (2026-08-01). -->
+        <a href="/" target="_blank" class="nina-link">View all reports in HEP →</a>
       </div>
     </div>
     <div class="nina-section">
