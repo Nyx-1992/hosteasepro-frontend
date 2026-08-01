@@ -572,16 +572,21 @@ const PROPS = {
   '83b2a84a-5451-4be5-a84f-2efc0d2602d5': {name:'TV House',      short:'TV House'},
 };
 
+// Offline roster fallback: names, colours and rates only. It carries NO
+// PINs. It used to carry all five, in the source of a page anyone can
+// open, in a public repository — which made the server-side check added
+// in 680 decorative. A PIN opens the staff portal: the cleaning
+// schedule, guest names and property access notes.
 const CLEANERS = [
-  {name:'Blessing', pin:'0314', color:'#f59e0b', initials:'BL',
+  {name:'Blessing', color:'#f59e0b', initials:'BL',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350, default:350}},
-  {name:'Fatima',   pin:'0722', color:'#8b5cf6', initials:'FA',
+  {name:'Fatima',   color:'#8b5cf6', initials:'FA',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350,'83b2a84a-5451-4be5-a84f-2efc0d2602d5':450, default:350}},
-  {name:'Patricia', pin:'0828', color:'#2dd4a0', initials:'PM',
+  {name:'Patricia', color:'#2dd4a0', initials:'PM',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350,'83b2a84a-5451-4be5-a84f-2efc0d2602d5':450, default:350}},
-  {name:'Spiwe',    pin:'0918', color:'#5b8ef0', initials:'SP',
+  {name:'Spiwe',    color:'#5b8ef0', initials:'SP',
    rate:{'e9737638-d83a-4947-940a-8746789e4d9f':350, default:350}},
-  {name:'Nina',     pin:'7021', color:'#6c47ff', initials:'NW',
+  {name:'Nina',     color:'#6c47ff', initials:'NW',
    rate:{default:0}},
 ];
 
@@ -787,7 +792,7 @@ function sendOutsideCleanerWhatsApp(row, waWin) {
 // CLEANERS array, PINs no longer ship in this page's source. CLEANERS
 // above remains only as the offline/RPC-failure fallback.
 const PORTAL_PALETTE=['#f59e0b','#8b5cf6','#2dd4a0','#5b8ef0','#f472b6','#38bdf8'];
-let PORTAL_USERS = CLEANERS.map(c=>({name:c.name, initials:c.initials, color:c.color, is_coordinator:c.name==='Nina', pin:c.pin}));
+let PORTAL_USERS = CLEANERS.map(c=>({name:c.name, initials:c.initials, color:c.color, is_coordinator:c.name==='Nina'}));
 async function loadPortalLogins() {
   if(!db) return;
   try {
@@ -885,11 +890,12 @@ async function checkPin() {
       }
     } catch(e){ console.warn('staff_portal_login:',e); }
   }
-  // Fallback path — mirrors the pre-680 behavior (incl. Nina's PIN
-  // opening the coordinator view from any selected button)
-  if(entered==='7021') { showNinaView(); return; }
-  if(selectedCleaner.pin && entered===selectedCleaner.pin) doLogin(selectedCleaner);
-  else pinRejected();
+  // No offline fallback. Checking a PIN in the browser means shipping the
+  // PIN to the browser, and there is nothing to fall back TO: every screen
+  // behind this one reads and writes the database, so if staff_portal_login()
+  // is unreachable the portal cannot do its job anyway. Say so plainly
+  // instead of pretending the PIN was wrong.
+  pinRejected('Can\'t reach the server — try again in a moment');
 }
 
 async function doLogin(cleaner) {

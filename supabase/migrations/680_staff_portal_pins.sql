@@ -39,20 +39,15 @@ DO $$ BEGIN
     CHECK (portal_pin IS NULL OR portal_pin ~ '^[0-9]{4}$');
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
-UPDATE public.team_contacts SET portal_pin = '0314', portal_color = '#f59e0b'
-WHERE org_id = '5966bc67-5c2f-45ae-8519-9b7eaeee09f4' AND cat = 'domestic' AND name LIKE 'Blessing%' AND portal_pin IS NULL;
-
-UPDATE public.team_contacts SET portal_pin = '0722', portal_color = '#8b5cf6'
-WHERE org_id = '5966bc67-5c2f-45ae-8519-9b7eaeee09f4' AND cat = 'domestic' AND name LIKE 'Fatima%' AND portal_pin IS NULL;
-
-UPDATE public.team_contacts SET portal_pin = '0828', portal_color = '#2dd4a0'
-WHERE org_id = '5966bc67-5c2f-45ae-8519-9b7eaeee09f4' AND cat = 'domestic' AND name LIKE 'Patricia%' AND portal_pin IS NULL;
-
-UPDATE public.team_contacts SET portal_pin = '0918', portal_color = '#5b8ef0'
-WHERE org_id = '5966bc67-5c2f-45ae-8519-9b7eaeee09f4' AND cat = 'domestic' AND name LIKE 'Spiwe%' AND portal_pin IS NULL;
-
-UPDATE public.team_contacts SET portal_pin = '7021', portal_color = '#6c47ff'
-WHERE org_id = '5966bc67-5c2f-45ae-8519-9b7eaeee09f4' AND cat = 'management' AND name LIKE 'Nina%' AND portal_pin IS NULL;
+-- The five real PINs used to be written out here, one UPDATE each. This
+-- repository is public, so publishing them defeated the whole point of the
+-- migration — it moved the PINs server-side and then printed them.
+--
+-- They are redacted. On a fresh database nobody has a PIN until an admin
+-- sets one in the Staff tab, which is the correct default: a portal login
+-- that exists before anyone asked for it is a way in, not a convenience.
+--
+-- The PINs that were here are public and must be changed in the Staff tab.
 
 -- Who appears on the portal's login screen. NO pin values here.
 -- Coordinator(s) last — the portal renders them as the full-width button

@@ -23,23 +23,24 @@ A comprehensive property management platform for short-term rental properties, b
 
 ## 🔐 User Accounts
 
-### Admin Access (Full Access)
-- **Email**: `sn_apt_management@outlook.com`
-- **Password**: `Sevilla2015!`
-- **Users**: Nicole and Silja
-- **Access**: All 9 tabs (Properties, Bookings, Check-in, Domestic, Tasks, Knowledge Base, Invoices, Reports, Financial)
+**No credentials in this file.** Accounts are Supabase Auth users; roles come
+from `public.profiles.role` and drive which tabs are visible:
 
-### Property Manager (Restricted)
-- **Email**: `vanwyk.nina@gmail.com`
-- **Password**: `HelloWorld1!`
-- **User**: Nina Williams
-- **Phone**: +27 083 702 2421
-- **Access**: All tabs except Reports & Financial (tabs hidden from UI)
+| Role     | Sees                                                        |
+|----------|-------------------------------------------------------------|
+| `owner`  | Everything, including Reports, Financial and Roadmap         |
+| `admin`  | Everything except the owner-only Roadmap                     |
+| `host`   | Day-to-day operations; Reports and Financial are hidden      |
+| `client` | Their own property dashboard only — no staff UI at all       |
 
-### Customer Account (Limited)
-- **Email**: `customer@nyxtraining.com`
-- **Password**: `password123`
-- **Access**: Basic functionality only
+Accounts are created in the app (People → Add) or by `api/create-user.js`.
+Password resets go through Supabase Auth.
+
+> Earlier revisions of this file listed real email addresses **and their
+> passwords in plain text**, for accounts that are still in use. The
+> passwords have been removed here, but this repository is public and git
+> history keeps every earlier revision: **any password that ever appeared in
+> this file must be considered public and changed.**
 
 ## 🏗️ Architecture
 
@@ -271,10 +272,9 @@ node setup.js
 ```
 
 This will create:
-- Admin user: sn_apt_management@outlook.com / Speranta2015!
-- Property Manager: nina@nyxtraining.com / password123
-- Customer user: customer@nyxtraining.com / password123
-- Sample properties (Speranta and TV House) with iCal integrations
+- An admin user, a property-manager user and a customer user — set their
+  passwords from the environment, never from a value written down here
+- Sample properties with iCal integrations
 - Initial knowledge base articles
 
 ## 🎯 Running the Application
@@ -321,18 +321,22 @@ Frontend will run on http://localhost:3000
 
 ## 🔄 iCal Integration
 
-The system automatically synchronizes with your booking platforms:
+The system synchronises with your booking platforms over their private iCal
+export links.
 
-### Speranta Property
-- Booking.com: `https://ical.booking.com/v1/export?t=8123e217-45b4-403d-8fa0-9dcc65c26800`
-- LekkeSlaap: `https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=bXEzOHNicTJQT3Nkd1dHb1ZSaXhRUT09`
-- Fewo: `http://www.fewo-direkt.de/icalendar/12b719114ecd42adab4e9ade2d2458e6.ics?nonTentative`
-- Airbnb: `https://www.airbnb.com/calendar/ical/1237076374831130516.ics?s=01582d0497e99114aa6013156146cea4&locale=en-GB`
+**The feed URLs are credentials and are not kept in this repository.** The
+token in an iCal export link is the only thing protecting it: anyone holding
+one can download the full guest calendar — names and dates — with no login.
+They live in `public.ical_feeds`, one row per (org, property, platform), and
+are entered through Settings → Sync.
 
-### TV House Property
-- Booking.com: `https://ical.booking.com/v1/export?t=ea29c451-4d0b-4fa4-b7a8-e879a33a8940`
-- LekkeSlaap: `https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=QzZ2aFlFVHhxYnoxdGRVL3ZwelRGUT09`
-- Airbnb: `https://www.airbnb.com/calendar/ical/1402174824640448492.ics?s=373c5a71c137230a72f928e88728dcf3&locale=en-GB`
+Earlier revisions of this file, and of `demo/index_fixed.html`, listed the
+real links for both properties. They have been redacted here, but redaction
+does not un-publish anything that was already served or pushed: **those six
+links must be regenerated at Airbnb, Booking.com and LekkeSlaap**, and the
+new ones pasted into Settings.
+
+Supported platforms: Booking.com, Airbnb, LekkeSlaap, FeWo-direkt.
 
 **Auto-sync**: Every 2 hours (configurable)
 **Manual sync**: Available via admin interface

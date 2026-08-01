@@ -2267,61 +2267,28 @@ let messages = [
 let ninaBTaskProgress = {};
 
 // ── SAMPLE DATA ───────────────────────────────────────────────
-const SAMPLE_BOOKINGS = [
-  // CURRENT / UPCOMING — Speranta
-  {id:'s1',  property_id:'speranta',guest_name:'Hedda Wessels',       platform:'booking',    check_in:'2026-04-15',check_out:'2026-04-17',nights:2, status:'checked-out', revenue:0,  currency:'ZAR',notes:''},
-  {id:'s2',  property_id:'speranta',guest_name:'Joe Ladlow',          platform:'airbnb',     check_in:'2026-04-17',check_out:'2026-04-21',nights:4, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s3',  property_id:'speranta',guest_name:'Armand Roets',        platform:'booking',    check_in:'2026-04-24',check_out:'2026-04-26',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s5',  property_id:'speranta',guest_name:'Carlin Baier',        platform:'booking',    check_in:'2026-05-05',check_out:'2026-05-07',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s6',  property_id:'speranta',guest_name:'Jack Marvellous',     platform:'booking',    check_in:'2026-05-08',check_out:'2026-05-10',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s7',  property_id:'speranta',guest_name:'Nicole & Silja (Owners)',platform:'manual',  check_in:'2026-05-13',check_out:'2026-05-21',nights:8, status:'owner',       revenue:0,  currency:'ZAR',notes:'Owner stay',is_active:false},
-  {id:'s8',  property_id:'speranta',guest_name:'Jasmine Hunton',      platform:'airbnb',     check_in:'2026-05-23',check_out:'2026-05-27',nights:4, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s9',  property_id:'speranta',guest_name:'Amogelang Masoma',    platform:'booking',    check_in:'2026-07-10',check_out:'2026-07-12',nights:2, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s10', property_id:'speranta',guest_name:'Tiago Borralho',      platform:'booking',    check_in:'2026-08-08',check_out:'2026-08-12',nights:4, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s11', property_id:'speranta',guest_name:'Puseletso Sono',      platform:'booking',    check_in:'2026-08-27',check_out:'2026-08-30',nights:3, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s12', property_id:'speranta',guest_name:'Prudence Masilela',   platform:'booking',    check_in:'2026-09-19',check_out:'2026-09-25',nights:6, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s13', property_id:'speranta',guest_name:'Muano Nemanashi',     platform:'booking',    check_in:'2026-09-25',check_out:'2026-09-28',nights:3, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s14', property_id:'speranta',guest_name:'Ngidi Nonhlanhla',    platform:'booking',    check_in:'2026-09-29',check_out:'2026-10-04',nights:5, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s15', property_id:'speranta',guest_name:'Frank Olyn',          platform:'booking',    check_in:'2026-12-14',check_out:'2026-12-17',nights:3, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s16', property_id:'speranta',guest_name:'Angelika Bramwell',   platform:'airbnb',     check_in:'2026-12-18',check_out:'2026-12-21',nights:3, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s17', property_id:'speranta',guest_name:'Olivia Da Silva',     platform:'booking',    check_in:'2026-12-24',check_out:'2026-12-28',nights:4, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'s18', property_id:'speranta',guest_name:'Vukona Nwandzule',    platform:'airbnb',     check_in:'2026-12-29',check_out:'2027-01-03',nights:5, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  // TV House upcoming
-  {id:'t1',  property_id:'tvhouse', guest_name:'Clare Lang',          platform:'booking',    check_in:'2026-04-13',check_out:'2026-04-22',nights:9, status:'confirmed',   revenue:0,  currency:'ZAR',notes:'9 nights'},
-  {id:'t2',  property_id:'tvhouse', guest_name:'Dimakatso Kunene',    platform:'lekkeslaap', check_in:'2026-04-25',check_out:'2026-04-30',nights:5, status:'confirmed',   revenue:0,  currency:'ZAR',notes:''},
-  {id:'t3',  property_id:'tvhouse', guest_name:'Mirka & Antonin (Owners)',platform:'manual', check_in:'2026-04-28',check_out:'2026-06-13',nights:46,status:'owner',       revenue:0,  currency:'ZAR',notes:'TV House owners visit',is_active:false},
-].map(b=>({...b,display_name:b.guest_name}));
-
-const SAMPLE_TASKS = [
-  // Guest management tasks
-  {id:'t1',title:'Fix leaking tap — Speranta bathroom',    property_id:'speranta',priority:'high',  status:'done', assigned:'Nina Williams',due:'2026-04-18',notes:'Under sink — urgent before Joe Ladlow arrives', type:'guest'},
-  {id:'t2',title:'Service air conditioner — Speranta',     property_id:'speranta',priority:'medium',status:'open', assigned:'Nicole',       due:'2026-04-25',notes:'Last serviced Jan 2025', type:'guest'},
-  {id:'t3',title:'Set up direct booking website',          property_id:'all',     priority:'high',  status:'open', assigned:'Nicole',       due:'2026-05-15',notes:'For follow-up booking messages to guests', type:'project'},
-  // Property projects
-  {id:'t4',title:'Garden project — Speranta',              property_id:'speranta',priority:'high',  status:'open', assigned:'Nicole',       due:'2026-04-30',notes:'Current project — coordinate with contractor', type:'project'},
-  {id:'t5',title:'Update Airbnb photos — TV House',        property_id:'tvhouse', priority:'low',   status:'open', assigned:'Silja',        due:'2026-04-30',notes:'New bedding installed — take new photos', type:'project'},
-  {id:'t6',title:'Deep clean before owners arrive — TV House',property_id:'tvhouse',priority:'high',status:'done', assigned:'Nina Williams',due:'2026-04-27',notes:'Mirka & Antonin arrive 28 Apr', type:'guest'},
-].map(t=>({...t,notes:t.notes||'',due:t.due||''}));
-
-const SAMPLE_DOMESTICS = [
-  {id:'d1',cleaner:'Blessing',property_id:'speranta',date:'2026-04-17',time:'10:00',type:'turnover',status:'scheduled',notes:'After Hedda Wessels checkout',   checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
-  {id:'d2',cleaner:'Patricia',property_id:'tvhouse', date:'2026-04-23',time:'10:00',type:'turnover',status:'scheduled',notes:'TV House booked',                 checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
-  {id:'d3',cleaner:'Spiwe',   property_id:'speranta',date:'2026-04-21',time:'10:00',type:'turnover',status:'scheduled',notes:'After Joe Ladlow checkout',       checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
-  {id:'d4',cleaner:'Fatima',  property_id:'speranta',date:'2026-04-26',time:'10:00',type:'turnover',status:'scheduled',notes:'After Armand Roets checkout',     checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
-  {id:'d5',cleaner:'Spiwe',   property_id:'speranta',date:'2026-05-03',time:'10:00',type:'turnover',status:'scheduled',notes:'After Gamede Lindiwe',            checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
-  {id:'d6',cleaner:'Patricia',property_id:'speranta',date:'2026-05-07',time:'10:00',type:'turnover',status:'scheduled',notes:'After Carlin Baier checkout',     checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
-  {id:'d7',cleaner:'Fatima',  property_id:'speranta',date:'2026-05-10',time:'10:00',type:'turnover',status:'scheduled',notes:'After Jack Marvellous checkout',  checklist:{kitchen:false,bathrooms:false,bedrooms:false,living:false,laundry:false}},
-];
-
-const SAMPLE_KB = [
-  {id:'k1',category:'Access',title:'Door Codes & Keys',content:'Speranta: Main door code #4521. Key box code 1234.\n\nTV House: Main door code #7893. Key box at front gate, code 5678.',tags:['access','security']},
-  {id:'k2',category:'WiFi',title:'WiFi Passwords',content:'Speranta: Network "Speranta_Guest" | Password: BloudBerg2024!\n\nTV House: Network "TVHouse_Guest" | Password: TableView2024!',tags:['wifi']},
-  {id:'k3',category:'Procedures',title:'Check-in Procedure',content:'1. Send welcome message 24h before arrival with access codes\n2. Confirm arrival time with guest\n3. Ensure property is clean and ready\n4. Leave welcome note and info folder\n5. Do quick video call walkthrough if needed',tags:['checkin']},
-  {id:'k4',category:'Procedures',title:'Check-out Procedure',content:'1. Send reminder evening before checkout\n2. Checkout time is 10:00\n3. Inspect property within 24 hours\n4. Report any damage via tasks\n5. Schedule cleaning immediately\n6. Send follow-up message inviting direct rebooking',tags:['checkout']},
-  {id:'k5',category:'Maintenance',title:'Emergency Contacts',content:'Plumber: Johan Botha - 082 555 1234\nElectrician: Cape Power - 021 555 9876\nLocksmith: Key King - 083 444 2222\nBusiness WhatsApp: +27 79 977 9455',tags:['emergency','contacts']},
-  {id:'k6',category:'Guest Info',title:'Area Guide',content:'Beach: 5 min walk\nCheckers Tableview: 3km\nTable Mountain: 30 min drive\nMyCiti bus: 200m away\nKitesurfing & whale watching (Jul-Nov)',tags:['area','guest']},
-  {id:'k7',category:'Procedures',title:'Nina Booking Checklist',content:'For every booking Nina must:\n1. Send check-in message 24h before arrival with access codes & house rules\n2. Book domestic/cleaning session after checkout date\n3. Process checkout - inspect property, log any issues as tasks\n4. Send follow-up message to guest inviting them to rebook directly via our website (coming soon)',tags:['nina','checklist','procedure']},
-];
+// ── PLACEHOLDER DATA ──────────────────────────────────────────
+// These four arrays are shown for the few hundred milliseconds between
+// the app painting and loadData()'s fetch returning. They used to hold
+// S&N's REAL operating data: 21 named guests, staff first names, the
+// door codes and WiFi passwords for both properties, and contractors'
+// mobile numbers. That is personal information under POPIA, it was in
+// the source of a page served to every visitor signed in or not, and
+// this repository is public — so it was readable three ways over.
+//
+// Same class of mistake as the hardcoded PROPS fallback and the calendar
+// tab bar: A DEFAULT THAT IS ONE TENANT'S REAL DATA IS NEVER A SAFE
+// DEFAULT. It is worse here, because the data was other people's.
+//
+// Empty is now the placeholder. Nothing is lost: bookings, tasks,
+// domestics and contacts all come from the database, and the knowledge
+// base content was moved into kb_articles and Property Manual > Access
+// & Welcome first. A blank half-second beats a flash of someone else's
+// guest list.
+const SAMPLE_BOOKINGS = [];
+const SAMPLE_TASKS    = [];
+const SAMPLE_DOMESTICS = [];
+const SAMPLE_KB       = [];
 // Finance-category notes (owner management fees, staff pay, cleaner rates)
 // used to live here too — pulled per owner feedback, that content belongs
 // in Reports/Management Invoice and Team, not the operational Knowledge
@@ -3583,22 +3550,25 @@ async function loadData() {
 // ever unreachable — never falls back for any other org, where an empty
 // result correctly means "no feeds configured yet", not "silently sync
 // someone else's calendars".
-const FALLBACK_ICAL_FEEDS_SN = [
-  // Speranta
-  { property_id: 'e9737638-d83a-4947-940a-8746789e4d9f', property_name: 'Speranta Flat', platform: 'booking',
-    url: 'https://ical.booking.com/v1/export?t=8123e217-45b4-403d-8fa0-9dcc65c26800' },
-  { property_id: 'e9737638-d83a-4947-940a-8746789e4d9f', property_name: 'Speranta Flat', platform: 'airbnb',
-    url: 'https://www.airbnb.com/calendar/ical/1237076374831130516.ics?s=01582d0497e99114aa6013156146cea4' },
-  { property_id: 'e9737638-d83a-4947-940a-8746789e4d9f', property_name: 'Speranta Flat', platform: 'lekkeslaap',
-    url: 'https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=bXEzOHNicTJQT3Nkd1dHb1ZSaXhRUT09' },
-  // TV House
-  { property_id: '83b2a84a-5451-4be5-a84f-2efc0d2602d5', property_name: 'TV House', platform: 'booking',
-    url: 'https://ical.booking.com/v1/export?t=ea29c451-4d0b-4fa4-b7a8-e879a33a8940' },
-  { property_id: '83b2a84a-5451-4be5-a84f-2efc0d2602d5', property_name: 'TV House', platform: 'airbnb',
-    url: 'https://www.airbnb.com/calendar/ical/1402174824640448492.ics?s=373c5a71c137230a72f928e88728dcf3' },
-  { property_id: '83b2a84a-5451-4be5-a84f-2efc0d2602d5', property_name: 'TV House', platform: 'lekkeslaap',
-    url: 'https://www.lekkeslaap.co.za/suppliers/icalendar.ics?t=QzZ2aFlFVHhxYnoxdGRVL3ZwelRGUT09' },
-];
+// There is deliberately NO hardcoded fallback here any more.
+//
+// This block used to carry six live private calendar-feed URLs — the
+// Booking.com, Airbnb and LekkeSlaap export links for both properties.
+// Those query tokens ARE the credential: anyone holding one can pull the
+// full guest calendar, names and dates included, with no login at all.
+// They sat in the source of a public page and in a public repository.
+//
+// The feeds live in public.ical_feeds, per org, and have done since the
+// table was added. Keeping a second copy in the page bought nothing
+// except a way to leak them, and "in case the table is unreachable" is
+// not worth a permanent exposure — if the table is unreachable, syncing
+// can wait.
+//
+// The tokens that were here must be treated as compromised and rotated
+// at each platform: regenerate the iCal export link in Airbnb, on
+// Booking.com and on LekkeSlaap, then paste the new URLs into Settings.
+// Removing them from the page does not un-publish them; only the
+// platform issuing a new link does.
 let ICAL_FEEDS = [];
 
 async function loadIcalFeeds() {
@@ -3620,9 +3590,6 @@ async function loadIcalFeeds() {
         }));
       }
     } catch (e) { console.warn('loadIcalFeeds:', e); }
-  }
-  if (!ICAL_FEEDS.length && getOrgId() === SN_OWNER_ORG_ID) {
-    ICAL_FEEDS = FALLBACK_ICAL_FEEDS_SN;
   }
   renderSyncHealth();
 }
@@ -5726,7 +5693,12 @@ function renderInvoicesTab() {
 
 
 // ── ROADMAP TAB (owner only) ──────────────────────────────────
-const ROADMAP = [
+// ROADMAP is filled from the database at load time — see rmLoadContent().
+let ROADMAP = [];
+// ROADMAP_SEED is the old in-page array, kept ONLY so an install that has
+// never synced can move its notes into the database once. Empty it as soon
+// as that has happened: while it has contents, they are in the page source.
+const ROADMAP_SEED = [
  {id:'now',lbl:'Immediate',meta:'This week',col:'#E24B4A',tasks:[
   {k:'now-1',t:'Invoices tab live — form, preview, sub-tabs rendering',n:'Structural nesting bug fixed; verify Quotation/Invoice toggle shows',c:'HEP'},
   {k:'now-2',t:'Invoice PDF generation fixed — client-side, colours preserved',n:'html2pdf.js replaces broken print fallback; date pickers + platform-based reference (DIRECT-/AIRBNB-/etc.) added',c:'HEP'},
@@ -5839,6 +5811,8 @@ const ROADMAP = [
   {k:"p3-21",t:"Trial countdown and lapsed read-only, enforced in the database (880)",n:"DONE (2026-07-31), implementing the owner's rule from p3-14: 'Lapsed account needs definitely limited view, but not lock out.' The line is READ EVERYTHING, WRITE NOTHING - the business keeps running on what is already there, but new work needs a live subscription. WHY TRIGGERS AND NOT RLS, which is the whole design decision: the obvious move is to AND a subscription check into the existing policies the way 824 added is_org_member, and it is WRONG here. Most of those policies are FOR ALL, and a FOR ALL policy's USING clause governs SELECT as well as UPDATE and DELETE - so the check would remove READ too, the exact opposite of the rule. Restricting only WITH CHECK does not work either, because WITH CHECK is never consulted for DELETE. A BEFORE INSERT/UPDATE/DELETE trigger cannot make that mistake: it runs on writes and only writes, so 'read everything' holds by construction. org_can_write(org) is false once a subscription is past_due/canceled/expired OR a trial's end date has passed - checking the date in the function means nothing has to sweep the table on a timer. FAIL-OPEN when no subscription row exists: a missing row means nobody has billed that org yet, and the cost of getting it wrong the other way is bricking a paying customer over a data gap. Three tables stay writable so a lapsed org can dig itself out - org_subscriptions (resubscribing is a write), org_settings (fixing billing details is a write) and profiles (blocking those risks locking the account rather than limiting it). Service-role callers are exempt, or the very webhook that REACTIVATES an org would be blocked by the lapse it is clearing. VERIFIED on staging by lapsing S&N and acting as Nicole: 418 bookings and 58 cleans still readable, UPDATE booking and INSERT task both refused with the plain-English message, org_settings still writable - then restored to active. The in-app banner is the honest FACE of the rule, not the enforcement: quiet until three days remain, then a countdown, then a read-only notice. All four existing orgs are grandfathered founder/active, so nothing changes for anyone until a real trial expires.",c:"Business"},
   {k:"p3-22",t:"HEP marketing page and self-serve signup with a one-week trial",n:"DONE (2026-07-31). The owner's ask: 'I want people to see an overview of what the platform delivers to sign up for the monthly subscription (with a week trial plan).' demo/welcome.html is the marketing page - what the product actually does (calendar sync, cleaning, guest messaging, real income from statements, inspections that raise tasks, roles), the owner-dashboard pitch as the differentiator almost no small agency can match, the R350/R550/R750 tiers from p3-14, and a signup form. Served at /welcome, /signup and /pricing, and linked from the login screen. It uses the app's own type and palette so the marketing page and the product do not look like two different companies. api/signup.js provisions org + owner profile + a 7-day trialing subscription + a blank org_settings row (870, so nothing is inherited from another tenant). DELIBERATELY UNAUTHENTICATED, unlike create-org.js which is gated to an S&N owner - a signup form that requires a login is not a signup form. What keeps that safe: it always creates a BRAND-NEW EMPTY org and never touches an existing one, the org id is generated server-side and never read from the request, and an email that already has an account is refused rather than having a second org grafted onto it. Full rollback on any failure, because a half-made org is an account that signs in and works badly, which is worse than one that never got made. The subscription row is written BEFORE the response on purpose: 880 fails open on a missing row, so an org without one would be a free-forever account. NO CARD UP FRONT per the owner's decision - expect more trials that never convert, which is the accepted cost and not a sign of the product failing. Signup does NOT auto-sign-in: typing the new password once at the real sign-in screen is what makes it stick. NOTE this opens PUBLIC REGISTRATION on production. Exposure is low today because hosteasepro.com is not registered and the page is only linked from the login screen, but it is a real change of posture and the owner should decide when to publicise it.",c:"GTM"},
   {k:"p3-23",t:"Marketing page: product shot, plan comparison, Starter lowered to 2",n:"DONE (2026-07-31). Owner, reviewing the marketing page: 'i like the intro page but maybe a video showing what all is possible wouldn't hurt? OR WHAT IT MEANS WHEN WE SAY growth included etc. also, starterpack 3 properties fair or should we lower it?' THREE THINGS. (1) SHOW THE PRODUCT: added a real screenshot of the owner dashboard in a browser frame - a capture of the actual app driven ENTIRELY BY SYNTHETIC DATA (fictional agency 'Cape Coast Property Co', fictional property, invented guests and round invented figures). A public page must never carry a customer's real bookings or income, and blurring a real capture is not a safeguard. The generator lives in the scratchpad, not the repo, so the shot is regenerated deliberately rather than drifting with the data. (2) WHAT 'GROWTH' MEANS: a line-by-line comparison table under the plan cards - properties, calendar sync, cleaning, guest messaging, owner dashboards, inspections, statement reading, reports, roles, shared task board, invoice branding, website editing, support. The cards say what you get; the table says what the words mean, which is what someone choosing a tier actually needs. Scrolls sideways on a phone rather than squashing - four columns at 380px is illegible. (3) STARTER LOWERED FROM 3 PROPERTIES TO 2, owner's decision after the recommendation. The reasoning: a 3-property agency is a real business that can afford R550, and the tier boundary should sit BELOW the typical customer rather than above it. The tell is that S&N itself runs 2 properties - if your own business would sit on the cheapest tier, the cheapest tier is too generous, and most of the target market would never reach Growth. Ladder is now 2 / 10 / unlimited. STILL OPEN: a walkthrough VIDEO is worth adding and the tour section is built to host one, but it should be recorded by the owner rather than faked - an authentic screen recording of someone who runs the business is worth more than a synthetic one, and it is a ten-minute job.",c:"GTM"},
+  {k:"p3-25",t:"Full audit: the repository is public, and it held live credentials",n:"DONE where it could be fixed in code; TWO ACTIONS LEFT FOR THE OWNER. Asked for 'a full check of github and supabase'. The Supabase half came first (890, 891) and is verified. The GitHub half found something bigger: THIS REPOSITORY IS PUBLIC. Not 'could be read if someone had the link' - listed on GitHub, readable by anyone, including every earlier revision. Every assumption in the codebase about what was safe to hardcode was written against a private repo; one seed file literally says 'KEEP REPO PRIVATE' in its header. What was in it: (1) LOGIN PASSWORDS IN PLAIN TEXT in README.md, including one for vanwyk.nina@gmail.com, a live production account that last signed in on 27 July. (2) SIX PRIVATE iCAL FEED URLS for both properties, in the page source and again in the README and two seed files - the token in those links IS the credential, and anyone holding one can download the full guest calendar, names and dates, with no login. (3) ALL FIVE STAFF PORTAL PINS, in demo/domestic.html and in migration 680 - the same migration whose entire purpose was moving PIN checking server-side, which it did, and then printed the PINs underneath. (4) The whole team's PERSONAL DATA in BUILTIN_CONTACTS: full names, personal mobile numbers, personal email addresses, DATES OF BIRTH and per-clean PAY RATES for six cleaners and a caretaker. (5) 21 REAL GUESTS by name in SAMPLE_BOOKINGS, plus door codes and WiFi passwords in SAMPLE_KB. Under POPIA (4) and (5) are other people's information, published without any of them having a say. FIXED IN CODE: every one of those is now redacted or gone. The placeholder arrays that held guests, staff and access codes are empty - they were only ever shown for the half-second before the real fetch lands, so nothing is lost, and the knowledge base content was copied into kb_articles first. The iCal fallback is deleted outright; the feeds live in ical_feeds and always did. The PIN fallback is deleted and the portal now says it cannot reach the server instead of pretending the PIN was wrong. THE PATTERN, for the third time: A DEFAULT THAT IS ONE TENANT'S REAL DATA IS NEVER A SAFE DEFAULT - same as the PROPS fallback (p3-18), the branding fallback (p3-20) and the calendar tab bar (p3-24). This time the default was other people's data. WHAT CODE CANNOT FIX: git history keeps every revision, so removing a secret does not un-publish it. TWO THINGS ONLY THE OWNER CAN DO, and they are the actual fix: MAKE THE REPOSITORY PRIVATE, and ROTATE EVERYTHING THAT WAS IN IT - the password for Nina's account and any other password that ever appeared in the README, the six iCal export links (regenerate at Airbnb, Booking.com and LekkeSlaap, then paste the new ones into Settings), and the five portal PINs in the Staff tab. Until those are done the credentials are public regardless of what the current code says.",c:"Security"},
+  {k:"p3-26",t:"Roadmap made genuinely private - notes moved out of the page (892)",n:"MOSTLY DONE - one step needs a single owner login. The instruction was 'roadmap is ONLY for me and no one else to see'. 891 locked roadmap_state so only the owner can read or change the TICKS, and that part is verified: the admin account sees zero. But the notes themselves - these 110 entries - were a const array in demo/index_fixed.html, a single-file app served to every browser, so anyone could open view-source and read the lot: pricing decisions, the competitor analysis, a customer's email address, and a written account of every security hole and how it was closed. An RLS policy cannot protect text that ships in the page, which is exactly what 891's own comment admitted at the time. 892 adds roadmap_phases and roadmap_items behind the same owner-only policy, and the app now reads the roadmap from there. The array that is left, ROADMAP_SEED, exists only to carry the existing notes across: the first time the owner opens the Roadmap tab it copies them into the database, and after that the database is the only source. LAST STEP: once that has happened, empty ROADMAP_SEED - that is the commit that actually takes the notes out of the page, and scripts/tests/test_roadmap_private.js prints a PENDING banner until it is done. Why it was not done in one go: the seed had to travel with the code, and putting 110 private notes into a migration file would have moved them from one public place to another while the repository is public. ALSO FIXED HERE, a regression from 891: it made org_id required on roadmap_state, but the app never sent one, so every tick since then failed the policy check and was swallowed by an empty catch - the tick looked saved until the page was reloaded. The app now sends org_id and the column has a default, and the primary key is (org_id, task_key) so two agencies cannot overwrite each other's ticks.",c:"Security"},
   {k:"p3-24",t:"Marketing tour of the agency screens, and a calendar hardcoded to S&N",n:"DONE (2026-07-31). Three pieces of owner feedback on the marketing page. (1) 'this feels a bit cut and I want them to rather see what THEY see and not the clients' - the single static shot was a tall full-page capture cropped mid-content, and it showed the CLIENT dashboard when the buyer is the AGENCY. Replaced with an auto-playing tour of four staff screens (dashboard, calendar, cleaning, tasks) with the owner dashboard as the closing beat, all captured at one viewport size so they share an aspect ratio and nothing crops. (2) 'I would have liked a quick minute showing some features which we can update later' - built as a cross-fade over pre-rendered screens rather than a video: no player, no hosting, no bandwidth budget, ~4.2s a slide, pauses on hover and on a hidden tab, honours prefers-reduced-motion, and a real recorded walkthrough can replace it by swapping one block for a <video>. (3) 'i don't want to limit myself with the property amount (up to 20)' - the differentiator card no longer names a ceiling; it now contrasts independents against enterprise tooling and says the price does not punish growth. Pro is unlimited, so advertising a cap told a 40-property agency to look elsewhere. ALL SCREENS USE SYNTHETIC DATA - fictional agency 'Cape Coast Property Co', three invented properties, invented guests and figures. FOUND WHILE DOING IT: the calendar's property tab bar was HARDCODED to 'Speranta Flat' and 'TV House' in the markup, so every other agency saw S&N's property names across the top of their calendar - the same class of bug as the PROPS fallback in p3-18 and the branding in p3-20, and it only surfaced because a marketing screenshot would have published it. Now built by buildCalPropTabs() from the org's own properties, rebuilt whenever the property list changes. Also fixed a 3px horizontal overflow at 420px caused by a fourth nav button; the two jump links now hide on a phone, where the page is one scroll anyway. NOTE more hardcoded S&N property names remain in the static markup (booking/task/manual property selects) - most are overwritten at runtime, but they should be audited the same way.",c:"GTM"},
   {k:'p3-2',t:'Pricing finalised from real partner data',n:'Starter R350 / Growth R550 / Pro R750 as baseline',c:'Business'},
   {k:'p3-3',t:'Support channel — WhatsApp Business or shared inbox',n:'One clear place for help',c:'GTM'},
@@ -5897,19 +5871,72 @@ function rmTimelineHtml(){
   return html;
 }
 
+// The roadmap notes used to be a const array in this file. This is a
+// single-file app served to every browser, so 110 private entries —
+// pricing, competitor analysis, customer names, write-ups of security
+// holes — were readable by anyone who opened view-source, signed in or
+// not. They now live in roadmap_items/roadmap_phases behind the same
+// owner-only policy as the ticks (892). ROADMAP_SEED is what is left of
+// the array: it is emptied once the content is in the database, and
+// exists only so an existing install can move its own notes across.
+async function rmLoadContent(){
+  let phases = [], items = [];
+  try{
+    const [ph, it] = await Promise.all([
+      db.from('roadmap_phases').select('phase_id,lbl,meta,col,sort').order('sort'),
+      db.from('roadmap_items').select('task_key,phase_id,title,note,cat,sort').order('sort'),
+    ]);
+    if (ph.error) throw ph.error;
+    if (it.error) throw it.error;
+    phases = ph.data || []; items = it.data || [];
+  }catch(e){ console.warn('roadmap content unavailable:', e.message||e); }
+
+  // Nothing stored yet but this build still carries the old array: push it
+  // up once, then read it back the normal way. Runs only for the owner —
+  // anyone else is refused by the policy and simply sees an empty tab.
+  if (!phases.length && ROADMAP_SEED.length && currentUser && currentUser.role === 'owner'){
+    try{
+      const org = currentUser.org_id;
+      await db.from('roadmap_phases').upsert(ROADMAP_SEED.map((p,i) => (
+        {org_id:org, phase_id:p.id, lbl:p.lbl, meta:p.meta, col:p.col, sort:i})));
+      const rows = [];
+      ROADMAP_SEED.forEach(p => p.tasks.forEach((t,j) => rows.push(
+        {org_id:org, task_key:t.k, phase_id:p.id, title:t.t, note:t.n||null, cat:t.c||null, sort:j})));
+      await db.from('roadmap_items').upsert(rows);
+      return rmLoadContent();
+    }catch(e){ console.warn('roadmap seed failed:', e.message||e); return ROADMAP_SEED; }
+  }
+
+  if (!phases.length) return ROADMAP_SEED;
+  return phases.map(p => ({
+    id:p.phase_id, lbl:p.lbl, meta:p.meta, col:p.col,
+    tasks: items.filter(t => t.phase_id === p.phase_id)
+                .map(t => ({k:t.task_key, t:t.title, n:t.note, c:t.cat})),
+  }));
+}
+
 async function rmLoad(){
   try{ const ls = JSON.parse(localStorage.getItem('hep_roadmap')||'{}'); Object.assign(rmState, ls); }catch(e){}
   try{
     const {data} = await db.from('roadmap_state').select('task_key,done');
     if(data) data.forEach(r => { rmState[r.task_key] = r.done; });
   }catch(e){ console.warn('roadmap_state table not found — using local storage only'); }
+  ROADMAP = await rmLoadContent();
 }
 
 async function rmToggle(k){
   rmState[k] = !rmState[k];
   try{ localStorage.setItem('hep_roadmap', JSON.stringify(rmState)); }catch(e){}
   rmRender();
-  try{ await db.from('roadmap_state').upsert({task_key:k, done:rmState[k], updated_at:new Date().toISOString()}); }catch(e){}
+  // org_id is required by the owner-only policy (891) and is NOT optional:
+  // without it the row inserts a null org, fails the with-check, and the
+  // catch below swallows the error — the tick looks saved until reload.
+  // 892 also gives the column a default, so this is belt and braces.
+  try{
+    const {error} = await db.from('roadmap_state').upsert(
+      {task_key:k, done:rmState[k], org_id:currentUser && currentUser.org_id, updated_at:new Date().toISOString()});
+    if (error) console.warn('roadmap tick not saved:', error.message);
+  }catch(e){ console.warn('roadmap tick not saved:', e.message||e); }
 }
 
 function rmTogglePhase(id){ rmOpen[id] = !rmOpen[id]; rmRender(); }
@@ -10456,32 +10483,17 @@ function toast(msg,type='info'){
   wrap.appendChild(t);setTimeout(()=>t.remove(),3500);
 }
 // ── CONTACTS DATA ────────────────────────────────────────────
-const BUILTIN_CONTACTS = [
-  // Management
-  {id:'c-nicole',  cat:'management', name:'Nicole Babczyk',    role:'Co-Owner / Admin',        phone:'+27 63 602 1847',   email:'sn_apt_management@outlook.com',  wa:'+27636021847',  note:'Co-founder S&N Apt Management. Manages bookings, finances & operations.', initials:'N'},
-  {id:'c-silja',   cat:'management', name:'Silja Faltin',      role:'Co-Owner / Admin',        phone:'',                  email:'s.faltin@tischlerei-faltin.de',  wa:'',              note:'Co-founder. TV House owner liaison.', initials:'S'},
-  {id:'c-nina',    cat:'management', name:'Nina Williams',      role:'Host Expert',             phone:'+27 79 977 9455',   email:'vanwyk.nina@gmail.com',          wa:'+27636021847',  note:'On-ground host manager. Business WhatsApp for all guest contact.', initials:'NW'},
-  // Domestic
-  {id:'c-blessing',cat:'domestic',   name:'Blessing',          role:'Cleaner — Speranta',      phone:'062 532 2932',      email:'',    wa:'27625322932', note:'Paid via ewallet directly. Rate: R350/clean.', initials:'BL',
-    cleaner_rate:350, cleaner_payment:'ewallet', cleaner_properties:['speranta'], birthday:'1988-03-14'},
-  {id:'c-fatima',  cat:'domestic',   name:'Fatima',            role:'Cleaner — Both properties',phone:'063 175 8111',     email:'',    wa:'27631758111', note:'Covers both properties. R350 Speranta / R450 TV House.', initials:'FA',
-    cleaner_rate:{speranta:350,tvhouse:450}, cleaner_payment:'ewallet', cleaner_properties:['speranta','tvhouse'], birthday:'1992-07-22'},
-  {id:'c-patricia',cat:'domestic',   name:'Patricia Mutizwa',  role:'Cleaner — TV House',      phone:'063 735 3892',      email:'',    wa:'27637353892', note:'Primary TV House cleaner. EFT payment. R350 Speranta / R450 TV House.', initials:'PM',
-    cleaner_rate:{speranta:350,tvhouse:450}, cleaner_payment:'eft', cleaner_properties:['speranta','tvhouse'], birthday:'1985-11-05'},
-  {id:'c-spiwe',   cat:'domestic',   name:'Spiwe Gwingwizna',  role:'Cleaner — Speranta',      phone:'084 915 0894',      email:'',    wa:'27849150894', note:'Speranta cleaner. Ewallet payment. R350/clean.', initials:'SP',
-    cleaner_rate:350, cleaner_payment:'ewallet', cleaner_properties:['speranta'], birthday:'1990-09-18'},
-  {id:'c-tino',    cat:'domestic',   name:'Takudzwa Dumbura',  role:'Caretaker (Tino)',        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat with wife Keithy. Born 13 July 1996.', initials:'TI',
-    cleaner_rate:null, cleaner_payment:'', cleaner_properties:[], birthday:'1996-07-13'},
-  {id:'c-keithy',  cat:'domestic',   name:'Keithy Ngwenya',    role:"Caretaker's Wife",        phone:'',                  email:'',    wa:'',            note:'Lives in TV House granny flat. Born 9 February 1997.', initials:'KE',
-    cleaner_rate:null, cleaner_payment:'', cleaner_properties:[], birthday:'1997-02-09'},
-  // Maintenance
-  {id:'c-pool',    cat:'maintenance', name:'Pool Service',      role:'Swimming Pool Maintenance',phone:'',                 email:'',    wa:'',            note:'Contact details TBC. Add pool service provider here.', initials:'🏊'},
-  // Suppliers
-  {id:'c-weatherprofe', cat:'supplier', name:'WeatherProfe Paint Shop', role:'Paint Supplier', phone:'',                  email:'',    wa:'',            note:'Personal contact: Heather, front desk.', initials:'WP',
-    contacts:[{name:'Heather', role:'Front Desk', phone:'083 445 6126', email:''}]},
-  {id:'c-dropalong', cat:'supplier',  name:'Drop Along Plumbing', role:'Plumbing Contractor',  phone:'',                  email:'',    wa:'',            note:'Trusted plumbing contractor.',          initials:'DA',
-    contacts:[{name:'Francois van Wyk', role:'Personal Contact', phone:'084 075 4684', email:'francois@ldrop.co.za', wa:'27840754684'}]},
-];
+// team_contacts (migration 520) is the live source for this tab; the
+// fetch in loadData() overwrites whatever is here. What used to be here
+// was S&N's actual team: full names, personal mobile numbers, personal
+// email addresses, DATES OF BIRTH and per-clean PAY RATES for six
+// cleaners and a caretaker, plus contractors' direct numbers — sitting
+// in the source of a public page, in a public repository.
+//
+// That is employees' personal information, published without any of them
+// having a say in it. Nothing about a loading placeholder justifies it,
+// and the database already had every row. Empty.
+const BUILTIN_CONTACTS = [];
 const CAT_COLORS = {management:'var(--accent)', domestic:'var(--teal)', maintenance:'var(--coral)', security:'#7c3aed', supplier:'var(--muted)', other:'var(--muted)'};
 
 let _contactFilter  = 'all';
@@ -11792,9 +11804,15 @@ async function renderClientDashboard() {
     // The window is always drawn from the day map, so switching to 3 or 6
     // months narrows the chart WITHOUT re-querying — the nights are
     // already known.
+    // Built from `today` (todaySAST), not from new Date(). Every other
+    // window on this dashboard keys off todaySAST, and this one keyed off
+    // the machine clock — so on 1 August a browser an hour behind SAST
+    // drew a chart ending in July beside an occupancy figure that had
+    // already rolled into August. Same family as the toISOString() bug
+    // that shifted the Czech client's dates: two clocks, one screen.
     const monthKeys = [];
     for (let i = _clientChartMonths - 1; i >= 0; i--) {
-      const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i);
+      const d = new Date(today + 'T00:00:00'); d.setDate(1); d.setMonth(d.getMonth() - i);
       monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
     }
     // Counts EVERY booked night in the month, including ones still to
