@@ -1857,6 +1857,9 @@ let CLIENT_BRAND = {
   email:      '',
   currency:   'ZAR',
   country:    'ZA',
+  tagline:    '',
+  strapline:  '',
+  signatories: [],
 };
 
 // ── Database (Supabase) ──
@@ -2333,6 +2336,12 @@ const BRAND_FIELDS = [
   { k: 'whatsapp',       label: 'WhatsApp',        ph: '27XXXXXXXXX',                 group: 'Identity',        where: 'settings',
     hint: 'Digits and country code, no + or spaces. Guest messages are sent from this number.' },
   { k: 'website',        label: 'Website',         ph: 'https://…',                   group: 'Identity',        where: 'settings' },
+  { k: 'tagline',        label: 'Tagline',         ph: 'e.g. Beyond the booking',     group: 'Documents',       where: 'settings',
+    hint: 'Printed under your name on invoices and owner statements. Leave blank to print nothing.' },
+  { k: 'strapline',      label: 'Strapline',       ph: 'e.g. CURATED STAYS',          group: 'Documents',       where: 'settings' },
+  { k: 'signatories',    label: 'Signed off by',   ph: 'Jane Smith, Director',        group: 'Documents',       where: 'settings',
+    type: 'signatories',
+    hint: 'One per line as "Name, Title". Leave blank for no signature block — most invoices have none.' },
   { k: 'address',        label: 'Address',         ph: 'Street, suburb, city',        group: 'Registered details', where: 'vault' },
   { k: 'reg_number',     label: 'Company reg. no', ph: '',                            group: 'Registered details', where: 'vault' },
   { k: 'tax_number',     label: 'Tax / VAT no',    ph: '',                            group: 'Registered details', where: 'vault' },
@@ -2344,6 +2353,24 @@ const BRAND_FIELDS = [
 ];
 
 let _brandRow = null;
+
+// signatories is stored as [{name,title}] but edited as plain lines —
+// "Nicole Babczyk, DIRECTOR" — because a repeating name/title form is a
+// lot of interface for something most orgs set once or leave empty.
+function signatoriesToText(v) {
+  if (!Array.isArray(v)) return '';
+  return v.filter(x => x && x.name)
+          .map(x => [x.name, x.title].filter(Boolean).join(', '))
+          .join('\n');
+}
+
+function textToSignatories(text) {
+  return String(text || '').split('\n').map(l => l.trim()).filter(Boolean).map(line => {
+    const i = line.indexOf(',');
+    return i < 0 ? { name: line, title: '' }
+                 : { name: line.slice(0, i).trim(), title: line.slice(i + 1).trim() };
+  }).filter(s => s.name);
+}
 
 const renderBrandSettings  = () => renderOrgFields('settings', 'settings-brand', 'settings-brand-card');
 const renderCompanyBanking = () => renderOrgFields('vault',    'vault-company',  'vault-company-card');
@@ -2377,9 +2404,11 @@ async function renderOrgFields(where, elId, cardId) {
         <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">${g}</div>
         <div class="form-grid" style="gap:10px">
           ${fields.filter(f => f.group === g).map(f => `
-            <div class="form-field${f.k === 'address' ? ' span-full' : ''}">
+            <div class="form-field${f.k === 'address' || f.type === 'signatories' ? ' span-full' : ''}">
               <label>${f.label}</label>
-              <input id="brand-${f.k}" placeholder="${escAttr(f.ph)}" value="${escAttr(_brandRow[f.k] || '')}"/>
+              ${f.type === 'signatories'
+                ? `<textarea id="brand-${f.k}" rows="2" placeholder="${escAttr(f.ph)}">${escHtml(signatoriesToText(_brandRow[f.k]))}</textarea>`
+                : `<input id="brand-${f.k}" placeholder="${escAttr(f.ph)}" value="${escAttr(_brandRow[f.k] || '')}"/>`}
               ${f.hint ? `<div style="font-size:.7rem;color:var(--muted);margin-top:3px">${f.hint}</div>` : ''}
             </div>`).join('')}
         </div>
@@ -2396,7 +2425,8 @@ async function saveBrandSettings(where) {
   const row = {};
   BRAND_FIELDS.filter(f => f.where === where).forEach(f => {
     const el = document.getElementById('brand-' + f.k);
-    if (el) row[f.k] = el.value.trim();
+    if (!el) return;
+    row[f.k] = f.type === 'signatories' ? textToSignatories(el.value) : el.value.trim();
   });
   if (row.whatsapp === undefined) delete row.whatsapp;
   // Digits only — a number stored as "+27 63 602 1847" produces a dead
@@ -2720,7 +2750,9 @@ const STANDARD_CLEANING_PLAN = [
   { area:'Laundry',      items:['Start any linen/towel laundry','Restock washing liquid/tablets if low','Hang or fold dry linen'] },
 ];
 function cleaningPlanText() {
-  return '*S&N Apt Management — Standard Cleaning Checklist*\n\n' +
+  // The org's own name — this goes out over WhatsApp to every cleaner,
+  // for every agency using HEP, not just S&N.
+  return '*' + (CLIENT_BRAND.name || 'Cleaning') + ' — Standard Cleaning Checklist*\n\n' +
     STANDARD_CLEANING_PLAN.map(s => `*${s.area}*\n` + s.items.map(i=>'• '+i).join('\n')).join('\n\n');
 }
 // Photo cleaning guides hosted as static PDFs (see vercel.json rewrites) —
@@ -4428,6 +4460,11 @@ async function loadOrgSettings(quiet) {
       email:     s.email         || '',
       currency:  s.currency      || 'ZAR',
       country:   s.country       || 'ZA',
+      // Printed on invoices and owner statements (893). Blank is a real
+      // answer and prints nothing — see invLetterheadHtml().
+      tagline:   s.tagline       || '',
+      strapline: s.strapline     || '',
+      signatories: Array.isArray(s.signatories) ? s.signatories : [],
     };
     applyBrandToChrome();
     // Taken straight from the org's row, with no fallback to a previous
@@ -4635,6 +4672,62 @@ function invToggleDeposit() {
   invRender();
 }
 
+// ── DOCUMENT BRANDING (893) ───────────────────────────────────────
+// Guest invoices and owner statements share a letterhead, a signature
+// block and a footer. All three were hardcoded to S&N: the name at the
+// top, "Beyond the booking", two directors signing by name, and S&N's
+// email in the footer. 870 fixed where the money goes and left the
+// document saying someone else's name — so a second agency billed their
+// own customer on S&N letterhead with two strangers' signatures, and
+// because the bank details were right it looked deliberate.
+//
+// Each part is OMITTED when the org has not set it. A plain invoice is
+// fine; an invoice wearing another company's identity is not. That is
+// the same reasoning as the blank bank account in 870: missing looks
+// incomplete and gets fixed, wrong looks finished and gets sent.
+function invDocName()  { return INV_COMPANY.name || CLIENT_BRAND.name || ''; }
+
+function invLetterheadHtml() {
+  const name = invDocName();
+  return '<div>'+
+    (name ? '<div style="color:#1A2340;font-size:16px;font-weight:700;letter-spacing:.08em">'+escHtml(name.toUpperCase())+'</div>' : '')+
+    (CLIENT_BRAND.tagline   ? '<div style="font-size:13px;color:#8b5e2a;font-style:italic;margin-top:3px">'+escHtml(CLIENT_BRAND.tagline)+'</div>' : '')+
+    (CLIENT_BRAND.strapline ? '<div style="font-size:10px;color:#a68a5b;letter-spacing:.06em;margin-top:2px">'+escHtml(CLIENT_BRAND.strapline)+'</div>' : '')+
+  '</div>';
+}
+
+// No signatories configured means no signature block at all — not an
+// empty ruled line waiting to be signed, and certainly not a default
+// name. Most invoices in the world carry no signature.
+function invSignatureHtml() {
+  const who = Array.isArray(CLIENT_BRAND.signatories) ? CLIENT_BRAND.signatories.filter(s => s && s.name) : [];
+  if (!who.length) return '';
+  const org = invDocName();
+  return '<div style="padding:20px 28px">'+
+    '<div style="font-size:11px;color:#444;margin-bottom:12px">Kind regards,</div>'+
+    '<div style="display:flex;gap:40px">'+
+      who.map(s =>
+        '<div style="flex:1">'+
+          '<div style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#1A2340;margin-bottom:5px">'+escHtml(s.name)+'</div>'+
+          '<div style="height:1px;background:#D4C9BC;margin-bottom:5px"></div>'+
+          '<div style="font-size:10px;color:#8b5e2a;letter-spacing:.04em">'+
+            escHtml([s.title, org].filter(Boolean).join(' · ').toUpperCase())+'</div>'+
+        '</div>').join('')+
+    '</div>'+
+  '</div>';
+}
+
+function invFooterHtml() {
+  const line = [invDocName(), INV_COMPANY.email || CLIENT_BRAND.email, CLIENT_BRAND.strapline]
+                 .filter(Boolean).join(' · ');
+  // Nothing configured at all: keep the coloured bar so the document
+  // still ends deliberately rather than trailing off mid-page.
+  return '<div style="background:#1A2340;padding:14px 20px;text-align:center;border-radius:0 0 6px 6px">'+
+    (CLIENT_BRAND.tagline ? '<div style="font-family:Georgia,serif;font-style:italic;font-size:14px;color:#B8962E">'+escHtml(CLIENT_BRAND.tagline)+'</div>' : '')+
+    (line ? '<div style="font-size:9.5px;color:rgba(184,150,46,.7);letter-spacing:.06em;margin-top:4px">'+escHtml(line.toUpperCase())+'</div>' : '')+
+  '</div>';
+}
+
 function invRender() {
   const preview = document.getElementById('inv-preview');
   if(!preview) return;
@@ -4661,11 +4754,7 @@ function invRender() {
   const bk         = INV_COMPANY.bank;
   preview.innerHTML =
     '<div style="background:#F5EFE6;padding:22px 28px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #B8962E">'+
-      '<div>'+
-        '<div style="color:#1A2340;font-size:16px;font-weight:700;letter-spacing:.08em">S&N APARTMENTS®</div>'+
-        '<div style="font-size:13px;color:#8b5e2a;font-style:italic;margin-top:3px">Beyond the booking</div>'+
-        '<div style="font-size:10px;color:#a68a5b;letter-spacing:.06em;margin-top:2px">CURATED STAYS · PERSONAL SERVICE</div>'+
-      '</div>'+
+      invLetterheadHtml()+
       '<div style="text-align:right">'+
         '<div style="color:#8b5e2a;font-size:19px;font-weight:700;letter-spacing:.05em">'+invType+'</div>'+
         '<div style="color:#555;font-size:11px;margin-top:4px;line-height:1.7">No: '+num+'<br>Date: '+dateIssued+'</div>'+
@@ -4737,17 +4826,8 @@ function invRender() {
       }).join('')+
     '</div>'+
     (notes.length?'<div style="padding:16px 28px;border-bottom:1px solid #E8E4DE"><div style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em;margin-bottom:8px">NOTES</div>'+notes.map(function(n){return '<div style="font-size:11px;color:#333;display:flex;gap:6px;margin-bottom:5px"><span style="color:#8b5e2a;font-weight:700">•</span><span>'+n+'</span></div>';}).join('')+'</div>':'')+
-    '<div style="padding:20px 28px">'+
-      '<div style="font-size:11px;color:#444;margin-bottom:12px">Kind regards,</div>'+
-      '<div style="display:flex;gap:40px">'+
-        '<div style="flex:1"><div style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#1A2340;margin-bottom:5px">Nicole Babczyk</div><div style="height:1px;background:#D4C9BC;margin-bottom:5px"></div><div style="font-size:10px;color:#8b5e2a;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
-        '<div style="flex:1"><div style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#1A2340;margin-bottom:5px">Silja Faltin</div><div style="height:1px;background:#D4C9BC;margin-bottom:5px"></div><div style="font-size:10px;color:#8b5e2a;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
-      '</div>'+
-    '</div>'+
-    '<div style="background:#1A2340;padding:14px 20px;text-align:center;border-radius:0 0 6px 6px">'+
-      '<div style="font-family:Georgia,serif;font-style:italic;font-size:14px;color:#B8962E">Beyond the booking</div>'+
-      '<div style="font-size:9.5px;color:rgba(184,150,46,.7);letter-spacing:.06em;margin-top:4px">S&N APT MANAGEMENT · SN_Apt_Management@outlook.com · CURATED STAYS · PERSONAL SERVICE</div>'+
-    '</div>';
+    invSignatureHtml()+
+    invFooterHtml();
 }
 
 async function loadOutgoing() {
@@ -6008,7 +6088,7 @@ function renderDashboard() {
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:1.3rem;animation:pulse 1.5s infinite">🔔</span>
           <div>
-            <div style="font-weight:700;font-size:.9rem;color:var(--ink)">${pendingDirect.length} S&N Apartments booking${pendingDirect.length>1?'s':''} awaiting approval</div>
+            <div style="font-weight:700;font-size:.9rem;color:var(--ink)">${pendingDirect.length} direct booking${pendingDirect.length>1?'s':''} awaiting approval</div>
             <div style="font-size:.76rem;color:var(--muted)">${pendingDirect.map(b=>b.display_name+' · '+fmtDate(b.check_in)).join(' · ')}</div>
           </div>
         </div>
@@ -10103,11 +10183,7 @@ function renderOwnerStatementPreview() {
   // each deduction (shown with a minus sign) instead of a flat sum.
   document.getElementById('ownstmt-preview').innerHTML =
     '<div style="background:#F5EFE6;padding:22px 28px;border-radius:6px 6px 0 0;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #B8962E">'+
-      '<div>'+
-        '<div style="color:#1A2340;font-size:16px;font-weight:700;letter-spacing:.08em">S&N APARTMENTS®</div>'+
-        '<div style="font-size:13px;color:#8b5e2a;font-style:italic;margin-top:3px">Beyond the booking</div>'+
-        '<div style="font-size:10px;color:#a68a5b;letter-spacing:.06em;margin-top:2px">CURATED STAYS · PERSONAL SERVICE</div>'+
-      '</div>'+
+      invLetterheadHtml()+
       '<div style="text-align:right">'+
         '<div style="color:#8b5e2a;font-size:19px;font-weight:700;letter-spacing:.05em">MANAGEMENT INVOICE</div>'+
         '<div style="color:#555;font-size:11px;margin-top:4px;line-height:1.7">No: '+invNum+'<br>Date: '+fmtDate(today)+'</div>'+
@@ -10160,17 +10236,8 @@ function renderOwnerStatementPreview() {
       '<div style="font-size:10px;font-weight:700;color:#8b5e2a;letter-spacing:.08em;margin-bottom:8px">NOTES</div>'+
       '<div style="font-size:11px;color:#333;display:flex;gap:6px;margin-bottom:5px"><span style="color:#8b5e2a;font-weight:700">•</span><span>Rental proceeds are a pass-through — they belong to the property owner(s) and are not held by '+INV_COMPANY.name+'. The total above covers the cleaning and management services performed on the owner\'s behalf and is payable to '+INV_COMPANY.name+' per the banking details above.</span></div>'+
     '</div>'+
-    '<div style="padding:20px 28px">'+
-      '<div style="font-size:11px;color:#444;margin-bottom:12px">Kind regards,</div>'+
-      '<div style="display:flex;gap:40px">'+
-        '<div style="flex:1"><div style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#1A2340;margin-bottom:5px">Nicole Babczyk</div><div style="height:1px;background:#D4C9BC;margin-bottom:5px"></div><div style="font-size:10px;color:#8b5e2a;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
-        '<div style="flex:1"><div style="font-family:Georgia,serif;font-style:italic;font-size:20px;color:#1A2340;margin-bottom:5px">Silja Faltin</div><div style="height:1px;background:#D4C9BC;margin-bottom:5px"></div><div style="font-size:10px;color:#8b5e2a;letter-spacing:.04em">DIRECTOR · S&N APT MANAGEMENT</div></div>'+
-      '</div>'+
-    '</div>'+
-    '<div style="background:#1A2340;padding:14px 20px;text-align:center;border-radius:0 0 6px 6px">'+
-      '<div style="font-family:Georgia,serif;font-style:italic;font-size:14px;color:#B8962E">Beyond the booking</div>'+
-      '<div style="font-size:9.5px;color:rgba(184,150,46,.7);letter-spacing:.06em;margin-top:4px">S&N APT MANAGEMENT · SN_Apt_Management@outlook.com · CURATED STAYS · PERSONAL SERVICE</div>'+
-    '</div>';
+    invSignatureHtml()+
+    invFooterHtml();
 }
 
 async function generateOwnerStatementPDF() {
