@@ -1892,18 +1892,19 @@ function _buildMobileNavStub(){/* replaced by main script */}
 //                      about managing their property is worse than sending
 //                      nothing.
 //
-// sunsetcoaststays.co.za was bought 2026-08-01. Change the one line below
-// once it actually resolves to the booking site — not when it is bought,
-// not while it is provisioning.
+// DONE 2026-08-01: sunsetcoaststays.co.za resolves and Vercel has issued
+// its certificate, so the guest link now points at the booking site's own
+// domain. It went to www.snapartments.co.za/stays for a few hours in
+// between — the /stays mattered, because that host's root became the S&N
+// company page the same evening, and a past guest following a discount
+// code to a B2B pitch about property management is worse than no link.
 //
-// Note the /stays on the end. www.snapartments.co.za/ is the S&N company
-// page as of 2026-08-01 — a B2B pitch about property management. Sending
-// a past guest there with a discount code would be worse than sending
-// nothing, so the guest link points at the listings, which are still
-// served from this host until the new domain resolves.
+// www, not the apex: Vercel serves www.sunsetcoaststays.co.za as
+// Production and 308s the bare domain to it, so linking the apex would put
+// a pointless redirect in front of every guest.
 const BOOKING_SITE_NAME = 'Sunset Coast Stays';
-const BOOKING_API_URL   = 'https://www.snapartments.co.za';        // stays put — see above
-const BOOKING_SITE_URL  = 'https://www.snapartments.co.za/stays';  // TODO -> https://www.sunsetcoaststays.co.za once the domain resolves
+const BOOKING_API_URL   = 'https://www.snapartments.co.za';       // stays put — see above
+const BOOKING_SITE_URL  = 'https://www.sunsetcoaststays.co.za';
 
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  WHO IS RUNNING THIS APP                                     ║
