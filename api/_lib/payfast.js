@@ -101,3 +101,55 @@ export const PLANS = {
   growth:  { label: 'Growth',  cents: 55000, properties: 8 },
   pro:     { label: 'Pro',     cents: 75000, properties: null },
 };
+
+// ── THE OTHER API, WITH THE OTHER SIGNATURE ───────────────────────
+//
+// PayFast has two signature schemes and they are not the same one.
+//
+//   Checkout (above): MD5 over the fields IN THE ORDER SENT.
+//   Recurring Billing API (here): MD5 over the headers and body
+//   parameters SORTED ALPHABETICALLY.
+//
+// Using the checkout rules here produces a signature that is wrong in a
+// way that looks right, and the failure is a 401 with no explanation of
+// which of the two you got wrong. Hence two clearly separated functions
+// rather than one with a flag.
+export const API_BASE = 'https://api.payfast.co.za';
+
+export function apiSignature(params, passphrase) {
+  const all = { ...params };
+  if (passphrase) all.passphrase = passphrase;
+  const ordered = Object.keys(all).sort()
+    .filter(k => all[k] !== undefined && all[k] !== null && String(all[k]) !== '')
+    .map(k => `${k}=${pfEncodePublic(String(all[k]).trim())}`);
+  return crypto.createHash('md5').update(ordered.join('&')).digest('hex');
+}
+
+// Same encoding rules as checkout — PHP urlencode, not encodeURIComponent.
+function pfEncodePublic(value) {
+  return encodeURIComponent(String(value))
+    .replace(/%20/g, '+')
+    .replace(/%[0-9a-f]{2}/g, m => m.toUpperCase());
+}
+
+// Cancels a subscription at PayFast. Returns { ok, status, body } and
+// never throws, because the caller has to tell the customer something
+// truthful either way.
+export async function cancelSubscription(token, cfg) {
+  const headers = {
+    'merchant-id': cfg.merchantId,
+    version: 'v1',
+    timestamp: new Date().toISOString().replace(/\.\d{3}Z$/, ''),
+  };
+  headers.signature = apiSignature(headers, cfg.passphrase);
+  if (!cfg.live) headers.testing = 'true';
+
+  try {
+    const r = await fetch(`${API_BASE}/subscriptions/${encodeURIComponent(token)}/cancel`,
+                          { method: 'PUT', headers });
+    const body = await r.text();
+    return { ok: r.ok, status: r.status, body };
+  } catch (e) {
+    return { ok: false, status: 0, body: String(e && e.message || e) };
+  }
+}

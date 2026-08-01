@@ -3133,7 +3133,16 @@ const NAV = [
   {id:'marketing',label:'Marketing',   icon:'📣',roles:['owner','admin','host']},
   {id:'vault',    label:'Business Info',icon:'🔐',roles:['owner','admin']},
   {id:'invoices', label:'Invoices',     icon:'🧾',roles:['owner','admin']},
-  {id:'roadmap',  label:'Roadmap',      icon:'🗺️',roles:['owner']},
+  // PLATFORM-ONLY. The roadmap is the platform owner's private working
+  // notebook, not a feature every agency gets — 'no one should see the
+  // roadmap tab but me'. roles:['owner'] alone was not enough: every
+  // agency has an owner, so every agency's owner saw the tab. Their
+  // roadmap was empty (891 makes sure of that), but an empty tab named
+  // Roadmap in someone else's product is still a thing they can see and
+  // ask about. Gated on platformOnly, resolved against
+  // platform_settings.platform_org_id — data, so it follows HEP into its
+  // own organisation without a code change.
+  {id:'roadmap',  label:'Roadmap',      icon:'🗺️',roles:['owner'],platformOnly:true},
   {id:'reports',  label:'Reports',      icon:'📊',roles:['owner','admin']},
   {id:'settings',  label:'Settings',     icon:'⚙️', roles:['owner','admin']},
 ];
@@ -3168,9 +3177,24 @@ function renderNavGroups(items, activeId, closeDrawerOnClick) {
     ).join('');
   }).join('');
 }
+// The org that owns the platform itself, from platform_settings (896).
+// Null until loadSubscription() has run, and a null must NOT open the
+// tab up to everyone — hence the explicit comparison rather than a
+// truthiness test.
+let platformOrgId = null;
+
+function isPlatformOwner() {
+  return !!(currentUser && currentUser.role === 'owner'
+            && platformOrgId && currentUser.org_id === platformOrgId);
+}
+
+function navFor(role) {
+  return NAV.filter(n => n.roles.includes(role) && (!n.platformOnly || isPlatformOwner()));
+}
+
 function buildNav() {
   const navEl = document.getElementById('sidebar-nav');
-  const items = NAV.filter(n=>n.roles.includes(currentUser.role));
+  const items = navFor(currentUser.role);
   const itemIds = items.map(n=>n.id).join(',');
   if (navEl.dataset.itemIds === itemIds) {
     // Same items as last render (the common case — role doesn't change
@@ -3190,7 +3214,7 @@ function buildNav() {
 function buildMobileDrawerNav() {
   const listEl = document.getElementById('mob-nav-list');
   if (!listEl || !currentUser) return;
-  const items = NAV.filter(n => n.roles.includes(currentUser.role));
+  const items = navFor(currentUser.role);
   listEl.innerHTML = renderNavGroups(items, currentTab, true);
 }
 
@@ -3224,6 +3248,14 @@ function switchTab(id) {
   }
   const nav = NAV.find(n => n.id === id);
   if (nav && currentUser && !nav.roles.includes(currentUser.role)) {
+    if (id !== 'dashboard') switchTab('dashboard');
+    return;
+  }
+  // Platform-only tabs are hidden from the nav, which stops them being
+  // clicked and says nothing about the other ways a tab opens. The
+  // database already refuses the data (891); this stops the empty shell
+  // of someone else's private tab appearing at all.
+  if (nav && nav.platformOnly && !isPlatformOwner()) {
     if (id !== 'dashboard') switchTab('dashboard');
     return;
   }
@@ -4508,9 +4540,14 @@ async function loadSubscription() {
   if (error) { console.warn('loadSubscription:', error.message); return; }
   orgSubscription = (data || [])[0] || null;
   try {
-    const ps = await db.from('platform_settings').select('billing_live').limit(1);
-    billingLive = !!((ps.data || [])[0] || {}).billing_live;
-  } catch (e) { billingLive = false; }
+    const ps = await db.from('platform_settings').select('billing_live,platform_org_id').limit(1);
+    const row = (ps.data || [])[0] || {};
+    billingLive = !!row.billing_live;
+    platformOrgId = row.platform_org_id || null;
+    // The nav is built before this resolves, so rebuild it now that we
+    // know whether the platform-only tabs belong to this user.
+    if (currentUser) { buildNav(); buildMobileNav(); }
+  } catch (e) { billingLive = false; platformOrgId = null; }
   renderSubscriptionBanner();
 }
 
