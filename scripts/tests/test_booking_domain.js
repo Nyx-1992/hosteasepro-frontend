@@ -145,15 +145,11 @@ ok('the public signup page names nobody real', inSignup.length === 0 ||
 ok('the staff portal names nobody real', inPortal.length === 0 ||
    (console.log('    found: ' + inPortal.join(', ')), false));
 
-// KNOWN GAP, NOT COVERED HERE. index_fixed.html still hardcodes
-// ['Nicole','Silja','Nina Williams','Tino'] as the task assignee list, in the
-// filter bar, the modal, the drawer and ASSIGNEE_COLORS. Another agency's
-// Tasks tab therefore offers them S&N's people to assign work to. It is the
-// same bug as the property list and wants the same fix — read the team from
-// team_contacts (cat='management') — but it spans five call sites plus static
-// markup in a tab that gets daily use, so it is a deliberate follow-up rather
-// than something to bolt on. Asserting it here would just fail on purpose;
-// this comment is the record.
+// The task assignee list was the last instance of this and is now fixed —
+// see scripts/tests/test_task_assignees.js, which covers it properly against
+// the real production data. index_fixed.html still contains those names in
+// comments explaining what was wrong, which is why the check above reads
+// code only.
 
 ok('the staff-portal card is populated at render time',
    /id="url-domestic"/.test(html) &&

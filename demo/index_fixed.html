@@ -1747,16 +1747,11 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div class="form-field span-full">
           <label>Assignees</label>
           <div id="t-assign-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px"></div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap">
-            <button type="button" onclick="toggleAssignee('Nicole')" id="ta-Nicole"
-              style="padding:4px 12px;border-radius:20px;border:1.5px solid #c17f3c;background:var(--sand);color:var(--ink);font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s">Nicole</button>
-            <button type="button" onclick="toggleAssignee('Silja')" id="ta-Silja"
-              style="padding:4px 12px;border-radius:20px;border:1.5px solid #7c3aed;background:var(--sand);color:var(--ink);font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s">Silja</button>
-            <button type="button" onclick="toggleAssignee('Nina Williams')" id="ta-Nina Williams"
-              style="padding:4px 12px;border-radius:20px;border:1.5px solid #16a34a;background:var(--sand);color:var(--ink);font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s">Nina</button>
-            <button type="button" onclick="toggleAssignee('Tino')" id="ta-Tino"
-              style="padding:4px 12px;border-radius:20px;border:1.5px solid #0369a1;background:var(--sand);color:var(--ink);font-size:.78rem;cursor:pointer;font-family:inherit;transition:all .15s">Tino</button>
-          </div>
+          <!-- Filled by renderModalAssignees() from the agency's own team.
+               These were four <button>s naming S&N's people, typed into the
+               markup, so every other agency's New Task form offered them a
+               choice of four strangers to assign work to. -->
+          <div id="t-assign-btns" style="display:flex;gap:5px;flex-wrap:wrap"></div>
           <input type="hidden" id="t-assign" value=""/>
         </div>
         <div class="form-field"><label>Due Date</label><input type="date" id="t-due"/></div>
@@ -9126,10 +9121,10 @@ function renderTasks() {
 function renderTaskFilterBar() {
   const filtersEl = document.getElementById('task-filters');
   if (!filtersEl) return;
-  const personBtns = ['all','Nicole','Silja','Nina Williams'].map(person => {
-    const label = person === 'all' ? 'All' : person === 'Nina Williams' ? 'Nina' : person;
+  const personBtns = ['all', ...getTaskAssignees()].map(person => {
+    const label = person === 'all' ? 'All' : assigneeShort(person);
     const active = taskAssigneeFilter === person;
-    return `<button onclick="setTaskAssigneeFilter('${person}')"
+    return `<button onclick="setTaskAssigneeFilter('${jsAttr(person)}')"
       style="padding:3px 9px;border-radius:12px;border:1.5px solid ${active?'var(--ocean)':'var(--border)'};background:${active?'var(--ocean)':'transparent'};color:${active?'#fff':'var(--muted)'};font-size:.7rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap">
       ${label}
     </button>`;
@@ -11596,6 +11591,12 @@ function ctSel(existing, cat, defaultWhenNew) {
   return (!existing && defaultWhenNew) ? 'selected' : '';
 }
 function escAttr(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+// For a value going into an inline onclick: it sits in a single-quoted JS
+// string inside a double-quoted HTML attribute, so it needs both layers.
+// escAttr alone leaves an apostrophe — O'Connor, N'Dour, D'Angelo — to end
+// the JS string early and break the handler. Backslash first, or the
+// escaping escapes itself.
+function jsAttr(s) { return escAttr(String(s ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'")); }
 // Full text escape — for content dropped between tags (textarea bodies,
 // message previews), where escAttr's quote-only escaping isn't enough.
 function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -14308,17 +14309,96 @@ function deleteVaultEntry(id) {
 
 
 
-// ── TASK ASSIGNEE COLORS ──────────────────────────────────────────────────────
-const ASSIGNEE_COLORS = {
-  'Nicole':        {bg:'#c17f3c', text:'#fff'},
-  'Silja':         {bg:'#7c3aed', text:'#fff'},
-  'Nina Williams': {bg:'#16a34a', text:'#fff'},
-  'Nina':          {bg:'#16a34a', text:'#fff'},
-  'Tino':          {bg:'#0369a1', text:'#fff'},
-};
+// ── WHO TASKS CAN BE ASSIGNED TO ──────────────────────────────────────────────
+//
+// This was ['Nicole','Silja','Nina Williams','Tino'] — S&N's four people —
+// written out in the filter bar, the modal markup, the drawer and a
+// colour map keyed by name. Every other agency's Tasks tab therefore
+// offered them four strangers to assign work to. Same mistake as the
+// hardcoded property list: A DEFAULT THAT IS ONE TENANT'S REAL DATA IS
+// NEVER A SAFE DEFAULT.
+//
+// The awkward part is not reading the team from team_contacts, it is that
+// tasks.assigned stores NAMES AS FREE TEXT and has done for a year:
+// 'Nicole', 'Silja', 'Nina Williams', 'Tino'. team_contacts holds 'Nicole
+// Babczyk' and 'Silja Faltin'. Generating chips from team_contacts alone
+// would produce 'Nicole Babczyk', which matches nothing already saved —
+// every historic task would show as unassigned and re-saving would write a
+// second spelling of the same person.
+//
+// So the existing data decides the spelling. For each management contact
+// we look for a name already used on a task and keep that form; only when
+// there is none do we fall back to the contact's first name. Anyone
+// assigned work who is not in the management list at all — a caretaker,
+// someone who has left — is appended, so their assignment stays visible
+// and removable rather than silently dropping off the task.
+function getTaskAssignees() {
+  const out = [], seen = new Set();
+  const push = (n) => {
+    const k = (n || '').trim().toLowerCase();
+    if (k && !seen.has(k)) { seen.add(k); out.push(n.trim()); }
+  };
+
+  // Every distinct name currently written on a task, in the spelling used.
+  // 'Unassigned' is a sentinel the UI writes, not a person.
+  const used = [];
+  tasks.forEach(t => (t.assigned || '').split(',').forEach(raw => {
+    const s = raw.trim();
+    if (!s || s.toLowerCase() === 'unassigned') return;
+    if (!used.some(u => u.toLowerCase() === s.toLowerCase())) used.push(s);
+  }));
+
+  contacts.filter(c => c.cat === 'management').forEach(c => {
+    const full = (c.name || '').trim();
+    if (!full) return;
+    const first = full.split(' ')[0];
+    const lc = full.toLowerCase(), lf = first.toLowerCase();
+    const existing = used.find(u => {
+      const lu = u.toLowerCase();
+      return lu === lc || lu === lf || lc.startsWith(lu);
+    });
+    // Full name, not the first name, when nothing is stored yet. The value
+    // written to tasks.assigned has to identify one person: an agency with
+    // two Thabos would otherwise file both under 'Thabo' and never be able
+    // to tell whose task it was. Shortening is a display concern and is
+    // handled by assigneeShort().
+    push(existing || full);
+  });
+
+  used.forEach(push);
+  return out;
+}
+
+// 'Nina Williams' shows as 'Nina' on a chip, as it always has — unless
+// someone else on the team is also a Nina, in which case both keep enough
+// surname to tell them apart. A chip that names the wrong colleague is
+// worse than a slightly longer chip.
+function assigneeShort(name, list) {
+  const full = (name || '').trim();
+  const first = full.split(' ')[0];
+  // Array.isArray, not a truthiness check: passing this straight to .map()
+  // hands it the index as the second argument, and `2 || getTaskAssignees()`
+  // is 2, which then throws on .filter. Caught by exactly that mistake in a
+  // test, which is where it would rather be caught than in the Tasks tab.
+  const others = (Array.isArray(list) ? list : getTaskAssignees()).filter(n => n !== full);
+  if (!others.some(n => n.split(' ')[0].toLowerCase() === first.toLowerCase())) return first;
+  const surname = full.slice(first.length).trim();
+  return surname ? `${first} ${surname[0]}.` : first;
+}
+
+// Position in that list picks the colour, the same way propColor() and
+// getCleanerColors() work. The palette is in the old order, so S&N's four
+// keep exactly the colours they have today.
+const ASSIGNEE_PALETTE = ['#c17f3c','#7c3aed','#16a34a','#0369a1','#be123c','#0f766e','#7e22ce','#a16207'];
 function assigneeColor(name) {
-  const key = Object.keys(ASSIGNEE_COLORS).find(k => (name||'').toLowerCase().includes(k.toLowerCase()));
-  return key ? ASSIGNEE_COLORS[key] : {bg:'#64748b', text:'#fff'};
+  const list = getTaskAssignees();
+  const n = (name || '').toLowerCase();
+  // Exact first, then the loose match the old map relied on, so a task
+  // saved as 'Nina Williams' still colours like the 'Nina' chip.
+  let i = list.findIndex(x => x.toLowerCase() === n);
+  if (i < 0) i = list.findIndex(x => n.includes(x.toLowerCase()) || x.toLowerCase().includes(n));
+  return i < 0 ? {bg:'#64748b', text:'#fff'}
+               : {bg: ASSIGNEE_PALETTE[i % ASSIGNEE_PALETTE.length], text:'#fff'};
 }
 let _modalAssignees = [];
 function toggleAssignee(name) {
@@ -14331,18 +14411,20 @@ function renderModalAssignees() {
   document.getElementById('t-assign').value = _modalAssignees.join(',');
   const chips = document.getElementById('t-assign-chips');
   if (chips) chips.innerHTML = _modalAssignees.map(n => {
-    const c = assigneeColor(n); const s = n==='Nina Williams'?'Nina':n;
-    return `<span style="background:${c.bg};color:${c.text};font-size:.75rem;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px">${s} <span onclick="toggleAssignee('${n}')" style="cursor:pointer;opacity:.7">x</span></span>`;
+    const c = assigneeColor(n);
+    return `<span style="background:${c.bg};color:${c.text};font-size:.75rem;font-weight:600;padding:3px 10px;border-radius:20px;display:inline-flex;align-items:center;gap:4px">${escHtml(assigneeShort(n))} <span onclick="toggleAssignee('${jsAttr(n)}')" style="cursor:pointer;opacity:.7">x</span></span>`;
   }).join('');
-  ['Nicole','Silja','Nina Williams','Tino'].forEach(name => {
-    const btn = document.getElementById('ta-'+name);
-    if (!btn) return;
+
+  // The buttons are built here rather than typed into the markup, so they
+  // are this agency's people and so a colleague added on the People tab is
+  // assignable straight away without a code change.
+  const btns = document.getElementById('t-assign-btns');
+  if (btns) btns.innerHTML = getTaskAssignees().map(name => {
     const active = _modalAssignees.includes(name);
     const c = assigneeColor(name);
-    btn.style.background = active ? c.bg : 'var(--sand)';
-    btn.style.color = active ? c.text : 'var(--ink)';
-    btn.style.fontWeight = active ? '700' : '400';
-  });
+    return `<button type="button" onclick="toggleAssignee('${jsAttr(name)}')"
+      style="padding:4px 12px;border-radius:20px;border:1.5px solid ${c.bg};background:${active?c.bg:'var(--sand)'};color:${active?c.text:'var(--ink)'};font-size:.78rem;font-weight:${active?'700':'400'};cursor:pointer;font-family:inherit;transition:all .15s">${escHtml(assigneeShort(name))}</button>`;
+  }).join('') || '<span style="font-size:.78rem;color:var(--muted)">No team members yet — add them on the People tab.</span>';
 }
 let _drawerTaskId = null;
 let _drawerAssignees = [];
@@ -14396,12 +14478,11 @@ function closeTaskDrawer() {
   _drawerTaskId = null;
 }
 function renderDrawerAssignees() {
-  const TEAM = ['Nicole','Silja','Nina Williams','Tino'];
-  document.getElementById('drawer-assignees').innerHTML = TEAM.map(name => {
+  document.getElementById('drawer-assignees').innerHTML = getTaskAssignees().map(name => {
     const active = _drawerAssignees.includes(name);
     const c = assigneeColor(name);
-    const short = name === 'Nina Williams' ? 'Nina' : name;
-    return `<button type="button" onclick="toggleDrawerAssignee('${name}')"
+    const short = assigneeShort(name);
+    return `<button type="button" onclick="toggleDrawerAssignee('${jsAttr(name)}')"
       style="padding:5px 14px;border-radius:20px;border:2px solid ${c.bg};background:${active?c.bg:'var(--sand)'};color:${active?c.text:'var(--ink)'};font-size:.78rem;font-weight:${active?'700':'400'};cursor:pointer;font-family:inherit;transition:all .15s">
       ${active?'+ ':' '}${short}</button>`;
   }).join('');
