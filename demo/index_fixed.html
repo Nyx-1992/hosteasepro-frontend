@@ -1426,6 +1426,15 @@ function _buildMobileNavStub(){/* replaced by main script */}
           <div style="font-family:'DM Serif Display',serif;font-size:1.4rem;font-weight:700">Settings &amp; Links</div>
         </div>
 
+        <!-- SUBSCRIPTION (895/896). What you are on, when you are next
+             charged, and how to stop — the last of those is not optional:
+             a subscription you cannot cancel yourself is not a
+             subscription, and the CPA entitles a customer to end it. -->
+        <div class="card" style="margin-bottom:18px" id="settings-billing-card">
+          <div style="font-weight:700;font-size:1rem;margin-bottom:4px">💳 Subscription</div>
+          <div id="billing-body"><div class="text-muted" style="font-size:.84rem">Loading…</div></div>
+        </div>
+
         <!-- BRANDING & INVOICE DETAILS (870). Everything here used to be
              hardcoded to S&N and inherited by every org — including the
              bank account on outgoing invoices. -->
@@ -2561,12 +2570,172 @@ async function saveBrandSettings(where) {
                          where === 'vault' ? 'vault-company-card' : 'settings-brand-card');
 }
 
+// ── SUBSCRIPTION SCREEN (895/896) ─────────────────────────────────
+//
+// Before this, the only billing surface was a banner that appeared three
+// days before a trial ended. Someone being charged R550 every month could
+// not see what plan they were on, when the next debit was, or how to
+// stop it. That is not a missing nicety — "where do I see my
+// subscription" is the first thing anyone asks after the first debit
+// order, and having no answer turns into a support queue and a chargeback.
+function fmtDay(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-ZA', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+const SUB_STATUS = {
+  trialing: ['On trial',   'var(--accent)'],
+  active:   ['Active',     'var(--green2)'],
+  past_due: ['Payment failed', 'var(--red)'],
+  canceled: ['Cancelled',  'var(--muted)'],
+  expired:  ['Expired',    'var(--red)'],
+};
+
+async function renderBilling() {
+  const el = document.getElementById('billing-body');
+  if (!el) return;
+  const canEdit = currentUser && ['owner', 'admin'].includes(currentUser.role);
+  if (!canEdit) {
+    el.innerHTML = '<div class="text-muted" style="font-size:.84rem">Only an owner or admin can see billing.</div>';
+    return;
+  }
+
+  const sub = orgSubscription;
+  if (!sub) {
+    el.innerHTML = '<div class="text-muted" style="font-size:.84rem">No subscription on this account yet.</div>';
+    return;
+  }
+
+  const [statusLabel, statusColour] = SUB_STATUS[sub.status] || [sub.status, 'var(--muted)'];
+  const planLabel = (HEP_PLANS.find(p => p.k === sub.plan) || {}).label || sub.plan || '—';
+  const rand = sub.amount_cents ? (sub.amount_cents / 100) : (HEP_PLANS.find(p => p.k === sub.plan) || {}).rand;
+  const left = trialDaysLeft();
+
+  // What happens next, in a sentence, rather than making them work it
+  // out from two dates and a status.
+  let next;
+  if (!billingLive) {
+    next = 'Card payments are not open yet. Nothing is locked and nothing will be charged — we will be in touch before that changes.';
+  } else if (sub.status === 'trialing') {
+    next = left !== null && left > 0
+      ? `Your trial runs until ${fmtDay(sub.trial_ends_at)} — ${left} day${left === 1 ? '' : 's'} left. Nothing is charged until you subscribe.`
+      : `Your trial ended on ${fmtDay(sub.trial_ends_at)}.`;
+  } else if (sub.status === 'active') {
+    next = `Next payment ${fmtDay(sub.current_period_end)}. R${rand} a month, and you can stop it any time.`;
+  } else if (sub.status === 'canceled') {
+    next = `Cancelled. You keep full access until ${fmtDay(sub.current_period_end)}, then the app becomes read-only — nothing is deleted.`;
+  } else if (sub.status === 'past_due') {
+    next = 'The last payment did not go through. Subscribing again will put it right.';
+  } else {
+    next = 'Subscribe to start writing again. Everything you have is still here.';
+  }
+
+  const showPlans = billingLive && sub.status !== 'active';
+  const showCancel = billingLive && sub.status === 'active';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+      <div style="font-size:1.15rem;font-weight:700">${escHtml(planLabel)}</div>
+      ${rand ? `<div style="font-size:.9rem;color:var(--muted)">R${rand}/month</div>` : ''}
+      <div style="font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:12px;background:var(--warm);color:${statusColour}">${escHtml(statusLabel)}</div>
+    </div>
+    <div style="font-size:.85rem;color:var(--muted);line-height:1.55;margin-bottom:14px">${escHtml(next)}</div>
+    ${sub.last_payment_at ? `<div style="font-size:.78rem;color:var(--muted);margin-bottom:12px">Last payment received ${fmtDay(sub.last_payment_at)}.</div>` : ''}
+
+    ${showPlans ? `<div style="border-top:1px solid var(--border);padding-top:14px">
+      <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Choose a plan</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${HEP_PLANS.map(p => `<button class="btn btn-sm ${p.k === sub.plan ? 'btn-primary' : 'btn-ghost'}"
+            onclick="startSubscription('${p.k}')">${p.label} · R${p.rand}<span style="opacity:.7">/mo</span></button>`).join('')}
+      </div>
+      <div style="font-size:.74rem;color:var(--muted);margin-top:7px">${HEP_PLANS.map(p => `${p.label}: ${p.blurb}`).join(' · ')}</div>
+    </div>` : ''}
+
+    ${showCancel ? `<div style="border-top:1px solid var(--border);padding-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-sm btn-ghost" id="billing-cancel-btn" onclick="cancelSubscriptionNow()"
+              style="color:var(--red);border-color:var(--red)">Cancel subscription</button>
+      <span style="font-size:.76rem;color:var(--muted)">You keep access until the end of the month you have paid for.</span>
+    </div>` : ''}
+
+    <div id="billing-history" style="margin-top:14px"></div>
+    ${isPlatformOwner() ? `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
+      <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Platform</div>
+      <label style="display:flex;gap:9px;align-items:flex-start;font-size:.84rem;cursor:pointer">
+        <input type="checkbox" id="billing-live-toggle" ${billingLive ? 'checked' : ''} onchange="setBillingLive(this.checked)" style="margin-top:3px">
+        <span>Billing is live — customers can pay, and a lapsed trial becomes read-only.
+          <span style="color:var(--muted)">Leave this off until the merchant account is working: while it is off nobody is charged and nobody is locked out.</span></span>
+      </label>
+      <div id="billing-live-msg" style="font-size:.78rem;margin-top:6px"></div>
+    </div>` : ''}`;
+
+  renderBillingHistory();
+}
+
+// Owner's own record of what was charged. Reads subscription_events,
+// which only an owner can see (895).
+async function renderBillingHistory() {
+  const el = document.getElementById('billing-history');
+  if (!el || !db || !currentUser || currentUser.role !== 'owner') return;
+  try {
+    const { data } = await db.from('subscription_events')
+      .select('event_type,amount_cents,accepted,created_at')
+      .eq('accepted', true).order('created_at', { ascending: false }).limit(12);
+    const rows = (data || []).filter(r => r.amount_cents);
+    if (!rows.length) return;
+    el.innerHTML =
+      '<div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px">Payments</div>' +
+      rows.map(r => `<div style="display:flex;justify-content:space-between;font-size:.83rem;padding:5px 0;border-bottom:1px solid var(--border)">
+          <span>${fmtDay(r.created_at)}</span>
+          <span style="font-weight:600">R${(r.amount_cents / 100).toLocaleString('en-ZA')}</span>
+        </div>`).join('');
+  } catch (e) { /* history is nice to have; never block the screen for it */ }
+}
+
+async function cancelSubscriptionNow() {
+  if (!confirm('Cancel your HostEase Pro subscription?\n\nYou keep full access until the end of the month you have already paid for. Nothing is deleted.')) return;
+  const btn = document.getElementById('billing-cancel-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Cancelling…'; }
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    const r = await fetch('/api/payfast-cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json',
+                 Authorization: `Bearer ${session ? session.access_token : ''}` },
+    });
+    const out = await r.json();
+    if (!r.ok) throw new Error(out.error || 'Could not cancel');
+    toast('Subscription cancelled', 'success');
+    await loadSubscription();
+    renderBilling();
+  } catch (e) {
+    toast(e.message || 'Could not cancel', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Cancel subscription'; }
+  }
+}
+
+// Platform-owner only, enforced by RLS as well as by hiding it (896).
+async function setBillingLive(on) {
+  const msg = document.getElementById('billing-live-msg');
+  const { error } = await db.from('platform_settings').update({ billing_live: on, updated_at: new Date().toISOString() }).eq('id', true);
+  if (error) {
+    if (msg) { msg.style.color = 'var(--red)'; msg.textContent = error.message; }
+    const box = document.getElementById('billing-live-toggle');
+    if (box) box.checked = !on;
+    return;
+  }
+  billingLive = on;
+  if (msg) { msg.style.color = 'var(--green2)'; msg.textContent = on ? 'Billing is live.' : 'Billing is off — nobody is charged or locked out.'; }
+  renderSubscriptionBanner();
+  renderBilling();
+}
+
 function renderSettingsPrefs() {
   const sel = document.getElementById('settings-timezone');
   if (sel) sel.value = userSettings.timezone || 'Africa/Johannesburg';
   renderPropertiesSettings();
   renderSocialShareSettings();
   renderBrandSettings();
+  renderBilling();
   const isSNOrg = getOrgId() === SN_OWNER_ORG_ID;
   const orgCard = document.getElementById('settings-org-card');
   if (orgCard) orgCard.style.display = isSNOrg ? '' : 'none';
