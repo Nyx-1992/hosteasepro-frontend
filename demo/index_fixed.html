@@ -4497,12 +4497,62 @@ let INV_COMPANY = {
 // as "your trial ended" rather than "the app is broken".
 let orgSubscription = null;
 
+// Whether the platform can actually take money yet (895). Separate from
+// whether THIS org has paid: while it is false nobody is gated, because
+// signup is open and the merchant account is not.
+let billingLive = false;
+
 async function loadSubscription() {
   if (!db) return;
   const { data, error } = await db.from('org_subscriptions').select('*').limit(1);
   if (error) { console.warn('loadSubscription:', error.message); return; }
   orgSubscription = (data || [])[0] || null;
+  try {
+    const ps = await db.from('platform_settings').select('billing_live').limit(1);
+    billingLive = !!((ps.data || [])[0] || {}).billing_live;
+  } catch (e) { billingLive = false; }
   renderSubscriptionBanner();
+}
+
+// R350 / R550 / R750 (p3-14). Mirrored from api/_lib/payfast.js, which
+// is the authority — the server decides what is charged, because a price
+// posted from a browser is a price the browser can edit.
+const HEP_PLANS = [
+  { k: 'starter', label: 'Starter', rand: 350, blurb: 'up to 2 properties' },
+  { k: 'growth',  label: 'Growth',  rand: 550, blurb: 'up to 8 properties' },
+  { k: 'pro',     label: 'Pro',     rand: 750, blurb: 'unlimited properties' },
+];
+
+// Hands off to PayFast. The signed fields come from the server; this
+// only builds the form and submits it.
+async function startSubscription(plan) {
+  const btn = document.getElementById('sub-pay-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Opening checkout…'; }
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    const r = await fetch('/api/payfast-subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json',
+                 Authorization: `Bearer ${session ? session.access_token : ''}` },
+      body: JSON.stringify({ plan }),
+    });
+    const out = await r.json();
+    if (!r.ok) throw new Error(out.error || 'Could not start checkout');
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = out.process_url;
+    Object.entries(out.fields).forEach(([k, v]) => {
+      const i = document.createElement('input');
+      i.type = 'hidden'; i.name = k; i.value = v;
+      form.appendChild(i);
+    });
+    document.body.appendChild(form);
+    form.submit();
+  } catch (e) {
+    toast(e.message || 'Could not start checkout', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Set up billing'; }
+  }
 }
 
 // Days left on a trial, or null when not trialling.
@@ -4530,6 +4580,31 @@ function renderSubscriptionBanner() {
   }
   const left = trialDaysLeft();
   const lapsed = subscriptionLapsed();
+  const canPay = billingLive && currentUser && ['owner','admin'].includes(currentUser.role);
+
+  const planButtons = () => HEP_PLANS.map(p =>
+    `<button id="sub-pay-btn" class="btn btn-sm btn-primary" style="margin-right:6px"
+       onclick="startSubscription('${p.k}')">${p.label} · R${p.rand}/mo</button>`).join('') +
+    `<div style="font-size:.74rem;color:var(--muted);margin-top:6px">${
+      HEP_PLANS.map(p => `${p.label}: ${p.blurb}`).join(' · ')}</div>`;
+
+  // BILLING IS NOT LIVE YET. Signup has been open since the marketing
+  // page shipped and the trial is a week; the merchant account is weeks
+  // away. Saying "subscribe now" with nowhere to subscribe is worse than
+  // saying nothing, and locking someone out for not paying when they
+  // cannot pay is our failure, not theirs — 895 makes the database agree
+  // by not enforcing the write gate while this is false.
+  if (!billingLive) {
+    if (left !== null && left <= 3) {
+      el.innerHTML = `<div style="background:#e0f2fe;border:1px solid #7dd3fc;border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:.86rem;line-height:1.5">
+        👋 <strong>Your trial period has ended</strong>, but card payments are not open yet — so nothing is locked
+        and you can keep working exactly as you are. We will be in touch to set up billing before anything changes.
+      </div>`;
+    } else {
+      el.innerHTML = '';
+    }
+    return;
+  }
 
   if (lapsed) {
     el.innerHTML = `<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;gap:12px;align-items:flex-start">
@@ -4538,6 +4613,7 @@ function renderSubscriptionBanner() {
         <strong>Read-only — your subscription has lapsed.</strong><br>
         Everything is still here and you can look at all of it. New bookings, messages and uploads need a live
         subscription. Your banking and business details stay editable so you can reactivate.
+        ${canPay ? `<div style="margin-top:10px">${planButtons()}</div>` : ''}
       </div></div>`;
     return;
   }
@@ -4547,6 +4623,7 @@ function renderSubscriptionBanner() {
     el.innerHTML = `<div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:10px;padding:11px 14px;margin-bottom:16px;font-size:.86rem">
       ⏳ <strong>${left} day${left === 1 ? '' : 's'} left</strong> on your HostEase Pro trial. After that the app stays
       readable, but you will not be able to add or change anything until you subscribe.
+      ${canPay ? `<div style="margin-top:10px">${planButtons()}</div>` : ''}
     </div>`;
     return;
   }
