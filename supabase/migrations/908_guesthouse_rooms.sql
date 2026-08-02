@@ -52,14 +52,15 @@
 --
 -- ══ BILLING: A GUESTHOUSE IS ONE PROPERTY ═════════════════════════
 --
--- The owner's decision, asked directly. An eight-room guesthouse counts as
--- one toward the plan limit, so Starter at R350 is genuinely usable by a
--- small guesthouse — which matters most right now, when the job is
--- recruiting them as testers rather than extracting R750 from them.
+-- SUPERSEDED BY 909 on the pricing, not on the counting. This function
+-- still answers "how many properties", and a guesthouse is still one of
+-- them. What changed is that the owner, seeing it, said "a guesthouse
+-- needs to be rather a medium plan then" — so how many properties is no
+-- longer the only thing that decides the plan. 909 has the rule.
 --
 -- Worth knowing, and not obvious: properties_limit has existed as a column
 -- since 830 and NOTHING HAS EVER ENFORCED IT. The pricing page promises
--- "up to 3 / up to 10 / unlimited" and any customer can add fifty. That is
+-- "up to 2 / up to 10 / unlimited" and any customer can add fifty. That is
 -- a slow leak with apartments and an instant one with guesthouses, so the
 -- counting function is defined here — correctly, counting guesthouses
 -- rather than rooms — ready for whenever the limit is actually applied.

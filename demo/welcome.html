@@ -56,6 +56,15 @@ section{padding:56px 0}
 .card .ico{font-size:1.5rem;display:block;margin-bottom:12px}
 
 .plans{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));align-items:stretch}
+/* Two segmented buttons rather than a switch: a switch implies on/off, and
+   neither of these is the "off" state — you are one or the other. */
+.plan-toggle{display:inline-flex;gap:4px;padding:4px;margin:0 auto 22px;border:1px solid var(--line,#e6e8ec);border-radius:999px;background:#fff}
+.plan-toggle{display:flex;width:max-content;margin-left:auto;margin-right:auto}
+.plan-toggle-btn{border:none;background:none;padding:9px 18px;border-radius:999px;font-family:inherit;font-size:.9rem;font-weight:600;color:#6b7280;cursor:pointer;transition:background .15s,color .15s;white-space:nowrap}
+.plan-toggle-btn.active{background:#14161D;color:#fff}
+.plan-toggle-btn:focus-visible{outline:2px solid #C17F3C;outline-offset:2px}
+.plan-note{text-align:center;font-size:.86rem;color:#6b7280;margin:18px auto 0;max-width:46ch;line-height:1.6}
+@media (max-width:420px){.plan-toggle-btn{padding:9px 12px;font-size:.82rem}}
 .plan{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:26px;display:flex;flex-direction:column}
 .plan.featured{border-color:var(--accent);box-shadow:0 8px 30px rgba(200,146,46,.14);position:relative}
 .plan.featured::after{content:"Most agencies";position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:.68rem;font-weight:700;padding:3px 12px;border-radius:999px;letter-spacing:.03em}
@@ -201,7 +210,24 @@ footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:v
     <h2>Pricing</h2>
     <p>Per agency, per month. Every plan includes the owner dashboards and the staff portal.</p>
   </div>
-  <div class="plans">
+  <!-- TWO TRACKS, because they are two businesses running the same
+       software. An agency has properties scattered across a city, each
+       with its own address, owner and cleaner — priced per PROPERTY. A
+       guesthouse is one building with rooms in it, daily servicing and
+       staff on site — priced per ROOM.
+
+       The toggle asks which you are instead of showing six tiers and
+       hoping you work it out. Nobody reads a pricing table wondering
+       whether they count as a property or a room; they know which of the
+       two things they run. -->
+  <div class="plan-toggle" role="tablist" aria-label="What do you run?">
+    <button id="tg-property" class="plan-toggle-btn active" role="tab" aria-selected="true"
+            onclick="setPlanTrack('property')">I manage properties</button>
+    <button id="tg-guesthouse" class="plan-toggle-btn" role="tab" aria-selected="false"
+            onclick="setPlanTrack('guesthouse')">I run a guesthouse</button>
+  </div>
+
+  <div class="plans" id="plans-property">
     <div class="plan">
       <div class="name">Starter</div>
       <div class="price">R350<small> /month</small></div>
@@ -221,6 +247,32 @@ footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:v
       <a class="btn btn-ghost" href="#start">Start free</a>
     </div>
   </div>
+
+  <div class="plans" id="plans-guesthouse" style="display:none">
+    <div class="plan">
+      <div class="name">Guesthouse</div>
+      <div class="price">R400<small> /month</small></div>
+      <ul><li>Up to 6 rooms</li><li>A calendar, rate and clean per room</li><li>Daily servicing</li><li>Guest messaging &amp; dashboards</li></ul>
+      <a class="btn btn-ghost" href="#start">Start free</a>
+    </div>
+    <div class="plan featured">
+      <div class="name">Guesthouse Plus</div>
+      <div class="price">R600<small> /month</small></div>
+      <ul><li>Up to 15 rooms</li><li>Everything in Guesthouse</li><li>Statement reading &amp; reports</li><li>Roles &amp; permissions</li></ul>
+      <a class="btn btn-primary" href="#start">Start free</a>
+    </div>
+    <div class="plan">
+      <div class="name">Guesthouse Pro</div>
+      <div class="price">R900<small> /month</small></div>
+      <ul><li>Unlimited rooms</li><li>Everything in Guesthouse Plus</li><li>Your branding on invoices</li><li>Priority support</li></ul>
+      <a class="btn btn-ghost" href="#start">Start free</a>
+    </div>
+  </div>
+
+  <p class="plan-note">
+    Run both? A guesthouse plan covers your separate properties too — you are
+    billed once, on the guesthouse tier that fits your rooms.
+  </p>
   <!-- The plan cards say what you get; this says what the words mean.
        "Growth" is meaningless on its own — an agency deciding between
        tiers needs the line item, not the adjective. -->
@@ -234,6 +286,12 @@ footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:v
       </tr></thead>
       <tbody>
         <tr><td>Properties</td><td>2</td><td class="hi">10</td><td>Unlimited</td></tr>
+        <!-- Superseded by the two-track toggle above: a guesthouse is no
+             longer a feature bolted onto an agency tier, it is its own set
+             of plans priced on rooms. So the comparison below is back to
+             comparing what the SOFTWARE does, which is the same for both. -->
+        <tr><td>Guesthouse rooms — a calendar, rate and clean for each</td><td>✓</td><td class="hi">✓</td><td>✓</td></tr>
+        <tr><td>Daily servicing while the guest is in residence</td><td>✓</td><td class="hi">✓</td><td>✓</td></tr>
         <tr><td>Calendar sync — Airbnb, Booking.com, LekkeSlaap</td><td>✓</td><td class="hi">✓</td><td>✓</td></tr>
         <tr><td>Cleaning schedule &amp; staff portal</td><td>✓</td><td class="hi">✓</td><td>✓</td></tr>
         <tr><td>Guest messaging with door codes &amp; WiFi</td><td>✓</td><td class="hi">✓</td><td>✓</td></tr>
@@ -288,6 +346,34 @@ footer{border-top:1px solid var(--line);padding:30px 0;text-align:center;color:v
 </div></footer>
 
 <script>
+// Pricing toggle. Swaps which set of three plans is shown; the comparison
+// table below stays as it is, because it compares what the software does
+// and that does not change with who is buying it.
+function setPlanTrack(track) {
+  var isGh = track === 'guesthouse';
+  var pEl = document.getElementById('plans-property');
+  var gEl = document.getElementById('plans-guesthouse');
+  if (pEl) pEl.style.display = isGh ? 'none' : '';
+  if (gEl) gEl.style.display = isGh ? '' : 'none';
+  [['tg-property', !isGh], ['tg-guesthouse', isGh]].forEach(function (pair) {
+    var b = document.getElementById(pair[0]);
+    if (!b) return;
+    b.classList.toggle('active', pair[1]);
+    b.setAttribute('aria-selected', pair[1] ? 'true' : 'false');
+  });
+  // Remembered so the choice survives following a link and coming back —
+  // somebody comparing tiers opens the FAQ and returns, and being reset to
+  // the other business's prices reads as the page having forgotten them.
+  try { localStorage.setItem('hep_plan_track', track); } catch (e) {}
+}
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('hep_plan_track'); } catch (e) {}
+  // ?plans=guesthouse so a link sent to a guesthouse owner opens on their
+  // prices rather than somebody else's.
+  var q = (location.search.match(/[?&]plans=(property|guesthouse)/) || [])[1];
+  if (q || saved === 'guesthouse' || saved === 'property') setPlanTrack(q || saved);
+})();
 // Auto-playing tour. Plain cross-fade over pre-rendered screens rather
 // than a video: it needs no player, no hosting and no bandwidth budget,
 // and a real recorded walkthrough can replace it later by swapping this
