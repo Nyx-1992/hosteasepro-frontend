@@ -12,9 +12,13 @@
 --
 -- 'Speranta Holdings' and 'TV House' are rows in organizations, created
 -- 2025-11-17, three days after S&N — left over from an early design where
--- each PROPERTY got its own org. They hold nothing: no logins, no
--- properties, no bookings, no contacts, no finance rows. Nobody can sign
--- into them, because no profile belongs to them.
+-- each PROPERTY got its own org. Nobody can sign into them, because no
+-- profile belongs to them.
+--
+-- NOT TO BE CONFUSED with the properties of the same names: 'Speranta
+-- Flat' (SPER) and 'TV House' (TVH) are rows in properties, belong to S&N,
+-- and carry 371 bookings between them. They are live and are not affected
+-- by anything here. The org rows are name-twins that own nothing.
 --
 -- They inflated every number on the platform dashboard: 4 customers when
 -- there is one real agency, and a "3 signed up but never added a property"
@@ -144,11 +148,19 @@ GRANT EXECUTE ON FUNCTION public.platform_summary()   TO authenticated;
 -- migration's — they are the only record that this data model was ever
 -- shaped that way. Delete when convenient:
 --
---   DELETE FROM public.org_settings   WHERE org_id IN (…);
---   DELETE FROM public.org_subscriptions WHERE org_id IN (…);
---   DELETE FROM public.organizations  WHERE id IN (…);
+--   DELETE FROM public.role_permissions   WHERE org_id IN (…);
+--   DELETE FROM public.platform_fee_config WHERE org_id IN (…);
+--   DELETE FROM public.org_settings        WHERE org_id IN (…);
+--   DELETE FROM public.org_subscriptions   WHERE org_id IN (…);
+--   DELETE FROM public.organizations       WHERE id IN (…);
 --
--- Verified empty on 2026-08-02: no profiles, properties, bookings,
--- team_contacts, finance_transactions or domestics reference either.
+-- WHAT THEY ACTUALLY HOLD, from sweeping every uuid column in the schema
+-- rather than the handful I first thought to check: no logins, properties,
+-- bookings, contacts, finance rows or cleans — but 28 role_permissions and
+-- 8 platform_fee_config rows each, which is the default scaffolding every
+-- org gets on creation. An earlier version of this comment said "verified
+-- empty" on the strength of a partial check; it was not wrong about the
+-- conclusion and was overstated about the evidence, and the delete script
+-- above was short by two tables because of it.
 
 -- End 905_customer_definition.
