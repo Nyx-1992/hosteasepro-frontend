@@ -85,7 +85,18 @@ h1,h2,h3{font-family:Syne,sans-serif}
 .nav-item{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:8px 14px;min-height:48px;opacity:.6;transition:opacity .2s}
 .nav-item.active{opacity:1}
 .nav-icon{font-size:1.3rem}
-.nav-label{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-family:Syne,sans-serif}
+/* Wraps and centres rather than overflowing. English "Availability" is the
+   shortest of the four languages here — isiXhosa "Ukufumaneka" and chiShona
+   "Kuchenesa" are longer, and a fixed single line would push the fourth tab
+   off a narrow phone. */
+.nav-label{font-size:.56rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-family:Syne,sans-serif;text-align:center;line-height:1.2;max-width:78px;overflow-wrap:anywhere}
+/* Language picker. Sits on the sign-in screen as well as inside the app,
+   because somebody who cannot read English has to be able to switch BEFORE
+   being asked to identify themselves. Option labels are each language's own
+   name for itself, so the list is readable whichever one you already speak. */
+.lang-select{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:5px 8px;color:var(--text);font-size:.75rem;font-family:inherit;cursor:pointer;max-width:130px}
+.lang-row{display:flex;align-items:center;gap:6px}
+.lang-row .globe{font-size:.9rem;opacity:.7}
 .nav-item.active .nav-label{color:var(--accent)}
 
 /* Screens */
@@ -282,13 +293,17 @@ h1,h2,h3{font-family:Syne,sans-serif}
   <!-- Not an agency name. This screen is shown before anyone signs in, and
        team_contacts/org_settings both require authentication, so the page
        genuinely cannot know whose portal it is yet. -->
-  <div class="auth-logo">HEP Staff Portal</div>
+  <div class="auth-logo" data-t="portalTitle">HEP Staff Portal</div>
+  <div class="lang-row" style="margin:-28px 0 26px">
+    <span class="globe">🌐</span>
+    <select class="lang-select" onchange="setStaffLang(this.value)" aria-label="Language"></select>
+  </div>
   <div class="auth-card">
-    <div class="auth-title">Good day! 👋</div>
-    <div class="auth-sub">Select your name to sign in</div>
+    <div class="auth-title" data-t="greet">Good day! 👋</div>
+    <div class="auth-sub" data-t="pickName">Select your name to sign in</div>
     <div class="cleaner-grid" id="cleaner-grid"></div>
     <div class="pin-section" id="pin-section">
-      <div class="pin-label">Enter your PIN</div>
+      <div class="pin-label" data-t="enterPin">Enter your PIN</div>
       <div class="pin-dots" id="pin-dots">
         <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
         <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
@@ -306,25 +321,28 @@ h1,h2,h3{font-family:Syne,sans-serif}
       <div class="user-avatar" id="user-avatar"></div>
       <div class="user-name" id="user-name"></div>
     </div>
-    <button class="logout-btn" onclick="doLogout()">Sign out</button>
+    <div class="lang-row">
+      <select class="lang-select" onchange="setStaffLang(this.value)" aria-label="Language"></select>
+      <button class="logout-btn" onclick="doLogout()" data-t="signOut">Sign out</button>
+    </div>
   </div>
   <div class="app-content">
     <div class="screen active" id="screen-home">
       <div id="home-alerts"></div>
       <div id="home-overdue"></div>
-      <div class="section-label" style="margin-bottom:12px">Next up</div>
+      <div class="section-label" style="margin-bottom:12px" data-t="nextUp">Next up</div>
       <div id="home-cleans"></div>
-      <div class="section-label" style="margin-top:20px;margin-bottom:10px">This month</div>
+      <div class="section-label" style="margin-top:20px;margin-bottom:10px" data-t="thisMonth">This month</div>
       <div id="home-stats"></div>
     </div>
     <div class="screen" id="screen-cleans">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div class="section-title" style="margin:0">My Cleans</div>
+        <div class="section-title" style="margin:0" data-t="myCleans">My Cleans</div>
         <div style="display:flex;gap:4px;background:var(--card2);border-radius:10px;padding:3px">
           <button id="filter-upcoming-btn" onclick="setCleanFilter('upcoming')"
-            style="padding:5px 12px;border-radius:7px;border:none;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;background:var(--accent);color:#fff;transition:all .2s">Upcoming</button>
+            style="padding:5px 12px;border-radius:7px;border:none;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;background:var(--accent);color:#fff;transition:all .2s" data-t="filterUpcoming">Upcoming</button>
           <button id="filter-completed-btn" onclick="setCleanFilter('completed')"
-            style="padding:5px 12px;border-radius:7px;border:none;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .2s">Completed</button>
+            style="padding:5px 12px;border-radius:7px;border:none;font-size:.74rem;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:var(--muted);transition:all .2s" data-t="filterCompleted">Completed</button>
         </div>
       </div>
       <div id="checkouts-needed"></div>
@@ -332,7 +350,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
     </div>
     <div class="screen" id="screen-inventory">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-        <button onclick="showScreen('cleans')" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;color:var(--text);font-size:.82rem;cursor:pointer;font-family:inherit">← Back</button>
+        <button onclick="showScreen('cleans')" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;color:var(--text);font-size:.82rem;cursor:pointer;font-family:inherit" data-t="back">← Back</button>
         <div>
           <div style="font-family:Syne,sans-serif;font-weight:800;font-size:1rem" id="inv-title"></div>
           <div style="font-size:.78rem;color:var(--muted)" id="inv-sub"></div>
@@ -343,38 +361,38 @@ h1,h2,h3{font-family:Syne,sans-serif}
         <!-- "Note for Nicole & Silja" named one agency's two owners to every
              cleaner on the platform. "the office" is who it is for in any
              agency, including this one. -->
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">📌 Note for the office</div>
-        <textarea class="ping-textarea" id="inv-note" placeholder="Anything else to mention? e.g. geyser making noise, gate stiff, neighbour complaint…"></textarea>
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px" data-t="noteOffice">📌 Note for the office</div>
+        <textarea class="ping-textarea" id="inv-note" data-t-ph="notePlaceholder" placeholder="Anything else to mention? e.g. geyser making noise, gate stiff, neighbour complaint…"></textarea>
       </div>
-      <button class="submit-btn green" onclick="submitInventory()">✓ Submit Inventory Report</button>
+      <button class="submit-btn green" onclick="submitInventory()" data-t="submitInv">✓ Submit Inventory Report</button>
     </div>
     <div class="screen" id="screen-avail">
-      <div class="section-title">My Availability</div>
-      <div class="section-sub">Tap a day to mark yourself unavailable</div>
+      <div class="section-title" data-t="myAvail">My Availability</div>
+      <div class="section-sub" data-t="tapDay">Tap a day to mark yourself unavailable</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <button onclick="availNav(-1)" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;color:var(--text);font-size:.8rem;cursor:pointer;font-family:inherit">← Prev</button>
+        <button onclick="availNav(-1)" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;color:var(--text);font-size:.8rem;cursor:pointer;font-family:inherit" data-t="prev">← Prev</button>
         <div style="font-family:Syne,sans-serif;font-weight:700" id="avail-month-label"></div>
-        <button onclick="availNav(1)" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;color:var(--text);font-size:.8rem;cursor:pointer;font-family:inherit">Next →</button>
+        <button onclick="availNav(1)" style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:6px 12px;color:var(--text);font-size:.8rem;cursor:pointer;font-family:inherit" data-t="next">Next →</button>
       </div>
       <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px">
-        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:rgba(45,212,160,.6)"></div>Clean booked</div>
-        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:rgba(45,212,160,.2);border:1px solid rgba(45,212,160,.5)"></div>Available (tap to set)</div>
-        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:var(--card2);border:1px solid var(--border)"></div>Unavailable (default)</div>
-        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;border:1.5px solid rgba(193,127,60,.5)"></div>Checkout (clean needed)</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:rgba(45,212,160,.6)"></div><span data-t="legendBooked">Clean booked</span></div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:rgba(45,212,160,.2);border:1px solid rgba(45,212,160,.5)"></div><span data-t="legendAvail">Available (tap to set)</span></div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;background:var(--card2);border:1px solid var(--border)"></div><span data-t="legendUnavail">Unavailable (default)</span></div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:.75rem;color:var(--muted)"><div style="width:10px;height:10px;border-radius:3px;border:1.5px solid rgba(193,127,60,.5)"></div><span data-t="legendCheckout">Checkout (clean needed)</span></div>
       </div>
       <div class="avail-cal" id="avail-cal"></div>
-      <button class="submit-btn" onclick="saveAvailability()">Save Availability</button>
+      <button class="submit-btn" onclick="saveAvailability()" data-t="saveAvail">Save Availability</button>
     </div>
     <div class="screen" id="screen-earnings">
-      <div class="section-title">My Earnings</div>
+      <div class="section-title" data-t="myEarnings">My Earnings</div>
       <div id="earnings-content"></div>
     </div>
   </div>
   <div class="bottom-nav">
-    <div class="nav-item active" onclick="showScreen('home')" id="nav-home"><div class="nav-icon">🏠</div><div class="nav-label">Home</div></div>
-    <div class="nav-item" onclick="showScreen('cleans')" id="nav-cleans"><div class="nav-icon">🧹</div><div class="nav-label">Cleans</div></div>
-    <div class="nav-item" onclick="showScreen('avail')" id="nav-avail"><div class="nav-icon">📅</div><div class="nav-label">Availability</div></div>
-    <div class="nav-item" onclick="showScreen('earnings')" id="nav-earnings"><div class="nav-icon">💰</div><div class="nav-label">Earnings</div></div>
+    <div class="nav-item active" onclick="showScreen('home')" id="nav-home"><div class="nav-icon">🏠</div><div class="nav-label" data-t="navHome">Home</div></div>
+    <div class="nav-item" onclick="showScreen('cleans')" id="nav-cleans"><div class="nav-icon">🧹</div><div class="nav-label" data-t="navCleans">Cleans</div></div>
+    <div class="nav-item" onclick="showScreen('avail')" id="nav-avail"><div class="nav-icon">📅</div><div class="nav-label" data-t="navAvail">Availability</div></div>
+    <div class="nav-item" onclick="showScreen('earnings')" id="nav-earnings"><div class="nav-icon">💰</div><div class="nav-label" data-t="navEarn">Earnings</div></div>
   </div>
 </div>
 
@@ -385,33 +403,36 @@ h1,h2,h3{font-family:Syne,sans-serif}
       <div class="nina-avatar">N</div>
       <div>
         <div class="nina-name">Nina Williams</div>
-        <div class="nina-role">Property Coordinator</div>
+        <div class="nina-role" data-t="coordinator">Property Coordinator</div>
       </div>
     </div>
-    <button class="nina-signout" onclick="ninaSignOut()">Sign out</button>
+    <div class="lang-row">
+      <select class="lang-select" onchange="setStaffLang(this.value)" aria-label="Language"></select>
+      <button class="nina-signout" onclick="ninaSignOut()" data-t="signOutShort">Sign out</button>
+    </div>
   </div>
   <div class="nina-tabs">
-    <button class="nina-tab active" id="ntab-schedule" onclick="switchNinaTab('schedule')">📋 Schedule</button>
-    <button class="nina-tab" id="ntab-inspect" onclick="switchNinaTab('inspect')">🔍 Inspect</button>
-    <button class="nina-tab" id="ntab-reports" onclick="switchNinaTab('reports')">📁 Reports</button>
+    <button class="nina-tab active" id="ntab-schedule" onclick="switchNinaTab('schedule')" data-t="tabSchedule">📋 Schedule</button>
+    <button class="nina-tab" id="ntab-inspect" onclick="switchNinaTab('inspect')" data-t="tabInspect">🔍 Inspect</button>
+    <button class="nina-tab" id="ntab-reports" onclick="switchNinaTab('reports')" data-t="tabReports">📁 Reports</button>
   </div>
 
   <!-- SCHEDULE TAB -->
   <div id="nina-tab-schedule" class="nina-tab-content">
     <div class="nina-section">
       <div class="nina-section-header">
-        <div><div class="nina-section-title">Upcoming Checkouts</div><div class="nina-section-sub">Next 30 days · assign a cleaner</div></div>
+        <div><div class="nina-section-title" data-t="upcomingCheckoutsTitle">Upcoming Checkouts</div><div class="nina-section-sub" data-t="next30assign">Next 30 days · assign a cleaner</div></div>
       </div>
       <div id="nina-checkouts-list"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
     <div class="nina-section">
       <div class="nina-section-header">
-        <div class="nina-section-title">Scheduled Cleanings</div>
+        <div class="nina-section-title" data-t="scheduledCleanings">Scheduled Cleanings</div>
         <div class="nina-filter-row">
           <select id="nina-sched-filter" onchange="loadNinaSchedule()">
-            <option value="upcoming">Upcoming</option>
-            <option value="all">All</option>
-            <option value="completed">Completed</option>
+            <option value="upcoming" data-t="filterUpcoming">Upcoming</option>
+            <option value="all" data-t="optAll">All</option>
+            <option value="completed" data-t="filterCompleted">Completed</option>
           </select>
         </div>
       </div>
@@ -419,7 +440,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
     </div>
     <div class="nina-section">
       <div class="nina-section-header">
-        <div><div class="nina-section-title">Cleaner Availability</div><div class="nina-section-sub">Next 14 days</div></div>
+        <div><div class="nina-section-title" data-t="cleanerAvailability">Cleaner Availability</div><div class="nina-section-sub" data-t="next14">Next 14 days</div></div>
       </div>
       <div id="nina-availability-grid"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
@@ -429,7 +450,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
   <div id="nina-tab-inspect" class="nina-tab-content" style="display:none;">
     <div class="nina-section">
       <div class="nina-section-header">
-        <div class="nina-section-title">Last Inspection</div>
+        <div class="nina-section-title" data-t="lastInspection">Last Inspection</div>
       </div>
       <div id="nina-last-inspections"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
       <div style="margin-top:10px;text-align:right;">
@@ -437,54 +458,54 @@ h1,h2,h3{font-family:Syne,sans-serif}
              so "/" is always the right way home — a hardcoded host goes stale
              the moment the domain changes, which it did when hosteasepro.com
              was registered (2026-08-01). -->
-        <a href="/" target="_blank" class="nina-link">View all reports in HEP →</a>
+        <a href="/" target="_blank" class="nina-link" data-t="viewAllInHep">View all reports in HEP →</a>
       </div>
     </div>
     <div class="nina-section">
-      <div class="nina-section-header"><div class="nina-section-title">New Inspection</div></div>
+      <div class="nina-section-header"><div class="nina-section-title" data-t="newInspection">New Inspection</div></div>
       <!-- Step 1 -->
       <div id="nina-insp-step1">
         <div class="nina-form-row">
-          <label>Property</label>
+          <label data-t="property">Property</label>
           <!-- Options are filled by renderPropertyPickers() from the
                agency's own properties. They used to be two <option>s naming
                S&N's flats, typed into the markup. -->
           <select id="nina-insp-property"><option value="">Select…</option></select>
         </div>
-        <div class="nina-form-row"><label>Date</label><input type="date" id="nina-insp-date"/></div>
-        <button class="nina-btn-primary" onclick="ninaInspNext(1)">Continue →</button>
+        <div class="nina-form-row"><label data-t="date">Date</label><input type="date" id="nina-insp-date"/></div>
+        <button class="nina-btn-primary" onclick="ninaInspNext(1)" data-t="continueArrow">Continue →</button>
       </div>
       <!-- Step 2 -->
       <div id="nina-insp-step2" style="display:none;">
         <div id="nina-insp-checklist"></div>
         <div class="nina-form-row" style="margin-top:14px;">
-          <label>Overall Condition</label>
+          <label data-t="overallCondition">Overall Condition</label>
           <div class="nina-rating-row" id="nina-insp-rating">
-            <button class="nina-rating-btn" data-val="excellent" onclick="ninaSetRating('excellent')">✅ Excellent</button>
-            <button class="nina-rating-btn" data-val="good" onclick="ninaSetRating('good')">👍 Good</button>
-            <button class="nina-rating-btn" data-val="fair" onclick="ninaSetRating('fair')">⚠️ Fair</button>
-            <button class="nina-rating-btn" data-val="poor" onclick="ninaSetRating('poor')">❌ Poor</button>
+            <button class="nina-rating-btn" data-val="excellent" onclick="ninaSetRating('excellent')" data-t="excellent">✅ Excellent</button>
+            <button class="nina-rating-btn" data-val="good" onclick="ninaSetRating('good')" data-t="good">👍 Good</button>
+            <button class="nina-rating-btn" data-val="fair" onclick="ninaSetRating('fair')" data-t="fair">⚠️ Fair</button>
+            <button class="nina-rating-btn" data-val="poor" onclick="ninaSetRating('poor')" data-t="poor">❌ Poor</button>
           </div>
         </div>
-        <div class="nina-form-row"><label>Breakages / Damage</label><textarea id="nina-insp-breakages" rows="2" placeholder="None if all okay"></textarea></div>
-        <div class="nina-form-row"><label>Notes</label><textarea id="nina-insp-notes" rows="2" placeholder="Anything to flag for owners"></textarea></div>
+        <div class="nina-form-row"><label data-t="breakagesLabel">Breakages / Damage</label><textarea id="nina-insp-breakages" rows="2" data-t-ph="noneIfOkay" placeholder="None if all okay"></textarea></div>
+        <div class="nina-form-row"><label data-t="notesLabel">Notes</label><textarea id="nina-insp-notes" rows="2" data-t-ph="flagForOwners" placeholder="Anything to flag for owners"></textarea></div>
         <div class="nina-btn-row">
-          <button class="nina-btn-secondary" onclick="ninaInspBack(2)">← Back</button>
-          <button class="nina-btn-primary" onclick="ninaInspNext(2)">Continue →</button>
+          <button class="nina-btn-secondary" onclick="ninaInspBack(2)" data-t="back">← Back</button>
+          <button class="nina-btn-primary" onclick="ninaInspNext(2)" data-t="continueArrow">Continue →</button>
         </div>
       </div>
       <!-- Step 3 -->
       <div id="nina-insp-step3" style="display:none;">
         <div class="nina-photo-drop" onclick="document.getElementById('nina-insp-photos').click()">
           <div style="font-size:1.8rem;">📷</div>
-          <div style="font-size:.85rem;color:var(--muted);margin-top:4px;">Tap to add photos (max 10)</div>
+          <div style="font-size:.85rem;color:var(--muted);margin-top:4px;" data-t="tapAddPhotos">Tap to add photos (max 10)</div>
           <input type="file" id="nina-insp-photos" accept="image/*" multiple capture="environment" onchange="ninaHandlePhotos(this)" style="display:none;"/>
         </div>
         <div id="nina-photo-grid" class="nina-photo-grid"></div>
         <div id="nina-photo-count" style="font-size:.78rem;color:var(--muted);margin:4px 0 12px;"></div>
         <div class="nina-btn-row">
-          <button class="nina-btn-secondary" onclick="ninaInspBack(3)">← Back</button>
-          <button class="nina-btn-primary" onclick="ninaInspNext(3)">Review →</button>
+          <button class="nina-btn-secondary" onclick="ninaInspBack(3)" data-t="back">← Back</button>
+          <button class="nina-btn-primary" onclick="ninaInspNext(3)" data-t="reviewArrow">Review →</button>
         </div>
       </div>
       <!-- Step 4 -->
@@ -492,16 +513,16 @@ h1,h2,h3{font-family:Syne,sans-serif}
         <div id="nina-insp-review" class="nina-review-block"></div>
         <div id="nina-insp-status" style="display:none;" class="nina-status-msg"></div>
         <div class="nina-btn-row">
-          <button class="nina-btn-secondary" onclick="ninaInspBack(4)">← Back</button>
-          <button class="nina-btn-submit" id="nina-insp-submit" onclick="ninaSubmitInspection()">Submit Inspection</button>
+          <button class="nina-btn-secondary" onclick="ninaInspBack(4)" data-t="back">← Back</button>
+          <button class="nina-btn-submit" id="nina-insp-submit" onclick="ninaSubmitInspection()" data-t="submitInspection">Submit Inspection</button>
         </div>
       </div>
       <!-- Success -->
       <div id="nina-insp-success" style="display:none;text-align:center;padding:30px 0;">
         <div style="font-size:2.5rem;">✅</div>
-        <div style="font-weight:800;margin:8px 0 4px;font-family:Syne,sans-serif;">Inspection submitted</div>
+        <div style="font-weight:800;margin:8px 0 4px;font-family:Syne,sans-serif;" data-t="inspectionSubmitted">Inspection submitted</div>
         <div id="nina-insp-success-ref" style="font-size:.82rem;color:var(--muted);margin-bottom:20px;"></div>
-        <button class="nina-btn-primary" onclick="ninaInspReset()">New Inspection</button>
+        <button class="nina-btn-primary" onclick="ninaInspReset()" data-t="newInspection">New Inspection</button>
       </div>
     </div>
   </div>
@@ -521,7 +542,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
     <!-- Inspection history -->
     <div class="nina-section">
       <div class="nina-section-header">
-        <div><div class="nina-section-title">Inspection History</div><div class="nina-section-sub">All submitted inspection reports</div></div>
+        <div><div class="nina-section-title" data-t="inspectionHistory">Inspection History</div><div class="nina-section-sub" data-t="allSubmittedReports">All submitted inspection reports</div></div>
       </div>
       <div id="nina-rep-inspections"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
@@ -529,7 +550,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
     <!-- Inventory reports -->
     <div class="nina-section" style="margin-top:14px;">
       <div class="nina-section-header">
-        <div><div class="nina-section-title">Inventory Reports</div><div class="nina-section-sub">Submitted by cleaners after each job</div></div>
+        <div><div class="nina-section-title" data-t="inventoryReports">Inventory Reports</div><div class="nina-section-sub" data-t="submittedByCleaners">Submitted by cleaners after each job</div></div>
       </div>
       <div id="nina-rep-inventory"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
@@ -537,7 +558,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
     <!-- Cleaner activity -->
     <div class="nina-section" style="margin-top:14px;">
       <div class="nina-section-header">
-        <div><div class="nina-section-title">Cleaner Activity</div><div class="nina-section-sub">All cleans · completed & scheduled</div></div>
+        <div><div class="nina-section-title" data-t="cleanerActivity">Cleaner Activity</div><div class="nina-section-sub" data-t="allCleansSub">All cleans · completed & scheduled</div></div>
       </div>
       <div id="nina-rep-cleans"><div style="padding:6px 0"><div class="skeleton-row"></div><div class="skeleton-row"></div><div class="skeleton-row"></div></div></div>
     </div>
@@ -549,27 +570,27 @@ h1,h2,h3{font-family:Syne,sans-serif}
 <!-- ASSIGN MODAL -->
 <div id="nina-assign-modal" class="nina-modal-overlay" style="display:none;" onclick="closeAssignModal(event)">
   <div class="nina-modal">
-    <div class="nina-modal-title">Assign Cleaning</div>
+    <div class="nina-modal-title" data-t="assignCleaning">Assign Cleaning</div>
     <div id="nina-assign-context" class="nina-assign-context"></div>
-    <div class="nina-form-row"><label>Cleaner</label><select id="nina-assign-cleaner" onchange="toggleOtherCleaner();checkAssignAvailability()"></select></div>
-    <div class="nina-form-row" id="nina-other-row" style="display:none"><label>Name</label><input type="text" id="nina-assign-other" placeholder="Who is cleaning? (one-off)"/></div>
-    <div class="nina-form-row" id="nina-other-phone-row" style="display:none"><label>Phone/WhatsApp</label><input type="tel" id="nina-assign-other-phone" placeholder="e.g. 082 123 4567 — sends them the inventory link"/></div>
-    <div class="nina-form-row"><label>Date</label><input type="date" id="nina-assign-date" onchange="checkAssignAvailability()"/></div>
-    <div class="nina-form-row"><label>Time</label><input type="time" id="nina-assign-time" value="10:00"/></div>
+    <div class="nina-form-row"><label data-t="cleaner">Cleaner</label><select id="nina-assign-cleaner" onchange="toggleOtherCleaner();checkAssignAvailability()"></select></div>
+    <div class="nina-form-row" id="nina-other-row" style="display:none"><label data-t="name">Name</label><input type="text" id="nina-assign-other" data-t-ph="whoIsCleaning" placeholder="Who is cleaning? (one-off)"/></div>
+    <div class="nina-form-row" id="nina-other-phone-row" style="display:none"><label data-t="phoneWa">Phone/WhatsApp</label><input type="tel" id="nina-assign-other-phone" data-t-ph="phoneHint" placeholder="e.g. 082 123 4567 — sends them the inventory link"/></div>
+    <div class="nina-form-row"><label data-t="date">Date</label><input type="date" id="nina-assign-date" onchange="checkAssignAvailability()"/></div>
+    <div class="nina-form-row"><label data-t="time">Time</label><input type="time" id="nina-assign-time" value="10:00"/></div>
     <div class="nina-form-row">
-      <label>Type</label>
+      <label data-t="type">Type</label>
       <select id="nina-assign-type">
-        <option value="turnover">Turnover clean</option>
-        <option value="deep_clean">Deep clean</option>
-        <option value="inspection_prep">Inspection prep</option>
+        <option value="turnover" data-t="turnoverClean">Turnover clean</option>
+        <option value="deep_clean" data-t="deepClean">Deep clean</option>
+        <option value="inspection_prep" data-t="inspectionPrep">Inspection prep</option>
       </select>
     </div>
-    <div class="nina-form-row"><label>Notes</label><input type="text" id="nina-assign-notes" placeholder="Optional"/></div>
+    <div class="nina-form-row"><label data-t="notesLabel">Notes</label><input type="text" id="nina-assign-notes" data-t-ph="optional" placeholder="Optional"/></div>
     <div id="nina-assign-availability" class="nina-avail-note"></div>
     <div id="nina-assign-status" style="display:none;" class="nina-status-msg"></div>
     <div class="nina-btn-row" style="margin-top:14px;">
-      <button class="nina-btn-secondary" onclick="document.getElementById('nina-assign-modal').style.display='none'">Cancel</button>
-      <button class="nina-btn-submit" id="nina-assign-btn" onclick="confirmAssignmentClick()">Confirm Assignment</button>
+      <button class="nina-btn-secondary" onclick="document.getElementById('nina-assign-modal').style.display='none'" data-t="cancel">Cancel</button>
+      <button class="nina-btn-submit" id="nina-assign-btn" onclick="confirmAssignmentClick()" data-t="confirmAssignment">Confirm Assignment</button>
     </div>
   </div>
 </div>
@@ -672,8 +693,546 @@ const FALLBACK_INVENTORY = {
   ],
 };
 
-const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const MONTHS_S = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// ══ LANGUAGES ═════════════════════════════════════════════════════
+//
+// "We also need to make the platform available for different languages."
+//
+// This portal is the one screen in HEP that is NOT used by the person who
+// bought it. It is used by cleaners, and telling someone to read job
+// instructions in their third language is how an instruction gets missed.
+// So this is the screen that earns the most from being translated, and it
+// is the one that got done first.
+//
+// ── HOW A LANGUAGE IS CHOSEN ──────────────────────────────────────
+//
+// Not from profiles.locale. Cleaners sign in with a PIN against
+// team_contacts — they have no auth.users row, so there is no profile to
+// hang a preference on. The choice lives in localStorage, per device,
+// which is also the honest match for how it is used: one cleaner, one
+// phone. The picker sits on the SIGN-IN screen as well as inside the app,
+// because somebody who cannot read English needs to switch BEFORE they are
+// asked to identify themselves, not after.
+//
+// ── HOW A LANGUAGE IS ADDED ───────────────────────────────────────
+//
+// Add a key to STAFF_LOCALES and a block to STAFF_T. That is the whole
+// job — no build step, no other file. Any key you leave out falls back to
+// English rather than breaking, so a half-finished language is safe to
+// commit and finish later.
+//
+// ── ON THE QUALITY OF WHAT IS BELOW ───────────────────────────────
+//
+// The Afrikaans is sound. The chiShona and isiXhosa were written with
+// care but NOT by a first-language speaker, and they should be read back
+// by one before anybody is told to rely on them — these are instructions
+// about entering and working in somebody's home, where a sentence that
+// lands slightly wrong is an operational problem and not a cosmetic one.
+// The people best placed to check them are already on the payroll.
+// Corrections are one-line edits in the blocks below.
+const STAFF_LOCALES = {
+  en: 'English',
+  af: 'Afrikaans',
+  sn: 'chiShona',
+  xh: 'isiXhosa',
+};
+
+const STAFF_T = {
+
+  // ── ENGLISH — the fallback, and therefore the complete one ───────
+  en: {
+    portalTitle:'HEP Staff Portal', language:'Language',
+    greet:'Good day! 👋', pickName:'Select your name to sign in',
+    enterPin:'Enter your PIN', pinWrong:'Incorrect PIN — try again',
+    pinNoServer:'Can\'t reach the server — try again in a moment',
+    almostThere:'Almost there 👋',
+    noKeyLead:'This link is missing the part that says which company you work for.',
+    noKeyBody:'Ask your manager to send you your own portal link. It ends with your company\'s name, like',
+    noKeyBody2:'Open that once and your phone will remember it.',
+
+    hi:'Hi, {name} 👋', signOut:'Sign out',
+    navHome:'Home', navCleans:'Cleans', navAvail:'Availability', navEarn:'Earnings',
+
+    nextUp:'Next up', thisMonth:'This month',
+    cancelledTitle:'🚫 Cleaning cancelled',
+    cancelledBody:'The booking was cancelled — this clean is no longer needed.',
+    wasScheduled:'was scheduled', overdueHead:'⏰ Overdue — submit inventory',
+    daysLate:'{n}d late', wasDue:'Was due', tapInventory:'Tap to submit inventory →',
+    noUpcoming:'No upcoming cleans scheduled',
+    today:'Today', upcoming:'Upcoming', overdue:'Overdue', done:'Done', scheduled:'Scheduled',
+    earnedThisMonth:'Earned this month', upcomingCleansStat:'Upcoming cleans', inventoryDue:'Inventory due',
+
+    myCleans:'My Cleans', filterUpcoming:'Upcoming', filterCompleted:'Completed',
+    noCleansYet:'No cleans assigned to you yet',
+    noUpcomingCleans:'No upcoming cleans', noCompletedCleans:'No completed cleans',
+    upcomingCheckouts:'🧹 Upcoming Checkouts', checksOut:'{name} checks out',
+    booked:'Booked', needed:'⚠ Needed',
+
+    back:'← Back', noteOffice:'📌 Note for the office',
+    notePlaceholder:'Anything else to mention? e.g. geyser making noise, gate stiff, neighbour complaint…',
+    submitInv:'✓ Submit Inventory Report', describeIssue:'Describe issue…', saving:'Saving…',
+    noConnection:'📶 No connection — try again once you\'re back online',
+    noConnectionKeep:'📶 No connection — we\'ll keep this on screen, try Submit again once you\'re back online',
+    couldntSave:'Couldn\'t save — check your connection and try again',
+    submittedFlagged_one:'✓ Submitted — {n} item flagged',
+    submittedFlagged_other:'✓ Submitted — {n} items flagged',
+    submittedNote:'✓ Submitted with note', allDone:'🎉 Nice one — all done!',
+
+    myAvail:'My Availability', tapDay:'Tap a day to mark yourself unavailable',
+    prev:'← Prev', next:'Next →',
+    legendBooked:'Clean booked', legendAvail:'Available (tap to set)',
+    legendUnavail:'Unavailable (default)', legendCheckout:'Checkout (clean needed)',
+    saveAvail:'Save Availability', availSaved:'Availability saved ✓',
+    notConnected:'Not connected', saveError:'Save error',
+
+    myEarnings:'My Earnings', allTimeTotal:'All time total:',
+    monthlyBreakdown:'Monthly breakdown', noCompletedYet:'No completed cleans yet',
+    cleansDone_one:'{n} clean completed', cleansDone_other:'{n} cleans completed',
+    cleansN_one:'{n} clean', cleansN_other:'{n} cleans',
+    markedDone:'Marked as done ✓', errorPrefix:'Error',
+
+    coordinator:'Coordinator', signOutShort:'Sign out',
+    tabSchedule:'📋 Schedule', tabInspect:'🔍 Inspect', tabReports:'📁 Reports',
+    upcomingCheckoutsTitle:'Upcoming Checkouts', next30assign:'Next 30 days · assign a cleaner',
+    noCheckouts30:'No checkouts in the next 30 days.',
+    scheduledCleanings:'Scheduled Cleanings', optAll:'All',
+    cleanerAvailability:'Cleaner Availability', next14:'Next 14 days',
+    noEntries:'No entries found.', reassign:'Reassign', assignArrow:'Assign →',
+    noCleanerAssigned:'⚠ No cleaner assigned', markDone:'Mark done',
+    available:'Available', unavailable:'Unavailable', notSubmitted:'· Not submitted',
+    checkoutLabel:'Checkout:', other:'Other…',
+    lastInspection:'Last Inspection', noInspectionYet:'No inspection recorded yet',
+    viewAllInHep:'View all reports in HEP →', newInspection:'New Inspection',
+    property:'Property', selectDots:'Select…', date:'Date', continueArrow:'Continue →',
+    overallCondition:'Overall Condition',
+    excellent:'✅ Excellent', good:'👍 Good', fair:'⚠️ Fair', poor:'❌ Poor',
+    breakagesLabel:'Breakages / Damage', noneIfOkay:'None if all okay',
+    notesLabel:'Notes', flagForOwners:'Anything to flag for owners',
+    tapAddPhotos:'Tap to add photos (max 10)', reviewArrow:'Review →',
+    submitInspection:'Submit Inspection', inspectionSubmitted:'Inspection submitted',
+    inspectionHistory:'Inspection History', allSubmittedReports:'All submitted inspection reports',
+    noInspectionsFound:'No inspections found.', noIssues:'✓ No issues',
+    inventoryReports:'Inventory Reports', submittedByCleaners:'Submitted by cleaners after each job',
+    noInventoryFound:'No inventory reports found.', allOk:'✓ All OK', ok:'✓ OK',
+    cleanerActivity:'Cleaner Activity', allCleansSub:'All cleans · completed & scheduled',
+    rating:'Rating', photos:'Photos', breakagesCol:'Breakages',
+    assignCleaning:'Assign Cleaning', cleaner:'Cleaner', name:'Name',
+    whoIsCleaning:'Who is cleaning? (one-off)', phoneWa:'Phone/WhatsApp',
+    phoneHint:'e.g. 082 123 4567 — sends them the inventory link',
+    time:'Time', type:'Type', turnoverClean:'Turnover clean',
+    deepClean:'Deep clean', inspectionPrep:'Inspection prep',
+    optional:'Optional', cancel:'Cancel', confirmAssignment:'Confirm Assignment',
+    enterOneOffName:'Enter a name for the one-off cleaner.',
+    updatedAssigned:'✓ Updated — {name} assigned for {date}',
+    assignedFor:'✓ {name} assigned for {date}',
+    selectPropAndDate:'Select a property and date',
+    selectCondition:'Select an overall condition',
+    refLine:'Ref: {ref} · {prop} · {date}',
+    noCleansMatch:'🧹 No cleans match this filter yet.',
+
+    issuesN_one:'{n} issue', issuesN_other:'{n} issues',
+    photosAdded_one:'{n} photo added', photosAdded_other:'{n} photos added',
+    noIssues2:'No issues',
+    months:['January','February','March','April','May','June','July','August','September','October','November','December'],
+    monthsShort:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+    weekdaysMin:['S','M','T','W','T','F','S'],
+  },
+
+  // ── AFRIKAANS ───────────────────────────────────────────────────
+  af: {
+    portalTitle:'HEP Personeelportaal', language:'Taal',
+    greet:'Goeiedag! 👋', pickName:'Kies jou naam om aan te meld',
+    enterPin:'Voer jou PIN in', pinWrong:'Verkeerde PIN — probeer weer',
+    pinNoServer:'Kan nie die bediener bereik nie — probeer netnou weer',
+    almostThere:'Amper daar 👋',
+    noKeyLead:'Hierdie skakel se laaste deel ontbreek — die deel wat sê vir watter maatskappy jy werk.',
+    noKeyBody:'Vra jou bestuurder om vir jou jou eie portaalskakel te stuur. Dit eindig met jou maatskappy se naam, soos',
+    noKeyBody2:'Maak dit een keer oop en jou foon sal dit onthou.',
+
+    hi:'Haai, {name} 👋', signOut:'Meld af',
+    navHome:'Tuis', navCleans:'Skoonmaak', navAvail:'Beskikbaar', navEarn:'Verdienste',
+
+    nextUp:'Volgende', thisMonth:'Hierdie maand',
+    cancelledTitle:'🚫 Skoonmaak gekanselleer',
+    cancelledBody:'Die bespreking is gekanselleer — hierdie skoonmaak is nie meer nodig nie.',
+    wasScheduled:'was geskeduleer', overdueHead:'⏰ Agterstallig — dien voorraad in',
+    daysLate:'{n}d laat', wasDue:'Was verwag', tapInventory:'Tik om voorraad in te dien →',
+    noUpcoming:'Geen komende skoonmaak geskeduleer nie',
+    today:'Vandag', upcoming:'Kom op', overdue:'Agterstallig', done:'Klaar', scheduled:'Geskeduleer',
+    earnedThisMonth:'Verdien hierdie maand', upcomingCleansStat:'Komende skoonmaak', inventoryDue:'Voorraad uitstaande',
+
+    myCleans:'My Skoonmaak', filterUpcoming:'Kom op', filterCompleted:'Voltooi',
+    noCleansYet:'Nog geen skoonmaak aan jou toegewys nie',
+    noUpcomingCleans:'Geen komende skoonmaak nie', noCompletedCleans:'Geen voltooide skoonmaak nie',
+    upcomingCheckouts:'🧹 Komende Uitboekings', checksOut:'{name} boek uit',
+    booked:'Bespreek', needed:'⚠ Nodig',
+
+    back:'← Terug', noteOffice:'📌 Nota vir die kantoor',
+    notePlaceholder:'Nog iets om te noem? Bv. geiser maak geraas, hek is styf, buurman kla…',
+    submitInv:'✓ Dien Voorraadverslag In', describeIssue:'Beskryf die probleem…', saving:'Stoor tans…',
+    noConnection:'📶 Geen verbinding nie — probeer weer sodra jy aanlyn is',
+    noConnectionKeep:'📶 Geen verbinding nie — ons hou dit op die skerm, druk weer Dien In sodra jy aanlyn is',
+    couldntSave:'Kon nie stoor nie — kyk na jou verbinding en probeer weer',
+    submittedFlagged_one:'✓ Ingedien — {n} item gemerk',
+    submittedFlagged_other:'✓ Ingedien — {n} items gemerk',
+    submittedNote:'✓ Ingedien met \'n nota', allDone:'🎉 Mooi so — alles klaar!',
+
+    myAvail:'My Beskikbaarheid', tapDay:'Tik \'n dag om jouself as onbeskikbaar te merk',
+    prev:'← Vorige', next:'Volgende →',
+    legendBooked:'Skoonmaak bespreek', legendAvail:'Beskikbaar (tik om te stel)',
+    legendUnavail:'Onbeskikbaar (verstek)', legendCheckout:'Uitboeking (skoonmaak nodig)',
+    saveAvail:'Stoor Beskikbaarheid', availSaved:'Beskikbaarheid gestoor ✓',
+    notConnected:'Nie gekoppel nie', saveError:'Stoorfout',
+
+    myEarnings:'My Verdienste', allTimeTotal:'Totaal tot dusver:',
+    monthlyBreakdown:'Maandelikse uiteensetting', noCompletedYet:'Nog geen voltooide skoonmaak nie',
+    cleansDone_one:'{n} skoonmaak voltooi', cleansDone_other:'{n} skoonmake voltooi',
+    cleansN_one:'{n} skoonmaak', cleansN_other:'{n} skoonmake',
+    markedDone:'Gemerk as klaar ✓', errorPrefix:'Fout',
+
+    coordinator:'Koördineerder', signOutShort:'Meld af',
+    tabSchedule:'📋 Skedule', tabInspect:'🔍 Inspekteer', tabReports:'📁 Verslae',
+    upcomingCheckoutsTitle:'Komende Uitboekings', next30assign:'Volgende 30 dae · wys \'n skoonmaker toe',
+    noCheckouts30:'Geen uitboekings in die volgende 30 dae nie.',
+    scheduledCleanings:'Geskeduleerde Skoonmaak', optAll:'Alles',
+    cleanerAvailability:'Skoonmakers se Beskikbaarheid', next14:'Volgende 14 dae',
+    noEntries:'Geen inskrywings gevind nie.', reassign:'Wys weer toe', assignArrow:'Wys toe →',
+    noCleanerAssigned:'⚠ Geen skoonmaker toegewys nie', markDone:'Merk as klaar',
+    available:'Beskikbaar', unavailable:'Onbeskikbaar', notSubmitted:'· Nie ingedien nie',
+    checkoutLabel:'Uitboeking:', other:'Ander…',
+    lastInspection:'Laaste Inspeksie', noInspectionYet:'Nog geen inspeksie aangeteken nie',
+    viewAllInHep:'Sien alle verslae in HEP →', newInspection:'Nuwe Inspeksie',
+    property:'Eiendom', selectDots:'Kies…', date:'Datum', continueArrow:'Gaan voort →',
+    overallCondition:'Algehele Toestand',
+    excellent:'✅ Uitstekend', good:'👍 Goed', fair:'⚠️ Redelik', poor:'❌ Swak',
+    breakagesLabel:'Breekskade / Skade', noneIfOkay:'Geen as alles reg is',
+    notesLabel:'Notas', flagForOwners:'Enigiets om vir eienaars uit te wys',
+    tapAddPhotos:'Tik om foto\'s by te voeg (maks 10)', reviewArrow:'Hersien →',
+    submitInspection:'Dien Inspeksie In', inspectionSubmitted:'Inspeksie ingedien',
+    inspectionHistory:'Inspeksiegeskiedenis', allSubmittedReports:'Alle ingediende inspeksieverslae',
+    noInspectionsFound:'Geen inspeksies gevind nie.', noIssues:'✓ Geen probleme nie',
+    inventoryReports:'Voorraadverslae', submittedByCleaners:'Deur skoonmakers ingedien na elke werk',
+    noInventoryFound:'Geen voorraadverslae gevind nie.', allOk:'✓ Alles reg', ok:'✓ Reg',
+    cleanerActivity:'Skoonmakeraktiwiteit', allCleansSub:'Alle skoonmaak · voltooi & geskeduleer',
+    rating:'Gradering', photos:'Foto\'s', breakagesCol:'Breekskade',
+    assignCleaning:'Wys Skoonmaak Toe', cleaner:'Skoonmaker', name:'Naam',
+    whoIsCleaning:'Wie maak skoon? (eenmalig)', phoneWa:'Foon/WhatsApp',
+    phoneHint:'bv. 082 123 4567 — stuur vir hulle die voorraadskakel',
+    time:'Tyd', type:'Tipe', turnoverClean:'Wisselskoonmaak',
+    deepClean:'Diep skoonmaak', inspectionPrep:'Inspeksievoorbereiding',
+    optional:'Opsioneel', cancel:'Kanselleer', confirmAssignment:'Bevestig Toewysing',
+    enterOneOffName:'Voer \'n naam in vir die eenmalige skoonmaker.',
+    updatedAssigned:'✓ Opgedateer — {name} toegewys vir {date}',
+    assignedFor:'✓ {name} toegewys vir {date}',
+    selectPropAndDate:'Kies \'n eiendom en datum',
+    selectCondition:'Kies \'n algehele toestand',
+    refLine:'Verw: {ref} · {prop} · {date}',
+    noCleansMatch:'🧹 Nog geen skoonmaak pas by hierdie filter nie.',
+
+    issuesN_one:'{n} probleem', issuesN_other:'{n} probleme',
+    photosAdded_one:'{n} foto bygevoeg', photosAdded_other:'{n} foto\'s bygevoeg',
+    noIssues2:'Geen probleme nie',
+    months:['Januarie','Februarie','Maart','April','Mei','Junie','Julie','Augustus','September','Oktober','November','Desember'],
+    monthsShort:['Jan','Feb','Mrt','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Des'],
+    weekdaysMin:['S','M','D','W','D','V','S'],
+  },
+
+  // ── chiSHONA ────────────────────────────────────────────────────
+  sn: {
+    portalTitle:'HEP Poto yeVashandi', language:'Mutauro',
+    greet:'Makadii! 👋', pickName:'Sarudza zita rako kuti upinde',
+    enterPin:'Isa PIN yako', pinWrong:'PIN haina kururama — edza zvakare',
+    pinNoServer:'Hatisi kukwanisa kusvika kuseva — edza zvakare munguva pfupi',
+    almostThere:'Wave pedyo 👋',
+    noKeyLead:'Chikamu chinoreva kambani yaunoshandira hachisi mulinki iyi.',
+    noKeyBody:'Kumbira maneja wako kuti akutumire linki yako pachako. Inopera nezita rekambani yako, sekuti',
+    noKeyBody2:'Vhura iyoyo kamwe chete uye foni yako icharangarira.',
+
+    hi:'Mhoro, {name} 👋', signOut:'Buda',
+    navHome:'Kumba', navCleans:'Kuchenesa', navAvail:'Kuvapo', navEarn:'Mari',
+
+    nextUp:'Zvinotevera', thisMonth:'Mwedzi uno',
+    cancelledTitle:'🚫 Kuchenesa kwamiswa',
+    cancelledBody:'Bhuking rakamiswa — kuchenesa uku hakuchadiwi.',
+    wasScheduled:'kwakange kwarongwa', overdueHead:'⏰ Kwanonoka — tumira chitupa chezvinhu',
+    daysLate:'mazuva {n} kunonoka', wasDue:'Kwaifanira kuitwa', tapInventory:'Baya kuti utumire chitupa chezvinhu →',
+    noUpcoming:'Hapana kuchenesa kwakarongwa',
+    today:'Nhasi', upcoming:'Kuri kuuya', overdue:'Kwanonoka', done:'Kwapera', scheduled:'Kwarongwa',
+    earnedThisMonth:'Mari yawanikwa mwedzi uno', upcomingCleansStat:'Kuchenesa kuri kuuya', inventoryDue:'Zvitupa zvisati zvatumirwa',
+
+    myCleans:'Kuchenesa Kwangu', filterUpcoming:'Kuri kuuya', filterCompleted:'Kwapera',
+    noCleansYet:'Hauna kupiwa basa rekuchenesa parizvino',
+    noUpcomingCleans:'Hapana kuchenesa kuri kuuya', noCompletedCleans:'Hapana kuchenesa kwapera',
+    upcomingCheckouts:'🧹 Vaenzi Vari Kubuda', checksOut:'{name} ari kubuda',
+    booked:'Kwarongwa', needed:'⚠ Kunodiwa',
+
+    back:'← Dzokera', noteOffice:'📌 Chinyorwa chehofisi',
+    notePlaceholder:'Chimwe chinhu chaungade kutaura? Semuenzaniso: giza riri kuita ruzha, gedhi rakaoma, muvakidzani anonyunyuta…',
+    submitInv:'✓ Tumira Chitupa Chezvinhu', describeIssue:'Tsanangura dambudziko…', saving:'Kuchengetedza…',
+    noConnection:'📶 Hapana network — edza zvakare kana wadzoka online',
+    noConnectionKeep:'📶 Hapana network — tichachengeta izvi pascreen, dzokera uzobaya Tumira kana wadzoka online',
+    couldntSave:'Zvakundikana kuchengetedza — tarisa network yako uedze zvakare',
+    submittedFlagged_one:'✓ Zvatumirwa — chinhu {n} chataurwa',
+    submittedFlagged_other:'✓ Zvatumirwa — zvinhu {n} zvataurwa',
+    submittedNote:'✓ Zvatumirwa nechinyorwa', allDone:'🎉 Wazviita zvakanaka — zvese zvapera!',
+
+    myAvail:'Mazuva Andinogona', tapDay:'Baya zuva kuti uratidze kuti haugoni',
+    prev:'← Yapfuura', next:'Inotevera →',
+    legendBooked:'Kuchenesa kwarongwa', legendAvail:'Ndinogona (baya kuti userere)',
+    legendUnavail:'Handigoni (zvakamira saizvozvo)', legendCheckout:'Muenzi ari kubuda (kuchenesa kunodiwa)',
+    saveAvail:'Chengetedza Mazuva', availSaved:'Mazuva achengetedzwa ✓',
+    notConnected:'Hausi kubatana', saveError:'Kanganiso pakuchengetedza',
+
+    myEarnings:'Mari Yangu', allTimeTotal:'Huwandu hwenguva yose:',
+    monthlyBreakdown:'Tsananguro yemwedzi nemwedzi', noCompletedYet:'Hapana kuchenesa kwapera',
+    cleansDone_one:'kuchenesa {n} kwapera', cleansDone_other:'kuchenesa {n} kwapera',
+    cleansN_one:'kuchenesa {n}', cleansN_other:'kuchenesa {n}',
+    markedDone:'Zvanyorwa sezvapera ✓', errorPrefix:'Kanganiso',
+
+    coordinator:'Muronga', signOutShort:'Buda',
+    tabSchedule:'📋 Rongo', tabInspect:'🔍 Ongorora', tabReports:'📁 Zvitupa',
+    upcomingCheckoutsTitle:'Vaenzi Vari Kubuda', next30assign:'Mazuva 30 anotevera · pa mushandi basa',
+    noCheckouts30:'Hapana vaenzi vari kubuda mumazuva 30 anotevera.',
+    scheduledCleanings:'Kuchenesa Kwakarongwa', optAll:'Zvese',
+    cleanerAvailability:'Mazuva eVashandi', next14:'Mazuva 14 anotevera',
+    noEntries:'Hapana chawanikwa.', reassign:'Chinja mushandi', assignArrow:'Pa basa →',
+    noCleanerAssigned:'⚠ Hapana mushandi akapiwa basa', markDone:'Nyora sezvapera',
+    available:'Anogona', unavailable:'Haagoni', notSubmitted:'· Hazvina kutumirwa',
+    checkoutLabel:'Kubuda:', other:'Mumwe…',
+    lastInspection:'Kuongorora Kwekupedzisira', noInspectionYet:'Hapana kuongorora kwakanyorwa',
+    viewAllInHep:'Ona zvitupa zvese muHEP →', newInspection:'Kuongorora Kutsva',
+    property:'Imba', selectDots:'Sarudza…', date:'Zuva', continueArrow:'Enderera →',
+    overallCondition:'Mamiriro Ose',
+    excellent:'✅ Zvakanaka kwazvo', good:'👍 Zvakanaka', fair:'⚠️ Zviri pakati', poor:'❌ Zvakaipa',
+    breakagesLabel:'Zvakatyoka / Kukuvara', noneIfOkay:'Nyora "hapana" kana zvese zvakanaka',
+    notesLabel:'Zvinyorwa', flagForOwners:'Chimwe chinhu chekuudza varidzi',
+    tapAddPhotos:'Baya kuti uwedzere mifananidzo (kusvika 10)', reviewArrow:'Ongorora →',
+    submitInspection:'Tumira Kuongorora', inspectionSubmitted:'Kuongorora kwatumirwa',
+    inspectionHistory:'Nhoroondo yeKuongorora', allSubmittedReports:'Zvitupa zvese zvekuongorora zvakatumirwa',
+    noInspectionsFound:'Hapana kuongorora kwawanikwa.', noIssues:'✓ Hapana dambudziko',
+    inventoryReports:'Zvitupa Zvezvinhu', submittedByCleaners:'Zvinotumirwa nevashandi mushure mebasa rega rega',
+    noInventoryFound:'Hapana chitupa chezvinhu chawanikwa.', allOk:'✓ Zvese zvakanaka', ok:'✓ Zvakanaka',
+    cleanerActivity:'Basa reVashandi', allCleansSub:'Kuchenesa kwese · kwapera & kwakarongwa',
+    rating:'Chiyero', photos:'Mifananidzo', breakagesCol:'Zvakatyoka',
+    assignCleaning:'Pa Basa Rekuchenesa', cleaner:'Mushandi', name:'Zita',
+    whoIsCleaning:'Ndiani ari kuchenesa? (kamwe chete)', phoneWa:'Nhare/WhatsApp',
+    phoneHint:'semuenzaniso 082 123 4567 — vanotumirwa linki yechitupa',
+    time:'Nguva', type:'Rudzi', turnoverClean:'Kuchenesa pakati pevaenzi',
+    deepClean:'Kuchenesa kwakadzama', inspectionPrep:'Kugadzirira kuongorora',
+    optional:'Hazvimanikidzwi', cancel:'Kanzura', confirmAssignment:'Simbisa Basa',
+    enterOneOffName:'Isa zita remushandi wekamwe chete.',
+    updatedAssigned:'✓ Zvagadziriswa — {name} apiwa basa re{date}',
+    assignedFor:'✓ {name} apiwa basa re{date}',
+    selectPropAndDate:'Sarudza imba nezuva',
+    selectCondition:'Sarudza mamiriro ose',
+    refLine:'Ref: {ref} · {prop} · {date}',
+    noCleansMatch:'🧹 Hapana kuchenesa kunoenderana nefilter iyi.',
+
+    issuesN_one:'dambudziko {n}', issuesN_other:'matambudziko {n}',
+    photosAdded_one:'mufananidzo {n} wawedzerwa', photosAdded_other:'mifananidzo {n} yawedzerwa',
+    noIssues2:'Hapana dambudziko',
+    months:['Ndira','Kukadzi','Kurume','Kubvumbi','Chivabvu','Chikumi','Chikunguru','Nyamavhuvhu','Gunyana','Gumiguru','Mbudzi','Zvita'],
+    monthsShort:['Ndi','Kuk','Kur','Kub','Chv','Chk','Chg','Nya','Gun','Gum','Mbu','Zvi'],
+    weekdaysMin:['S','M','C','C','C','C','M'],
+  },
+
+  // ── isiXHOSA ────────────────────────────────────────────────────
+  xh: {
+    portalTitle:'HEP Iziko labaSebenzi', language:'Ulwimi',
+    greet:'Molo! 👋', pickName:'Khetha igama lakho ukuze ungene',
+    enterPin:'Faka i-PIN yakho', pinWrong:'I-PIN ayichanekanga — zama kwakhona',
+    pinNoServer:'Asikwazi ukufikelela kwiseva — zama kwakhona emzuzwana',
+    almostThere:'Usondele 👋',
+    noKeyLead:'Le khonkco alinanto ethi usebenzela yiphi inkampani.',
+    noKeyBody:'Cela umphathi wakho akuthumele ikhonkco lakho. Liphela ngegama lenkampani yakho, njenge',
+    noKeyBody2:'Livule kanye kuphela, ifowuni yakho iya kulikhumbula.',
+
+    hi:'Molo, {name} 👋', signOut:'Phuma',
+    navHome:'Ekhaya', navCleans:'Ukucoca', navAvail:'Iintsuku', navEarn:'Imali',
+
+    nextUp:'Okulandelayo', thisMonth:'Le nyanga',
+    cancelledTitle:'🚫 Ukucoca kurhoxisiwe',
+    cancelledBody:'Ubhukisho lurhoxisiwe — oku kucoca akusafuneki.',
+    wasScheduled:'bekucwangcisiwe', overdueHead:'⏰ Kudlulile — ngenisa ingxelo yempahla',
+    daysLate:'iintsuku ezi-{n} emva kwexesha', wasDue:'Bekufanele kwenziwe', tapInventory:'Cofa ukungenisa ingxelo yempahla →',
+    noUpcoming:'Akukho kucoca kucwangcisiweyo',
+    today:'Namhlanje', upcoming:'Kuyeza', overdue:'Kudlulile', done:'Kugqityiwe', scheduled:'Kucwangcisiwe',
+    earnedThisMonth:'Ofunyenwe le nyanga', upcomingCleansStat:'Ukucoca okuzayo', inventoryDue:'Iingxelo ezisalindeleyo',
+
+    myCleans:'Ukucoca Kwam', filterUpcoming:'Kuyeza', filterCompleted:'Kugqityiwe',
+    noCleansYet:'Akukho msebenzi wokucoca owabelwe wena',
+    noUpcomingCleans:'Akukho kucoca kuzayo', noCompletedCleans:'Akukho kucoca okugqityiweyo',
+    upcomingCheckouts:'🧹 Iindwendwe Ezimkayo', checksOut:'{name} uyahamba',
+    booked:'Kubhukishiwe', needed:'⚠ Kuyafuneka',
+
+    back:'← Emva', noteOffice:'📌 Inqaku leofisi',
+    notePlaceholder:'Ingaba kukho enye into? Umz. igeyser yenza ingxolo, isango liqinile, ummelwane uyakhalaza…',
+    submitInv:'✓ Ngenisa Ingxelo yeMpahla', describeIssue:'Chaza ingxaki…', saving:'Iyagcina…',
+    noConnection:'📶 Akukho khonkco — zama kwakhona xa usebuyile kwi-intanethi',
+    noConnectionKeep:'📶 Akukho khonkco — siza kuyigcina le nto kwiscreen, cofa uNgenise kwakhona xa usebuyile kwi-intanethi',
+    couldntSave:'Ayikwazanga ukugcina — jonga ukhonkco lwakho uzame kwakhona',
+    submittedFlagged_one:'✓ Kungenisiwe — into e-{n} iphawuliwe',
+    submittedFlagged_other:'✓ Kungenisiwe — izinto ezi-{n} ziphawuliwe',
+    submittedNote:'✓ Kungenisiwe kunye nenqaku', allDone:'🎉 Wenze kakuhle — konke kugqityiwe!',
+
+    myAvail:'Iintsuku Zam', tapDay:'Cofa usuku ukubonisa ukuba awufumaneki',
+    prev:'← Ngaphambili', next:'Elandelayo →',
+    legendBooked:'Ukucoca kubhukishiwe', legendAvail:'Ndiyafumaneka (cofa ukumisela)',
+    legendUnavail:'Andifumaneki (okumiselweyo)', legendCheckout:'Undwendwe luyahamba (kufuneka ukucoca)',
+    saveAvail:'Gcina Iintsuku', availSaved:'Iintsuku zigciniwe ✓',
+    notConnected:'Awudibananga', saveError:'Impazamo yokugcina',
+
+    myEarnings:'Imali Yam', allTimeTotal:'Iyonke yonke ixesha:',
+    monthlyBreakdown:'Ucaciso ngenyanga', noCompletedYet:'Akukho kucoca okugqityiweyo',
+    cleansDone_one:'ukucoca oku-{n} kugqityiwe', cleansDone_other:'ukucoca oku-{n} kugqityiwe',
+    cleansN_one:'ukucoca oku-{n}', cleansN_other:'ukucoca oku-{n}',
+    markedDone:'Kuphawulwe njengokugqityiweyo ✓', errorPrefix:'Impazamo',
+
+    coordinator:'Umlungiseleli', signOutShort:'Phuma',
+    tabSchedule:'📋 Ushedyuli', tabInspect:'🔍 Hlola', tabReports:'📁 Iingxelo',
+    upcomingCheckoutsTitle:'Iindwendwe Ezimkayo', next30assign:'Iintsuku ezingama-30 ezizayo · nika umcoci umsebenzi',
+    noCheckouts30:'Akukho ndwendwe zimkayo kwiintsuku ezingama-30 ezizayo.',
+    scheduledCleanings:'Ukucoca Okucwangcisiweyo', optAll:'Konke',
+    cleanerAvailability:'Iintsuku zabaCoci', next14:'Iintsuku ezili-14 ezizayo',
+    noEntries:'Akukho nto ifunyenweyo.', reassign:'Tshintsha umcoci', assignArrow:'Nika umsebenzi →',
+    noCleanerAssigned:'⚠ Akukho mcoci onikwe umsebenzi', markDone:'Phawula njengegqityiweyo',
+    available:'Uyafumaneka', unavailable:'Akafumaneki', notSubmitted:'· Ayingeniswanga',
+    checkoutLabel:'Ukuhamba:', other:'Omnye…',
+    lastInspection:'Uhlolo Lokugqibela', noInspectionYet:'Akukho hlolo lubhaliweyo',
+    viewAllInHep:'Jonga zonke iingxelo kwiHEP →', newInspection:'Uhlolo Olutsha',
+    property:'Indlu', selectDots:'Khetha…', date:'Umhla', continueArrow:'Qhubeka →',
+    overallCondition:'Imeko Iyonke',
+    excellent:'✅ Igqwesile', good:'👍 Ilungile', fair:'⚠️ Iphakathi', poor:'❌ Imbi',
+    breakagesLabel:'Okwaphukileyo / Umonakalo', noneIfOkay:'Bhala "akukho" ukuba konke kulungile',
+    notesLabel:'Amanqaku', flagForOwners:'Nayiphi na into omele uyixelele abanini',
+    tapAddPhotos:'Cofa ukongeza iifoto (ubuninzi 10)', reviewArrow:'Hlola →',
+    submitInspection:'Ngenisa Uhlolo', inspectionSubmitted:'Uhlolo lungenisiwe',
+    inspectionHistory:'Imbali yoHlolo', allSubmittedReports:'Zonke iingxelo zohlolo ezingenisiweyo',
+    noInspectionsFound:'Akukho hlolo lufunyenweyo.', noIssues:'✓ Akukho ngxaki',
+    inventoryReports:'Iingxelo zeMpahla', submittedByCleaners:'Zingeniswa ngabacoci emva komsebenzi ngamnye',
+    noInventoryFound:'Akukho ngxelo yempahla ifunyenweyo.', allOk:'✓ Konke kulungile', ok:'✓ Kulungile',
+    cleanerActivity:'Umsebenzi wabaCoci', allCleansSub:'Konke ukucoca · okugqityiweyo nokucwangcisiweyo',
+    rating:'Isikali', photos:'Iifoto', breakagesCol:'Okwaphukileyo',
+    assignCleaning:'Nika Umsebenzi Wokucoca', cleaner:'Umcoci', name:'Igama',
+    whoIsCleaning:'Ngubani ococayo? (kwakanye)', phoneWa:'Ifowuni/WhatsApp',
+    phoneHint:'umz. 082 123 4567 — bathunyelwa ikhonkco lengxelo',
+    time:'Ixesha', type:'Uhlobo', turnoverClean:'Ukucoca phakathi kweendwendwe',
+    deepClean:'Ukucoca okunzulu', inspectionPrep:'Ukulungiselela uhlolo',
+    optional:'Akunyanzelekanga', cancel:'Rhoxisa', confirmAssignment:'Qinisekisa Umsebenzi',
+    enterOneOffName:'Faka igama lomcoci wesihlandlo esinye.',
+    updatedAssigned:'✓ Kuhlaziyiwe — {name} unikwe umsebenzi we-{date}',
+    assignedFor:'✓ {name} unikwe umsebenzi we-{date}',
+    selectPropAndDate:'Khetha indlu nomhla',
+    selectCondition:'Khetha imeko iyonke',
+    refLine:'Ref: {ref} · {prop} · {date}',
+    noCleansMatch:'🧹 Akukho kucoca kuhambelana nesi sihluzi.',
+
+    issuesN_one:'ingxaki e-{n}', issuesN_other:'iingxaki ezi-{n}',
+    photosAdded_one:'ifoto e-{n} yongeziwe', photosAdded_other:'iifoto ezi-{n} zongeziwe',
+    noIssues2:'Akukho ngxaki',
+    months:['EyoMqungu','EyoMdumba','EyoKwindla','UTshazimpuzi','UCanzibe','EyeSilimela','EyeKhala','EyeThupha','EyoMsintsi','EyeDwarha','EyeNkanga','EyoMnga'],
+    monthsShort:['Mqu','Mdu','Kwi','Tsha','Can','Sil','Kha','Thu','Msi','Dwa','Nka','Mng'],
+    weekdaysMin:['C','M','L','T','S','H','M'],
+  },
+};
+
+// The chosen language, per device. Falls back to the phone's own language
+// if we happen to speak it, and to English if not.
+let staffLocale = (function () {
+  try {
+    const saved = localStorage.getItem('hep_staff_lang');
+    if (saved && STAFF_T[saved]) return saved;
+  } catch (e) {}
+  try {
+    const nav = (navigator.language || '').slice(0, 2).toLowerCase();
+    if (STAFF_T[nav]) return nav;
+  } catch (e) {}
+  return 'en';
+})();
+
+// Lookup. Missing key → English → the key itself, so a half-translated
+// language degrades to a mixed screen instead of a blank one or the word
+// "undefined" in front of somebody trying to do their job.
+function t(key, vars) {
+  const dict = STAFF_T[staffLocale] || STAFF_T.en;
+  let s = dict[key];
+  if (s == null) s = STAFF_T.en[key];
+  if (s == null) return key;
+  if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
+  return s;
+}
+
+// Plurals. English gets away with n + 's', which is why the code used to
+// do that inline; isiXhosa and chiShona do not form plurals that way at
+// all, so each count needs two whole strings rather than a suffix.
+function tp(key, n, vars) {
+  const v = Object.assign({ n: n }, vars || {});
+  return t(key + (n === 1 ? '_one' : '_other'), v);
+}
+
+// Month and weekday names come from the dictionary, NOT from
+// toLocaleDateString. The browser's own data for chiShona and isiXhosa is
+// patchy — Intl would quietly hand back English month names on some
+// phones and the right ones on others, which is worse than either.
+// Called rather than indexed, because the language can change between two
+// renders and a const array captured at load would keep serving whichever
+// language the page happened to start in.
+function mon(i)  { const a = t('months');      return a[i] || ''; }
+function monS(i) { const a = t('monthsShort'); return a[i] || ''; }
+function weekdayHeads() { return t('weekdaysMin'); }
+
+// Applies the dictionary to everything tagged in the markup. data-t sets
+// the text, data-t-ph sets a placeholder. English stays in the HTML as the
+// fallback, so this page still reads correctly with the script removed.
+function applyStaticT() {
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const k = el.getAttribute('data-t');
+    if (k) el.textContent = t(k);
+  });
+  document.querySelectorAll('[data-t-ph]').forEach(el => {
+    const k = el.getAttribute('data-t-ph');
+    if (k) el.setAttribute('placeholder', t(k));
+  });
+  document.documentElement.setAttribute('lang', staffLocale);
+}
+
+// Switching language re-renders whatever is on screen rather than asking
+// for a reload — a cleaner who picks the wrong one must be able to pick
+// again without losing the PIN screen they were halfway through.
+function setStaffLang(code) {
+  if (!STAFF_T[code]) return;
+  staffLocale = code;
+  try { localStorage.setItem('hep_staff_lang', code); } catch (e) {}
+  applyStaticT();
+  renderLangPickers();
+  // The agency's own name outranks the generic title once we know it.
+  const logo = document.querySelector('.auth-logo');
+  if (logo && ORG_NAME) logo.textContent = ORG_NAME;
+  if (currentCleaner) {
+    document.getElementById('user-name').textContent = t('hi', { name: currentCleaner.name });
+    const active = document.querySelector('.screen.active');
+    const id = active ? active.id.replace('screen-', '') : 'home';
+    if (id === 'home') renderHome();
+    else if (id === 'cleans') renderCleans();
+    else if (id === 'avail') renderAvail();
+    else if (id === 'earnings') renderEarnings();
+    else if (id === 'inventory' && currentInventoryClean) openInventory(currentInventoryClean.id);
+  }
+  const nina = document.getElementById('nina-view');
+  if (nina && nina.style.display && nina.style.display !== 'none') {
+    renderPropertyPickers();
+    if (typeof loadNinaSchedule === 'function') loadNinaSchedule();
+  }
+}
+
+// One <select> markup, drawn into every slot that wants a picker.
+function langPickerHtml() {
+  return Object.keys(STAFF_LOCALES).map(c =>
+    `<option value="${c}"${c === staffLocale ? ' selected' : ''}>${STAFF_LOCALES[c]}</option>`
+  ).join('');
+}
+function renderLangPickers() {
+  document.querySelectorAll('.lang-select').forEach(sel => { sel.innerHTML = langPickerHtml(); });
+}
 
 let db = null;
 let currentCleaner = null;
@@ -701,9 +1260,9 @@ try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e){}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function tod() { return new Date().toISOString().slice(0,10); }
-function fmtDate(d) { if(!d)return''; const[y,m,day]=d.split('-'); return `${parseInt(day)} ${MONTHS_S[parseInt(m)-1]}`; }
+function fmtDate(d) { if(!d)return''; const[y,m,day]=d.split('-'); return `${parseInt(day)} ${monS(parseInt(m)-1)}`; }
 function skeletonRows(n=3) { return `<div style="padding:6px 0">${Array.from({length:n}).map(()=>'<div class="skeleton-row"></div>').join('')}</div>`; }
-function fmtFull(d) { if(!d)return''; const[y,m,day]=d.split('-'); return `${parseInt(day)} ${MONTHS[parseInt(m)-1]} ${y}`; }
+function fmtFull(d) { if(!d)return''; const[y,m,day]=d.split('-'); return `${parseInt(day)} ${mon(parseInt(m)-1)} ${y}`; }
 function getRate(cl, propId) {
   // Live rate from the Staff tab first (team_contacts.cleaner_rate is a
   // flat number or {speranta:350,tvhouse:450} keyed by SHORT key), so a
@@ -875,7 +1434,7 @@ function updatePinDots() {
 
 function pinRejected(msg) {
   pinInput=''; updatePinDots();
-  document.getElementById('auth-error').textContent=msg||'Incorrect PIN — try again';
+  document.getElementById('auth-error').textContent=msg||t('pinWrong');
   document.querySelectorAll('.pin-dot').forEach(d=>{
     d.style.background='var(--red)';d.style.borderColor='var(--red)';
     setTimeout(()=>{d.style.background='';d.style.borderColor='';},500);
@@ -906,7 +1465,7 @@ async function checkPin() {
   // behind this one reads and writes the database, so if staff_portal_login()
   // is unreachable the portal cannot do its job anyway. Say so plainly
   // instead of pretending the PIN was wrong.
-  pinRejected('Can\'t reach the server — try again in a moment');
+  pinRejected(t('pinNoServer'));
 }
 
 async function doLogin(cleaner) {
@@ -915,7 +1474,7 @@ async function doLogin(cleaner) {
   document.getElementById('app').style.display='flex';
   document.getElementById('user-avatar').textContent=cleaner.initials;
   document.getElementById('user-avatar').style.background=cleaner.color;
-  document.getElementById('user-name').textContent=`Hi, ${cleaner.name} 👋`;
+  document.getElementById('user-name').textContent=t('hi',{name:cleaner.name});
   await loadData();
   renderHome();
 }
@@ -1020,9 +1579,9 @@ async function loadNinaCheckouts() {
         <div class="nina-checkout-bottom">
           ${assigned
             ?`<span class="nina-assigned-tag">✓ ${assigned.cleaner} assigned</span>
-              <button class="nina-assign-btn reassign" onclick="openAssignModal('${b.property_id}','${pk}','${gn}','${coDate}','${b.id}')">Reassign</button>`
+              <button class="nina-assign-btn reassign" onclick="openAssignModal('${b.property_id}','${pk}','${gn}','${coDate}','${b.id}')">${t('reassign')}</button>`
             :`<span class="nina-unassigned-tag">⚠ No cleaner assigned</span>
-              <button class="nina-assign-btn" onclick="openAssignModal('${b.property_id}','${pk}','${gn}','${coDate}','${b.id}')">Assign →</button>`
+              <button class="nina-assign-btn" onclick="openAssignModal('${b.property_id}','${pk}','${gn}','${coDate}','${b.id}')">${t('assignArrow')}</button>`
           }
         </div>
       </div>`;
@@ -1054,7 +1613,7 @@ async function loadNinaSchedule() {
         </span>
         <span class="nina-sched-status ${d.status}">${d.status}</span>
         ${d.status==='scheduled'&&daysFromNow(d.date)<=0
-          ?`<button class="nina-mark-done" onclick="ninaMarkDone('${d.id}')">Mark done</button>`:''}
+          ?`<button class="nina-mark-done" onclick="ninaMarkDone('${d.id}')">${t('markDone')}</button>`:''}
       </div>`;
     }).join('');
   } catch(err){el.innerHTML=`<div class="nina-loading" style="color:var(--red);">Error: ${err.message}</div>`;}
@@ -1064,9 +1623,9 @@ async function ninaMarkDone(id) {
   try {
     const {error}=await db.from('domestics').update({status:'completed'}).eq('id',id);
     if(error) throw error;
-    toast('Marked as done ✓','ok');
+    toast(t('markedDone'),'ok');
     loadNinaSchedule();
-  } catch(err){toast('Error: '+err.message,'err');}
+  } catch(err){toast(t('errorPrefix')+': '+err.message,'err');}
 }
 
 async function loadNinaAvailability() {
@@ -1083,10 +1642,7 @@ async function loadNinaAvailability() {
     const lookup={};
     (data||[]).forEach(r=>{lookup[`${r.cleaner}-${r.date}`]=r.available;});
     const allCleaners=rosterCleanerNames(); // live Staff-tab roster; caretakers (no cleaner_rate) excluded — not cleaning staff
-    const shortDates=dates.map(d=>{
-      const dt=new Date(d+'T00:00:00');
-      return dt.toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
-    });
+    const shortDates=dates.map(d=>fmtDate(d));
     let html=`<div class="nina-avail-grid"><table class="nina-avail-table"><thead><tr><th></th>${shortDates.map(sd=>`<th>${sd}</th>`).join('')}</tr></thead><tbody>`;
     allCleaners.forEach(cleaner=>{
       html+=`<tr><td class="nina-avail-name">${cleaner}</td>`;
@@ -1171,7 +1727,7 @@ async function saveAssignment(waWin) {
   let cleanerPhone=null;
   if(cleaner==='__other__'){
     cleaner=document.getElementById('nina-assign-other').value.trim();
-    if(!cleaner){ statusEl.style.display=''; statusEl.className='nina-status-msg error'; statusEl.textContent='Enter a name for the one-off cleaner.'; btn.disabled=false; bail(); return; }
+    if(!cleaner){ statusEl.style.display=''; statusEl.className='nina-status-msg error'; statusEl.textContent=t('enterOneOffName'); btn.disabled=false; bail(); return; }
     cleanerPhone=(document.getElementById('nina-assign-other-phone').value||'').trim()||null;
   }
   const date=document.getElementById('nina-assign-date').value;
@@ -1181,7 +1737,7 @@ async function saveAssignment(waWin) {
   const {propertyKey,bookingId}=ninaAssignContext;
   const rate=propRateFromKey(propertyKey);
   btn.disabled=true;
-  statusEl.style.display=''; statusEl.className='nina-status-msg loading'; statusEl.textContent='Saving…';
+  statusEl.style.display=''; statusEl.className='nina-status-msg loading'; statusEl.textContent=t('saving');
   try {
     const propShort=propertyKey==='speranta'?'SP':'TV';
     // Guard against duplicates: is there already a scheduled clean for this property + date?
@@ -1199,7 +1755,7 @@ async function saveAssignment(waWin) {
         .eq('id',existing[0].id);
       if(upErr) throw upErr;
       statusEl.className='nina-status-msg success';
-      statusEl.textContent=`✓ Updated — ${cleaner} assigned for ${fmtDate(date)}`;
+      statusEl.textContent=t('updatedAssigned',{name:cleaner,date:fmtDate(date)});
       if(cleanerPhone && existing[0].access_token) sentRow={id:existing[0].id, access_token:existing[0].access_token, cleaner, cleaner_phone:cleanerPhone, property_id:propertyKey};
     } else {
       const {data,error}=await db.from('domestics').insert([{
@@ -1212,7 +1768,7 @@ async function saveAssignment(waWin) {
       }]).select().single();
       if(error) throw error;
       statusEl.className='nina-status-msg success';
-      statusEl.textContent=`✓ ${cleaner} assigned for ${fmtDate(date)}`;
+      statusEl.textContent=t('assignedFor',{name:cleaner,date:fmtDate(date)});
       if(cleanerPhone && data && data.access_token) sentRow=data;
     }
     if(sentRow){
@@ -1228,7 +1784,7 @@ async function saveAssignment(waWin) {
       loadNinaCheckouts(); loadNinaSchedule();
     },1000);
   } catch(err){
-    statusEl.className='nina-status-msg error'; statusEl.textContent='Error: '+err.message;
+    statusEl.className='nina-status-msg error'; statusEl.textContent=t('errorPrefix')+': '+err.message;
     btn.disabled=false;
     bail();
   }
@@ -1253,7 +1809,7 @@ async function loadNinaLastInspections() {
       return `<div class="nina-last-insp-card">
         <div>
           <div class="nina-insp-prop">${propNameFromKey(pk)}</div>
-          <div class="nina-insp-meta">${fmtFull(rec.inspection_date)} · ${rec.inspector_name||'Nina'}${issueCount>0?' · <span style="color:var(--accent);">'+issueCount+' issue'+(issueCount>1?'s':'')+'</span>':' · No issues'}</div>
+          <div class="nina-insp-meta">${fmtFull(rec.inspection_date)} · ${rec.inspector_name||'Nina'}${issueCount>0?' · <span style="color:var(--accent);">'+tp('issuesN',issueCount)+'</span>':' · '+t('noIssues2')}</div>
         </div>
         <span class="nina-insp-rating-badge ${rec.overall_condition||'fair'}">${rec.overall_condition?rec.overall_condition.charAt(0).toUpperCase()+rec.overall_condition.slice(1):'—'}</span>
       </div>`;
@@ -1265,13 +1821,13 @@ function ninaInspNext(step) {
   if(step===1){
     const prop=document.getElementById('nina-insp-property').value;
     const date=document.getElementById('nina-insp-date').value;
-    if(!prop||!date){toast('Select a property and date','err');return;}
+    if(!prop||!date){toast(t('selectPropAndDate'),'err');return;}
     const sel=document.getElementById('nina-insp-property');
     const pk=sel.options[sel.selectedIndex].getAttribute('data-key');
     ninaInspChecklist={};
     buildNinaChecklist(pk);
   }
-  if(step===2&&!ninaInspRating){toast('Select an overall condition','err');return;}
+  if(step===2&&!ninaInspRating){toast(t('selectCondition'),'err');return;}
   if(step===3) buildNinaInspReview();
   document.getElementById(`nina-insp-step${step}`).style.display='none';
   document.getElementById(`nina-insp-step${step+1}`).style.display='';
@@ -1329,7 +1885,7 @@ function ninaHandlePhotos(input) {
     grid.appendChild(wrap);
   });
   const ct=document.getElementById('nina-photo-count');
-  ct.textContent=ninaInspPhotos.length?`${ninaInspPhotos.length} photo${ninaInspPhotos.length>1?'s':''} added`:'';
+  ct.textContent=ninaInspPhotos.length?tp('photosAdded',ninaInspPhotos.length):'';
   input.value='';
 }
 
@@ -1418,7 +1974,7 @@ async function ninaSubmitInspection() {
     document.getElementById('nina-insp-step4').style.display='none';
     document.getElementById('nina-insp-success').style.display='';
     const ref=inserted?.id?.toString().slice(0,8).toUpperCase()||slug;
-    document.getElementById('nina-insp-success-ref').textContent=`Ref: ${ref} · ${propNameFromKey(pk)} · ${fmtFull(date)}`;
+    document.getElementById('nina-insp-success-ref').textContent=t('refLine',{ref:ref,prop:propNameFromKey(pk),date:fmtFull(date)});
     loadNinaLastInspections();
   } catch(err){show('Error: '+err.message,'error');btn.disabled=false;}
 }
@@ -1525,7 +2081,7 @@ async function loadNinaRepInspections() {
         <div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">
           <span style="font-size:.78rem;font-weight:700;color:${rc};text-transform:capitalize;">${r.overall_condition||'—'}</span>
           <span style="font-size:.74rem;color:var(--muted);">${r.inspector_name||'Nina'}</span>
-          ${issueCount > 0 ? `<span style="font-size:.72rem;color:var(--accent);font-weight:600;">⚠ ${issueCount} issue${issueCount>1?'s':''}</span>` : '<span style="font-size:.72rem;color:var(--green);">✓ No issues</span>'}
+          ${issueCount > 0 ? `<span style="font-size:.72rem;color:var(--accent);font-weight:600;">⚠ ${tp('issuesN',issueCount)}</span>` : `<span style="font-size:.72rem;color:var(--green);">${t('noIssues')}</span>`}
           ${photoCount > 0 ? `<span style="font-size:.72rem;color:var(--muted);">📷 ${photoCount}</span>` : ''}
         </div>
         ${r.notes ? `<div style="font-size:.78rem;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">${r.notes}</div>` : ''}
@@ -1663,9 +2219,9 @@ function renderHome() {
     alertsEl.innerHTML=needsAttention.map(c=>{
       const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
       return `<div class="card" style="border-left:3px solid var(--red);background:rgba(255,107,107,.08);margin-bottom:10px">
-        <div style="font-weight:700;color:var(--red);font-size:.86rem;margin-bottom:3px">🚫 Cleaning cancelled</div>
-        <div style="font-size:.82rem">📍 ${prop.name} · was scheduled ${fmtDate(c.date)}</div>
-        <div style="font-size:.76rem;color:var(--muted);margin-top:3px">The booking was cancelled — this clean is no longer needed.</div>
+        <div style="font-weight:700;color:var(--red);font-size:.86rem;margin-bottom:3px">${t('cancelledTitle')}</div>
+        <div style="font-size:.82rem">📍 ${prop.name} · ${t('wasScheduled')} ${fmtDate(c.date)}</div>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:3px">${t('cancelledBody')}</div>
       </div>`;
     }).join('');
   }
@@ -1686,20 +2242,20 @@ function renderHome() {
     if(!overdue.length){
       overdueEl.innerHTML='';
     } else {
-      overdueEl.innerHTML='<div class="section-label" style="margin-bottom:10px;color:var(--red)">⏰ Overdue — submit inventory</div>'
+      overdueEl.innerHTML='<div class="section-label" style="margin-bottom:10px;color:var(--red)">'+t('overdueHead')+'</div>'
         +overdue.map(c=>{
           const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
           const daysLate=Math.round((new Date(td)-new Date(c.date))/86400000);
           return `<div class="clean-card" style="border-left:3px solid var(--red);margin-bottom:8px" onclick="openInventory('${c.id}')">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
               <div style="font-weight:600;font-size:.9rem">📍 ${prop.name}</div>
-              <span class="status-pill pill-overdue">${daysLate}d late</span>
+              <span class="status-pill pill-overdue">${t('daysLate',{n:daysLate})}</span>
             </div>
-            <div style="font-size:.78rem;color:var(--muted)">Was due ${fmtDate(c.date)}${c.notes?' · '+c.notes:''}</div>
-            <div style="margin-top:8px;font-size:.74rem;color:var(--red);font-weight:600">Tap to submit inventory →</div>
+            <div style="font-size:.78rem;color:var(--muted)">${t('wasDue')} ${fmtDate(c.date)}${c.notes?' · '+c.notes:''}</div>
+            <div style="margin-top:8px;font-size:.74rem;color:var(--red);font-weight:600">${t('tapInventory')}</div>
           </div>`;
         }).join('')
-        +'<div class="section-label" style="margin-top:16px;margin-bottom:12px">Next up</div>';
+        +'<div class="section-label" style="margin-top:16px;margin-bottom:12px">'+t('nextUp')+'</div>';
     }
   }
   // Genuinely upcoming only — overdue ones have their own section above now.
@@ -1709,23 +2265,23 @@ function renderHome() {
   const earned=thisMonth.filter(c=>c.status==='completed').reduce((s,c)=>s+(c.amount_paid||getRate(currentCleaner,c.property_id)),0);
   const nextEl=document.getElementById('home-cleans');
   if(!upcoming.length){
-    nextEl.innerHTML=`<div class="card" style="text-align:center;padding:28px"><div style="font-size:2rem;margin-bottom:8px">✨</div><div style="color:var(--muted);font-size:.88rem">No upcoming cleans scheduled</div></div>`;
+    nextEl.innerHTML=`<div class="card" style="text-align:center;padding:28px"><div style="font-size:2rem;margin-bottom:8px">✨</div><div style="color:var(--muted);font-size:.88rem">${t('noUpcoming')}</div></div>`;
   } else {
     nextEl.innerHTML=upcoming.map(c=>{
       const isToday=c.date===td;
       const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
       const[y,m,d]=(c.date||'-- -').split('-');
       const pillClass=isToday?'pill-today':'pill-scheduled';
-      const pillText=isToday?'Today':'Upcoming';
+      const pillText=isToday?t('today'):t('upcoming');
       return `<div class="clean-card ${isToday?'today-card':''}" onclick="openInventory('${c.id}')">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
           <div><div style="font-family:Syne,sans-serif;font-size:2rem;font-weight:800;line-height:1">${parseInt(d)||'?'}</div>
-          <div style="font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">${m?MONTHS_S[parseInt(m)-1]:''} ${y||''}</div></div>
+          <div style="font-size:.7rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">${m?monS(parseInt(m)-1):''} ${y||''}</div></div>
           <span class="status-pill ${pillClass}">${pillText}</span>
         </div>
         <div style="font-weight:600;font-size:.9rem;margin-bottom:3px">📍 ${prop.name}</div>
         <div style="font-size:.78rem;color:var(--muted)">${c.time||'10:00'}${c.notes?' · '+c.notes:''}</div>
-        <div style="margin-top:10px;font-size:.74rem;color:var(--accent);font-weight:600">Tap to submit inventory →</div>
+        <div style="margin-top:10px;font-size:.74rem;color:var(--accent);font-weight:600">${t('tapInventory')}</div>
       </div>`;
     }).join('');
   }
@@ -1733,15 +2289,15 @@ function renderHome() {
   document.getElementById('home-stats').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="card" style="border-left:3px solid var(--green)">
-        <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Earned this month</div>
+        <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${t('earnedThisMonth')}</div>
         <div style="font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;color:var(--green)">R${earned.toLocaleString()}</div>
       </div>
       <div class="card" style="border-left:3px solid var(--accent)">
-        <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Upcoming cleans</div>
+        <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${t('upcomingCleansStat')}</div>
         <div style="font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;color:var(--accent)">${scheduled}</div>
       </div>
       <div class="card" style="border-left:3px solid var(--red);grid-column:1 / -1">
-        <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Inventory due</div>
+        <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${t('inventoryDue')}</div>
         <div style="font-family:Syne,sans-serif;font-size:1.5rem;font-weight:800;color:var(--red)">${overdue.length}</div>
       </div>
     </div>`;
@@ -1768,17 +2324,17 @@ function renderCheckoutsNeeded() {
     if(propKeyFromId(c.property_id)!==propKeyFromId(b.pid)) return false;
     return Math.abs(new Date(c.date+'T00:00:00')-new Date(b.date+'T00:00:00'))<=2*86400000;
   });
-  el.innerHTML='<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">🧹 Upcoming Checkouts</div>'
+  el.innerHTML='<div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px">'+t('upcomingCheckouts')+'</div>'
     +upcoming.map(b=>{
       const cleanForDate=findCleanFor(b);
       const hasClean=!!cleanForDate;
       const[y,m,d]=b.date.split('-');
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--card);border:1px solid '+(hasClean?'rgba(45,212,160,.3)':'rgba(193,127,60,.3)')+';border-radius:10px;margin-bottom:6px">'
         +'<div style="display:flex;align-items:center;gap:10px">'
-        +'<div style="text-align:center;min-width:32px"><div style="font-family:Syne,sans-serif;font-size:1.1rem;font-weight:800">'+parseInt(d)+'</div><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase">'+MONTHS_S[parseInt(m)-1]+'</div></div>'
-        +'<div><div style="font-weight:600;font-size:.84rem">'+b.prop+'</div><div style="font-size:.72rem;color:var(--muted)">'+b.guest+' checks out</div></div>'
+        +'<div style="text-align:center;min-width:32px"><div style="font-family:Syne,sans-serif;font-size:1.1rem;font-weight:800">'+parseInt(d)+'</div><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase">'+monS(parseInt(m)-1)+'</div></div>'
+        +'<div><div style="font-weight:600;font-size:.84rem">'+b.prop+'</div><div style="font-size:.72rem;color:var(--muted)">'+t('checksOut',{name:b.guest})+'</div></div>'
         +'</div>'
-        +'<span style="font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:10px;background:'+(hasClean?'rgba(45,212,160,.15)':'rgba(193,127,60,.15)')+';color:'+(hasClean?'var(--green)':'var(--accent)')+'">'+( hasClean?'✓ '+(cleanForDate?.cleaner||'Booked'):'⚠ Needed')+'</span>'
+        +'<span style="font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:10px;background:'+(hasClean?'rgba(45,212,160,.15)':'rgba(193,127,60,.15)')+';color:'+(hasClean?'var(--green)':'var(--accent)')+'">'+( hasClean?'✓ '+(cleanForDate?.cleaner||t('booked')):t('needed'))+'</span>'
         +'</div>';
     }).join('')+'<div style="height:16px"></div>';
 }
@@ -1787,11 +2343,11 @@ function renderCleans() {
   const td=tod();
   renderCheckoutsNeeded();
   const el=document.getElementById('cleans-list');
-  if(!myCleans.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px"><div style="font-size:2rem;margin-bottom:8px">🧹</div><div style="color:var(--muted);font-size:.88rem">No cleans assigned to you yet</div></div>';return;}
+  if(!myCleans.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px"><div style="font-size:2rem;margin-bottom:8px">🧹</div><div style="color:var(--muted);font-size:.88rem">'+t('noCleansYet')+'</div></div>';return;}
   const filtered=cleansFilter==='upcoming'
     ?[...myCleans].filter(c=>c.status==='scheduled').sort((a,b)=>a.date.localeCompare(b.date))
     :[...myCleans].filter(c=>c.status==='completed').sort((a,b)=>b.date.localeCompare(a.date));
-  if(!filtered.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px"><div style="font-size:2rem;margin-bottom:8px">'+(cleansFilter==='upcoming'?'✨':'📋')+'</div><div style="color:var(--muted);font-size:.88rem">No '+cleansFilter+' cleans</div></div>';return;}
+  if(!filtered.length){el.innerHTML='<div class="card" style="text-align:center;padding:28px"><div style="font-size:2rem;margin-bottom:8px">'+(cleansFilter==='upcoming'?'✨':'📋')+'</div><div style="color:var(--muted);font-size:.88rem">'+(cleansFilter==='upcoming'?t('noUpcomingCleans'):t('noCompletedCleans'))+'</div></div>';return;}
   el.innerHTML=filtered.map(c=>{
     const prop=PROPS[c.property_id]||{name:c.property_id||'—'};
     const[y,m,d]=(c.date||'').split('-');
@@ -1799,16 +2355,16 @@ function renderCleans() {
     const isToday=c.date===td;
     const isOverdue=!done&&c.date<td;
     const pillClass=isOverdue?'pill-overdue':done?'pill-completed':isToday?'pill-today':'pill-scheduled';
-    const pillText=isOverdue?'Overdue':done?'Done':isToday?'Today':'Scheduled';
+    const pillText=isOverdue?t('overdue'):done?t('done'):isToday?t('today'):t('scheduled');
     return '<div class="clean-card '+(isToday?'today-card':'')+'">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:10px">'
       +'<div style="display:flex;align-items:center;gap:12px">'
-      +'<div style="text-align:center;min-width:36px"><div style="font-family:Syne,sans-serif;font-size:1.2rem;font-weight:800">'+(parseInt(d)||'?')+'</div><div style="font-size:.62rem;color:var(--muted);text-transform:uppercase">'+(m?MONTHS_S[parseInt(m)-1]:'')+'</div></div>'
+      +'<div style="text-align:center;min-width:36px"><div style="font-family:Syne,sans-serif;font-size:1.2rem;font-weight:800">'+(parseInt(d)||'?')+'</div><div style="font-size:.62rem;color:var(--muted);text-transform:uppercase">'+(m?monS(parseInt(m)-1):'')+'</div></div>'
       +'<div><div style="font-weight:600;font-size:.88rem">'+prop.name+'</div><div style="font-size:.76rem;color:var(--muted)">'+(c.time||'10:00')+' · R'+(c.amount_paid||getRate(currentCleaner,c.property_id))+'</div></div>'
       +'</div>'
       +'<span class="status-pill '+pillClass+'">'+pillText+'</span>'
       +'</div>'
-      +(!done?'<div onclick="openInventory(\''+c.id+'\')" style="font-size:.74rem;color:var(--accent);font-weight:600;cursor:pointer">Tap to submit inventory →</div>':'')
+      +(!done?'<div onclick="openInventory(\''+c.id+'\')" style="font-size:.74rem;color:var(--accent);font-weight:600;cursor:pointer">'+t('tapInventory')+'</div>':'')
       +'</div>';
   }).join('');
 }
@@ -1834,7 +2390,7 @@ function openInventory(cleanId) {
           <span class="item-name">${item}</span><div class="item-toggle" id="it-${k}">✓</div>
         </div>
         <div class="flag-note" id="fn-${k}">
-          <input class="flag-input" placeholder="Describe issue…" onchange="setNote('${room.room}','${item}',this.value)" onclick="event.stopPropagation()"/>
+          <input class="flag-input" data-t-ph="describeIssue" placeholder="${t('describeIssue')}" onchange="setNote('${room.room}','${item}',this.value)" onclick="event.stopPropagation()"/>
         </div>`;
       }).join('')}
     </div>`).join('');
@@ -1879,28 +2435,28 @@ async function submitInventory() {
     reviewed:false,
     task_created:false,
   };
-  if(!db){toast('📶 No connection — try again once you\'re back online','err');return;}
-  if(typeof navigator!=='undefined' && navigator.onLine===false){toast('📶 No connection — try again once you\'re back online','err');return;}
+  if(!db){toast(t('noConnection'),'err');return;}
+  if(typeof navigator!=='undefined' && navigator.onLine===false){toast(t('noConnection'),'err');return;}
   _submittingInventory=true;
-  if(btn){btn.disabled=true;btn.dataset.origText=btn.textContent;btn.textContent='Saving…';}
+  if(btn){btn.disabled=true;btn.dataset.origText=btn.textContent;btn.textContent=t('saving');}
   try {
     const{error:rErr}=await db.from('inventory_reports').insert([report]);
     if(rErr) throw rErr;
     await db.from('domestics').update({status:'completed'}).eq('id',currentInventoryClean.id);
     const c=myCleans.find(x=>String(x.id)===String(currentInventoryClean.id));
     if(c) c.status='completed';
-    const msg=flagged.length>0?`✓ Submitted — ${flagged.length} item${flagged.length>1?'s':''} flagged`:generalNote?'✓ Submitted with note':'🎉 Nice one — all done!';
+    const msg=flagged.length>0?tp('submittedFlagged',flagged.length):generalNote?t('submittedNote'):t('allDone');
     toast(msg, flagged.length>0 ? 'ok' : 'celebrate');
     setTimeout(()=>showScreen('home'),1200);
   } catch(e){
     console.error(e);
     const msg = (typeof navigator!=='undefined' && navigator.onLine===false)
-      ? '📶 No connection — we\'ll keep this on screen, try Submit again once you\'re back online'
-      : 'Couldn\'t save — check your connection and try again';
+      ? t('noConnectionKeep')
+      : t('couldntSave');
     toast(msg,'err');
   } finally {
     _submittingInventory=false;
-    if(btn){btn.disabled=false;btn.textContent=btn.dataset.origText||'✓ Submit Inventory Report';}
+    if(btn){btn.disabled=false;btn.textContent=btn.dataset.origText||t('submitInv');}
   }
 }
 
@@ -1910,10 +2466,10 @@ function renderAvail() {
   const firstDay=new Date(availYear,availMonth,1).getDay();
   const daysCount=new Date(availYear,availMonth+1,0).getDate();
   const monthStr=availYear+'-'+String(availMonth+1).padStart(2,'0');
-  document.getElementById('avail-month-label').textContent=MONTHS[availMonth]+' '+availYear;
+  document.getElementById('avail-month-label').textContent=mon(availMonth)+' '+availYear;
   const cleanDates=new Set(myCleans.filter(c=>c.date&&c.date.startsWith(monthStr)).map(c=>c.date));
   const checkoutMap=new Map(myBookingCheckouts.filter(b=>b.date&&b.date.startsWith(monthStr)).map(b=>[b.date,b]));
-  let html=['S','M','T','W','T','F','S'].map(d=>'<div class="avail-day-head">'+d+'</div>').join('');
+  let html=weekdayHeads().map(d=>'<div class="avail-day-head">'+d+'</div>').join('');
   for(let i=0;i<firstDay;i++) html+='<div class="avail-cell empty"></div>';
   for(let d=1;d<=daysCount;d++){
     const ds=monthStr+'-'+String(d).padStart(2,'0');
@@ -1940,7 +2496,7 @@ function toggleAvail(ds){availableDays.has(ds)?availableDays.delete(ds):availabl
 function availNav(dir){availMonth+=dir;if(availMonth>11){availMonth=0;availYear++;}if(availMonth<0){availMonth=11;availYear--;}renderAvail();}
 
 async function saveAvailability() {
-  if(!db||!currentCleaner){toast('Not connected','err');return;}
+  if(!db||!currentCleaner){toast(t('notConnected'),'err');return;}
   const td=tod();
   const monthStr=availYear+'-'+String(availMonth+1).padStart(2,'0');
   const daysCount=new Date(availYear,availMonth+1,0).getDate();
@@ -1951,8 +2507,8 @@ async function saveAvailability() {
     upserts.push({cleaner:currentCleaner.name,date:ds,available:availableDays.has(ds),org_id:ORG_ID});
   }
   const{error}=await db.from('cleaner_availability').upsert(upserts,{onConflict:'cleaner,date'});
-  if(error){toast('Save error: '+error.message,'err');return;}
-  toast('Availability saved ✓','ok');
+  if(error){toast(t('saveError')+': '+error.message,'err');return;}
+  toast(t('availSaved'),'ok');
 }
 
 // ── Earnings ──────────────────────────────────────────────────────────────────
@@ -1972,17 +2528,17 @@ function renderEarnings() {
   const months=Object.keys(byMonth).sort().reverse();
   document.getElementById('earnings-content').innerHTML=`
     <div class="card" style="border-left:3px solid var(--green);margin-bottom:20px">
-      <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">This month</div>
+      <div style="font-size:.65rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">${t('thisMonth')}</div>
       <div style="font-family:Syne,sans-serif;font-size:2.5rem;font-weight:800;color:var(--green);line-height:1">R${thisTotal.toLocaleString()}</div>
-      <div style="font-size:.78rem;color:var(--muted);margin-top:4px;margin-bottom:12px">${(byMonth[thisMonth]||{cleans:0}).cleans} clean${(byMonth[thisMonth]||{cleans:0}).cleans!==1?'s':''} completed</div>
-      <div style="font-size:.74rem;color:var(--muted)">All time total: <strong style="color:var(--text)">R${allTime.toLocaleString()}</strong></div>
+      <div style="font-size:.78rem;color:var(--muted);margin-top:4px;margin-bottom:12px">${tp('cleansDone',(byMonth[thisMonth]||{cleans:0}).cleans)}</div>
+      <div style="font-size:.74rem;color:var(--muted)">${t('allTimeTotal')} <strong style="color:var(--text)">R${allTime.toLocaleString()}</strong></div>
     </div>
-    <div class="section-label">Monthly breakdown</div>
+    <div class="section-label">${t('monthlyBreakdown')}</div>
     <div class="card">
       ${months.length?months.map(m=>{
         const[y,mo]=m.split('-');
-        return `<div class="earn-row"><div><div style="font-weight:600;font-size:.88rem">${MONTHS[parseInt(mo)-1]} ${y}</div><div style="font-size:.76rem;color:var(--muted)">${byMonth[m].cleans} clean${byMonth[m].cleans!==1?'s':''}</div></div><div style="font-family:Syne,sans-serif;font-weight:700;color:var(--green)">R${byMonth[m].total.toLocaleString()}</div></div>`;
-      }).join(''):'<div style="color:var(--muted);text-align:center;padding:20px;font-size:.85rem">No completed cleans yet</div>'}
+        return `<div class="earn-row"><div><div style="font-weight:600;font-size:.88rem">${mon(parseInt(mo)-1)} ${y}</div><div style="font-size:.76rem;color:var(--muted)">${tp('cleansN',byMonth[m].cleans)}</div></div><div style="font-family:Syne,sans-serif;font-weight:700;color:var(--green)">R${byMonth[m].total.toLocaleString()}</div></div>`;
+      }).join(''):'<div style="color:var(--muted);text-align:center;padding:20px;font-size:.85rem">'+t('noCompletedYet')+'</div>'}
     </div>`;
 }
 
@@ -2017,7 +2573,7 @@ function renderPropertyPickers() {
   const uuids = Object.keys(PROPS);
   document.querySelectorAll('#nina-insp-property').forEach(sel => {
     const current = sel.value;
-    sel.innerHTML = '<option value="">Select…</option>' +
+    sel.innerHTML = '<option value="">'+t('selectDots')+'</option>' +
       uuids.map(u => `<option value="${u}" data-key="${PROPS[u].key || ''}">${PROPS[u].name}</option>`).join('');
     if (current) sel.value = current;
   });
@@ -2030,21 +2586,30 @@ function showNoPortalKey() {
   const auth = document.getElementById('auth');
   if (!auth) return;
   auth.innerHTML = `
-    <div class="auth-logo">HEP Staff Portal</div>
+    <div class="auth-logo">${t('portalTitle')}</div>
+    <div class="lang-row" style="margin:-28px 0 26px">
+      <span class="globe">🌐</span>
+      <select class="lang-select" onchange="setStaffLang(this.value)" aria-label="Language"></select>
+    </div>
     <div class="auth-card">
-      <div class="auth-title">Almost there 👋</div>
+      <div class="auth-title">${t('almostThere')}</div>
       <div class="auth-sub" style="margin-bottom:18px">
-        This link is missing the part that says which company you work for.
+        ${t('noKeyLead')}
       </div>
       <div style="font-size:.86rem;line-height:1.7;color:var(--muted)">
-        Ask your manager to send you your own portal link. It ends with your
-        company's name, like <code style="color:var(--accent)">/domestic/your-company</code>.
-        Open that once and your phone will remember it.
+        ${t('noKeyBody')} <code style="color:var(--accent)">/domestic/your-company</code>.
+        ${t('noKeyBody2')}
       </div>
     </div>`;
+  renderLangPickers();
 }
 
 (async function boot() {
+  // Language first, before the network. bootstrapPortal() is a round trip,
+  // and a cleaner who has chosen isiXhosa should not watch the sign-in
+  // screen sit in English while it completes.
+  applyStaticT();
+  renderLangPickers();
   const ok = await bootstrapPortal();
   if (!ok) { showNoPortalKey(); return; }
   buildAuth();
