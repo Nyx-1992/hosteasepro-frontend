@@ -2763,10 +2763,10 @@ async function renderBilling() {
     ${showPlans ? `<div style="border-top:1px solid var(--border);padding-top:14px">
       <div style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">Choose a plan</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${HEP_PLANS.map(p => `<button class="btn btn-sm ${p.k === sub.plan ? 'btn-primary' : 'btn-ghost'}"
+        ${hepPlansForMe().map(p => `<button class="btn btn-sm ${p.k === sub.plan ? 'btn-primary' : 'btn-ghost'}"
             onclick="startSubscription('${p.k}')">${p.label} · R${p.rand}<span style="opacity:.7">/mo</span></button>`).join('')}
       </div>
-      <div style="font-size:.74rem;color:var(--muted);margin-top:7px">${HEP_PLANS.map(p => `${p.label}: ${p.blurb}`).join(' · ')}</div>
+      <div style="font-size:.74rem;color:var(--muted);margin-top:7px">${hepPlansForMe().map(p => `${p.label}: ${p.blurb}`).join(' · ')}</div>
     </div>` : ''}
 
     ${showCancel ? `<div style="border-top:1px solid var(--border);padding-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -5384,14 +5384,36 @@ async function loadSubscription() {
   renderSubscriptionBanner();
 }
 
-// R350 / R550 / R750 (p3-14). Mirrored from api/_lib/payfast.js, which
-// is the authority — the server decides what is charged, because a price
-// posted from a browser is a price the browser can edit.
+// Mirrored from api/_lib/payfast.js, which is the authority — the server
+// decides what is charged, because a price posted from a browser is a
+// price the browser can edit. This copy had drifted: it advertised Growth
+// as 8 properties while the pricing page said 10.
+//
+// Two tracks, because they are two businesses running the same software:
+// an agency is priced per property, a guesthouse per room. Which set is
+// shown depends on whether the customer has a guesthouse, so nobody is
+// asked to choose between six tiers when only three can apply to them.
 const HEP_PLANS = [
-  { k: 'starter', label: 'Starter', rand: 350, blurb: 'up to 2 properties' },
-  { k: 'growth',  label: 'Growth',  rand: 550, blurb: 'up to 8 properties' },
-  { k: 'pro',     label: 'Pro',     rand: 750, blurb: 'unlimited properties' },
+  { k: 'starter',   label: 'Starter',         rand: 350, track: 'property',   blurb: 'up to 2 properties' },
+  { k: 'growth',    label: 'Growth',          rand: 550, track: 'property',   blurb: 'up to 10 properties' },
+  { k: 'pro',       label: 'Pro',             rand: 750, track: 'property',   blurb: 'unlimited properties' },
+  { k: 'gh_small',  label: 'Guesthouse',      rand: 400, track: 'guesthouse', blurb: 'up to 6 rooms' },
+  { k: 'gh_medium', label: 'Guesthouse Plus', rand: 600, track: 'guesthouse', blurb: 'up to 15 rooms' },
+  { k: 'gh_large',  label: 'Guesthouse Pro',  rand: 900, track: 'guesthouse', blurb: 'unlimited rooms' },
 ];
+
+// A customer who has set up a guesthouse is shown the room-priced tiers;
+// everyone else sees the property-priced ones. Derived from what they have
+// actually created rather than asked as a question, because by the time
+// they are looking at plans they have already told us by adding rooms.
+function hepPlanTrack() {
+  const hasRooms = Object.values(PROPS || {}).some(p => p && p.parent_id);
+  return hasRooms ? 'guesthouse' : 'property';
+}
+function hepPlansForMe() {
+  const t = hepPlanTrack();
+  return HEP_PLANS.filter(p => p.track === t);
+}
 
 // Hands off to PayFast. The signed fields come from the server; this
 // only builds the form and submits it.
@@ -5452,11 +5474,11 @@ function renderSubscriptionBanner() {
   const lapsed = subscriptionLapsed();
   const canPay = billingLive && currentUser && ['owner','admin'].includes(currentUser.role);
 
-  const planButtons = () => HEP_PLANS.map(p =>
+  const planButtons = () => hepPlansForMe().map(p =>
     `<button id="sub-pay-btn" class="btn btn-sm btn-primary" style="margin-right:6px"
        onclick="startSubscription('${p.k}')">${p.label} · R${p.rand}/mo</button>`).join('') +
     `<div style="font-size:.74rem;color:var(--muted);margin-top:6px">${
-      HEP_PLANS.map(p => `${p.label}: ${p.blurb}`).join(' · ')}</div>`;
+      hepPlansForMe().map(p => `${p.label}: ${p.blurb}`).join(' · ')}</div>`;
 
   // BILLING IS NOT LIVE YET. Signup has been open since the marketing
   // page shipped and the trial is a week; the merchant account is weeks
@@ -7144,6 +7166,7 @@ function drawCustomers() {
   if (s.never_set_up)      todo.push(['🏚️', s.never_set_up + ' signed up but added no property', 'They have not started. They will not convert on their own.']);
   if (s.quiet_14d)         todo.push(['🌙', s.quiet_14d + ' have not signed in for two weeks', 'Quiet before cancelling. Worth a check-in.']);
   if (s.lapsed)            todo.push(['⚠️', s.lapsed + ' lapsed or failed payment', 'Was paying, is not now.']);
+  if (s.underplanned)      todo.push(['↑', s.underplanned + ' on a plan below what they run', 'A guesthouse or extra properties on too small a tier. A conversation, not a cut-off.']);
 
   const stat = (label, value, sub, colour) => `
     <div class="stat-card" style="border-top-color:${colour||'var(--ocean)'}">
@@ -7165,7 +7188,42 @@ function drawCustomers() {
     return map[r.status] || ['#6b7280', r.status || '—'];
   };
 
-  const planLabel = { starter:'Starter · R350', growth:'Growth · R550', pro:'Pro · R750', founder:'No charge', trial:'Trial' };
+  // Both tracks, plus the two states that are not a plan. HQ has to be
+  // able to put anybody on anything — including a guesthouse tier for an
+  // agency that has not created its rooms yet, which happens during
+  // onboarding more often than it sounds.
+  const planLabel = PLAN_LABEL;
+
+  // Is this customer running more than they pay for? A guesthouse needs
+  // Growth however few rooms it has — it is a different operation from a
+  // flat, not a bigger one, and it is the customer who gets the most out
+  // of HEP. org_required_plan() in 909 decides; this only ranks the answer
+  // against what they are on.
+  //
+  // ADVISORY, NEVER A BLOCK. Nothing stops them, and no customer is told
+  // off by the software. It is on this screen so it can become a
+  // conversation rather than a locked door — and a comped account is a
+  // decision, not an underpayment, so it never flags.
+  // 'trial' and 'none' are deliberately absent: a customer still on trial
+  // has not chosen a plan yet, so PLAN_RANK[r.plan] is undefined, the
+  // comparison is false, and they are never flagged for underpaying
+  // something they are not yet paying for.
+  // Compared BY PRICE, not by tier rank. Rank does not survive two tracks:
+  // "Guesthouse at R400" is neither above nor below "Growth at R550" in any
+  // ordering that means anything, but the rands always are. Mirrors
+  // plan_price_rand() in migration 910.
+  const PLAN_RAND = { starter:350, growth:550, pro:750, gh_small:400, gh_medium:600, gh_large:900 };
+  const PLAN_NAME = { starter:'Starter', growth:'Growth', pro:'Pro',
+                      gh_small:'Guesthouse', gh_medium:'Guesthouse Plus', gh_large:'Guesthouse Pro' };
+  const PLAN_LABEL = {
+    starter:'Starter · R350', growth:'Growth · R550', pro:'Pro · R750',
+    gh_small:'Guesthouse · R400', gh_medium:'Guesthouse Plus · R600', gh_large:'Guesthouse Pro · R900',
+    founder:'No charge', trial:'Trial', none:'—',
+  };
+  const underplanned = (r) =>
+    r.plan !== 'founder' &&
+    (PLAN_RAND[r.plan] || 0) > 0 &&
+    (PLAN_RAND[r.needs_plan] || 0) > (PLAN_RAND[r.plan] || 0);
 
   root.innerHTML = `
     ${todo.length ? `
@@ -7227,10 +7285,11 @@ function drawCustomers() {
                 <div style="font-size:.76rem;color:var(--muted);margin-top:3px">${planLabel[r.plan] || r.plan || '—'}</div>
                 ${r.status === 'trialing' && dleft !== null
                   ? `<div style="font-size:.72rem;color:${dleft <= 3 ? 'var(--red)' : 'var(--muted)'}">${dleft < 0 ? 'expired' : dleft + ' days left'}</div>` : ''}
+                ${underplanned(r) ? `<div style="font-size:.72rem;color:#c17f3c;font-weight:600" title="${escHtml(r.needs_reason||'')}">↑ needs ${escHtml(PLAN_NAME[r.needs_plan]||r.needs_plan)}</div>` : ''}
               </td>
               <td style="padding:10px;color:var(--muted);white-space:nowrap">${r.signed_up ? fmtDate(String(r.signed_up).slice(0,10)) : '—'}</td>
               <td style="padding:10px;color:var(--muted);white-space:nowrap">
-                <div style="font-weight:600;color:var(--ink)">${r.properties}</div>
+                <div style="font-weight:600;color:var(--ink)">${r.properties}${r.rooms ? ` <span style="font-weight:400;font-size:.8rem">+ ${r.rooms} room${r.rooms===1?'':'s'}</span>` : ''}</div>
                 <div style="font-size:.76rem">${r.bookings} booking${r.bookings===1?'':'s'}</div>
               </td>
               <td style="padding:10px;color:var(--muted)">
@@ -7395,8 +7454,8 @@ function openCustomerActions(orgId) {
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <select id="hq-plan" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem">
-        ${['starter','growth','pro','trial'].map(p =>
-          `<option value="${p}"${r.plan === p ? ' selected' : ''}>${{starter:'Starter · R350',growth:'Growth · R550',pro:'Pro · R750',trial:'Trial'}[p]}</option>`).join('')}
+        ${['starter','growth','pro','gh_small','gh_medium','gh_large','trial'].map(p =>
+          `<option value="${p}"${r.plan === p ? ' selected' : ''}>${PLAN_LABEL[p]}</option>`).join('')}
       </select>
       <select id="hq-status" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem">
         ${['active','trialing','past_due','cancelled'].map(s =>
