@@ -138,6 +138,42 @@ ok('the plan button only appears once something is serviced daily',
 ok('pressing it twice is safe and says so',
    /Safe to press twice/.test(app) && /already planned/.test(app));
 
+// ══ WHO IS CLEANING IT ════════════════════════════════════════════
+//
+// "It looks nice, just seems a bit complicated? How do I see the cleaner
+// for the full day there?"
+//
+// Both halves were fair. The tile showed a broom and refused to say whose,
+// and the screen carried five legend entries and three lines of prose
+// explaining itself.
+console.log('\n── The cleaner is named, not implied ──');
+ok('the room state query returns who is cleaning', /clean_by/.test(app));
+ok('the tile names them rather than showing a bare broom',
+   /r\.clean_by \? `🧹 \$\{firstName\(r\.clean_by\)\}`/.test(app));
+// A clean nobody is on is not the same as no clean, and it is the one
+// that needs doing something about.
+ok('a clean with nobody on it says so',
+   /r\.clean_due \? '🧹 unassigned'/.test(app) && /hv-room-clean\.unassigned/.test(app));
+ok('the dashboard card says the same thing',
+   (app.match(/hv-room-clean/g) || []).length >= 3);
+
+console.log('\n── The cleaner\'s whole day ──');
+ok('the list can group by cleaner, not just by job',
+   /function hkGroupBy/.test(app) && /_hkBy === 'cleaner'/.test(app));
+ok('both groupings are offered as buttons',
+   /hkGroupBy\('task'\)/.test(app) && /hkGroupBy\('cleaner'\)/.test(app));
+// Unassigned is the only group that needs a decision, so it goes first.
+ok('unassigned work sorts to the top of the by-cleaner view',
+   /\(a \? 1 : -1\) - \(b \? 1 : -1\)/.test(app) && /Nobody assigned/.test(app));
+ok('by-cleaner shows what the job is, by-job shows who has it',
+   /byCleaner\s*\n?\s*\? escHtml\(HK_TASK\[r\.task\]\[2\]\)/.test(app));
+
+console.log('\n── Less on screen ──');
+ok('the legend hides states that are not happening today',
+   /return n \? `<span>/.test(app));
+ok('the explanatory paragraph is gone unless it is useful',
+   !/tap one to edit it/.test(app));
+
 // ══ IT HAS TO BE WHERE SHE LOOKS ══════════════════════════════════
 //
 // "Where is my little catch with the amount of chalets / guest rooms to
