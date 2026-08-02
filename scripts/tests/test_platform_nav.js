@@ -89,19 +89,40 @@ console.log('\n── Everything else is unaffected ──');
 
 const customerOwner = navIds('owner', CUSTOMER, PLATFORM);
 const platformOwner = navIds('owner', PLATFORM, PLATFORM);
-ok('a customer owner still gets every other owner tab',
-   platformOwner.filter(id => id !== 'roadmap').every(id => customerOwner.includes(id)));
-ok('roadmap is the ONLY difference between them',
-   platformOwner.length === customerOwner.length + 1);
+
+// THE SHAPE CHANGED ON 2026-08-02, deliberately. This used to assert that
+// roadmap was the ONLY difference — i.e. the platform owner saw the tenant
+// app plus one tab. That was the wrong product: HEP manages no flats, so
+// Bookings, Calendar, Cleaning and Invoices were permanently empty for the
+// one person who cannot use them. The platform owner now gets a separate
+// nav (PLATFORM_NAV_GROUPS), not the tenant one with extras.
+const PLATFORM_ONLY = ['customers', 'roadmap'];
+ok('a customer owner gets none of the platform tabs',
+   PLATFORM_ONLY.every(id => !customerOwner.includes(id)));
+ok('the platform owner gets all of them',
+   PLATFORM_ONLY.every(id => platformOwner.includes(id)));
+ok('those tabs are the only difference in what each MAY see',
+   platformOwner.filter(id => !PLATFORM_ONLY.includes(id)).join() === customerOwner.join());
 ok('a customer owner still has the tabs they pay for',
    ['dashboard', 'bookings', 'calendar', 'invoices', 'reports'].every(id => customerOwner.includes(id)));
 
+// What each is SHOWN, which is a different question from what they may see:
+// renderNavGroups swaps the whole grouping for the platform owner.
+ok('the platform owner is shown a different nav entirely',
+   /isPlatformOwner\(\) \? PLATFORM_NAV_GROUPS : NAV_GROUPS/.test(html));
+const platGroups = (html.match(/const PLATFORM_NAV_GROUPS = \[([\s\S]*?)\];/) || [])[1] || '';
+ok('and that nav contains no tenant tabs',
+   platGroups.length > 0 &&
+   !['bookings','calendar','cleaning','tasks','invoices','spending','reports','people','vault','marketing','messages','knowledge','inspections','dashboard']
+     .some(id => platGroups.includes(`'${id}'`)));
+
 console.log('\n── The flag itself ──');
 
-const flagged = M.NAV.filter(n => n.platformOnly).map(n => n.id);
+const flagged = M.NAV.filter(n => n.platformOnly).map(n => n.id).sort();
 ok('roadmap is marked platformOnly', flagged.includes('roadmap'));
+ok('the customers screen is too', flagged.includes('customers'));
 ok('nothing else is marked platformOnly by accident',
-   flagged.length === 1 && flagged[0] === 'roadmap');
+   flagged.join() === PLATFORM_ONLY.slice().sort().join());
 ok('both navs go through the same check',
    (html.match(/navFor\(/g) || []).length >= 3);
 ok('switchTab checks it too — the nav is not the only way in',
