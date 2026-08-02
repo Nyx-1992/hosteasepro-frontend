@@ -544,6 +544,9 @@ function _buildMobileNavStub(){/* replaced by main script */}
     <div class="field-group"><label>Email</label><input type="email" id="login-email" placeholder="your@email.com"/></div>
     <div class="field-group"><label>Password</label><input type="password" id="login-password" onkeydown="if(event.key==='Enter')doLogin();"/></div>
     <button class="btn btn-primary btn-full" id="signin-btn" onclick="doLogin()">Sign In</button>
+    <div style="margin-top:10px;text-align:center">
+      <a href="#" onclick="startPasswordReset();return false;" style="font-size:.8rem;color:var(--muted);text-decoration:none">Forgot your password?</a>
+    </div>
     <div style="margin-top:12px;text-align:center">
       <a href="./domestic.html" style="display:inline-flex;align-items:center;gap:6px;padding:9px 20px;border-radius:20px;border:1.5px solid var(--border);font-size:.82rem;font-weight:600;color:var(--muted);text-decoration:none;background:var(--sand);transition:all .2s" onmouseover="this.style.borderColor='var(--ocean)';this.style.color='var(--ocean)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
         🧹 Staff Portal
@@ -2456,6 +2459,7 @@ function getOrgId() {
   return CURRENT_ORG_ID || SN_OWNER_ORG_ID;
 }
 restoreSession();
+watchForPasswordRecovery();
 let bookingFilter = 'upcoming';
 // Tracks the Urgent Actions count across renders so the "all clear"
 // celebration only fires on the actual transition to zero, not on every
@@ -3637,6 +3641,119 @@ function applyRoleUI() {
   const revField = document.getElementById('b-revenue-field');
   if (revField) revField.style.display = hide ? 'none' : '';
 }
+// ══ FORGOT PASSWORD ═══════════════════════════════════════════════
+//
+// There was no way back into an account. An agency that forgets its
+// password had to email someone, and HEP is sold to people who have never
+// met us — "reply to this email and we will reset it by hand" is not a
+// product, and it does not work at 11pm on a Sunday when a cleaner needs
+// the schedule.
+//
+// TWO THINGS THIS DELIBERATELY DOES NOT DO:
+//
+// It does not say whether the address has an account. "No account with
+// that email" turns this box into a way to find out who your customers
+// are, one address at a time. The message is the same either way.
+//
+// It does not clear the email field or navigate away, so somebody who
+// mistyped can see what they typed and fix it.
+async function startPasswordReset() {
+  const emailEl = document.getElementById('login-email');
+  const errEl   = document.getElementById('auth-error');
+  const email   = (emailEl.value || '').trim();
+
+  const say = (msg, isError) => {
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+    // The box is styled as an error; a sent-successfully message in red
+    // reads as a failure, which is how people end up sending it four times.
+    errEl.style.background = isError ? '' : 'rgba(22,163,74,.10)';
+    errEl.style.borderColor = isError ? '' : 'rgba(22,163,74,.45)';
+    errEl.style.color = isError ? '' : '#166534';
+  };
+
+  if (!email) { emailEl.focus(); return say('Type your email address above first, then click this again.', true); }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say('That email address does not look right.', true);
+  if (!db) return say('Not connected to the server. Please refresh and try again.', true);
+
+  try {
+    // redirectTo must be on Supabase's allow-list (Authentication → URL
+    // Configuration) or the link in the email refuses to open. Built from
+    // the current origin so it is correct on every deployment.
+    await db.auth.resetPasswordForEmail(email, { redirectTo: location.origin + '/' });
+  } catch (e) {
+    console.warn('resetPasswordForEmail:', e);
+  }
+  // Deliberately unconditional, including on failure. See above.
+  say('If there is an account for ' + email + ', a reset link is on its way. It expires in an hour.', false);
+}
+
+// Supabase sends the recovery link back here with the token in the URL
+// FRAGMENT, so it never reaches a server or a log. supabase-js consumes it
+// and fires PASSWORD_RECOVERY; until the new password is set the session is
+// a limited one, which is why this shows a form rather than logging in.
+function watchForPasswordRecovery() {
+  if (!db) return;
+  const isRecovery = /[#&]type=recovery/.test(location.hash);
+  db.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY' || (isRecovery && event === 'SIGNED_IN')) showSetNewPassword();
+  });
+  if (isRecovery) showSetNewPassword();
+}
+
+function showSetNewPassword() {
+  const card = document.querySelector('#auth-screen .auth-card');
+  if (!card || card.dataset.recovery === '1') return;
+  card.dataset.recovery = '1';
+  document.getElementById('auth-screen').style.display = '';
+  const app = document.getElementById('app-screen');
+  if (app) app.style.display = 'none';
+  card.innerHTML = `
+    <div class="auth-logo">🏠 HostEase Pro</div>
+    <div class="auth-sub">Choose a new password</div>
+    <div class="error-box" id="auth-error"></div>
+    <div class="field-group"><label>New password</label>
+      <input type="password" id="np-1" placeholder="At least 8 characters"/></div>
+    <div class="field-group"><label>Repeat it</label>
+      <input type="password" id="np-2" onkeydown="if(event.key==='Enter')saveNewPassword();"/></div>
+    <button class="btn btn-primary btn-full" id="np-btn" onclick="saveNewPassword()">Save and sign in</button>`;
+  setTimeout(() => { const el = document.getElementById('np-1'); if (el) el.focus(); }, 60);
+}
+
+async function saveNewPassword() {
+  const a = document.getElementById('np-1').value;
+  const b = document.getElementById('np-2').value;
+  const errEl = document.getElementById('auth-error');
+  const btn = document.getElementById('np-btn');
+  const fail = (m) => { errEl.textContent = m; errEl.style.display = 'block'; };
+  errEl.style.display = 'none';
+
+  // Matches the signup rule. A reset that accepts a weaker password than
+  // signup is a way around the signup rule.
+  if (a.length < 8) return fail('Password must be at least 8 characters.');
+  if (!/[a-zA-Z]/.test(a) || !/[0-9]/.test(a)) return fail('Use a mix of letters and numbers.');
+  if (a !== b) return fail('Those two do not match.');
+
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const { error } = await db.auth.updateUser({ password: a });
+    if (error) { btn.disabled = false; btn.textContent = 'Save and sign in'; return fail(error.message || 'Could not save that password.'); }
+    // Drop the recovery token out of the address bar before anything else —
+    // it is still in the URL, and the URL ends up in browser history and in
+    // whatever the person pastes to a colleague when asking for help.
+    history.replaceState(null, '', location.pathname);
+    const { data } = await db.auth.getUser();
+    const profile = data && data.user ? await fetchProfile(data.user.id, data.user.email) : null;
+    if (!profile) { location.href = location.pathname; return; }
+    currentUser = profile;
+    await _afterLogin(profile);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Save and sign in';
+    fail('Something went wrong. Please try the link again.');
+    console.warn('saveNewPassword:', e);
+  }
+}
+
 async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pass  = document.getElementById('login-password').value;
@@ -3734,6 +3851,10 @@ async function _afterLogin(user) {
 }
 async function restoreSession() {
   if (!db) return;
+  // A recovery link carries a real, if limited, session. Without this guard
+  // it signs them into the app and the password they came to change never
+  // gets changed — the reset appears to work and nothing happens.
+  if (/[#&]type=recovery/.test(location.hash)) return;
   try {
     const { data } = await db.auth.getSession();
     const session = data && data.session;
