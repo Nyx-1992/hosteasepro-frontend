@@ -3949,7 +3949,11 @@ const NAV = [
   // PLATFORM-ONLY, like the roadmap. This is HEP's own business — who has
   // signed up, who is paying, who is about to leave — and it is meaningless
   // inside an agency's account.
-  {id:'customers',label:'My Business',  icon:'📈',roles:['owner'],platformOnly:true},
+  // "What do we call this?" — HQ. Short enough for a nav, and it names the
+  // MODE rather than a screen: signed in here you are running HostEase Pro
+  // the company, not a letting agency. "My Business" described the tab
+  // accurately and left the thing itself nameless.
+  {id:'customers',label:'HQ',           icon:'🎛️',roles:['owner'],platformOnly:true},
   {id:'roadmap',  label:'Roadmap',      icon:'🗺️',roles:['owner'],platformOnly:true},
   {id:'reports',  label:'Reports',      icon:'📊',roles:['owner','admin']},
   {id:'settings',  label:'Settings',     icon:'⚙️', roles:['owner','admin']},
@@ -4070,7 +4074,7 @@ function switchTab(id) {
     return;
   }
   // Where to send someone who lands somewhere they may not open. The
-  // platform owner's home is My Business; everyone else's is the dashboard.
+  // platform owner's home is HQ; everyone else's is the dashboard.
   const home = () => (isPlatformOwner() ? 'customers' : 'dashboard');
 
   const nav = NAV.find(n => n.id === id);
@@ -7207,6 +7211,7 @@ function drawCustomers() {
             <th style="padding:8px 10px">Properties</th>
             <th style="padding:8px 10px">People</th>
             <th style="padding:8px 10px">Last seen</th>
+            <th style="padding:8px 10px"></th>
           </tr></thead>
           <tbody>
           ${rows.map(r => {
@@ -7234,7 +7239,11 @@ function drawCustomers() {
                 <div style="font-size:.76rem">${r.staff} staff contact${r.staff===1?'':'s'}</div>
               </td>
               <td style="padding:10px;white-space:nowrap;color:${!r.last_seen || (new Date() - new Date(r.last_seen)) > 14*86400000 ? 'var(--red)' : 'var(--muted)'}">${ago(r.last_seen)}</td>
-            </tr>`;
+              <td style="padding:10px;white-space:nowrap;text-align:right">
+                <button class="btn btn-ghost btn-sm" onclick="openCustomerActions('${r.org_id}')">Manage</button>
+              </td>
+            </tr>
+            ${r.note ? `<tr><td colspan="7" style="padding:0 10px 10px;font-size:.78rem;color:var(--muted)">📝 ${escHtml(r.note)}</td></tr>` : ''}`;
           }).join('')}
           </tbody>
         </table></div>`}
@@ -7243,7 +7252,204 @@ function drawCustomers() {
     <div style="font-size:.75rem;color:var(--muted);margin-top:14px;line-height:1.6">
       Counts only. HostEase Pro cannot see a customer's bookings, guests, addresses or income —
       say so when you are asked, because it is true and your competitors cannot say it.
+    </div>
+
+    <div class="section-label" style="margin-top:24px">What you changed</div>
+    <div class="card">
+      <div id="hq-actions-log"><div class="text-muted" style="font-size:.82rem">Loading…</div></div>
     </div>`;
+
+  drawRecentActions();
+}
+
+// ══ HQ: DOING SOMETHING ABOUT IT ══════════════════════════════════
+//
+// Owner: "I need action buttons to comp free access to people who test for
+// me, and just have some useful managing tools available to me."
+//
+// Until now this screen could only look. Every policy on org_subscriptions
+// is scoped to current_org_id(), so signed into HOSTEASE PRO's own org she
+// could change exactly one subscription — her own. Comping a tester meant
+// opening the SQL editor, which is not a thing anyone should do on a
+// Sunday to help a friend who is trying the product.
+//
+// THE BUTTONS ARE NOT THE PERMISSION. Every action below calls a
+// SECURITY DEFINER function from 906 that re-checks is_platform_owner()
+// server-side and refuses otherwise. Hiding a button is presentation;
+// the function is the rule. Someone who edits this page gets an error.
+//
+// STILL COUNTS, NEVER CONTENTS. These touch org_subscriptions and nothing
+// else — no bookings, no guests, no addresses, no income. Write access was
+// exactly the moment "we cannot see your data" could quietly have stopped
+// being true, so it is written down here as well as enforced there.
+function customerById(id) {
+  return ((_platformData && _platformData.rows) || []).find(r => String(r.org_id) === String(id));
+}
+
+// One wrapper, so no action can forget to report failure. A comp that
+// silently does nothing is worse than an error: the tester keeps being
+// locked out and nobody knows why.
+async function hqAction(fn, args, okMsg) {
+  try {
+    const { error } = await db.rpc(fn, args);
+    if (error) throw error;
+    toast(okMsg, 'success');
+    closeModal('day-modal');
+    _platformData = null;
+    await renderCustomersTab();
+  } catch (e) {
+    toast(e.message || 'That did not go through', 'error');
+  }
+}
+
+function openCustomerActions(orgId) {
+  const r = customerById(orgId);
+  if (!r) return;
+  const comped = r.plan === 'founder';
+  const portal = r.portal_key ? location.origin + '/domestic/' + r.portal_key : '';
+  const trialLine = r.status === 'trialing' && r.trial_ends_at
+    ? `Trial ends ${fmtDate(String(r.trial_ends_at).slice(0, 10))}`
+    : '';
+
+  document.getElementById('day-modal-title').textContent = r.name || 'Customer';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="text-muted" style="font-size:.82rem;margin-bottom:16px">
+      ${escHtml(r.owner_name || '')}${r.owner_email ? ' · ' + escHtml(r.owner_email) : ''}
+      ${trialLine ? '<br>' + escHtml(trialLine) : ''}
+    </div>
+
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">
+      Free access
+    </div>
+    ${comped ? `
+      <div style="font-size:.84rem;margin-bottom:8px">Not being charged. No trial clock, no expiry.</div>
+      <button class="btn btn-ghost btn-sm" onclick="hqEndComp('${r.org_id}')">Stop free access → 7-day trial</button>
+    ` : `
+      <div style="font-size:.84rem;margin-bottom:8px">Give this agency the product at no charge, indefinitely.</div>
+      <button class="btn btn-primary btn-sm" onclick="hqComp('${r.org_id}')">Comp this account</button>
+    `}
+
+    <div style="border-top:1px solid var(--border);margin:18px 0 12px"></div>
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">
+      Extend the trial
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-ghost btn-sm" onclick="hqExtend('${r.org_id}',7)">+7 days</button>
+      <button class="btn btn-ghost btn-sm" onclick="hqExtend('${r.org_id}',14)">+14 days</button>
+      <button class="btn btn-ghost btn-sm" onclick="hqExtend('${r.org_id}',30)">+30 days</button>
+    </div>
+    <div class="text-muted" style="font-size:.76rem;margin-top:6px">
+      Added to whatever they have left, not instead of it.
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin:18px 0 12px"></div>
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">
+      Set the plan by hand
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <select id="hq-plan" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem">
+        ${['starter','growth','pro','trial'].map(p =>
+          `<option value="${p}"${r.plan === p ? ' selected' : ''}>${{starter:'Starter · R350',growth:'Growth · R550',pro:'Pro · R750',trial:'Trial'}[p]}</option>`).join('')}
+      </select>
+      <select id="hq-status" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.84rem">
+        ${['active','trialing','past_due','cancelled'].map(s =>
+          `<option value="${s}"${r.status === s ? ' selected' : ''}>${{active:'Paying',trialing:'On trial',past_due:'Payment failed',cancelled:'Cancelled'}[s]}</option>`).join('')}
+      </select>
+      <button class="btn btn-ghost btn-sm" onclick="hqSetPlan('${r.org_id}')">Save</button>
+    </div>
+    <div class="text-muted" style="font-size:.76rem;margin-top:6px">
+      For someone paying by EFT, or to correct a PayFast subscription.
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin:18px 0 12px"></div>
+    <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px">
+      Your note
+    </div>
+    <textarea id="hq-note" rows="2" placeholder="e.g. testing the Airbnb sync for me — no charge until March"
+      style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.85rem;resize:vertical">${escHtml(r.note || '')}</textarea>
+    <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="hqSaveNote('${r.org_id}')">Save note</button>
+
+    <div style="border-top:1px solid var(--border);margin:18px 0 12px"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      ${r.owner_email ? `<a class="btn btn-ghost btn-sm" href="mailto:${escHtml(r.owner_email)}">Email them</a>` : ''}
+      ${portal ? `<button class="btn btn-ghost btn-sm" onclick="hqCopy(${JSON.stringify(portal)})">Copy staff portal link</button>` : ''}
+    </div>
+    <div class="text-muted" style="font-size:.76rem;margin-top:12px;line-height:1.6">
+      These change what they are charged. They do not open their data —
+      HostEase Pro still cannot see this agency's bookings, guests or income.
+    </div>`;
+  openModal('day-modal');
+}
+
+function hqComp(id) {
+  const r = customerById(id);
+  confirmAction(
+    `Give ${r ? r.name : 'this agency'} free access?\n\nThey keep full use of HostEase Pro with no charge and no trial clock. You can undo this at any time.`,
+    () => hqAction('platform_comp_account', { p_org: id, p_note: null }, 'Comped — no charge'),
+    'Comp it');
+}
+function hqEndComp(id) {
+  const r = customerById(id);
+  confirmAction(
+    `Stop free access for ${r ? r.name : 'this agency'}?\n\nThey move onto a fresh 7-day trial rather than straight to a bill — nobody should discover they owe money without warning.`,
+    () => hqAction('platform_end_comp', { p_org: id, p_trial_days: 7 }, 'Free access ended — 7-day trial started'),
+    'Stop it');
+}
+function hqExtend(id, days) {
+  hqAction('platform_extend_trial', { p_org: id, p_days: days }, `Trial extended by ${days} days`);
+}
+function hqSetPlan(id) {
+  const plan = document.getElementById('hq-plan').value;
+  const status = document.getElementById('hq-status').value;
+  const go = () => hqAction('platform_set_plan', { p_org: id, p_plan: plan, p_status: status }, 'Plan updated');
+  // Cancelling is the one that stops the money and limits them to reading.
+  // Everything else here is reversible without them noticing.
+  if (status === 'cancelled' || status === 'past_due') {
+    const r = customerById(id);
+    confirmAction(
+      `Mark ${r ? r.name : 'this agency'} as ${status === 'cancelled' ? 'cancelled' : 'payment failed'}?\n\nThey keep full read access to their own data — nothing is deleted and they are not locked out — but they cannot add or change anything until it is live again.`,
+      go, 'Do it');
+  } else go();
+}
+function hqSaveNote(id) {
+  hqAction('platform_set_note', { p_org: id, p_note: document.getElementById('hq-note').value.trim() }, 'Note saved');
+}
+function hqCopy(text) {
+  navigator.clipboard.writeText(text)
+    .then(() => toast('Copied', 'success'))
+    .catch(() => toast('Could not copy — select it by hand', 'error'));
+}
+
+// What did I change, and when. Six months from now "why is this agency not
+// being charged" wants an answer that was written down rather than
+// remembered. Read-only: the log is written by the functions in 906, and
+// there is deliberately no way to edit it from here.
+async function drawRecentActions() {
+  const el = document.getElementById('hq-actions-log');
+  if (!el || !db) return;
+  try {
+    const { data, error } = await db.rpc('platform_recent_actions', { p_limit: 12 });
+    if (error) throw error;
+    const rows = data || [];
+    if (!rows.length) { el.innerHTML = '<div class="text-muted" style="font-size:.82rem">Nothing yet.</div>'; return; }
+    const label = {
+      comp: 'gave free access to', end_comp: 'ended free access for',
+      extend_trial: 'extended the trial for', set_plan: 'changed the plan for',
+      note: 'made a note about',
+    };
+    el.innerHTML = rows.map(a => {
+      const d = a.detail || {};
+      const extra = a.action === 'extend_trial' ? ` (+${d.days} days)`
+        : a.action === 'set_plan' ? ` (${d.plan} · ${d.status})`
+        : '';
+      return `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid var(--border);font-size:.82rem">
+        <div>${escHtml(label[a.action] || a.action)} <strong>${escHtml(a.org_name || '—')}</strong>${escHtml(extra)}</div>
+        <div class="text-muted" style="white-space:nowrap">${fmtDate(String(a.at).slice(0,10))}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div class="text-muted" style="font-size:.82rem">Could not load.</div>';
+  }
 }
 
 async function renderRoadmapTab(){ await rmLoad(); rmRender(); }
