@@ -96,10 +96,35 @@ export async function confirmWithPayfast(body, validateUrl) {
 
 // R350 / R550 / R750, the owner's decision (p3-14). Cents, because
 // floating point and money do not belong together.
+// TWO TRACKS, because they are two businesses running the same software.
+//
+// An agency has properties scattered across a city, each with its own
+// address, owner and cleaner — so it is priced per PROPERTY. A guesthouse
+// is one building with rooms in it, daily servicing and staff on site — so
+// it is priced per ROOM. Pricing the second as a slightly awkward version
+// of the first was the mistake this replaces.
+//
+// A guesthouse plan covers everything: somebody with a guesthouse and
+// three flats pays the guesthouse tier and the flats are included. Mixed
+// customers are rare enough that the generosity costs almost nothing, and
+// "you will be billed twice" is a bad first invoice.
+//
+// THIS IS THE AUTHORITY. The server decides what is charged, because a
+// price posted from a browser is a price the browser can edit. Two copies
+// mirror it and must be changed with it: HEP_PLANS in demo/index_fixed.html
+// (what the customer clicks) and plan_price_rand() in migration 910 (what
+// the dashboard reports as revenue). Before 910 there was no shared
+// definition at all and they had already drifted — this table said Growth
+// allowed 8 properties while the pricing page advertised 10.
 export const PLANS = {
-  starter: { label: 'Starter', cents: 35000, properties: 2 },
-  growth:  { label: 'Growth',  cents: 55000, properties: 8 },
-  pro:     { label: 'Pro',     cents: 75000, properties: null },
+  // Agencies — priced per property.
+  starter:   { label: 'Starter',         cents: 35000, track: 'property',   properties: 2 },
+  growth:    { label: 'Growth',          cents: 55000, track: 'property',   properties: 10 },
+  pro:       { label: 'Pro',             cents: 75000, track: 'property',   properties: null },
+  // Guesthouses — priced per room. Separate flats come along free.
+  gh_small:  { label: 'Guesthouse',      cents: 40000, track: 'guesthouse', rooms: 6 },
+  gh_medium: { label: 'Guesthouse Plus', cents: 60000, track: 'guesthouse', rooms: 15 },
+  gh_large:  { label: 'Guesthouse Pro',  cents: 90000, track: 'guesthouse', rooms: null },
 };
 
 // ── THE OTHER API, WITH THE OTHER SIGNATURE ───────────────────────
