@@ -2319,6 +2319,7 @@ let _hvDate = null;
 
 function openHouseView(parentId) {
   _hvParent = parentId;
+  _hvMode = 'house';   // reopening always shows the picture first
   _hvDate = new Date().toISOString().slice(0, 10);
   const prop = _propertiesRaw.find(p => p.id === parentId) || {};
   document.getElementById('day-modal-title').textContent = prop.name || 'House view';
@@ -2330,6 +2331,7 @@ function openHouseView(parentId) {
       <button class="btn btn-ghost btn-sm" onclick="hvNudge(1)">→</button>
       <button class="btn btn-ghost btn-sm" onclick="hvSetDate(new Date().toISOString().slice(0,10))">Today</button>
       <div style="flex:1"></div>
+      <button class="btn btn-ghost btn-sm" onclick="hvToggleView()" id="hv-toggle">🧹 Cleaning list</button>
       <button class="btn btn-ghost btn-sm" onclick="openAddRoom('${parentId}')">+ Room</button>
     </div>
     <div id="hv-body"><div class="hv-empty">Loading…</div></div>`;
@@ -2347,6 +2349,7 @@ function hvNudge(days) {
 async function drawHouseView() {
   const el = document.getElementById('hv-body');
   if (!el || !db || !_hvParent) return;
+  if (_hvMode === 'clean') return drawCleaningList(el);
   let rows;
   try {
     const { data, error } = await db.rpc('rooms_on_date', { p_parent: _hvParent, p_date: _hvDate });
@@ -2441,6 +2444,92 @@ async function drawHouseView() {
       ${escHtml(bt.label)} · tap one to edit it.
       ${groups.length === 1 && !groups[0].key
         ? `Give rooms a ${bt.floorWord} when you edit them and they will group here.` : ''}
+    </div>`;
+}
+
+// ══ THE MORNING SHEET ═════════════════════════════════════════════
+//
+// "With guesthouses, we ask if daily cleaners are on board, since this
+// would give them a list of cleaning required."
+//
+// The flag was never the point; the list is. A housekeeper at 8am does not
+// want a filtered table, they want the sheet: which rooms are being turned
+// over, which made up, which checked before somebody arrives — in the
+// order they walk them.
+//
+// DERIVED FROM BOOKINGS, not from the generated cleans. A room whose guest
+// left this morning needs turning over whether or not anyone remembered to
+// schedule it, and a sheet that only shows what was scheduled is the sheet
+// that hides the room you forgot. Where a clean HAS been scheduled, whoever
+// it is assigned to is shown alongside.
+let _hvMode = 'house';
+function hvToggleView() {
+  _hvMode = _hvMode === 'house' ? 'clean' : 'house';
+  const b = document.getElementById('hv-toggle');
+  if (b) b.textContent = _hvMode === 'house' ? '🧹 Cleaning list' : '🏠 House view';
+  drawHouseView();
+}
+
+const HK_TASK = {
+  turnover: ['#e8b06a', '#fff6e8', 'Turn over', 'Guest has left — full clean'],
+  prepare:  ['#7ed0a4', '#eafaf1', 'Prepare',   'Arriving today — check it is ready'],
+  service:  ['#9dbdf0', '#eef5ff', 'Service',   'Guest in residence — make up'],
+};
+
+async function drawCleaningList(el) {
+  let rows;
+  try {
+    const { data, error } = await db.rpc('housekeeping_list', { p_parent: _hvParent, p_date: _hvDate });
+    if (error) throw error;
+    rows = data || [];
+  } catch (e) {
+    el.innerHTML = '<div class="hv-empty">Could not load the list.</div>';
+    return;
+  }
+  if (!rows.length) {
+    el.innerHTML = `<div class="hv-empty">Nothing needs cleaning on this date.</div>`;
+    return;
+  }
+  // Grouped by job, because a housekeeper does all the turnovers first —
+  // those are the ones with somebody arriving into them this afternoon.
+  const groups = ['turnover', 'prepare', 'service']
+    .map(t => [t, rows.filter(r => r.task === t)])
+    .filter(([, list]) => list.length);
+
+  el.innerHTML = `
+    <div class="hv" style="background:#fff">
+      ${groups.map(([task, list]) => {
+        const [bc, bg, title, why] = HK_TASK[task];
+        return `
+        <div style="margin-bottom:18px">
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+            <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${bg};border:1.5px solid ${bc}"></span>
+            <strong style="font-size:.9rem">${title}</strong>
+            <span style="font-size:.76rem;color:var(--muted)">${list.length} · ${why}</span>
+          </div>
+          ${list.map(r => `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--border);border-left:3px solid ${bc};border-radius:8px;margin-bottom:6px;background:${r.done ? '#f4f8f4' : '#fff'}">
+              <div style="min-width:0">
+                <div style="font-weight:700;font-size:.86rem">
+                  ${r.done ? '<span style="color:#16a34a">✓ </span>' : ''}${escHtml(r.room_name)}
+                  ${r.floor ? `<span style="font-weight:400;color:var(--muted);font-size:.76rem"> · ${escHtml(r.floor)}</span>` : ''}
+                </div>
+                <div style="font-size:.76rem;color:var(--muted)">
+                  ${escHtml(r.guest || '—')}${r.nights ? ' · ' + r.nights + ' night' + (r.nights===1?'':'s') : ''}
+                </div>
+              </div>
+              <div style="font-size:.76rem;color:var(--muted);white-space:nowrap">
+                ${r.assigned_to ? escHtml(r.assigned_to) : '<span style="color:#c17f3c">unassigned</span>'}
+              </div>
+            </div>`).join('')}
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="font-size:.76rem;color:var(--muted);margin-top:6px;line-height:1.6">
+      ${rows.length} room${rows.length===1?'':'s'} need attention.
+      This is worked out from the bookings, so a room shows here even if nobody
+      has scheduled a clean for it yet — assign them under Cleaning, or use
+      <em>Plan the next 14 days</em> to create them all at once.
     </div>`;
 }
 
@@ -2560,15 +2649,21 @@ function openPropertyModal(id) {
           floors for a guesthouse, separate units on a plot for chalets.
         </div>
       </div>`}
+      <!-- Asked ONCE, about the business, not eight times about eight
+           rooms. No guesthouse services room 3 daily and room 4 weekly —
+           either there are cleaners in every morning or there are not.
+           On a room the same box is an override, for the self-catering
+           cottage at the bottom of the garden. -->
       <div class="form-field span-full">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
           <input type="checkbox" id="pr-daily" ${existing&&existing.daily_service?'checked':''} style="width:15px;height:15px;cursor:pointer"/>
-          Serviced daily while the guest is in
+          ${isRoom ? 'Serviced daily while the guest is in'
+                   : 'Do you have cleaners in daily?'}
         </label>
         <div style="font-size:.76rem;color:var(--muted);margin-top:4px;line-height:1.5">
-          For a guesthouse room that gets made up every morning. Off for
-          self-catering, which is cleaned between guests. Arrival and
-          departure days are already covered by the turnover clean.
+          ${isRoom
+            ? 'Overrides the building for this room. Arrival and departure days are already covered by the turnover clean.'
+            : 'Tick this if rooms are made up every morning while guests are in residence. It applies to every room in the building, and produces the daily cleaning list. Leave it off for self-catering, which is cleaned between guests.'}
         </div>
       </div>
       <div class="form-field span-full"><label>Address</label><input id="pr-addr1" placeholder="Street address" value="${escAttr(existing?existing.address_line1:'')}"/></div>
@@ -2636,6 +2731,7 @@ async function savePropertyRecord(id) {
   // the column's "no special arrangement" value, and keeping it that way
   // means a platform added later is included automatically instead of
   // silently excluded by a list written before it existed.
+  const isRoomSave = !!(_pendingRoomParent || (id && (_propertiesRaw.find(p => p.id === id) || {}).parent_id));
   const ticked = [...document.querySelectorAll('.pr-revplat:checked')].map(el => el.value);
   row.revenue_platforms = ticked.length === REVENUE_PLATFORMS.length ? null : ticked;
   let propertyId = id;
@@ -2664,7 +2760,16 @@ async function savePropertyRecord(id) {
     if (feedError) { toast('Property saved, but feed save failed: '+feedError.message,'error'); }
   }
 
-  toast(_pendingRoomParent || (id && row.parent_id) ? 'Room saved ✓' : 'Property saved ✓','success');
+  // The building's answer applies to its rooms. Done server-side in one
+  // statement so it cannot half-apply across eight rooms on a bad
+  // connection — and only for a building, because on a room the same
+  // checkbox is a deliberate exception.
+  if (propertyId && !isRoomSave) {
+    const { error: dsErr } = await db.rpc('set_daily_service', { p_parent: propertyId, p_on: row.daily_service });
+    if (dsErr) toast('Saved, but the rooms did not pick up the cleaning setting: ' + dsErr.message, 'error');
+  }
+
+  toast(isRoomSave ? 'Room saved ✓' : 'Property saved ✓','success');
   const wasRoomOf = _pendingRoomParent;
   _pendingRoomParent = null;   // or the next "Add Property" quietly becomes a room
   closeModal('day-modal');
