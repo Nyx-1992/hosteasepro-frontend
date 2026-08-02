@@ -7254,12 +7254,59 @@ function drawCustomers() {
       say so when you are asked, because it is true and your competitors cannot say it.
     </div>
 
+    <div class="section-label" style="margin-top:24px">Going out tonight</div>
+    <div class="card">
+      <div id="hq-trials-due"><div class="text-muted" style="font-size:.82rem">Loading…</div></div>
+    </div>
+
     <div class="section-label" style="margin-top:24px">What you changed</div>
     <div class="card">
       <div id="hq-actions-log"><div class="text-muted" style="font-size:.82rem">Loading…</div></div>
     </div>`;
 
+  drawTrialsDue();
   drawRecentActions();
+}
+
+// What the 09:00 run will send. Reading this list does NOT send anything —
+// it is the same query the cron uses, so what is on screen is what will go
+// out rather than a second implementation that could disagree with it.
+//
+// Names and dates only. The cron's version of this query returns email
+// addresses because it has to write to them; this one deliberately does
+// not, because HQ shows counts and names and a screen has no reason to
+// carry a customer's address just to say a reminder is queued.
+async function drawTrialsDue() {
+  const el = document.getElementById('hq-trials-due');
+  if (!el || !db) return;
+  try {
+    const { data, error } = await db.rpc('platform_trials_due');
+    if (error) throw error;
+    const rows = data || [];
+    if (!rows.length) {
+      el.innerHTML = '<div class="text-muted" style="font-size:.82rem">Nothing due. Every trialling customer has already had the reminder for their current end date.</div>';
+      return;
+    }
+    const what = {
+      t3: ['#c17f3c', 'three days left'],
+      t1: ['#c17f3c', 'one day left'],
+      t0: ['#dc2626', 'trial has ended'],
+    };
+    el.innerHTML = rows.map(r => {
+      const [colour, label] = what[r.kind] || ['#6b7280', r.kind];
+      return `<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--border);font-size:.85rem">
+        <div><strong>${escHtml(r.org_name || '—')}</strong>
+          <span style="color:${colour};font-size:.78rem"> · ${escHtml(label)}</span></div>
+        <div class="text-muted" style="white-space:nowrap;font-size:.78rem">${r.trial_ends_at ? fmtDate(String(r.trial_ends_at).slice(0,10)) : ''}</div>
+      </div>`;
+    }).join('') + `
+      <div class="text-muted" style="font-size:.76rem;margin-top:10px;line-height:1.6">
+        Sent at 09:00. Extending a trial from Manage re-arms the whole sequence —
+        they get warned again against the new date rather than being skipped.
+      </div>`;
+  } catch (e) {
+    el.innerHTML = '<div class="text-muted" style="font-size:.82rem">Could not load.</div>';
+  }
 }
 
 // ══ HQ: DOING SOMETHING ABOUT IT ══════════════════════════════════
