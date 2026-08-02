@@ -139,6 +139,44 @@ h2,h3{font-family:"DM Serif Display",serif}
 .card-title{font-family:"DM Sans",sans-serif;font-weight:700;font-size:1rem;margin-bottom:14px;color:var(--ink)}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
 .stat-card{background:var(--card);border-radius:var(--r);padding:18px 22px;box-shadow:var(--sh);border-top:3px solid var(--accent);transition:transform .2s ease,box-shadow .2s ease}
+/* ── HOUSE VIEW ───────────────────────────────────────────────────
+   A drawn building rather than a list, because a guesthouse owner
+   thinks in rooms on floors and not in table rows. Two layouts: a
+   STACKED building with floors under one roof, and DETACHED units
+   standing on a plot — drawing a chalet park as three storeys is the
+   kind of wrong that makes somebody stop trusting the screen.
+   Hand-drawn feel comes from slightly irregular borders and a warm
+   paper ground, not from an illustration library. */
+.hv{background:linear-gradient(#fcfbf8,#f6f4ef);border:1px solid var(--border);border-radius:14px;padding:18px 18px 22px;position:relative;overflow-x:auto}
+.hv-roof{height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:34px solid #C17F3C;opacity:.85;margin:0 auto;width:min(100%,560px);box-sizing:content-box}
+.hv-roof-wrap{position:relative}
+.hv-chimney{position:absolute;top:-12px;right:20%;width:14px;height:22px;background:#a96c31;border-radius:2px 2px 0 0;opacity:.85}
+.hv-building{border:2px solid #d8cfc0;border-top:none;border-radius:0 0 10px 10px;background:#fffdf9;padding:12px;width:min(100%,604px);margin:0 auto;box-sizing:border-box}
+.hv-floor{border-bottom:1px dashed #e2dacb;padding:10px 4px}
+.hv-floor:last-child{border-bottom:none}
+.hv-floor-label{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#a1937c;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.hv-floor-label::after{content:"";flex:1;height:1px;background:#ece5d8}
+.hv-rooms{display:flex;flex-wrap:wrap;gap:8px}
+/* Detached: each unit gets its own little roof and stands on grass. */
+.hv-plot{background:linear-gradient(#f3f7ef,#e9f1e3);border:2px dashed #cfe0c2;border-radius:12px;padding:16px}
+.hv-unit{display:flex;flex-direction:column;align-items:stretch;width:112px}
+.hv-unit-roof{height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:16px solid #C17F3C;opacity:.8;margin:0 auto}
+.hv-room{border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;min-width:96px;background:#fff;cursor:pointer;text-align:left;font-family:inherit;transition:transform .12s ease,box-shadow .12s ease;position:relative}
+.hv-room:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.09)}
+.hv-unit .hv-room{border-radius:0 0 8px 8px;width:100%;min-width:0}
+.hv-room-name{font-weight:700;font-size:.8rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hv-room-sub{font-size:.68rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hv-room.free      {background:#fff;                border-color:#dfe3e8}
+.hv-room.occupied  {background:#eef5ff;             border-color:#9dbdf0}
+.hv-room.arriving  {background:#eafaf1;             border-color:#7ed0a4}
+.hv-room.departing {background:#fff6e8;             border-color:#e8b06a}
+.hv-room .hv-broom{position:absolute;top:5px;right:6px;font-size:.7rem;opacity:.75}
+.hv-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;font-size:.72rem;color:var(--muted)}
+.hv-legend span{display:flex;align-items:center;gap:5px}
+.hv-swatch{width:11px;height:11px;border-radius:3px;border:1.5px solid}
+.hv-datebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.hv-empty{text-align:center;padding:26px 10px;color:var(--muted);font-size:.86rem}
+@media (max-width:520px){.hv-room{min-width:78px;padding:7px 8px}.hv-unit{width:96px}}
 .stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,.1)}
 .stat-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;font-weight:700}
 .stat-value{font-family:"DM Serif Display",serif;font-size:1.9rem;color:var(--ink)}
@@ -2020,7 +2058,12 @@ async function loadProperties() {
     //
     // The key is an IDENTITY, not a label: domestics.property_id stores
     // it, so it must not move when a property is renamed.
-    data.slice().sort((a,b) => (a.name||'').localeCompare(b.name||'')).forEach(p => {
+    // Alphabetical, but a room sorts under its guesthouse rather than
+    // wherever its own name falls — "Room 3" listed between two unrelated
+    // flats tells you nothing about which building it is in.
+    const nameOf = id => (data.find(x => x.id === id) || {}).name || '';
+    const sortKey = p => (p.parent_id ? nameOf(p.parent_id) + '\u0000' + (p.name||'') : (p.name||''));
+    data.slice().sort((a,b) => sortKey(a).localeCompare(sortKey(b))).forEach(p => {
       const key = p.short_key || p.code || p.id;
       const old = PROPS[key] || {};
       newProps[key] = {
@@ -2032,6 +2075,12 @@ async function loadProperties() {
         // Carries listing_names — the platform listing titles that map to
         // this property when reading uploaded statements (migration 700).
         platformIntegrations: p.platform_integrations || {},
+        // Guesthouse structure (908). parent_id set means this is a room;
+        // it drives which pricing track the customer is shown, and lets
+        // every picker group rooms under the building they are in.
+        parent_id: p.parent_id || null,
+        type: p.type || null,
+        dailyService: !!p.daily_service,
       };
       newUuidMap[p.id] = key;
     });
@@ -2182,21 +2231,254 @@ function renderPropertiesSettings() {
     el.innerHTML = emptyState('🏠', 'No properties yet', `<button class="btn btn-sm btn-primary" onclick="openAddProperty()">+ Add Property</button>`);
     return;
   }
-  el.innerHTML = _propertiesRaw.map(p => {
+  // Rooms are drawn UNDER the guesthouse they belong to, indented, rather
+  // than as siblings sorted by their own name. A flat list puts "Room 3"
+  // between two unrelated properties and tells you nothing about which
+  // building it is in — which is the entire question when you have eight
+  // of them.
+  const rooms = _propertiesRaw.filter(p => p.parent_id);
+  const roomsOf = id => rooms.filter(r => r.parent_id === id);
+  const tops = _propertiesRaw.filter(p => !p.parent_id);
+
+  const line = (p, isRoom) => {
     const feedCount = (typeof ICAL_FEEDS!=='undefined' ? ICAL_FEEDS : []).filter(f=>f.property_id===p.id).length;
+    const kids = roomsOf(p.id);
+    const bits = [];
+    if (!isRoom) bits.push([p.address_line1,p.city].filter(Boolean).join(', ') || 'No address set');
+    if (!isRoom && p.building_type) bits.push(buildingType(p.building_type).label);
+    if (isRoom && p.floor) bits.push(p.floor);
+    bits.push('Cleaning fee R' + (p.cleaning_fee||0));
+    bits.push(feedCount ? feedCount+' iCal feed'+(feedCount>1?'s':'') : 'No iCal feeds');
+    if (p.daily_service) bits.push('serviced daily');
     return `
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div>
-        <div style="font-weight:600;font-size:.88rem">${p.name}</div>
-        <div style="font-size:.76rem;color:var(--muted)">${[p.address_line1,p.city].filter(Boolean).join(', ')||'No address set'} · Cleaning fee R${p.cleaning_fee||0} · ${feedCount?feedCount+' iCal feed'+(feedCount>1?'s':''):'No iCal feeds'}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)${isRoom?';padding-left:18px':''}">
+      <div style="min-width:0">
+        <div style="font-weight:600;font-size:.88rem">
+          ${isRoom ? '<span style="color:var(--muted);font-weight:400">↳ </span>' : ''}${escHtml(p.name)}
+          ${kids.length ? `<span style="font-weight:400;font-size:.76rem;color:var(--muted)"> · ${kids.length} room${kids.length===1?'':'s'}</span>` : ''}
+        </div>
+        <div style="font-size:.76rem;color:var(--muted)">${escHtml(bits.join(' · '))}</div>
       </div>
-      <button class="btn btn-sm btn-ghost" onclick="openEditProperty('${p.id}')">Edit</button>
+      <div style="display:flex;gap:6px;white-space:nowrap">
+        ${!isRoom && (p.building_type || kids.length) ? `<button class="btn btn-sm btn-ghost" onclick="openHouseView('${p.id}')" title="See the rooms and who is in them">🏠 House view</button>` : ''}
+        ${!isRoom && (p.building_type || kids.length) ? `<button class="btn btn-sm btn-ghost" onclick="openAddRoom('${p.id}')" title="Add a room to this building">+ Room</button>` : ''}
+        <button class="btn btn-sm btn-ghost" onclick="openEditProperty('${p.id}')">Edit</button>
+      </div>
     </div>`;
-  }).join('');
+  };
+
+  el.innerHTML = tops.map(p => line(p, false) + roomsOf(p.id).map(r => line(r, true)).join('')).join('');
+
+  // Only shown once a guesthouse exists, so an agency with three flats
+  // never sees a button about servicing they do not do.
+  const anyDaily = _propertiesRaw.some(p => p.daily_service);
+  if (anyDaily) {
+    el.insertAdjacentHTML('beforeend', `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 0 2px">
+        <div style="font-size:.78rem;color:var(--muted);max-width:46ch;line-height:1.5">
+          Rooms marked <strong>serviced daily</strong> get a clean for every night a guest is
+          in residence — not the arrival or departure day, which are already covered.
+        </div>
+        <button class="btn btn-sm btn-ghost" onclick="generateServicing()">Plan the next 14 days</button>
+      </div>`);
+  }
 }
 
-function openAddProperty() { openPropertyModal(null); }
-function openEditProperty(id) { openPropertyModal(id); }
+// ══ HOUSE VIEW ════════════════════════════════════════════════════
+//
+// "I would love even a look of a sketched house and one can add floors and
+// rooms per floor, which visualises the booking a bit! Besides it's
+// chalets etc."
+//
+// A drawn building rather than a table, because a guesthouse owner thinks
+// in rooms on floors, not in rows. The point is the morning glance: which
+// rooms empty today, which need turning over, which are still full.
+//
+// TWO LAYOUTS, decided by building_type. A guesthouse, B&B, hotel,
+// backpackers or apartment block STACKS its floors under one roof. Chalets,
+// cottages, a lodge, a farmstay or a campsite are DETACHED units standing
+// on a plot, each with its own little roof. Drawing a chalet park as three
+// storeys on top of each other is the kind of wrong that makes somebody
+// stop believing the rest of the screen.
+const BUILDING_TYPES = [
+  { k: 'guesthouse',      label: 'Guesthouse',       layout: 'stacked',  floorWord: 'floor'   },
+  { k: 'bnb',             label: 'B&B',              layout: 'stacked',  floorWord: 'floor'   },
+  { k: 'hotel',           label: 'Small hotel',      layout: 'stacked',  floorWord: 'floor'   },
+  { k: 'backpackers',     label: 'Backpackers',      layout: 'stacked',  floorWord: 'floor'   },
+  { k: 'apartment_block', label: 'Apartment block',  layout: 'stacked',  floorWord: 'floor'   },
+  { k: 'chalets',         label: 'Chalets',          layout: 'detached', floorWord: 'cluster' },
+  { k: 'cottages',        label: 'Cottages',         layout: 'detached', floorWord: 'cluster' },
+  { k: 'lodge',           label: 'Lodge',            layout: 'detached', floorWord: 'cluster' },
+  { k: 'farmstay',        label: 'Farm stay',        layout: 'detached', floorWord: 'area'    },
+  { k: 'camping',         label: 'Camping / cabins', layout: 'detached', floorWord: 'area'    },
+];
+const buildingType = (k) => BUILDING_TYPES.find(b => b.k === k) || BUILDING_TYPES[0];
+
+let _hvParent = null;
+let _hvDate = null;
+
+function openHouseView(parentId) {
+  _hvParent = parentId;
+  _hvDate = new Date().toISOString().slice(0, 10);
+  const prop = _propertiesRaw.find(p => p.id === parentId) || {};
+  document.getElementById('day-modal-title').textContent = prop.name || 'House view';
+  document.getElementById('day-modal-body').innerHTML = `
+    <div class="hv-datebar">
+      <button class="btn btn-ghost btn-sm" onclick="hvNudge(-1)">←</button>
+      <input type="date" id="hv-date" value="${_hvDate}" onchange="hvSetDate(this.value)"
+             style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.85rem"/>
+      <button class="btn btn-ghost btn-sm" onclick="hvNudge(1)">→</button>
+      <button class="btn btn-ghost btn-sm" onclick="hvSetDate(new Date().toISOString().slice(0,10))">Today</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost btn-sm" onclick="openAddRoom('${parentId}')">+ Room</button>
+    </div>
+    <div id="hv-body"><div class="hv-empty">Loading…</div></div>`;
+  openModal('day-modal');
+  drawHouseView();
+}
+
+function hvSetDate(d) { if (!d) return; _hvDate = d; const el = document.getElementById('hv-date'); if (el) el.value = d; drawHouseView(); }
+function hvNudge(days) {
+  const d = new Date(_hvDate + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  hvSetDate(d.toISOString().slice(0, 10));
+}
+
+async function drawHouseView() {
+  const el = document.getElementById('hv-body');
+  if (!el || !db || !_hvParent) return;
+  let rows;
+  try {
+    const { data, error } = await db.rpc('rooms_on_date', { p_parent: _hvParent, p_date: _hvDate });
+    if (error) throw error;
+    rows = data || [];
+  } catch (e) {
+    el.innerHTML = `<div class="hv-empty">Could not load the rooms.</div>`;
+    return;
+  }
+  if (!rows.length) {
+    el.innerHTML = `<div class="hv-empty">
+      No rooms yet.<br><br>
+      <button class="btn btn-primary btn-sm" onclick="openAddRoom('${_hvParent}')">Add the first room</button>
+    </div>`;
+    return;
+  }
+
+  const prop = _propertiesRaw.find(p => p.id === _hvParent) || {};
+  const bt = buildingType(prop.building_type);
+
+  // Grouped by the label the owner typed — "Ground floor", "Garden
+  // chalets", "The Barn". Rooms with no group sit together first, which is
+  // right for a four-room place where floors are not worth mentioning.
+  const groups = [];
+  rows.forEach(r => {
+    const key = r.floor || '';
+    let g = groups.find(x => x.key === key);
+    if (!g) { g = { key, rooms: [] }; groups.push(g); }
+    g.rooms.push(r);
+  });
+  // Top floor at the top, the way you would draw it. The ungrouped bucket
+  // stays at the bottom because it is the ground the rest sits on.
+  if (bt.layout === 'stacked') groups.sort((a, b) => (a.key ? -1 : 1) - (b.key ? -1 : 1) || b.key.localeCompare(a.key));
+
+  const tile = (r) => {
+    const sub = r.state === 'free' ? 'Free'
+      : r.state === 'departing' ? `${firstName(r.guest)} leaves`
+      : r.state === 'arriving'  ? `${firstName(r.guest)} arrives`
+      : `${firstName(r.guest)} · ${r.nights || '?'}n`;
+    return `<button class="hv-room ${r.state}" onclick="openEditProperty('${r.room_id}')"
+              title="${escAttr((r.guest || 'Free') + (r.clean_due ? ' — clean booked' : ''))}">
+      ${r.clean_due ? '<span class="hv-broom">🧹</span>' : ''}
+      <div class="hv-room-name">${escHtml(r.room_name)}</div>
+      <div class="hv-room-sub">${escHtml(sub)}</div>
+    </button>`;
+  };
+
+  const stacked = () => `
+    <div class="hv-roof-wrap">
+      <div class="hv-chimney"></div>
+      <div class="hv-roof"></div>
+    </div>
+    <div class="hv-building">
+      ${groups.map(g => `
+        <div class="hv-floor">
+          ${g.key ? `<div class="hv-floor-label">${escHtml(g.key)}</div>` : ''}
+          <div class="hv-rooms">${g.rooms.map(tile).join('')}</div>
+        </div>`).join('')}
+    </div>`;
+
+  const detached = () => `
+    <div class="hv-plot">
+      ${groups.map(g => `
+        <div style="margin-bottom:${groups.length > 1 ? '16px' : '0'}">
+          ${g.key ? `<div class="hv-floor-label">${escHtml(g.key)}</div>` : ''}
+          <div class="hv-rooms">
+            ${g.rooms.map(r => `<div class="hv-unit"><div class="hv-unit-roof"></div>${tile(r)}</div>`).join('')}
+          </div>
+        </div>`).join('')}
+    </div>`;
+
+  const counts = ['occupied', 'arriving', 'departing', 'free']
+    .map(k => [k, rows.filter(r => r.state === k).length]);
+
+  el.innerHTML = `
+    <div class="hv">
+      ${bt.layout === 'stacked' ? stacked() : detached()}
+      <div class="hv-legend">
+        ${[['occupied','#9dbdf0','#eef5ff','In residence'],
+           ['arriving','#7ed0a4','#eafaf1','Arriving'],
+           ['departing','#e8b06a','#fff6e8','Leaving — needs turning over'],
+           ['free','#dfe3e8','#fff','Free']]
+          .map(([k, bc, bg, label]) => {
+            const n = (counts.find(c => c[0] === k) || [,0])[1];
+            return `<span><span class="hv-swatch" style="border-color:${bc};background:${bg}"></span>${label}${n ? ` · ${n}` : ''}</span>`;
+          }).join('')}
+        <span>🧹 Clean booked</span>
+      </div>
+    </div>
+    <div style="font-size:.76rem;color:var(--muted);margin-top:10px;line-height:1.6">
+      ${rows.length} ${bt.layout === 'detached' ? 'unit' : 'room'}${rows.length===1?'':'s'} ·
+      ${escHtml(bt.label)} · tap one to edit it.
+      ${groups.length === 1 && !groups[0].key
+        ? `Give rooms a ${bt.floorWord} when you edit them and they will group here.` : ''}
+    </div>`;
+}
+
+// Just the first word. A tile is 96px wide and "Mr Johannes van der Merwe"
+// in it is not information, it is a smear.
+function firstName(n) { return String(n || '').trim().split(/\s+/)[0] || 'Guest'; }
+
+// Materialises the servicing cleans so they can be assigned and ticked
+// off. Safe to press twice: generate_daily_service() skips any date that
+// already has a clean of any kind, so it will never send two people to the
+// same room on the same day.
+async function generateServicing() {
+  if (!db) { toast('Not connected','error'); return; }
+  const from = new Date();
+  const to = new Date(Date.now() + 14 * 86400000);
+  const iso = d => d.toISOString().slice(0,10);
+  try {
+    const { data, error } = await db.rpc('generate_daily_service', {
+      p_org: getOrgId(), p_from: iso(from), p_to: iso(to), p_cleaner: '',
+    });
+    if (error) throw error;
+    const n = Number(data) || 0;
+    toast(n ? `${n} daily clean${n===1?'':'s'} added — assign them under Cleaning` : 'Nothing to add — the next 14 days are already planned', n ? 'success' : 'info');
+    if (typeof loadDomestics === 'function') await loadDomestics();
+  } catch (e) {
+    toast(e.message || 'Could not plan the servicing', 'error');
+  }
+}
+
+function openAddProperty() { _pendingRoomParent = null; openPropertyModal(null); }
+function openEditProperty(id) { _pendingRoomParent = null; openPropertyModal(id); }
+
+// Which building a NEW room belongs to. Held here rather than passed as a
+// second argument because openPropertyModal is called from six places and
+// five of them have nothing to say about parents.
+let _pendingRoomParent = null;
+function openAddRoom(parentId) { _pendingRoomParent = parentId; openPropertyModal(null); }
+const cap = (t) => String(t||'').charAt(0).toUpperCase() + String(t||'').slice(1);
 
 let _icalFeedSeq = 0;
 const ICAL_PLATFORM_LABELS_PR = {airbnb:'Airbnb', booking:'Booking.com', lekkeslaap:'LekkeSlaap', other:'Other'};
@@ -2234,12 +2516,61 @@ function addIcalFeedRow() {
 function openPropertyModal(id) {
   const existing = id ? _propertiesRaw.find(p=>p.id===id) : null;
   const existingFeeds = existing ? ICAL_FEEDS.filter(f=>f.property_id===existing.id) : [];
-  document.getElementById('day-modal-title').textContent = existing ? 'Edit Property' : 'Add Property';
+  // A room being added carries its parent through _pendingRoomParent; a
+  // room being edited already knows its own.
+  const parentId = (existing && existing.parent_id) || _pendingRoomParent || null;
+  const isRoom = !!parentId;
+  const parentRow = parentId ? (_propertiesRaw.find(p=>p.id===parentId) || {}) : {};
+  const parentType = buildingType(parentRow.building_type);
+  // Offered as suggestions rather than a fixed list, so the second room on
+  // the first floor does not need the label typing again — and a new one
+  // can still be invented.
+  const knownFloors = [...new Set(_propertiesRaw
+    .filter(p => p.parent_id === parentId && p.floor)
+    .map(p => p.floor))].sort();
+  document.getElementById('day-modal-title').textContent =
+    existing ? (isRoom ? 'Edit room' : 'Edit Property')
+             : (isRoom ? ('Add a room to ' + (parentRow.name || 'this building')) : 'Add Property');
   document.getElementById('day-modal-body').innerHTML = `
     <div class="form-grid" style="gap:10px">
-      <div class="form-field span-full"><label>Property Name *</label><input id="pr-name" placeholder="e.g. Sunset Villa" value="${escAttr(existing?existing.name:'')}"/></div>
+      <div class="form-field span-full"><label>${isRoom ? 'Room name *' : 'Property Name *'}</label><input id="pr-name" placeholder="${isRoom ? 'e.g. Room 3, or Protea' : 'e.g. Sunset Villa'}" value="${escAttr(existing?existing.name:'')}"/></div>
       <div class="form-field"><label>Short code <span style="font-weight:400;color:var(--muted)">(optional)</span></label><input id="pr-code" placeholder="e.g. sunset" value="${escAttr(existing?existing.code:'')}"/></div>
       <div class="form-field"><label>Cleaning Fee (R)</label><input id="pr-fee" type="number" placeholder="0" value="${existing&&existing.cleaning_fee?existing.cleaning_fee:''}"/></div>
+      ${isRoom ? `
+      <!-- A room is inside something, so it inherits the address and needs
+           to know which group it sits in. The word for that group comes
+           from the building type: a guesthouse has floors, a chalet park
+           has clusters. -->
+      <div class="form-field"><label>${escHtml(cap(parentType.floorWord))} <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+        <input id="pr-floor" list="pr-floor-list" placeholder="${escAttr(parentType.layout==='detached'?'e.g. Garden cluster':'e.g. Ground floor')}" value="${escAttr(existing?(existing.floor||''):'')}"/>
+        <datalist id="pr-floor-list">${knownFloors.map(f=>`<option value="${escAttr(f)}"></option>`).join('')}</datalist>
+      </div>
+      <div class="form-field"><label>Order <span style="font-weight:400;color:var(--muted)">(low first)</span></label>
+        <input id="pr-sort" type="number" placeholder="0" value="${existing&&existing.sort_order?existing.sort_order:''}"/></div>
+      ` : `
+      <div class="form-field span-full">
+        <label>Is this one building with rooms in it?</label>
+        <select id="pr-btype">
+          <option value="">No — a single property (flat, house, cottage)</option>
+          ${BUILDING_TYPES.map(b=>`<option value="${b.k}" ${existing&&existing.building_type===b.k?'selected':''}>${b.label}</option>`).join('')}
+        </select>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:5px;line-height:1.5">
+          Pick one and you can add rooms underneath, each with its own calendar,
+          rate and cleaning. It also decides how the house is drawn — stacked
+          floors for a guesthouse, separate units on a plot for chalets.
+        </div>
+      </div>`}
+      <div class="form-field span-full">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600">
+          <input type="checkbox" id="pr-daily" ${existing&&existing.daily_service?'checked':''} style="width:15px;height:15px;cursor:pointer"/>
+          Serviced daily while the guest is in
+        </label>
+        <div style="font-size:.76rem;color:var(--muted);margin-top:4px;line-height:1.5">
+          For a guesthouse room that gets made up every morning. Off for
+          self-catering, which is cleaned between guests. Arrival and
+          departure days are already covered by the turnover clean.
+        </div>
+      </div>
       <div class="form-field span-full"><label>Address</label><input id="pr-addr1" placeholder="Street address" value="${escAttr(existing?existing.address_line1:'')}"/></div>
       <div class="form-field span-full"><label>City</label><input id="pr-city" placeholder="City" value="${escAttr(existing?existing.city:'')}"/></div>
       <div class="form-field span-full">
@@ -2283,7 +2614,24 @@ async function savePropertyRecord(id) {
     address_line1: document.getElementById('pr-addr1').value.trim() || null,
     city: document.getElementById('pr-city').value.trim() || null,
     cleaning_fee: parseFloat(document.getElementById('pr-fee').value) || 0,
+    daily_service: !!document.getElementById('pr-daily').checked,
   };
+  // Only sent when the field is on screen. Writing floor:null for a whole
+  // property would be harmless; writing building_type:null for a room
+  // would not, because the form does not show it and the value would be
+  // silently cleared on every edit.
+  const btEl = document.getElementById('pr-btype');
+  if (btEl) row.building_type = btEl.value || null;
+  const floorEl = document.getElementById('pr-floor');
+  if (floorEl) {
+    row.floor = floorEl.value.trim() || null;
+    row.sort_order = parseInt(document.getElementById('pr-sort').value, 10) || 0;
+  }
+  if (!id && _pendingRoomParent) {
+    row.parent_id = _pendingRoomParent;
+    row.type = 'room';
+  }
+  if (!id && !_pendingRoomParent && row.building_type) row.type = 'guesthouse';
   // All four ticked is stored as NULL rather than the full list: NULL is
   // the column's "no special arrangement" value, and keeping it that way
   // means a platform added later is included automatically instead of
@@ -2316,10 +2664,14 @@ async function savePropertyRecord(id) {
     if (feedError) { toast('Property saved, but feed save failed: '+feedError.message,'error'); }
   }
 
-  toast('Property saved ✓','success');
+  toast(_pendingRoomParent || (id && row.parent_id) ? 'Room saved ✓' : 'Property saved ✓','success');
+  const wasRoomOf = _pendingRoomParent;
+  _pendingRoomParent = null;   // or the next "Add Property" quietly becomes a room
   closeModal('day-modal');
   await loadProperties();
   await loadIcalFeeds();
+  // Straight back to the picture they were looking at.
+  if (wasRoomOf) openHouseView(wasRoomOf);
 }
 
 // ── Share to Social (V0 — see Roadmap p2-10) ──────────────────────────────
