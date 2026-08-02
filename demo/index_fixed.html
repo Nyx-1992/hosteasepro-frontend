@@ -1435,6 +1435,15 @@ function _buildMobileNavStub(){/* replaced by main script */}
       </div><!-- /tab-invoices -->
 
       <!-- ══ ROADMAP (owner only) ═══════════════════════════════════════════ -->
+      <!-- ══ MY BUSINESS (904) ═══════════════════════════════════════
+           HEP's own numbers, for the platform owner only. Owner: "how many
+           customers signed up, how many paying customers do I have,
+           anything of interest for me as a business." Counts and money,
+           never a customer's contents. -->
+      <div class="tab-pane" id="tab-customers" style="min-height:600px">
+        <div id="customers-root"><div class="text-muted">Loading…</div></div>
+      </div><!-- /tab-customers -->
+
       <div class="tab-pane" id="tab-roadmap" style="min-height:600px">
         <div id="roadmap-root"><div class="text-muted">Loading roadmap…</div></div>
       </div><!-- /tab-roadmap -->
@@ -3930,6 +3939,10 @@ const NAV = [
   // ask about. Gated on platformOnly, resolved against
   // platform_settings.platform_org_id — data, so it follows HEP into its
   // own organisation without a code change.
+  // PLATFORM-ONLY, like the roadmap. This is HEP's own business — who has
+  // signed up, who is paying, who is about to leave — and it is meaningless
+  // inside an agency's account.
+  {id:'customers',label:'My Business',  icon:'📈',roles:['owner'],platformOnly:true},
   {id:'roadmap',  label:'Roadmap',      icon:'🗺️',roles:['owner'],platformOnly:true},
   {id:'reports',  label:'Reports',      icon:'📊',roles:['owner','admin']},
   {id:'settings',  label:'Settings',     icon:'⚙️', roles:['owner','admin']},
@@ -3956,12 +3969,22 @@ const NAV_GROUPS = [
   {label:'People',  items:['people']},
   {label:'Admin',   items:['vault','roadmap','settings']},
 ];
+
+// The platform owner runs a software company, not a letting agency. Showing
+// her Bookings, Calendar, Cleaning and Invoices — all permanently empty,
+// because HEP manages no flats — is the wrong product. She gets her own
+// short nav instead of the tenant one.
+const PLATFORM_NAV_GROUPS = [
+  {label:null,     items:['customers']},
+  {label:'Build',  items:['roadmap']},
+  {label:'Admin',  items:['settings']},
+];
 // Shared by both the desktop sidebar and the mobile drawer — one grouping
 // definition instead of two lists that could drift out of sync.
 function renderNavGroups(items, activeId, closeDrawerOnClick) {
   const byId = {}; items.forEach(n => byId[n.id] = n);
   const clickSuffix = closeDrawerOnClick ? ';closeDrawer()' : '';
-  return NAV_GROUPS.map(g => {
+  return (isPlatformOwner() ? PLATFORM_NAV_GROUPS : NAV_GROUPS).map(g => {
     const groupItems = g.items.map(id => byId[id]).filter(Boolean);
     if (!groupItems.length) return '';
     const label = g.label ? `<div class="nav-group-label">${g.label}</div>` : '';
@@ -4443,6 +4466,7 @@ function renderTab(id) {
   }
   else if (id==='spending')  renderSpendingTab();
   else if (id==='invoices')  renderInvoicesTab();
+  else if (id==='customers') renderCustomersTab();
   else if (id==='roadmap')   renderRoadmapTab();
   else if (id==='settings')  { renderSettingsPrefs(); loadPermissions(); loadStakeholders(); }
 }
@@ -7032,6 +7056,174 @@ function rmRender(){
           '<div style="color:var(--muted);font-size:.8rem;transform:rotate('+(isOpen?'180':'0')+'deg);transition:transform .2s">▼</div>'+
         '</div>'+rows+'</div>';
     }).join('');
+}
+
+// ══ MY BUSINESS ═══════════════════════════════════════════════════
+//
+// HEP's own dashboard. Owner: "how many customers signed up, how many
+// paying customers do I have, anything of interest for me as a business."
+// Asked which mattered most, money or growth, the answer was "all of these
+// are important, especially as a startup" — which at this size is correct,
+// so both are on screen at once rather than behind tabs.
+//
+// EVERY NUMBER COMES FROM THE SERVER. platform_customers() and
+// platform_summary() are SECURITY DEFINER and return nothing to anyone who
+// is not the platform owner, so this screen cannot be made to show data by
+// editing the page. isPlatformOwner() here only decides what to draw.
+//
+// COUNTS, NEVER CONTENTS. No bookings, no guests, no addresses, no income.
+// An agency evaluating HEP can be told their guests and their revenue are
+// invisible to us, and that stays true only while nothing here returns them.
+let _platformData = null;
+
+async function renderCustomersTab() {
+  const root = document.getElementById('customers-root');
+  if (!root) return;
+  if (!db) { root.innerHTML = '<div class="text-muted">Not connected.</div>'; return; }
+  if (!_platformData) root.innerHTML = '<div class="text-muted">Loading…</div>';
+
+  try {
+    const [sumRes, custRes] = await Promise.all([
+      db.rpc('platform_summary'),
+      db.rpc('platform_customers'),
+    ]);
+    _platformData = {
+      sum: (sumRes.data && sumRes.data[0]) || null,
+      rows: custRes.data || [],
+    };
+  } catch (e) {
+    console.warn('platform data:', e);
+    root.innerHTML = '<div class="text-muted">Could not load your business figures. Try again in a moment.</div>';
+    return;
+  }
+  drawCustomers();
+}
+
+function drawCustomers() {
+  const root = document.getElementById('customers-root');
+  const d = _platformData;
+  if (!root || !d) return;
+  const s = d.sum || {};
+  const rows = d.rows;
+
+  const money = n => 'R' + Number(n || 0).toLocaleString('en-ZA');
+  const days = (iso) => {
+    if (!iso) return null;
+    return Math.round((new Date(iso) - new Date()) / 86400000);
+  };
+  const ago = (iso) => {
+    if (!iso) return 'never';
+    const d0 = Math.round((new Date() - new Date(iso)) / 86400000);
+    if (d0 <= 0) return 'today';
+    if (d0 === 1) return 'yesterday';
+    if (d0 < 30) return d0 + ' days ago';
+    if (d0 < 365) return Math.round(d0 / 30) + ' months ago';
+    return Math.round(d0 / 365) + ' years ago';
+  };
+
+  // ── Things that want doing. Deliberately first: the owner asked for
+  //    money and growth AND "needs me today", and a number you cannot act
+  //    on is worth less than one you can.
+  const todo = [];
+  if (s.trials_ending_7d)  todo.push(['⏳', s.trials_ending_7d + ' trial' + (s.trials_ending_7d>1?'s':'') + ' ending within a week', 'They decide soon. A message now is worth more than one after.']);
+  if (s.never_set_up)      todo.push(['🏚️', s.never_set_up + ' signed up but added no property', 'They have not started. They will not convert on their own.']);
+  if (s.quiet_14d)         todo.push(['🌙', s.quiet_14d + ' have not signed in for two weeks', 'Quiet before cancelling. Worth a check-in.']);
+  if (s.lapsed)            todo.push(['⚠️', s.lapsed + ' lapsed or failed payment', 'Was paying, is not now.']);
+
+  const stat = (label, value, sub, colour) => `
+    <div class="stat-card" style="border-top-color:${colour||'var(--ocean)'}">
+      <div class="stat-label">${label}</div>
+      <div class="stat-value" style="font-size:1.5rem">${value}</div>
+      <div class="stat-sub">${sub || ''}</div>
+    </div>`;
+
+  const statusPill = (r) => {
+    const map = {
+      active:   ['#16a34a', 'Paying'],
+      trialing: ['#c17f3c', 'Trial'],
+      cancelled:['#dc2626', 'Cancelled'],
+      canceled: ['#dc2626', 'Cancelled'],
+      past_due: ['#dc2626', 'Payment failed'],
+      lapsed:   ['#dc2626', 'Lapsed'],
+    };
+    if (r.plan === 'founder') return ['#6b7280', 'Comped'];
+    return map[r.status] || ['#6b7280', r.status || '—'];
+  };
+
+  const planLabel = { starter:'Starter · R350', growth:'Growth · R550', pro:'Pro · R750', founder:'No charge', trial:'Trial' };
+
+  root.innerHTML = `
+    ${todo.length ? `
+    <div class="card" style="margin-bottom:18px;border-left:3px solid var(--accent)">
+      <div style="font-weight:700;font-size:.95rem;margin-bottom:10px">Needs you</div>
+      ${todo.map(([icon, head, why]) => `
+        <div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--border)">
+          <div style="font-size:1.1rem">${icon}</div>
+          <div><div style="font-weight:600;font-size:.88rem">${escHtml(head)}</div>
+               <div style="font-size:.78rem;color:var(--muted)">${escHtml(why)}</div></div>
+        </div>`).join('')}
+    </div>` : `
+    <div class="card" style="margin-bottom:18px;border-left:3px solid var(--green)">
+      <div style="font-size:.9rem">✅ Nothing needs chasing right now.</div>
+    </div>`}
+
+    <div class="section-label">Money</div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${stat('Monthly recurring', money(s.mrr_rand), (s.paying||0) + ' paying customer' + ((s.paying||0)===1?'':'s'), 'var(--green)')}
+      ${stat('A year at this rate', money((s.mrr_rand||0) * 12), 'if nobody joins or leaves', 'var(--green)')}
+      ${stat('On trial', s.trialing || 0, (s.trials_ending_7d||0) + ' ending this week', '#c17f3c')}
+      ${stat('Not charged', s.comped || 0, 'comped accounts', '#6b7280')}
+    </div>
+
+    <div class="section-label">Growth</div>
+    <div class="stat-grid" style="margin-bottom:22px">
+      ${stat('Signed up, last 7 days', s.signups_7d || 0, '', 'var(--ocean)')}
+      ${stat('Signed up, last 30 days', s.signups_30d || 0, '', 'var(--ocean)')}
+      ${stat('Customers in total', s.customers || 0, 'excluding HostEase Pro itself', 'var(--ocean)')}
+      ${stat('Never got started', s.never_set_up || 0, 'no property added', '#6b7280')}
+    </div>
+
+    <div class="section-label">Customers</div>
+    <div class="card">
+      ${rows.length === 0
+        ? emptyState('📈', 'No customers yet. The first signup will appear here.')
+        : `<div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:.85rem;min-width:640px">
+          <thead><tr style="text-align:left;color:var(--muted);font-size:.74rem;text-transform:uppercase;letter-spacing:.05em">
+            <th style="padding:8px 10px">Agency</th>
+            <th style="padding:8px 10px">Plan</th>
+            <th style="padding:8px 10px">Since</th>
+            <th style="padding:8px 10px">Using it</th>
+            <th style="padding:8px 10px">Last seen</th>
+          </tr></thead>
+          <tbody>
+          ${rows.map(r => {
+            const [colour, text] = statusPill(r);
+            const dleft = days(r.trial_ends_at);
+            return `<tr style="border-top:1px solid var(--border)">
+              <td style="padding:10px">
+                <div style="font-weight:700">${escHtml(r.name || '—')}</div>
+                <div style="font-size:.76rem;color:var(--muted)">${escHtml(r.owner_name || '')}${r.owner_email ? ' · ' + escHtml(r.owner_email) : ''}</div>
+              </td>
+              <td style="padding:10px">
+                <span style="background:${colour}1a;color:${colour};font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:20px;white-space:nowrap">${text}</span>
+                <div style="font-size:.76rem;color:var(--muted);margin-top:3px">${planLabel[r.plan] || r.plan || '—'}</div>
+                ${r.status === 'trialing' && dleft !== null
+                  ? `<div style="font-size:.72rem;color:${dleft <= 3 ? 'var(--red)' : 'var(--muted)'}">${dleft < 0 ? 'expired' : dleft + ' days left'}</div>` : ''}
+              </td>
+              <td style="padding:10px;color:var(--muted);white-space:nowrap">${r.signed_up ? fmtDate(String(r.signed_up).slice(0,10)) : '—'}</td>
+              <td style="padding:10px;color:var(--muted);white-space:nowrap">${r.properties} propert${r.properties===1?'y':'ies'}<br>${r.staff} staff · ${r.bookings} bookings</td>
+              <td style="padding:10px;white-space:nowrap;color:${!r.last_seen || (new Date() - new Date(r.last_seen)) > 14*86400000 ? 'var(--red)' : 'var(--muted)'}">${ago(r.last_seen)}</td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table></div>`}
+    </div>
+
+    <div style="font-size:.75rem;color:var(--muted);margin-top:14px;line-height:1.6">
+      Counts only. HostEase Pro cannot see a customer's bookings, guests, addresses or income —
+      say so when you are asked, because it is true and your competitors cannot say it.
+    </div>`;
 }
 
 async function renderRoadmapTab(){ await rmLoad(); rmRender(); }
