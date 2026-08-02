@@ -125,6 +125,47 @@ ok('the plan button only appears once something is serviced daily',
 ok('pressing it twice is safe and says so',
    /Safe to press twice/.test(app) && /already planned/.test(app));
 
+// ══ THE MORNING SHEET ═════════════════════════════════════════════
+//
+// "With guesthouses we ask if daily cleaners are on board, since this
+// would give them a list of cleaning required." The flag was never the
+// point; the list is.
+console.log('\n── The cleaning list ──');
+const hk = read('supabase', 'migrations', '912_housekeeping_list.sql');
+
+ok('the question is asked once about the building, not per room',
+   /Do you have cleaners in daily\?/.test(app));
+ok('and it cascades to every room in one statement',
+   /set_daily_service/.test(hk) && /db\.rpc\('set_daily_service'/.test(app));
+ok('a room can still differ from its building',
+   /Overrides the building for this room/.test(app));
+// A guesthouse that services room 3 daily and room 4 weekly does not
+// exist; a self-catering cottage in the garden of one does.
+ok('the migration says why it is one question',
+   /No guesthouse services room 3 daily and room 4 weekly/.test(hk));
+
+ok('three jobs: turn over, prepare, service',
+   /'turnover'/.test(hk) && /'prepare'/.test(hk) && /'service'/.test(hk));
+// A departure has a deadline — somebody may be arriving into that room
+// this afternoon — so it is done first.
+ok('turnovers are listed first', /WHEN 'turnover' THEN 0/.test(hk));
+ok('service only appears where cleaners are in daily',
+   /WHEN s\.daily_service\s*\n\s*AND EXISTS/.test(hk));
+
+// THE important property of this list.
+ok('the sheet is derived from bookings, not from generated cleans',
+   /Derived from bookings/.test(hk) &&
+   !/FROM public\.domestics[\s\S]{0,200}AS task/.test(hk));
+ok('and says why — a scheduled-only list hides the room you forgot',
+   /hides the room you forgot|hides the room nobody scheduled/.test(hk));
+ok('where a clean exists, who has it is shown', /assigned_to/.test(hk) && /unassigned/.test(app));
+ok('rooms needing nothing are left out', /WHERE w\.task IS NOT NULL/.test(hk));
+
+ok('the house view can switch to the list and back',
+   /function hvToggleView/.test(app) && /_hvMode === 'clean'/.test(app));
+ok('reopening always shows the picture first',
+   /_hvMode = 'house';   \/\/ reopening always shows the picture first/.test(app));
+
 // ══ THE LIST STILL MAKES SENSE ════════════════════════════════════
 console.log('\n── The property list ──');
 ok('rooms are drawn under their building, indented',
