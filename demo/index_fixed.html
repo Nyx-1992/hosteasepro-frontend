@@ -653,6 +653,12 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div class="strip-label">Today's movements</div>
         <div class="dash-console" id="dash-stats" style="margin-bottom:24px"></div>
 
+        <!-- The house, drawn, for anyone who runs rooms rather than
+             separate properties. Above the arrivals because it answers the
+             same question faster: it IS this morning, at a glance. Empty
+             and hidden for an agency with no rooms. -->
+        <div id="dash-house" style="margin-bottom:24px"></div>
+
         <!-- Next arrivals: Speranta + TV House side by side -->
         <div class="grid-2" style="margin-bottom:18px" id="dash-arrivals-grid"></div>
 
@@ -2019,6 +2025,11 @@ async function loadProperties() {
     if (error) { console.warn('loadProperties:', error); return; }
     _propertiesRaw = data || [];
     renderPropertiesSettings();
+    // The dashboard's house card reads _propertiesRaw, and properties
+    // usually finish loading AFTER the first dashboard render — without
+    // this the card only appears on the second visit to the tab, which
+    // reads as it not existing.
+    if (typeof renderDashHouses === 'function') renderDashHouses();
     // The feed list is built from these rows, so it has to be redrawn
     // whenever they change — adding a property should show its feed
     // address without a reload.
@@ -2445,6 +2456,75 @@ async function drawHouseView() {
       ${groups.length === 1 && !groups[0].key
         ? `Give rooms a ${bt.floorWord} when you edit them and they will group here.` : ''}
     </div>`;
+}
+
+// ══ THE HOUSE, ON THE DASHBOARD ═══════════════════════════════════
+//
+// "Where is my little catch with the amount of chalets / guest rooms to
+// visually display occupied rooms?"
+//
+// It was behind Settings → Properties → House view, which is where you put
+// something you configure, not something you look at. This answers "what
+// is happening in my house this morning" and that is the first question of
+// the day, so it belongs on the first screen.
+//
+// Drawn compactly here — tiles and a count, no roof — because the
+// dashboard already has a shape and a second full illustration in the
+// middle of it would fight the rest of the page. The full drawing, the
+// date scrubber and the cleaning list are one tap away.
+//
+// Nothing renders for an agency with no rooms, so a two-flat customer
+// never sees an empty box asking about floors.
+async function renderDashHouses() {
+  const el = document.getElementById('dash-house');
+  if (!el) return;
+  const buildings = (_propertiesRaw || []).filter(p =>
+    !p.parent_id && (p.building_type || (_propertiesRaw || []).some(r => r.parent_id === p.id)));
+  if (!buildings.length || !db) { el.innerHTML = ''; return; }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const blocks = await Promise.all(buildings.map(async b => {
+    let rows = [];
+    try {
+      const { data, error } = await db.rpc('rooms_on_date', { p_parent: b.id, p_date: today });
+      if (!error) rows = data || [];
+    } catch (e) { /* a building that will not load must not blank the dashboard */ }
+    if (!rows.length) return '';
+
+    const n = k => rows.filter(r => r.state === k).length;
+    const bt = buildingType(b.building_type);
+    const free = n('free'), out = n('departing'), inn = n('arriving');
+    const full = rows.length - free;
+
+    return `
+      <div class="card" style="padding:16px 18px">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+          <div>
+            <div style="font-weight:700;font-size:.95rem">${escHtml(b.name)}</div>
+            <div style="font-size:.76rem;color:var(--muted)">
+              ${full} of ${rows.length} ${bt.layout === 'detached' ? 'chalets' : 'rooms'} occupied
+              ${out ? ` · ${out} leaving` : ''}${inn ? ` · ${inn} arriving` : ''}
+            </div>
+          </div>
+          <button class="btn btn-sm btn-ghost" onclick="openHouseView('${b.id}')">Open house view</button>
+        </div>
+        <div class="hv-rooms">
+          ${rows.map(r => `
+            <button class="hv-room ${r.state}" onclick="openHouseView('${b.id}')"
+                    title="${escAttr(r.room_name + ' — ' + (r.guest || 'free'))}">
+              ${r.clean_due ? '<span class="hv-broom">🧹</span>' : ''}
+              <div class="hv-room-name">${escHtml(r.room_name)}</div>
+              <div class="hv-room-sub">${escHtml(
+                r.state === 'free' ? 'Free'
+                : r.state === 'departing' ? 'Leaving'
+                : r.state === 'arriving' ? 'Arriving'
+                : firstName(r.guest))}</div>
+            </button>`).join('')}
+        </div>
+      </div>`;
+  }));
+
+  el.innerHTML = blocks.filter(Boolean).join('<div style="height:14px"></div>');
 }
 
 // ══ THE MORNING SHEET ═════════════════════════════════════════════
@@ -8066,6 +8146,7 @@ function renderDashboardPropertyColumns() {
 function renderDashboard() {
   if (!currentUser) return; // Guard: don't run before login
   renderDashboardPropertyColumns();
+  renderDashHouses();
   // Re-filter from live bookings array (handles deleted bookings)
   const today = todaySAST();
   const now   = new Date();

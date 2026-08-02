@@ -90,8 +90,21 @@ ok('a same-day turnover shows as departing, not arriving',
 ok('cancelled stays and owner blocks are not guests',
    /status,''\) <> 'cancelled'/.test(fn) && /is_owner_block,false\) = false/.test(fn));
 ok('a booked clean is shown on the tile', /clean_due/.test(fn) && /hv-broom/.test(app));
-ok('one call draws the whole house, not one per room',
-   /rooms_on_date/.test(app) && (app.match(/db\.rpc\('rooms_on_date'/g) || []).length === 1);
+// The cost that matters is per ROOM, not per screen. Two screens draw a
+// house — the dashboard card and the full view — and each makes one call
+// per building. An earlier version of this check counted call sites and
+// so failed the moment the dashboard card was added, which was a correct
+// change; the check was measuring the wrong thing.
+// "Not inside a .map" was too blunt — the dashboard legitimately maps over
+// BUILDINGS, one call each. What must never happen is a call per room, so
+// name the collection instead of banning the construct.
+const roomsCalls = (app.match(/db\.rpc\('rooms_on_date'/g) || []).length;
+const perRoomLoop = /\b(rows|rooms)\.map\([^)]*=>[\s\S]{0,300}db\.rpc\('rooms_on_date'/.test(app);
+ok('one call per building, never one per room',
+   roomsCalls >= 1 && roomsCalls <= 2 && !perRoomLoop,
+   roomsCalls + ' call site(s), per-room loop: ' + perRoomLoop);
+ok('the dashboard fans out over buildings, one call each',
+   /buildings\.map\(async b =>[\s\S]{0,300}db\.rpc\('rooms_on_date'/.test(app));
 ok('the date can be moved, including back', /function hvNudge/.test(app) && /hvNudge\(-1\)/.test(app));
 ok('the function is scoped to the signed-in org',
    /p\.org_id = public\.current_org_id\(\)/.test(fn));
@@ -124,6 +137,33 @@ ok('the plan button only appears once something is serviced daily',
    /const anyDaily = _propertiesRaw\.some\(p => p\.daily_service\)/.test(app) && /if \(anyDaily\)/.test(app));
 ok('pressing it twice is safe and says so',
    /Safe to press twice/.test(app) && /already planned/.test(app));
+
+// ══ IT HAS TO BE WHERE SHE LOOKS ══════════════════════════════════
+//
+// "Where is my little catch with the amount of chalets / guest rooms to
+// visually display occupied rooms?" — it was behind Settings → Properties
+// → House view, which is where you put something you CONFIGURE, not
+// something you look at every morning. Being buried is a bug in a screen
+// whose whole value is the glance.
+console.log('\n── On the dashboard, not in settings ──');
+ok('the dashboard has a slot for it', /id="dash-house"/.test(app));
+ok('renderDashboard fills it',
+   /renderDashboardPropertyColumns\(\);\s*\n\s*renderDashHouses\(\);/.test(app));
+// Properties usually finish loading after the first dashboard render, so
+// without this the card only appears on the second visit to the tab —
+// which reads exactly like it not existing.
+ok('it refreshes once properties have loaded',
+   /if \(typeof renderDashHouses === 'function'\) renderDashHouses\(\);/.test(app));
+ok('the tiles open the full house view', /onclick="openHouseView\('\$\{b\.id\}'\)"/.test(app));
+ok('an agency with no rooms sees nothing at all',
+   /if \(!buildings\.length \|\| !db\) \{ el\.innerHTML = ''; return; \}/.test(app));
+ok('it counts occupied against the total',
+   /\$\{full\} of \$\{rows\.length\}/.test(app));
+ok('it says chalets or rooms depending on the building',
+   /bt\.layout === 'detached' \? 'chalets' : 'rooms'/.test(app));
+// One building failing to load must not blank the whole dashboard.
+ok('a building that will not load does not take the dashboard with it',
+   /a building that will not load must not blank the dashboard/.test(app));
 
 // ══ THE MORNING SHEET ═════════════════════════════════════════════
 //
