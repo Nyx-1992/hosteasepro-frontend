@@ -7193,7 +7193,8 @@ function drawCustomers() {
             <th style="padding:8px 10px">Agency</th>
             <th style="padding:8px 10px">Plan</th>
             <th style="padding:8px 10px">Since</th>
-            <th style="padding:8px 10px">Using it</th>
+            <th style="padding:8px 10px">Properties</th>
+            <th style="padding:8px 10px">People</th>
             <th style="padding:8px 10px">Last seen</th>
           </tr></thead>
           <tbody>
@@ -7212,7 +7213,15 @@ function drawCustomers() {
                   ? `<div style="font-size:.72rem;color:${dleft <= 3 ? 'var(--red)' : 'var(--muted)'}">${dleft < 0 ? 'expired' : dleft + ' days left'}</div>` : ''}
               </td>
               <td style="padding:10px;color:var(--muted);white-space:nowrap">${r.signed_up ? fmtDate(String(r.signed_up).slice(0,10)) : '—'}</td>
-              <td style="padding:10px;color:var(--muted);white-space:nowrap">${r.properties} propert${r.properties===1?'y':'ies'}<br>${r.staff} staff · ${r.bookings} bookings</td>
+              <td style="padding:10px;color:var(--muted);white-space:nowrap">
+                <div style="font-weight:600;color:var(--ink)">${r.properties}</div>
+                <div style="font-size:.76rem">${r.bookings} booking${r.bookings===1?'':'s'}</div>
+              </td>
+              <td style="padding:10px;color:var(--muted)">
+                <div style="font-weight:600;color:var(--ink)">${r.users} login${r.users===1?'':'s'}</div>
+                <div style="font-size:.76rem">${escHtml(r.roles || '—')}</div>
+                <div style="font-size:.76rem">${r.staff} staff contact${r.staff===1?'':'s'}</div>
+              </td>
               <td style="padding:10px;white-space:nowrap;color:${!r.last_seen || (new Date() - new Date(r.last_seen)) > 14*86400000 ? 'var(--red)' : 'var(--muted)'}">${ago(r.last_seen)}</td>
             </tr>`;
           }).join('')}
