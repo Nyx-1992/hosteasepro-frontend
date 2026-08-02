@@ -2,7 +2,11 @@
 // Bump CACHE on any change to the portal shell. Phones that already have
 // it installed serve the cached copy first, so without a new name they
 // would keep the old S&N-branded page indefinitely.
-const CACHE = 'staff-portal-v3';
+// v4: the portal speaks Afrikaans, chiShona and isiXhosa. Cleaners have
+// this installed on their home screens, so without a new name a phone
+// could keep serving the English-only shell and the language picker
+// would look like it had simply failed to arrive.
+const CACHE = 'staff-portal-v4';
 const ASSETS = ['/domestic'];
 
 self.addEventListener('install', e => {
