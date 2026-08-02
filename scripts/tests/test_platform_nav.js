@@ -116,11 +116,11 @@ ok('and that nav contains no tenant tabs',
    !['bookings','calendar','cleaning','tasks','invoices','spending','reports','people','vault','marketing','messages','knowledge','inspections','dashboard']
      .some(id => platGroups.includes(`'${id}'`)));
 
-// Where each lands. The platform owner's home is My Business — signing in
+// Where each lands. The platform owner's home is HQ — signing in
 // and being shown 0 check-ins and 0 of 0 properties is the wrong first
 // screen for someone who runs the software rather than a letting agency,
 // and 'dashboard' is not even in her nav.
-ok('signing in sends the platform owner to My Business',
+ok('signing in sends the platform owner to HQ',
    /if \(isPlatformOwner\(\)\) switchTab\('customers'\);/.test(html));
 // The bounce target had the same problem: a tab she may not open would
 // have dropped her on the tenant dashboard.
