@@ -70,8 +70,20 @@ ok('nothing is sent before those guards',
 
 console.log('\n── Coming back from the email ──');
 ok('recovery is detected from the URL fragment', /\[#&\]type=recovery/.test(html));
+// Both link shapes: implicit puts tokens in the fragment, PKCE sends ?code=.
+ok('a PKCE ?code= link is recognised too', /\[\?&\]code=/.test(html));
+// THE BUG THIS PINS: supabase-js has detectSessionInUrl on by default, reads
+// the tokens the moment the client is created and strips them with
+// history.replaceState. Reading location.hash afterwards is a race, and it
+// lost — the recovery link opened the ordinary sign-in screen. The URL must
+// be captured BEFORE createClient, and every check must use that copy.
+const capture = html.indexOf('const INITIAL_URL');
+const create  = html.indexOf('supabase.createClient(');
+ok('the URL is captured before the client is created', capture > 0 && capture < create);
+ok('no recovery check reads location.hash directly',
+   !/type=recovery\/\.test\(location\.hash\)/.test(html));
 ok('restoreSession stands aside for it',
-   /async function restoreSession\(\)[\s\S]{0,420}type=recovery[\s\S]{0,40}return;/.test(html));
+   /async function restoreSession\(\)[\s\S]{0,500}if \(isRecoveryUrl\(\)\) return;/.test(html));
 ok('the watcher runs at boot', /^watchForPasswordRecovery\(\);$/m.test(html));
 ok('a set-password form is shown', /function showSetNewPassword\(\)/.test(html) && /Choose a new password/.test(html));
 
