@@ -166,6 +166,9 @@ h2,h3{font-family:"DM Serif Display",serif}
 .hv-unit .hv-room{border-radius:0 0 8px 8px;width:100%;min-width:0}
 .hv-room-name{font-weight:700;font-size:.8rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hv-room-sub{font-size:.68rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hv-room-clean{font-size:.66rem;margin-top:4px;padding-top:4px;border-top:1px dashed #e6e0d4;color:#7a6a52;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hv-room-clean.unassigned{color:#c17f3c;font-weight:600}
+.hv-room{align-self:flex-start}
 .hv-room.free      {background:#fff;                border-color:#dfe3e8}
 .hv-room.occupied  {background:#eef5ff;             border-color:#9dbdf0}
 .hv-room.arriving  {background:#eafaf1;             border-color:#7ed0a4}
@@ -2395,16 +2398,24 @@ async function drawHouseView() {
   // stays at the bottom because it is the ground the rest sits on.
   if (bt.layout === 'stacked') groups.sort((a, b) => (a.key ? -1 : 1) - (b.key ? -1 : 1) || b.key.localeCompare(a.key));
 
+  // Three facts, one per line, in the order they are asked: which room,
+  // what is happening in it, who is cleaning it. The broom on its own said
+  // a clean existed and refused to say whose — which is the question
+  // actually being asked at eight in the morning.
   const tile = (r) => {
     const sub = r.state === 'free' ? 'Free'
       : r.state === 'departing' ? `${firstName(r.guest)} leaves`
       : r.state === 'arriving'  ? `${firstName(r.guest)} arrives`
       : `${firstName(r.guest)} · ${r.nights || '?'}n`;
+    // A clean with nobody on it is not the same as no clean, and the
+    // difference is the one worth acting on.
+    const clean = r.clean_by ? `🧹 ${firstName(r.clean_by)}`
+                : r.clean_due ? '🧹 unassigned' : '';
     return `<button class="hv-room ${r.state}" onclick="openEditProperty('${r.room_id}')"
-              title="${escAttr((r.guest || 'Free') + (r.clean_due ? ' — clean booked' : ''))}">
-      ${r.clean_due ? '<span class="hv-broom">🧹</span>' : ''}
+              title="${escAttr(r.room_name + ' — ' + (r.guest || 'free') + (r.clean_due ? ' — clean: ' + (r.clean_by || 'unassigned') : ''))}">
       <div class="hv-room-name">${escHtml(r.room_name)}</div>
       <div class="hv-room-sub">${escHtml(sub)}</div>
+      ${clean ? `<div class="hv-room-clean${r.clean_by ? '' : ' unassigned'}">${escHtml(clean)}</div>` : ''}
     </button>`;
   };
 
@@ -2439,23 +2450,20 @@ async function drawHouseView() {
     <div class="hv">
       ${bt.layout === 'stacked' ? stacked() : detached()}
       <div class="hv-legend">
-        ${[['occupied','#9dbdf0','#eef5ff','In residence'],
+        ${[['departing','#e8b06a','#fff6e8','Leaving'],
            ['arriving','#7ed0a4','#eafaf1','Arriving'],
-           ['departing','#e8b06a','#fff6e8','Leaving — needs turning over'],
+           ['occupied','#9dbdf0','#eef5ff','Staying'],
            ['free','#dfe3e8','#fff','Free']]
           .map(([k, bc, bg, label]) => {
             const n = (counts.find(c => c[0] === k) || [,0])[1];
-            return `<span><span class="hv-swatch" style="border-color:${bc};background:${bg}"></span>${label}${n ? ` · ${n}` : ''}</span>`;
+            return n ? `<span><span class="hv-swatch" style="border-color:${bc};background:${bg}"></span>${label} ${n}</span>` : '';
           }).join('')}
-        <span>🧹 Clean booked</span>
       </div>
     </div>
-    <div style="font-size:.76rem;color:var(--muted);margin-top:10px;line-height:1.6">
-      ${rows.length} ${bt.layout === 'detached' ? 'unit' : 'room'}${rows.length===1?'':'s'} ·
-      ${escHtml(bt.label)} · tap one to edit it.
-      ${groups.length === 1 && !groups[0].key
-        ? `Give rooms a ${bt.floorWord} when you edit them and they will group here.` : ''}
-    </div>`;
+    ${groups.length === 1 && !groups[0].key
+      ? `<div style="font-size:.76rem;color:var(--muted);margin-top:10px">
+           Give rooms a ${escHtml(bt.floorWord)} when you edit them and they will group here.
+         </div>` : ''}`;
 }
 
 // ══ THE HOUSE, ON THE DASHBOARD ═══════════════════════════════════
@@ -2511,14 +2519,14 @@ async function renderDashHouses() {
         <div class="hv-rooms">
           ${rows.map(r => `
             <button class="hv-room ${r.state}" onclick="openHouseView('${b.id}')"
-                    title="${escAttr(r.room_name + ' — ' + (r.guest || 'free'))}">
-              ${r.clean_due ? '<span class="hv-broom">🧹</span>' : ''}
+                    title="${escAttr(r.room_name + ' — ' + (r.guest || 'free') + (r.clean_due ? ' — clean: ' + (r.clean_by || 'unassigned') : ''))}">
               <div class="hv-room-name">${escHtml(r.room_name)}</div>
               <div class="hv-room-sub">${escHtml(
                 r.state === 'free' ? 'Free'
                 : r.state === 'departing' ? 'Leaving'
                 : r.state === 'arriving' ? 'Arriving'
                 : firstName(r.guest))}</div>
+              ${r.clean_due ? `<div class="hv-room-clean${r.clean_by ? '' : ' unassigned'}">🧹 ${escHtml(r.clean_by ? firstName(r.clean_by) : 'unassigned')}</div>` : ''}
             </button>`).join('')}
         </div>
       </div>`;
@@ -2543,6 +2551,8 @@ async function renderDashHouses() {
 // that hides the room you forgot. Where a clean HAS been scheduled, whoever
 // it is assigned to is shown alongside.
 let _hvMode = 'house';
+let _hkBy = 'task';
+function hkGroupBy(mode) { _hkBy = mode; drawHouseView(); }
 function hvToggleView() {
   _hvMode = _hvMode === 'house' ? 'clean' : 'house';
   const b = document.getElementById('hv-toggle');
@@ -2570,24 +2580,49 @@ async function drawCleaningList(el) {
     el.innerHTML = `<div class="hv-empty">Nothing needs cleaning on this date.</div>`;
     return;
   }
-  // Grouped by job, because a housekeeper does all the turnovers first —
+  // TWO WAYS TO READ THE SAME DAY, and they answer different questions.
+  //
+  // BY JOB is the planner's view: all the turnovers together, because
   // those are the ones with somebody arriving into them this afternoon.
-  const groups = ['turnover', 'prepare', 'service']
-    .map(t => [t, rows.filter(r => r.task === t)])
-    .filter(([, list]) => list.length);
+  //
+  // BY CLEANER is the round — "what is Thandeka doing today" — which is
+  // what you actually want when you are handing out work or somebody
+  // phones in sick. Unassigned comes first in that view, because it is
+  // the only group that needs a decision.
+  const byCleaner = _hkBy === 'cleaner';
+  const groups = byCleaner
+    ? (() => {
+        const names = [...new Set(rows.map(r => r.assigned_to || ''))]
+          .sort((a, b) => (a ? 1 : -1) - (b ? 1 : -1) || a.localeCompare(b));
+        return names.map(n => [n, rows.filter(r => (r.assigned_to || '') === n)]);
+      })()
+    : ['turnover', 'prepare', 'service']
+        .map(t => [t, rows.filter(r => r.task === t)])
+        .filter(([, list]) => list.length);
 
   el.innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <button class="btn btn-sm ${byCleaner ? 'btn-ghost' : 'btn-primary'}" onclick="hkGroupBy('task')">By job</button>
+      <button class="btn btn-sm ${byCleaner ? 'btn-primary' : 'btn-ghost'}" onclick="hkGroupBy('cleaner')">By cleaner</button>
+    </div>
     <div class="hv" style="background:#fff">
-      ${groups.map(([task, list]) => {
-        const [bc, bg, title, why] = HK_TASK[task];
+      ${groups.map(([key, list]) => {
+        const head = byCleaner
+          ? (key
+              ? `<strong style="font-size:.9rem">${escHtml(key)}</strong>
+                 <span style="font-size:.76rem;color:var(--muted)">${list.length} room${list.length===1?'':'s'} today</span>`
+              : `<strong style="font-size:.9rem;color:#c17f3c">Nobody assigned</strong>
+                 <span style="font-size:.76rem;color:var(--muted)">${list.length} room${list.length===1?'':'s'} — give these to someone</span>`)
+          : (() => { const [bc, bg, title, why] = HK_TASK[key];
+              return `<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${bg};border:1.5px solid ${bc}"></span>
+                      <strong style="font-size:.9rem">${title}</strong>
+                      <span style="font-size:.76rem;color:var(--muted)">${list.length} · ${why}</span>`; })();
         return `
         <div style="margin-bottom:18px">
-          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
-            <span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${bg};border:1.5px solid ${bc}"></span>
-            <strong style="font-size:.9rem">${title}</strong>
-            <span style="font-size:.76rem;color:var(--muted)">${list.length} · ${why}</span>
-          </div>
-          ${list.map(r => `
+          <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">${head}</div>
+          ${list.map(r => {
+            const [bc] = HK_TASK[r.task];
+            return `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border:1px solid var(--border);border-left:3px solid ${bc};border-radius:8px;margin-bottom:6px;background:${r.done ? '#f4f8f4' : '#fff'}">
               <div style="min-width:0">
                 <div style="font-weight:700;font-size:.86rem">
@@ -2598,18 +2633,14 @@ async function drawCleaningList(el) {
                   ${escHtml(r.guest || '—')}${r.nights ? ' · ' + r.nights + ' night' + (r.nights===1?'':'s') : ''}
                 </div>
               </div>
-              <div style="font-size:.76rem;color:var(--muted);white-space:nowrap">
-                ${r.assigned_to ? escHtml(r.assigned_to) : '<span style="color:#c17f3c">unassigned</span>'}
+              <div style="font-size:.76rem;white-space:nowrap;color:var(--muted)">
+                ${byCleaner
+                  ? escHtml(HK_TASK[r.task][2])
+                  : (r.assigned_to ? escHtml(r.assigned_to) : '<span style="color:#c17f3c">unassigned</span>')}
               </div>
-            </div>`).join('')}
+            </div>`;}).join('')}
         </div>`;
       }).join('')}
-    </div>
-    <div style="font-size:.76rem;color:var(--muted);margin-top:6px;line-height:1.6">
-      ${rows.length} room${rows.length===1?'':'s'} need attention.
-      This is worked out from the bookings, so a room shows here even if nobody
-      has scheduled a clean for it yet — assign them under Cleaning, or use
-      <em>Plan the next 14 days</em> to create them all at once.
     </div>`;
 }
 
