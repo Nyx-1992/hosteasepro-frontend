@@ -116,6 +116,18 @@ ok('and that nav contains no tenant tabs',
    !['bookings','calendar','cleaning','tasks','invoices','spending','reports','people','vault','marketing','messages','knowledge','inspections','dashboard']
      .some(id => platGroups.includes(`'${id}'`)));
 
+// Where each lands. The platform owner's home is My Business — signing in
+// and being shown 0 check-ins and 0 of 0 properties is the wrong first
+// screen for someone who runs the software rather than a letting agency,
+// and 'dashboard' is not even in her nav.
+ok('signing in sends the platform owner to My Business',
+   /if \(isPlatformOwner\(\)\) switchTab\('customers'\);/.test(html));
+// The bounce target had the same problem: a tab she may not open would
+// have dropped her on the tenant dashboard.
+ok('and a refused tab bounces her there too, not to the tenant dashboard',
+   /const home = \(\) => \(isPlatformOwner\(\) \? 'customers' : 'dashboard'\)/.test(html) &&
+   !/if \(id !== 'dashboard'\) switchTab\('dashboard'\)/.test(html));
+
 console.log('\n── The flag itself ──');
 
 const flagged = M.NAV.filter(n => n.platformOnly).map(n => n.id).sort();

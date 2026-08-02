@@ -3875,6 +3875,13 @@ async function _afterLogin(user) {
   document.getElementById('mob-name').textContent = user.name;
   document.getElementById('mob-role').textContent = user.role;
   buildNav(); buildMobileNav(); loadData(); scheduleICalSync(); applyRoleUI();
+
+  // The platform owner lands on her own business, not on a property
+  // dashboard. 'dashboard' is the tenant landing page and is not even in
+  // her nav — signing in and being shown 0 check-ins and 0 of 0 properties
+  // is the wrong first screen for someone who runs the software rather
+  // than a letting agency.
+  if (isPlatformOwner()) switchTab('customers');
 }
 async function restoreSession() {
   if (!db) return;
@@ -4062,9 +4069,13 @@ function switchTab(id) {
     showClientOnly();
     return;
   }
+  // Where to send someone who lands somewhere they may not open. The
+  // platform owner's home is My Business; everyone else's is the dashboard.
+  const home = () => (isPlatformOwner() ? 'customers' : 'dashboard');
+
   const nav = NAV.find(n => n.id === id);
   if (nav && currentUser && !nav.roles.includes(currentUser.role)) {
-    if (id !== 'dashboard') switchTab('dashboard');
+    if (id !== home()) switchTab(home());
     return;
   }
   // Platform-only tabs are hidden from the nav, which stops them being
@@ -4072,7 +4083,7 @@ function switchTab(id) {
   // database already refuses the data (891); this stops the empty shell
   // of someone else's private tab appearing at all.
   if (nav && nav.platformOnly && !isPlatformOwner()) {
-    if (id !== 'dashboard') switchTab('dashboard');
+    if (id !== home()) switchTab(home());
     return;
   }
   currentTab=id;
