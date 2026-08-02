@@ -2438,6 +2438,14 @@ const NINA_BOOKING_TASKS = [
 // ║  PLATFORM CORE — do not edit per client                     ║
 // ╚══════════════════════════════════════════════════════════════╝
 
+// CAPTURED BEFORE createClient, and that ordering is the whole point.
+// supabase-js has detectSessionInUrl on by default: it reads the tokens out
+// of the URL the moment the client is made and then strips them with
+// history.replaceState. Any later read of location.hash is a race — which is
+// exactly what happened, and why a recovery link opened the ordinary sign-in
+// screen instead of the set-password form.
+const INITIAL_URL = { hash: location.hash || '', search: location.search || '' };
+
 let db = null;
 try { db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY); } catch(e) {}
 
@@ -3692,13 +3700,23 @@ async function startPasswordReset() {
 // FRAGMENT, so it never reaches a server or a log. supabase-js consumes it
 // and fires PASSWORD_RECOVERY; until the new password is set the session is
 // a limited one, which is why this shows a form rather than logging in.
+// Two shapes, because Supabase sends whichever the project is configured
+// for: implicit puts the tokens in the fragment with type=recovery; PKCE
+// sends back ?code=. HEP has no OAuth and no magic links, so a code landing
+// here is a recovery and nothing else.
+function isRecoveryUrl() {
+  return /[#&]type=recovery/.test(INITIAL_URL.hash) || /[?&]code=/.test(INITIAL_URL.search);
+}
+
 function watchForPasswordRecovery() {
   if (!db) return;
-  const isRecovery = /[#&]type=recovery/.test(location.hash);
+  const recovering = isRecoveryUrl();
   db.auth.onAuthStateChange((event) => {
-    if (event === 'PASSWORD_RECOVERY' || (isRecovery && event === 'SIGNED_IN')) showSetNewPassword();
+    if (event === 'PASSWORD_RECOVERY' || (recovering && event === 'SIGNED_IN')) showSetNewPassword();
   });
-  if (isRecovery) showSetNewPassword();
+  // Synchronously too: the event may already have fired while this script
+  // was still parsing, and a listener registered afterwards never hears it.
+  if (recovering) showSetNewPassword();
 }
 
 function showSetNewPassword() {
@@ -3854,7 +3872,7 @@ async function restoreSession() {
   // A recovery link carries a real, if limited, session. Without this guard
   // it signs them into the app and the password they came to change never
   // gets changed — the reset appears to work and nothing happens.
-  if (/[#&]type=recovery/.test(location.hash)) return;
+  if (isRecoveryUrl()) return;
   try {
     const { data } = await db.auth.getSession();
     const session = data && data.session;
