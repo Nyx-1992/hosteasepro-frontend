@@ -51,10 +51,22 @@ const types = app.slice(app.indexOf('const BUILDING_TYPES = ['), app.indexOf('];
 
 ok('the renderer actually branches on the layout',
    /bt\.layout === 'stacked' \? stacked\(\) : detached\(\)/.test(app));
-ok('stacked draws one roof over the whole building',
-   /const stacked = \(\)[\s\S]{0,300}hv-roof-wrap[\s\S]{0,200}hv-building/.test(app));
-ok('detached gives every unit its own roof on a plot',
-   /const detached = \(\)[\s\S]{0,400}hv-plot[\s\S]{0,300}hv-unit-roof/.test(app));
+// Drawn in SVG now rather than assembled from divs — "I hoped the view
+// will be more in a sketch view, which looks nicer in black and grey and
+// white, or at least not like a box."
+ok('stacked draws one roof spanning the whole building',
+   /const stackedSvg = \(\)[\s\S]{0,900}L \$\{w \/ 2\} 8/.test(app));
+ok('detached gives every unit its own roof, standing on a ground line',
+   /const detachedSvg = \(\)[\s\S]{0,900}L \$\{x \+ W \/ 2\} \$\{y\}/.test(app) &&
+   /\/\/ the ground/.test(app));
+ok('the hand-drawn look is a filter, so it degrades to clean lines',
+   /feTurbulence/.test(app) && /feDisplacementMap/.test(app) && /filter="url\(#hvRough\)"/.test(app));
+// A picture that only works in colour stops working when it is printed,
+// photocopied, or looked at by somebody colour-blind.
+ok('state is carried by fill weight, not by hue',
+   /STATE IS FILL WEIGHT, NOT HUE/.test(app) &&
+   /stroke-dasharray="5 4"/.test(app) &&
+   /r\.state === 'departing'[\s\S]{0,200}<line /.test(app));
 
 // The word for a group changes with the type — a chalet park has clusters,
 // not floors, and labelling them "Floor 2" is the fiction this avoids.
@@ -74,7 +86,7 @@ ok('the reason is recorded — room names do not sort',
 ok('building_type is constrained to the known kinds',
    /properties_building_type_check/.test(mig) && /'chalets','cottages','lodge','farmstay','camping'/.test(mig));
 ok('a room with no group still renders',
-   /g\.key \?/.test(app) && /groups\.find\(x => x\.key === key\)/.test(app));
+   /groups\.find\(x => x\.key === key\)/.test(app) && /if \(g\.key\)/.test(app));
 ok('previously used groups are offered as suggestions, not forced',
    /datalist id="pr-floor-list"/.test(app) && /knownFloors/.test(app));
 
@@ -89,7 +101,10 @@ ok('a same-day turnover shows as departing, not arriving',
    /ORDER BY CASE WHEN b\.co = p_date THEN 0 ELSE 1 END/.test(fn));
 ok('cancelled stays and owner blocks are not guests',
    /status,''\) <> 'cancelled'/.test(fn) && /is_owner_block,false\) = false/.test(fn));
-ok('a booked clean is shown on the tile', /clean_due/.test(fn) && /hv-broom/.test(app));
+// The broom badge is gone: it said a clean existed and refused to say
+// whose, which is the question actually being asked in the morning.
+ok('a booked clean is NAMED on the tile',
+   /clean_due/.test(fn) && /hv-cell-clean/.test(app) && /dh-clean/.test(app));
 // The cost that matters is per ROOM, not per screen. Two screens draw a
 // house — the dashboard card and the full view — and each makes one call
 // per building. An earlier version of this check counted call sites and
@@ -149,13 +164,12 @@ ok('pressing it twice is safe and says so',
 console.log('\n── The cleaner is named, not implied ──');
 ok('the room state query returns who is cleaning', /clean_by/.test(app));
 ok('the tile names them rather than showing a bare broom',
-   /r\.clean_by \? `🧹 \$\{firstName\(r\.clean_by\)\}`/.test(app));
+   /const clean = r\.clean_by \? firstName\(r\.clean_by\)/.test(app));
 // A clean nobody is on is not the same as no clean, and it is the one
 // that needs doing something about.
 ok('a clean with nobody on it says so',
-   /r\.clean_due \? '🧹 unassigned'/.test(app) && /hv-room-clean\.unassigned/.test(app));
-ok('the dashboard card says the same thing',
-   (app.match(/hv-room-clean/g) || []).length >= 3);
+   /\(r\.clean_due \? 'unassigned' : ''\)/.test(app) && /hv-cell-clean\.unassigned/.test(app));
+ok('the dashboard card says the same thing', /dh-clean\.unassigned/.test(app));
 
 console.log('\n── The cleaner\'s whole day ──');
 ok('the list can group by cleaner, not just by job',
@@ -170,7 +184,13 @@ ok('by-cleaner shows what the job is, by-job shows who has it',
 
 console.log('\n── Less on screen ──');
 ok('the legend hides states that are not happening today',
-   /return n \? `<span>/.test(app));
+   /return n \? `<span><span class="hv-key"/.test(app));
+// "2026/07/31" is a date you decode; "Sun 2 Aug" is one you read.
+ok('the date reads as a day, not as a number',
+   /function hvDayLabel/.test(app) && /'Today' : diff === 1 \? 'Tomorrow'/.test(app));
+// btn-sm is a 24px target you have to aim at.
+ok('the day steppers are a real tap target',
+   /class="hv-step"/.test(app) && /\.hv-step\{width:34px;height:34px/.test(app));
 ok('the explanatory paragraph is gone unless it is useful',
    !/tap one to edit it/.test(app));
 
