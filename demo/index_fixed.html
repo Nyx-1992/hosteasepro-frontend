@@ -140,46 +140,50 @@ h2,h3{font-family:"DM Serif Display",serif}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
 .stat-card{background:var(--card);border-radius:var(--r);padding:18px 22px;box-shadow:var(--sh);border-top:3px solid var(--accent);transition:transform .2s ease,box-shadow .2s ease}
 /* ── HOUSE VIEW ───────────────────────────────────────────────────
-   A drawn building rather than a list, because a guesthouse owner
-   thinks in rooms on floors and not in table rows. Two layouts: a
-   STACKED building with floors under one roof, and DETACHED units
-   standing on a plot — drawing a chalet park as three storeys is the
-   kind of wrong that makes somebody stop trusting the screen.
-   Hand-drawn feel comes from slightly irregular borders and a warm
-   paper ground, not from an illustration library. */
-.hv{background:linear-gradient(#fcfbf8,#f6f4ef);border:1px solid var(--border);border-radius:14px;padding:18px 18px 22px;position:relative;overflow-x:auto}
-.hv-roof{height:0;border-left:22px solid transparent;border-right:22px solid transparent;border-bottom:34px solid #C17F3C;opacity:.85;margin:0 auto;width:min(100%,560px);box-sizing:content-box}
-.hv-roof-wrap{position:relative}
-.hv-chimney{position:absolute;top:-12px;right:20%;width:14px;height:22px;background:#a96c31;border-radius:2px 2px 0 0;opacity:.85}
-.hv-building{border:2px solid #d8cfc0;border-top:none;border-radius:0 0 10px 10px;background:#fffdf9;padding:12px;width:min(100%,604px);margin:0 auto;box-sizing:border-box}
-.hv-floor{border-bottom:1px dashed #e2dacb;padding:10px 4px}
-.hv-floor:last-child{border-bottom:none}
-.hv-floor-label{font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#a1937c;margin-bottom:8px;display:flex;align-items:center;gap:8px}
-.hv-floor-label::after{content:"";flex:1;height:1px;background:#ece5d8}
-.hv-rooms{display:flex;flex-wrap:wrap;gap:8px}
-/* Detached: each unit gets its own little roof and stands on grass. */
-.hv-plot{background:linear-gradient(#f3f7ef,#e9f1e3);border:2px dashed #cfe0c2;border-radius:12px;padding:16px}
-.hv-unit{display:flex;flex-direction:column;align-items:stretch;width:112px}
-.hv-unit-roof{height:0;border-left:12px solid transparent;border-right:12px solid transparent;border-bottom:16px solid #C17F3C;opacity:.8;margin:0 auto}
-.hv-room{border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;min-width:96px;background:#fff;cursor:pointer;text-align:left;font-family:inherit;transition:transform .12s ease,box-shadow .12s ease;position:relative}
-.hv-room:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.09)}
-.hv-unit .hv-room{border-radius:0 0 8px 8px;width:100%;min-width:0}
-.hv-room-name{font-weight:700;font-size:.8rem;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hv-room-sub{font-size:.68rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hv-room-clean{font-size:.66rem;margin-top:4px;padding-top:4px;border-top:1px dashed #e6e0d4;color:#7a6a52;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hv-room-clean.unassigned{color:#c17f3c;font-weight:600}
-.hv-room{align-self:flex-start}
-.hv-room.free      {background:#fff;                border-color:#dfe3e8}
-.hv-room.occupied  {background:#eef5ff;             border-color:#9dbdf0}
-.hv-room.arriving  {background:#eafaf1;             border-color:#7ed0a4}
-.hv-room.departing {background:#fff6e8;             border-color:#e8b06a}
-.hv-room .hv-broom{position:absolute;top:5px;right:6px;font-size:.7rem;opacity:.75}
-.hv-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:14px;font-size:.72rem;color:var(--muted)}
-.hv-legend span{display:flex;align-items:center;gap:5px}
-.hv-swatch{width:11px;height:11px;border-radius:3px;border:1.5px solid}
+   Drawn, not boxed. Ink on paper: near-black strokes, greys, and one
+   restrained amber for the only thing that needs a decision. The
+   hand-drawn wobble is an SVG turbulence filter displacing otherwise
+   straight lines — no illustration library, and it degrades to clean
+   lines rather than to nothing if a browser refuses the filter.
+   State is carried by FILL WEIGHT rather than by hue, so the picture
+   still reads printed, photocopied, or by someone colour-blind. */
+.hv{background:#fbfaf7;border:1px solid #e7e3da;border-radius:12px;padding:16px 14px 12px;overflow-x:auto}
+.hv svg{display:block;margin:0 auto;max-width:100%;height:auto}
+.hv-ink{stroke:#2b2b2b;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.hv-ink-thin{stroke:#8b8b8b;fill:none;stroke-width:1.1;stroke-linecap:round}
+.hv-cell{cursor:pointer}
+.hv-cell:hover .hv-cell-bg{fill:#ece8df}
+.hv-cell-label{font-family:inherit;font-size:12.5px;font-weight:700;fill:#2b2b2b}
+.hv-cell-sub{font-family:inherit;font-size:10.5px;fill:#6f6f6f}
+.hv-cell-clean{font-family:inherit;font-size:10px;fill:#6f6f6f}
+.hv-cell-clean.unassigned{fill:#b07520;font-weight:700}
+.hv-floor-name{font-family:inherit;font-size:10px;font-weight:700;fill:#9a948a;letter-spacing:.09em}
+.hv-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:.74rem;color:#6f6f6f;align-items:center}
+.hv-legend span{display:flex;align-items:center;gap:6px}
+.hv-key{width:16px;height:12px;border:1.4px solid #2b2b2b;border-radius:2px}
 .hv-datebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .hv-empty{text-align:center;padding:26px 10px;color:var(--muted);font-size:.86rem}
-@media (max-width:520px){.hv-room{min-width:78px;padding:7px 8px}.hv-unit{width:96px}}
+/* The date, readable as a date rather than as 2026/07/31. */
+.hv-day{font-weight:700;font-size:.92rem;min-width:9.5ch;text-align:center}
+.hv-day small{display:block;font-weight:400;font-size:.72rem;color:var(--muted)}
+.hv-step{width:34px;height:34px;border:1px solid var(--border);background:var(--card);border-radius:9px;cursor:pointer;font-size:1rem;line-height:1;font-family:inherit}
+.hv-step:hover{background:var(--card2)}
+/* The dashboard summary. Same ink palette as the drawing so the two do not
+   look like different products, but chips rather than a second full
+   illustration — the dashboard already has a shape and one drawn house on
+   it is a focal point, two is a fight. */
+.dh-strip{display:flex;flex-wrap:wrap;gap:6px}
+.dh-chip{display:flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:84px;
+  padding:7px 9px;border:1.4px solid #2b2b2b;border-radius:3px;background:#fff;
+  cursor:pointer;font-family:inherit;text-align:left;transition:background .12s}
+.dh-chip:hover{background:#f0ece3}
+.dh-chip.occupied{background:#efece5}
+.dh-chip.arriving{border-style:dashed}
+.dh-chip.departing{background:repeating-linear-gradient(45deg,#fff,#fff 4px,#e2ddd2 4px,#e2ddd2 5px)}
+.dh-name{font-size:.76rem;font-weight:700;color:#2b2b2b;line-height:1.2}
+.dh-sub{font-size:.66rem;color:#6f6f6f;line-height:1.2}
+.dh-clean{font-size:.62rem;color:#6f6f6f;border-top:1px solid #ddd8cd;margin-top:3px;padding-top:2px;width:100%}
+.dh-clean.unassigned{color:#b07520;font-weight:700}
 .stat-card:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,0,0,.1)}
 .stat-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:5px;font-weight:700}
 .stat-value{font-family:"DM Serif Display",serif;font-size:1.9rem;color:var(--ink)}
@@ -2338,11 +2342,18 @@ function openHouseView(parentId) {
   const prop = _propertiesRaw.find(p => p.id === parentId) || {};
   document.getElementById('day-modal-title').textContent = prop.name || 'House view';
   document.getElementById('day-modal-body').innerHTML = `
+    <!-- The arrows were btn-sm, which is a 24px target you have to aim at,
+         and the value read "2026/07/31" — a date you have to decode rather
+         than read. Bigger steppers, the day spelled out, and the picker
+         hidden behind the label for when you genuinely want to jump. -->
     <div class="hv-datebar">
-      <button class="btn btn-ghost btn-sm" onclick="hvNudge(-1)">←</button>
-      <input type="date" id="hv-date" value="${_hvDate}" onchange="hvSetDate(this.value)"
-             style="padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.85rem"/>
-      <button class="btn btn-ghost btn-sm" onclick="hvNudge(1)">→</button>
+      <button class="hv-step" onclick="hvNudge(-1)" title="Previous day" aria-label="Previous day">‹</button>
+      <label class="hv-day" style="cursor:pointer" title="Pick a date">
+        <span id="hv-day-label">${escHtml(hvDayLabel(_hvDate))}</span>
+        <input type="date" id="hv-date" value="${_hvDate}" onchange="hvSetDate(this.value)"
+               style="position:absolute;opacity:0;width:0;height:0;pointer-events:none"/>
+      </label>
+      <button class="hv-step" onclick="hvNudge(1)" title="Next day" aria-label="Next day">›</button>
       <button class="btn btn-ghost btn-sm" onclick="hvSetDate(new Date().toISOString().slice(0,10))">Today</button>
       <div style="flex:1"></div>
       <button class="btn btn-ghost btn-sm" onclick="hvToggleView()" id="hv-toggle">🧹 Cleaning list</button>
@@ -2353,7 +2364,23 @@ function openHouseView(parentId) {
   drawHouseView();
 }
 
-function hvSetDate(d) { if (!d) return; _hvDate = d; const el = document.getElementById('hv-date'); if (el) el.value = d; drawHouseView(); }
+// "Sun 2 Aug", with today and tomorrow named — a date you read rather than
+// decode. The year is dropped: nobody scrubbing a house view is unsure
+// which year they are in.
+function hvDayLabel(iso) {
+  const d = new Date(iso + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((d - today) / 86400000);
+  const nice = d.toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' });
+  return diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : diff === -1 ? 'Yesterday' : nice;
+}
+function hvSetDate(d) {
+  if (!d) return;
+  _hvDate = d;
+  const el = document.getElementById('hv-date'); if (el) el.value = d;
+  const lb = document.getElementById('hv-day-label'); if (lb) lb.textContent = hvDayLabel(d);
+  drawHouseView();
+}
 function hvNudge(days) {
   const d = new Date(_hvDate + 'T00:00:00');
   d.setDate(d.getDate() + days);
@@ -2402,46 +2429,103 @@ async function drawHouseView() {
   // what is happening in it, who is cleaning it. The broom on its own said
   // a clean existed and refused to say whose — which is the question
   // actually being asked at eight in the morning.
-  const tile = (r) => {
+  // ══ DRAWN, NOT BOXED ════════════════════════════════════════════
+  //
+  // "I hoped the view will be more in a sketch view, which looks nicer in
+  // black and grey and white, or at least not like a box."
+  //
+  // So: ink on paper. The wobble is an SVG turbulence filter displacing
+  // otherwise straight lines, which is why it looks drawn rather than
+  // rendered and why it needs no library. If a browser ignores the filter
+  // the result is clean lines, not a blank frame.
+  //
+  // STATE IS FILL WEIGHT, NOT HUE. Free is empty paper, staying is a light
+  // wash, leaving is hatched, arriving is a dotted outline. It reads
+  // photocopied, and it reads to somebody colour-blind. The single amber
+  // is spent on the one thing that needs a decision — a clean with nobody
+  // on it.
+  const W = 132, H = 78, GAP = 10, PAD = 18;
+  const FILL = { free: '#ffffff', occupied: '#efece5', arriving: '#ffffff', departing: '#ffffff' };
+
+  const cell = (r, x, y) => {
     const sub = r.state === 'free' ? 'Free'
       : r.state === 'departing' ? `${firstName(r.guest)} leaves`
       : r.state === 'arriving'  ? `${firstName(r.guest)} arrives`
       : `${firstName(r.guest)} · ${r.nights || '?'}n`;
-    // A clean with nobody on it is not the same as no clean, and the
-    // difference is the one worth acting on.
-    const clean = r.clean_by ? `🧹 ${firstName(r.clean_by)}`
-                : r.clean_due ? '🧹 unassigned' : '';
-    return `<button class="hv-room ${r.state}" onclick="openEditProperty('${r.room_id}')"
-              title="${escAttr(r.room_name + ' — ' + (r.guest || 'free') + (r.clean_due ? ' — clean: ' + (r.clean_by || 'unassigned') : ''))}">
-      <div class="hv-room-name">${escHtml(r.room_name)}</div>
-      <div class="hv-room-sub">${escHtml(sub)}</div>
-      ${clean ? `<div class="hv-room-clean${r.clean_by ? '' : ' unassigned'}">${escHtml(clean)}</div>` : ''}
-    </button>`;
+    const clean = r.clean_by ? firstName(r.clean_by) : (r.clean_due ? 'unassigned' : '');
+    return `
+    <g class="hv-cell" onclick="openEditProperty('${r.room_id}')" filter="url(#hvRough)">
+      <title>${escAttr(r.room_name + ' — ' + (r.guest || 'free') + (r.clean_due ? ' — clean: ' + (r.clean_by || 'unassigned') : ''))}</title>
+      <rect class="hv-cell-bg" x="${x}" y="${y}" width="${W}" height="${H}" rx="3"
+            fill="${FILL[r.state]}" stroke="#2b2b2b" stroke-width="1.6"
+            ${r.state === 'arriving' ? 'stroke-dasharray="5 4"' : ''}/>
+      ${r.state === 'departing'
+        ? `<g clip-path="url(#clip${r.room_id.slice(0,8)})">
+             ${[0,1,2,3,4,5,6,7].map(i => `<line x1="${x + i*22 - 40}" y1="${y+H}" x2="${x + i*22 + 40}" y2="${y}" stroke="#c9c3b6" stroke-width="1.1"/>`).join('')}
+           </g>
+           <clipPath id="clip${r.room_id.slice(0,8)}"><rect x="${x}" y="${y}" width="${W}" height="${H}" rx="3"/></clipPath>`
+        : ''}
+      <text class="hv-cell-label" x="${x + 11}" y="${y + 22}">${escHtml(r.room_name)}</text>
+      <text class="hv-cell-sub"   x="${x + 11}" y="${y + 39}">${escHtml(sub)}</text>
+      ${clean ? `<text class="hv-cell-clean${r.clean_by ? '' : ' unassigned'}" x="${x + 11}" y="${y + 60}">${escHtml('\u2500 ' + clean)}</text>` : ''}
+    </g>`;
   };
 
-  const stacked = () => `
-    <div class="hv-roof-wrap">
-      <div class="hv-chimney"></div>
-      <div class="hv-roof"></div>
-    </div>
-    <div class="hv-building">
-      ${groups.map(g => `
-        <div class="hv-floor">
-          ${g.key ? `<div class="hv-floor-label">${escHtml(g.key)}</div>` : ''}
-          <div class="hv-rooms">${g.rooms.map(tile).join('')}</div>
-        </div>`).join('')}
-    </div>`;
+  // A rough pencil line, used for the roof, the ground and the floor
+  // dividers. Two overlapping strokes at slightly different opacities is
+  // what stops it looking like a border.
+  const stroke = (d) => `<path d="${d}" class="hv-ink" filter="url(#hvRough)"/>
+                         <path d="${d}" class="hv-ink" filter="url(#hvRough)" opacity=".45" transform="translate(0.7,0.6)"/>`;
 
-  const detached = () => `
-    <div class="hv-plot">
-      ${groups.map(g => `
-        <div style="margin-bottom:${groups.length > 1 ? '16px' : '0'}">
-          ${g.key ? `<div class="hv-floor-label">${escHtml(g.key)}</div>` : ''}
-          <div class="hv-rooms">
-            ${g.rooms.map(r => `<div class="hv-unit"><div class="hv-unit-roof"></div>${tile(r)}</div>`).join('')}
-          </div>
-        </div>`).join('')}
-    </div>`;
+  const defs = `
+    <defs>
+      <filter id="hvRough" x="-6%" y="-6%" width="112%" height="112%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="3" seed="7" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>`;
+
+  const perRow = Math.max(...groups.map(g => g.rooms.length), 1);
+  const innerW = perRow * W + (perRow - 1) * GAP;
+
+  const stackedSvg = () => {
+    const roofH = 44;
+    let y = roofH + 12, body = '';
+    groups.forEach(g => {
+      if (g.key) { body += `<text class="hv-floor-name" x="${PAD}" y="${y + 2}">${escHtml(g.key.toUpperCase())}</text>`; y += 14; }
+      body += g.rooms.map((r, i) => cell(r, PAD + i * (W + GAP), y)).join('');
+      y += H + GAP;
+      body += stroke(`M ${PAD - 6} ${y - GAP/2} L ${PAD + innerW + 6} ${y - GAP/2}`);
+    });
+    const h = y + 8, w = innerW + PAD * 2;
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img">
+      ${defs}
+      ${stroke(`M ${PAD - 10} ${roofH} L ${w / 2} 8 L ${w - PAD + 10} ${roofH}`)}
+      ${stroke(`M ${w * 0.72} ${roofH - 20} L ${w * 0.72} 26 L ${w * 0.78} 26 L ${w * 0.78} ${roofH - 14}`)}
+      ${stroke(`M ${PAD - 10} ${roofH} L ${PAD - 10} ${h - 8} L ${w - PAD + 10} ${h - 8} L ${w - PAD + 10} ${roofH}`)}
+      ${body}
+    </svg>`;
+  };
+
+  const detachedSvg = () => {
+    const roofH = 26;
+    let y = 6, body = '';
+    groups.forEach(g => {
+      if (g.key) { body += `<text class="hv-floor-name" x="${PAD}" y="${y + 12}">${escHtml(g.key.toUpperCase())}</text>`; y += 22; }
+      g.rooms.forEach((r, i) => {
+        const x = PAD + i * (W + GAP);
+        body += stroke(`M ${x - 4} ${y + roofH} L ${x + W / 2} ${y} L ${x + W + 4} ${y + roofH}`);
+        body += cell(r, x, y + roofH);
+      });
+      y += roofH + H + 22;
+    });
+    const w = innerW + PAD * 2;
+    body += stroke(`M ${PAD - 14} ${y - 8} L ${w - PAD + 14} ${y - 8}`);   // the ground
+    return `<svg viewBox="0 0 ${w} ${y + 6}" width="${w}" height="${y + 6}" role="img">${defs}${body}</svg>`;
+  };
+
+  const stacked  = stackedSvg;
+  const detached = detachedSvg;
 
   const counts = ['occupied', 'arriving', 'departing', 'free']
     .map(k => [k, rows.filter(r => r.state === k).length]);
@@ -2450,13 +2534,13 @@ async function drawHouseView() {
     <div class="hv">
       ${bt.layout === 'stacked' ? stacked() : detached()}
       <div class="hv-legend">
-        ${[['departing','#e8b06a','#fff6e8','Leaving'],
-           ['arriving','#7ed0a4','#eafaf1','Arriving'],
-           ['occupied','#9dbdf0','#eef5ff','Staying'],
-           ['free','#dfe3e8','#fff','Free']]
-          .map(([k, bc, bg, label]) => {
+        ${[['departing','background:repeating-linear-gradient(45deg,#fff,#fff 3px,#c9c3b6 3px,#c9c3b6 4px)','Leaving'],
+           ['arriving','border-style:dashed','Arriving'],
+           ['occupied','background:#efece5','Staying'],
+           ['free','background:#fff','Free']]
+          .map(([k, style, label]) => {
             const n = (counts.find(c => c[0] === k) || [,0])[1];
-            return n ? `<span><span class="hv-swatch" style="border-color:${bc};background:${bg}"></span>${label} ${n}</span>` : '';
+            return n ? `<span><span class="hv-key" style="${style}"></span>${label} ${n}</span>` : '';
           }).join('')}
       </div>
     </div>
@@ -2516,17 +2600,17 @@ async function renderDashHouses() {
           </div>
           <button class="btn btn-sm btn-ghost" onclick="openHouseView('${b.id}')">Open house view</button>
         </div>
-        <div class="hv-rooms">
+        <div class="dh-strip">
           ${rows.map(r => `
-            <button class="hv-room ${r.state}" onclick="openHouseView('${b.id}')"
+            <button class="dh-chip ${r.state}" onclick="openHouseView('${b.id}')"
                     title="${escAttr(r.room_name + ' — ' + (r.guest || 'free') + (r.clean_due ? ' — clean: ' + (r.clean_by || 'unassigned') : ''))}">
-              <div class="hv-room-name">${escHtml(r.room_name)}</div>
-              <div class="hv-room-sub">${escHtml(
-                r.state === 'free' ? 'Free'
-                : r.state === 'departing' ? 'Leaving'
-                : r.state === 'arriving' ? 'Arriving'
-                : firstName(r.guest))}</div>
-              ${r.clean_due ? `<div class="hv-room-clean${r.clean_by ? '' : ' unassigned'}">🧹 ${escHtml(r.clean_by ? firstName(r.clean_by) : 'unassigned')}</div>` : ''}
+              <span class="dh-name">${escHtml(r.room_name)}</span>
+              <span class="dh-sub">${escHtml(
+                r.state === 'free' ? 'free'
+                : r.state === 'departing' ? 'leaving'
+                : r.state === 'arriving' ? 'arriving'
+                : firstName(r.guest))}</span>
+              ${r.clean_due ? `<span class="dh-clean${r.clean_by ? '' : ' unassigned'}">${escHtml(r.clean_by ? firstName(r.clean_by) : 'unassigned')}</span>` : ''}
             </button>`).join('')}
         </div>
       </div>`;
@@ -12732,6 +12816,8 @@ function nc(c) {
     contacts: c.sub_contacts || [],
     sensitive: !!c.sensitive,
     cleaner_rate: c.cleaner_rate ?? null,
+    pay_basis: c.pay_basis || 'per_clean',
+    pay_amount: c.pay_amount ?? null,
     cleaner_payment: c.cleaner_payment || '',
     cleaner_properties: c.cleaner_properties || [],
     birthday: c.birthday || '',
@@ -12750,7 +12836,8 @@ function allContacts() {
 // short form so it keeps matching domestics.cleaner values saved before
 // team_contacts held full names (e.g. "Patricia Mutizwa").
 function getDomesticStaff() {
-  return contacts.filter(c => c.cat === 'domestic' && c.cleaner_rate != null).map(c => ({
+  return contacts.filter(c => c.cat === 'domestic' &&
+                            (c.cleaner_rate != null || c.pay_basis === 'per_day' || c.pay_basis === 'monthly')).map(c => ({
     id: c.id,
     name: (c.name || '').split(' ')[0],
     fullName: c.name,
@@ -12936,6 +13023,10 @@ function deleteContact(id) {
 // as Contacts' 'domestic' filter — this is a specialized editor over it,
 // not a second data source.
 function fmtCleanerRate(c) {
+  // A day rate and a per-clean fee are different facts, and showing the
+  // second where the first is true is how somebody's wages get misread.
+  if (c.pay_basis === 'per_day')  return c.pay_amount != null ? 'R' + c.pay_amount + '/day' : 'Day rate';
+  if (c.pay_basis === 'monthly')  return c.pay_amount != null ? 'R' + c.pay_amount + '/month' : 'Monthly';
   if (c.cleaner_rate == null) return '—';
   if (typeof c.cleaner_rate === 'object') {
     return Object.entries(c.cleaner_rate).map(([k,v]) => (PROPS[k]?PROPS[k].short:k)+': R'+v).join(' · ');
@@ -13182,6 +13273,26 @@ function openStaffModal(id) {
       <div class="form-field"><label>Email</label><input id="st-email" type="email" placeholder="email@domain.co.za" value="${escAttr(existing?existing.email:'')}"/></div>
       <div class="form-field"><label>WhatsApp number</label><input id="st-wa" placeholder="27821234567 (no + or spaces)" value="${escAttr(existing?existing.wa:'')}"/></div>
       <div id="staff-cleaner-fields" style="display:${cat==='domestic'?'contents':'none'}">
+        <!-- "What I mean with a daily cleaner is, that there is no fee per
+             room." Everything about pay here assumed piece work — right for
+             an agency where a cleaner turns over a flat between guests and
+             invoices for the turnover, wrong for a guesthouse housekeeper
+             who does nine rooms on Tuesday and three on Wednesday for the
+             same money. Choosing the basis swaps which fields you get, so
+             nobody is asked for a per-room rate they do not have. -->
+        <div class="form-field span-full"><label>How are they paid?</label>
+          <select id="st-basis" onchange="onPayBasisChange()">
+            <option value="per_clean" ${!existing||existing.pay_basis!=='per_day'&&existing.pay_basis!=='monthly'?'selected':''}>Per clean — a fee for each turnover</option>
+            <option value="per_day"   ${existing&&existing.pay_basis==='per_day'?'selected':''}>Per day — a day rate, however many rooms</option>
+            <option value="monthly"   ${existing&&existing.pay_basis==='monthly'?'selected':''}>Monthly — a fixed wage</option>
+          </select>
+        </div>
+        <div class="form-field span-full" id="pay-amount-field"
+             style="display:${existing&&(existing.pay_basis==='per_day'||existing.pay_basis==='monthly')?'':'none'}">
+          <label><span id="pay-amount-label">Day rate</span> (R)</label>
+          <input id="st-pay-amount" type="number" placeholder="0" value="${existing&&existing.pay_amount!=null?existing.pay_amount:''}"/>
+          <div class="text-muted" style="font-size:.72rem;margin-top:3px" id="pay-amount-help"></div>
+        </div>
         <div class="form-field"><label>Payment method</label>
           <select id="st-payment">
             <option value="" ${!existing||!existing.cleaner_payment?'selected':''}>—</option>
@@ -13191,7 +13302,9 @@ function openStaffModal(id) {
           </select>
         </div>
         <div class="form-field"><label>Birthday</label><input type="date" id="st-birthday" value="${existing&&existing.birthday?existing.birthday:''}"/></div>
-        <div class="form-field span-full"><label>Properties &amp; rate (R per clean)</label>
+        <div class="form-field span-full" id="staff-rate-grid"
+             style="display:${existing&&(existing.pay_basis==='per_day'||existing.pay_basis==='monthly')?'none':''}">
+          <label>Properties &amp; rate (R per clean)</label>
           <div id="staff-prop-rates">
             ${Object.keys(PROPS).map(k => `
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
@@ -13203,6 +13316,18 @@ function openStaffModal(id) {
               </div>`).join('')}
           </div>
           <div class="text-muted" style="font-size:.72rem;margin-top:2px">Leave unchecked if this person isn't an assignable cleaner (e.g. a caretaker) — they'll still show in Staff, just not in the cleaner picker.</div>
+        </div>
+        <div class="form-field span-full" id="staff-prop-only"
+             style="display:${existing&&(existing.pay_basis==='per_day'||existing.pay_basis==='monthly')?'':'none'}">
+          <label>Which properties do they cover?</label>
+          <div id="staff-prop-list">
+            ${Object.keys(PROPS).map(k => `
+              <label style="display:inline-flex;align-items:center;gap:5px;font-weight:400;margin:0 12px 4px 0">
+                <input type="checkbox" class="staff-prop-only-chk" value="${k}" ${existingProps.includes(k)?'checked':''} style="width:auto"/>
+                ${PROPS[k].short}
+              </label>`).join('')}
+          </div>
+          <div class="text-muted" style="font-size:.72rem;margin-top:2px">No rate here — they are paid the same whatever they clean.</div>
         </div>
       </div>
       <div class="form-field" id="staff-pin-field" style="display:${(cat==='domestic'||cat==='management')?'':'none'}">
@@ -13218,25 +13343,54 @@ function openStaffModal(id) {
   openModal('day-modal');
 }
 
+// Swaps which pay fields are on screen. A day-rate cleaner is never asked
+// for a per-room fee, because there is not one.
+function onPayBasisChange() {
+  const basis = document.getElementById('st-basis').value;
+  const piece = basis === 'per_clean';
+  const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? '' : 'none'; };
+  show('staff-rate-grid', piece);
+  show('staff-prop-only', !piece);
+  show('pay-amount-field', !piece);
+  const lbl = document.getElementById('pay-amount-label');
+  const help = document.getElementById('pay-amount-help');
+  if (lbl) lbl.textContent = basis === 'monthly' ? 'Monthly wage' : 'Day rate';
+  if (help) help.textContent = basis === 'monthly'
+    ? 'Paid every month regardless of how many rooms were cleaned.'
+    : 'Paid for each day they work, however many rooms that day contains.';
+}
+
 async function saveStaff(id) {
   const name = document.getElementById('st-name').value.trim();
   if (!name) { toast('Name is required','error'); return; }
   const cat = document.getElementById('st-cat').value;
   let cleaner_rate = null, cleaner_payment = '', properties = [];
+  let pay_basis = 'per_clean', pay_amount = null;
   if (cat === 'domestic') {
-    const propRows = Array.from(document.querySelectorAll('#staff-prop-rates > div'));
-    const rateMap = {};
-    propRows.forEach(row => {
-      const chk = row.querySelector('.staff-prop-chk');
-      const rateInput = row.querySelector('.staff-prop-rate');
-      if (chk.checked) {
-        properties.push(chk.value);
-        rateMap[chk.value] = Number(rateInput.value) || 0;
-      }
-    });
-    const rateValues = Object.values(rateMap);
-    cleaner_rate = properties.length === 0 ? null
-      : (rateValues.every(r => r === rateValues[0]) ? rateValues[0] : rateMap);
+    pay_basis = document.getElementById('st-basis').value || 'per_clean';
+    if (pay_basis === 'per_clean') {
+      const propRows = Array.from(document.querySelectorAll('#staff-prop-rates > div'));
+      const rateMap = {};
+      propRows.forEach(row => {
+        const chk = row.querySelector('.staff-prop-chk');
+        const rateInput = row.querySelector('.staff-prop-rate');
+        if (chk.checked) {
+          properties.push(chk.value);
+          rateMap[chk.value] = Number(rateInput.value) || 0;
+        }
+      });
+      const rateValues = Object.values(rateMap);
+      cleaner_rate = properties.length === 0 ? null
+        : (rateValues.every(r => r === rateValues[0]) ? rateValues[0] : rateMap);
+    } else {
+      // No per-room figure exists on a day rate, so cleaner_rate is left
+      // NULL rather than filled with a number nobody agreed to. The roster
+      // query in 913 was widened to keep these people assignable — the old
+      // one required a rate and so hid them entirely.
+      properties = [...document.querySelectorAll('.staff-prop-only-chk:checked')].map(el => el.value);
+      cleaner_rate = null;
+      pay_amount = Number(document.getElementById('st-pay-amount').value) || 0;
+    }
     cleaner_payment = document.getElementById('st-payment').value;
   }
   // Portal PIN (migration 680) — only meaningful for the categories the
@@ -13257,6 +13411,8 @@ async function saveStaff(id) {
     wa: document.getElementById('st-wa').value.trim(),
     note: document.getElementById('st-note').value,
     initials: name0.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(),
+    pay_basis,
+    pay_amount,
     cleaner_payment,
     cleaner_properties: properties,
     cleaner_rate,
