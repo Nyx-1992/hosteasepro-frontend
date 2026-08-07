@@ -557,6 +557,26 @@ tfoot td{padding:11px 14px;font-size:.86rem;background:var(--sand);font-weight:7
   #kanban-board{grid-template-columns:1fr!important}
 }
 
+/* ── Seasonal rates: the month picker ──────────────────────────────
+   Twelve letters beats twelve checkboxes with names next to them: a
+   season is a shape of the year, and the point of the control is to
+   show that shape at a glance — "peak is the four warm ones" reads off
+   the row without anybody counting. The full month name is on the title
+   attribute, and on aria-label so it is not sighted-users-only. */
+.rs-months { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px }
+.rs-month {
+  width:30px; height:30px; padding:0; cursor:pointer;
+  border:1.5px solid var(--border); border-radius:7px;
+  background:transparent; color:var(--muted);
+  font-size:.76rem; font-weight:700; font-family:inherit;
+  transition:background .12s, color .12s, border-color .12s;
+}
+.rs-month:hover { border-color:var(--ink) }
+.rs-month.on { background:var(--ink); border-color:var(--ink); color:#fff }
+/* Keyboard focus must stay visible on both states — the "on" chip is
+   dark on dark, so the browser default ring disappears against it. */
+.rs-month:focus-visible { outline:2px solid var(--accent); outline-offset:2px }
+
 /* Respect reduced-motion system-wide — catches every animation/transition
    (including inline style="animation:…") in one place, rather than
    special-casing each one. */
@@ -2031,6 +2051,11 @@ async function loadProperties() {
     const { data, error } = await db.from('properties').select('*').eq('org_id', getOrgId());
     if (error) { console.warn('loadProperties:', error); return; }
     _propertiesRaw = data || [];
+    // Seasons and holidays ride along with properties so the property form
+    // can be built synchronously — they are two small tables and this is
+    // the one place that already knows the property list changed.
+    await loadRateSeasons();
+    loadPublicHolidays();
     renderPropertiesSettings();
     // The dashboard's house card reads _propertiesRaw, and properties
     // usually finish loading AFTER the first dashboard render — without
@@ -2797,6 +2822,206 @@ function addIcalFeedRow() {
   document.getElementById('pr-feeds-list').insertAdjacentHTML('beforeend', icalFeedRowHtml({}));
 }
 
+// ══ SEASONAL RATES (915) ══════════════════════════════════════════
+//
+// Migration 915 gave every property a base rate, seasons by month and a
+// public-holiday premium. This is where somebody types them in — without
+// it the whole engine reads "no price set" forever, which is what it did
+// for the first day it existed.
+//
+// Months rather than dates, because a season is a recurring shape of the
+// year. "Peak is November to February" is true every year; re-entering two
+// dates each December is the sort of chore that quietly stops happening,
+// and a season nobody renewed prices Christmas at the winter rate.
+// Where an agency or a property is, for the holiday calendar. Deliberately
+// short: these are the countries HEP is plausibly sold into, and a
+// 250-entry ISO list is a worse control than a dozen with "Other" implied
+// by the blank. Adding one is a line here plus a holiday source.
+const COUNTRIES = [
+  { k: 'ZA', label: 'South Africa' },
+  { k: 'NA', label: 'Namibia' },
+  { k: 'BW', label: 'Botswana' },
+  { k: 'ZW', label: 'Zimbabwe' },
+  { k: 'MZ', label: 'Mozambique' },
+  { k: 'MU', label: 'Mauritius' },
+  { k: 'GB', label: 'United Kingdom' },
+  { k: 'PT', label: 'Portugal' },
+  { k: 'ES', label: 'Spain' },
+  { k: 'DE', label: 'Germany' },
+  { k: 'AT', label: 'Austria' },
+  { k: 'CZ', label: 'Czechia' },
+];
+const countryName = (k) => (COUNTRIES.find(c => c.k === k) || {}).label || k || '';
+
+const MONTH_LETTERS = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+const MONTH_NAMES = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+
+let _rateSeasons = [];
+let _seasonSeq = 0;
+
+let _publicHolidays = [];
+
+async function loadRateSeasons() {
+  if (!db) return;
+  const { data, error } = await db.from('rate_seasons').select('*').order('sort');
+  if (error) { console.warn('loadRateSeasons:', error); return; }
+  _rateSeasons = data || [];
+}
+
+// The holiday calendar for wherever this agency operates. Small — four
+// years of one country is about fifty rows — and it is what lets the
+// preview default to a date where the premium actually shows.
+async function loadPublicHolidays() {
+  if (!db) return;
+  const cc = (CLIENT_BRAND && CLIENT_BRAND.countryCode) || 'ZA';
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await db.from('public_holidays')
+    .select('holiday_date,name').eq('country_code', cc)
+    .gte('holiday_date', today).order('holiday_date').limit(60);
+  if (error) { console.warn('loadPublicHolidays:', error); return; }
+  _publicHolidays = data || [];
+}
+
+// Default the preview to the next public holiday, night before to morning
+// after. Opening the box on a random week in June and seeing three
+// identical nights tells you nothing about whether the premium works; a
+// weekend with Heritage Day in it tells you immediately.
+function nextHolidayRange() {
+  const plus = (iso, n) => {
+    const d = new Date(iso + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + n);
+    return d.toISOString().slice(0, 10);
+  };
+  const h = _publicHolidays[0];
+  if (h) return { from: plus(h.holiday_date, -1), to: plus(h.holiday_date, 2) };
+  // No holidays loaded — a country we have not seeded, or the fetch failed.
+  // Fall back to a plain three nights from tomorrow rather than an empty box.
+  const t = new Date().toISOString().slice(0, 10);
+  return { from: plus(t, 1), to: plus(t, 4) };
+}
+
+function seasonRowHtml(s) {
+  s = s || {};
+  const rowId = 'rs' + (_seasonSeq++);
+  // months arrives as a Postgres int[], which supabase-js hands back as an
+  // array of numbers — but a row half-typed in this form has strings, so
+  // both are normalised before the includes() below.
+  const on = (Array.isArray(s.months) ? s.months : []).map(Number);
+  return `<div class="pr-season-row" data-row-id="${rowId}" data-id="${escAttr(s.id||'')}" style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:6px;position:relative">
+    <button type="button" class="btn btn-ghost btn-sm" title="Remove this season" aria-label="Remove this season" style="position:absolute;top:5px;right:5px;width:22px;height:22px;padding:0" onclick="this.closest('.pr-season-row').remove()">✕</button>
+    <div style="display:grid;grid-template-columns:1fr 110px;gap:6px;padding-right:28px">
+      <input class="rs-name" placeholder="e.g. Peak Summer" value="${escAttr(s.name||'')}" aria-label="Season name"/>
+      <input class="rs-rate" type="number" min="0" step="1" placeholder="Rate R" value="${s.rate!=null?String(s.rate):''}" aria-label="Nightly rate for this season"/>
+    </div>
+    <div class="rs-months">
+      ${MONTH_LETTERS.map((L,i)=>`<button type="button" class="rs-month${on.includes(i+1)?' on':''}" data-m="${i+1}" title="${MONTH_NAMES[i]}" aria-label="${MONTH_NAMES[i]}" aria-pressed="${on.includes(i+1)}" onclick="rsToggleMonth(this)">${L}</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function rsToggleMonth(btn) {
+  const nowOn = btn.classList.toggle('on');
+  btn.setAttribute('aria-pressed', String(nowOn));
+}
+
+function addSeasonRow() {
+  document.getElementById('pr-seasons-list').insertAdjacentHTML('beforeend', seasonRowHtml({}));
+}
+
+// An empty rate box means "no price set", which is a different thing from
+// zero and has to survive all the way to the column. parseFloat('') is NaN
+// and NaN || 0 is 0, so the usual idiom would quietly price the property at
+// nothing.
+function ratesFieldOrNull(id) {
+  const raw = (document.getElementById(id) || {}).value;
+  if (raw == null || String(raw).trim() === '') return null;
+  const n = parseFloat(raw);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Reads the form back. A season with no months selected is dropped rather
+// than saved: months is NOT NULL in the table, and an empty season would
+// silently never apply — which looks identical to a season that is broken.
+function readSeasonRows() {
+  return Array.from(document.querySelectorAll('#pr-seasons-list .pr-season-row')).map(r => ({
+    id: r.dataset.id || null,
+    name: r.querySelector('.rs-name').value.trim(),
+    rate: parseFloat(r.querySelector('.rs-rate').value),
+    months: Array.from(r.querySelectorAll('.rs-month.on')).map(b => parseInt(b.dataset.m, 10)),
+  })).filter(s => s.name && Number.isFinite(s.rate) && s.months.length);
+}
+
+// ── The preview ───────────────────────────────────────────────────
+//
+// Rates are the one part of this product where being wrong is expensive in
+// both directions, and the arithmetic — base, then season, then a
+// percentage for the holiday — is not something anybody should have to do
+// in their head to check it landed. So the form prices a real stay against
+// the real function and shows the nights.
+//
+// It calls stay_quote() rather than recomputing here on purpose: a second
+// implementation in JavaScript would eventually disagree with the database,
+// and the preview would be confidently wrong about the thing it exists to
+// confirm.
+async function previewStayQuote(propertyId) {
+  const out = document.getElementById('pr-quote-out');
+  const ci = document.getElementById('pr-q-in').value;
+  const co = document.getElementById('pr-q-out').value;
+  if (!out) return;
+  if (!ci || !co || co <= ci) {
+    out.innerHTML = `<div style="color:var(--muted);font-size:.8rem">Pick a check-in and a later check-out.</div>`;
+    return;
+  }
+  out.innerHTML = `<div style="color:var(--muted);font-size:.8rem">Pricing…</div>`;
+  const { data, error } = await db.rpc('stay_quote', {
+    p_property: propertyId, p_check_in: ci, p_check_out: co });
+  if (error) { out.innerHTML = `<div style="color:var(--red);font-size:.8rem">${escHtml(error.message)}</div>`; return; }
+  const q = Array.isArray(data) ? data[0] : data;
+  if (!q) { out.innerHTML = `<div style="color:var(--muted);font-size:.8rem">No nights in that range.</div>`; return; }
+
+  const nights = (q.detail || []);
+  // unpriced is shown as its own line rather than folded into the total. A
+  // quote missing three nights' price is a broken quote, not a cheap one,
+  // and the total below would otherwise look like a real number.
+  const unpriced = q.unpriced_nights || 0;
+  out.innerHTML = `
+    <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
+      ${nights.map(n => `
+        <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:.8rem">
+          <span>${escHtml(fmtNightLabel(n.night))}
+            ${n.season ? `<span style="color:var(--muted)"> · ${escHtml(n.season)}</span>` : ''}
+            ${n.holiday ? `<span style="color:var(--accent2);font-weight:600"> · ${escHtml(n.holiday)} +${n.premium_pct}%</span>` : ''}
+          </span>
+          <span style="font-variant-numeric:tabular-nums;${n.rate==null?'color:var(--red)':''}">
+            ${n.rate==null ? 'no rate set' : 'R'+Number(n.rate).toLocaleString('en-ZA',{minimumFractionDigits:0,maximumFractionDigits:2})}
+          </span>
+        </div>`).join('')}
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 10px;font-weight:700;background:var(--warm)">
+        <span>${q.nights} night${q.nights===1?'':'s'}${q.holiday_nights ? ` · ${q.holiday_nights} public holiday` : ''}</span>
+        <span style="font-variant-numeric:tabular-nums">${q.total==null ? '—' : 'R'+Number(q.total).toLocaleString('en-ZA',{minimumFractionDigits:0,maximumFractionDigits:2})}</span>
+      </div>
+    </div>
+    ${unpriced ? `<div style="margin-top:6px;font-size:.76rem;color:var(--red)">
+      ${unpriced} night${unpriced===1?'':'s'} have no rate, so this total is incomplete — set a nightly rate above, or a season covering ${unpriced===1?'that month':'those months'}.
+    </div>` : ''}
+    <div style="margin-top:6px;font-size:.72rem;color:var(--muted);line-height:1.5">
+      Check-out day is not charged. This is what a <strong>direct</strong> booking costs —
+      Airbnb, Booking.com and LekkeSlaap set their own prices, and we cannot change them from here.
+    </div>`;
+}
+
+// "Fri 3 Apr" — a date somebody can match against a calendar without
+// decoding it. Built from the parts rather than toLocaleDateString so it
+// does not shift by a day in a timezone behind UTC.
+function fmtNightLabel(iso) {
+  const [y, m, d] = String(iso).slice(0, 10).split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const mons = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${days[dt.getUTCDay()]} ${d} ${mons[m - 1]}`;
+}
+
 function openPropertyModal(id) {
   const existing = id ? _propertiesRaw.find(p=>p.id===id) : null;
   const existingFeeds = existing ? ICAL_FEEDS.filter(f=>f.property_id===existing.id) : [];
@@ -2820,6 +3045,42 @@ function openPropertyModal(id) {
       <div class="form-field span-full"><label>${isRoom ? 'Room name *' : 'Property Name *'}</label><input id="pr-name" placeholder="${isRoom ? 'e.g. Room 3, or Protea' : 'e.g. Sunset Villa'}" value="${escAttr(existing?existing.name:'')}"/></div>
       <div class="form-field"><label>Short code <span style="font-weight:400;color:var(--muted)">(optional)</span></label><input id="pr-code" placeholder="e.g. sunset" value="${escAttr(existing?existing.code:'')}"/></div>
       <div class="form-field"><label>Cleaning Fee (R)</label><input id="pr-fee" type="number" placeholder="0" value="${existing&&existing.cleaning_fee?existing.cleaning_fee:''}"/></div>
+      <!-- The nightly rate. Left blank the property has NO price, which is
+           what every property had until 915 — the quote functions return
+           NULL rather than 0, so nothing is ever quoted at zero by
+           accident. -->
+      <div class="form-field"><label>Nightly rate (R)</label>
+        <input id="pr-rate" type="number" min="0" step="1" placeholder="not set" value="${existing&&existing.base_rate!=null?String(existing.base_rate):''}"/></div>
+      <div class="form-field"><label>Public holiday premium (%)</label>
+        <input id="pr-holpct" type="number" min="0" step="1" placeholder="0" value="${existing&&existing.holiday_premium_pct?String(existing.holiday_premium_pct):''}"/>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:3px">
+          Added on top on a public holiday — 40 means +40%. A percentage rather
+          than an amount, so it rises with the season by itself.
+        </div>
+      </div>
+      <div class="form-field span-full">
+        <label>Seasonal rates <span style="font-weight:400;color:var(--muted)">(optional — months not covered use the nightly rate above)</span></label>
+        <div id="pr-seasons-list"></div>
+        <button type="button" class="btn btn-ghost btn-sm" style="margin-top:4px" onclick="addSeasonRow()">+ Add season</button>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:5px;line-height:1.5">
+          Tap the months a season covers. Set it once and it repeats every year —
+          no re-entering dates each December.
+        </div>
+      </div>
+      ${existing ? `
+      <!-- Priced against the real function rather than recomputed here, so
+           the preview cannot be confidently wrong about the one thing it
+           exists to confirm. -->
+      <div class="form-field span-full" style="border-top:1px solid var(--border);padding-top:12px">
+        <label>Check a price <span style="font-weight:400;color:var(--muted)">(uses what is saved, so save first)</span></label>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <input id="pr-q-in" type="date" value="${escAttr(nextHolidayRange().from)}" aria-label="Check-in"/>
+          <span style="color:var(--muted)">→</span>
+          <input id="pr-q-out" type="date" value="${escAttr(nextHolidayRange().to)}" aria-label="Check-out"/>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="previewStayQuote('${existing.id}')">Price it</button>
+        </div>
+        <div id="pr-quote-out" style="margin-top:8px"></div>
+      </div>` : ''}
       ${isRoom ? `
       <!-- A room is inside something, so it inherits the address and needs
            to know which group it sits in. The word for that group comes
@@ -2863,6 +3124,16 @@ function openPropertyModal(id) {
       </div>
       <div class="form-field span-full"><label>Address</label><input id="pr-addr1" placeholder="Street address" value="${escAttr(existing?existing.address_line1:'')}"/></div>
       <div class="form-field span-full"><label>City</label><input id="pr-city" placeholder="City" value="${escAttr(existing?existing.city:'')}"/></div>
+      <!-- Only for a property in a different country from the agency,
+           which is nearly none of them — so it defaults to "same as the
+           agency" rather than making everyone pick their own country
+           twice. It decides which public holiday calendar applies. -->
+      <div class="form-field span-full"><label>Country <span style="font-weight:400;color:var(--muted)">(only if it differs from your business)</span></label>
+        <select id="pr-country">
+          <option value="">Same as my business${CLIENT_BRAND&&CLIENT_BRAND.countryCode?` (${escHtml(countryName(CLIENT_BRAND.countryCode))})`:''}</option>
+          ${COUNTRIES.map(c=>`<option value="${c.k}" ${existing&&existing.country_code===c.k?'selected':''}>${escHtml(c.label)}</option>`).join('')}
+        </select>
+      </div>
       <div class="form-field span-full">
         <label>iCal Feeds <span style="font-weight:400;color:var(--muted)">(paste the sync URL from each platform this property is listed on)</span></label>
         <div id="pr-feeds-list"></div>
@@ -2891,6 +3162,14 @@ function openPropertyModal(id) {
   const feedsListEl = document.getElementById('pr-feeds-list');
   feedsListEl.innerHTML = '';
   (existingFeeds.length ? existingFeeds : [{}]).forEach(f => feedsListEl.insertAdjacentHTML('beforeend', icalFeedRowHtml(f)));
+  // Seasons start empty rather than with a blank row, unlike feeds. Most
+  // properties have one rate all year, and an empty row invites filling in
+  // — a season nobody wanted is worse than a button nobody pressed.
+  const seasonsListEl = document.getElementById('pr-seasons-list');
+  seasonsListEl.innerHTML = '';
+  (existing ? _rateSeasons.filter(s => s.property_id === existing.id) : [])
+    .sort((a, b) => (a.sort || 0) - (b.sort || 0))
+    .forEach(s => seasonsListEl.insertAdjacentHTML('beforeend', seasonRowHtml(s)));
   openModal('day-modal');
 }
 
@@ -2905,6 +3184,13 @@ async function savePropertyRecord(id) {
     city: document.getElementById('pr-city').value.trim() || null,
     cleaning_fee: parseFloat(document.getElementById('pr-fee').value) || 0,
     daily_service: !!document.getElementById('pr-daily').checked,
+    // NULL, not 0, when the box is empty. The whole point of 915 is that a
+    // property with no price quotes nothing rather than quoting free — so
+    // "|| 0" here would undo it at the last step, and the failure would
+    // only ever be seen by a guest.
+    base_rate: ratesFieldOrNull('pr-rate'),
+    holiday_premium_pct: parseFloat(document.getElementById('pr-holpct').value) || 0,
+    country_code: document.getElementById('pr-country').value || null,
   };
   // Only sent when the field is on screen. Writing floor:null for a whole
   // property would be harmless; writing building_type:null for a room
@@ -2955,6 +3241,24 @@ async function savePropertyRecord(id) {
     if (feedError) { toast('Property saved, but feed save failed: '+feedError.message,'error'); }
   }
 
+  // Seasonal rates. The whole set is replaced rather than diffed — a season
+  // has no natural key, two can share a name and months move between them,
+  // so matching old rows to new ones means guessing.
+  //
+  // Replacing it from here would be DELETE then INSERT, and the gap between
+  // those is the problem: a connection that drops in the middle leaves the
+  // property with no seasons at all, which does not error and does not look
+  // wrong, it just quietly reverts to the base rate and prices Christmas at
+  // the winter one. 916 does both statements in a single transaction.
+  if (propertyId) {
+    const { error: seasErr } = await db.rpc('set_rate_seasons', {
+      p_property: propertyId,
+      p_seasons: readSeasonRows().map((s, i) => ({
+        name: s.name, rate: s.rate, months: s.months, sort: i })),
+    });
+    if (seasErr) toast('Property saved, but the seasonal rates did not: ' + seasErr.message, 'error');
+  }
+
   // The building's answer applies to its rooms. Done server-side in one
   // statement so it cannot half-apply across eight rooms on a bad
   // connection — and only for a building, because on a room the same
@@ -2968,7 +3272,7 @@ async function savePropertyRecord(id) {
   const wasRoomOf = _pendingRoomParent;
   _pendingRoomParent = null;   // or the next "Add Property" quietly becomes a room
   closeModal('day-modal');
-  await loadProperties();
+  await loadProperties();      // also refreshes _rateSeasons
   await loadIcalFeeds();
   // Straight back to the picture they were looking at.
   if (wasRoomOf) openHouseView(wasRoomOf);
@@ -3223,6 +3527,9 @@ const BRAND_FIELDS = [
   { k: 'whatsapp',       label: 'WhatsApp',        ph: '27XXXXXXXXX',                 group: 'Identity',        where: 'settings',
     hint: 'Digits and country code, no + or spaces. Guest messages are sent from this number.' },
   { k: 'website',        label: 'Website',         ph: 'https://…',                   group: 'Identity',        where: 'settings' },
+  { k: 'country_code',   label: 'Country',                                            group: 'Identity',        where: 'settings',
+    type: 'country',
+    hint: 'Decides which public holiday calendar your rates use. Set a property\'s own country only if it sits somewhere else.' },
   { k: 'owner_stay_names', label: 'Owner names on your calendars', ph: 'e.g. Mirka, Antonin',  group: 'Identity', where: 'settings',
     type: 'namelist',
     hint: 'When one of these appears on a calendar event, the stay is recorded as the owner using the place rather than as a paying guest — so it stays out of your income and occupancy. Leave blank and only the word "owner" is used. These were four names buried in the code; any other agency with a guest of the same name had that booking quietly reclassified.' },
@@ -3307,6 +3614,9 @@ async function renderOrgFields(where, elId, cardId) {
                    </label>`
                 : f.type === 'namelist'
                 ? `<input id="brand-${f.k}" placeholder="${escAttr(f.ph)}" value="${escAttr((_brandRow[f.k] || []).join(', '))}"/>`
+                : f.type === 'country'
+                ? `<select id="brand-${f.k}">${COUNTRIES.map(c =>
+                     `<option value="${c.k}" ${(_brandRow[f.k] || 'ZA') === c.k ? 'selected' : ''}>${escHtml(c.label)}</option>`).join('')}</select>`
                 : `<input id="brand-${f.k}" placeholder="${escAttr(f.ph)}" value="${escAttr(_brandRow[f.k] || '')}"/>`}
               ${f.hint ? `<div style="font-size:.7rem;color:var(--muted);margin-top:3px">${f.hint}</div>` : ''}
             </div>`).join('')}
@@ -6260,6 +6570,11 @@ async function loadOrgSettings(quiet) {
       email:     s.email         || '',
       currency:  s.currency      || 'ZAR',
       country:   s.country       || 'ZA',
+      // Separate from `country` above, which is free text and empty on
+      // every row — somebody's "South Africa" and somebody else's "RSA"
+      // both mean ZA, and a holiday calendar cannot be looked up by a
+      // guess. country_code (915) is the 2-letter ISO one.
+      countryCode: s.country_code || 'ZA',
       // Printed on invoices and owner statements (893). Blank is a real
       // answer and prints nothing — see invLetterheadHtml().
       tagline:   s.tagline       || '',

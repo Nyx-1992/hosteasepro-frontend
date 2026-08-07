@@ -307,6 +307,76 @@ ok('the premium starts at 0%, so nothing changes price on its own',
 ok('there is no UPDATE backfilling rates onto existing rows',
    !/UPDATE public\.properties[\s\S]{0,120}SET[\s\S]{0,60}base_rate/.test(mig));
 
+// ══ 9. THE SCREEN SOMEBODY TYPES A RATE INTO ══════════════════════
+//
+// The engine above shipped a day before this did, during which every
+// property in the product read "no price set" and there was no way to
+// change that. An engine with no form is a migration, not a feature.
+console.log('\n── demo/index_fixed.html, entering rates ──');
+const app = read('demo', 'index_fixed.html');
+const mig916 = read('supabase', 'migrations', '916_set_rate_seasons.sql');
+
+ok('a property has a nightly rate field', /id="pr-rate"/.test(app));
+ok('and a public holiday premium field', /id="pr-holpct"/.test(app));
+ok('and a country, for the holiday calendar', /id="pr-country"/.test(app));
+ok('seasons can be added and removed', /id="pr-seasons-list"/.test(app) && /function addSeasonRow\(\)/.test(app));
+
+// THE ONE THAT WOULD BE SILENT. JavaScript's Date.getMonth() is 0-11 and
+// the booking site's hardcoded seasons are written that way; the database
+// is 1-12. Mixing them shifts every season by a month, so Peak Summer
+// becomes January-to-March and Christmas is priced at the shoulder rate —
+// no error, no warning, just a year of slightly wrong prices.
+const monthBtn = app.slice(app.indexOf('MONTH_LETTERS.map((L,i)=>'), app.indexOf('MONTH_LETTERS.map((L,i)=>') + 400);
+ok('the month picker sends 1-12, not JavaScript 0-11',
+   /data-m="\$\{i\+1\}"/.test(monthBtn), monthBtn.slice(0, 120));
+ok('and the database refuses 0-11 if anything ever does send it',
+   /months <@ ARRAY\[1,2,3,4,5,6,7,8,9,10,11,12\]/.test(mig916));
+// array_length of an empty array is NULL, and a CHECK passes on NULL — so
+// the obvious BETWEEN lets a season covering no months through, which
+// never matches a date and looks like a season that is simply unused.
+ok('a season covering no months is refused too',
+   /COALESCE\(array_length\(months, 1\), 0\) BETWEEN 1 AND 12/.test(mig916));
+
+// An empty rate box means "no price set". parseFloat('') is NaN and
+// NaN || 0 is 0, so the ordinary idiom would price the property at free at
+// the very last step — undoing the whole of section 4 above.
+ok('a blank rate saves as NULL, not as zero',
+   /base_rate: ratesFieldOrNull\('pr-rate'\)/.test(app) &&
+   /function ratesFieldOrNull/.test(app) &&
+   /String\(raw\)\.trim\(\) === ''\) return null/.test(app));
+
+// Replacing the set from the browser is DELETE then INSERT, and a
+// connection that drops between them leaves a property with no seasons —
+// silently back on its base rate.
+ok('saving seasons is one transaction, not delete-then-insert',
+   /db\.rpc\('set_rate_seasons'/.test(app) &&
+   !/from\('rate_seasons'\)\.delete\(\)/.test(app));
+ok('the function checks the property belongs to the caller',
+   /WHERE id = p_property AND org_id = v_org/.test(mig916) &&
+   /RAISE EXCEPTION 'No such property'/.test(mig916));
+ok('and does not reveal whether the property exists or is someone else\'s',
+   /same message whether the property does not exist or/.test(mig916));
+
+// The preview must not be a second implementation of the pricing rules —
+// it would eventually disagree with the database and be confidently wrong
+// about the one thing it exists to confirm.
+console.log('\n── The preview ──');
+ok('it prices against the real function', /db\.rpc\('stay_quote'/.test(app));
+const prev = app.slice(app.indexOf('async function previewStayQuote'), app.indexOf('function fmtNightLabel'));
+ok('it does not recompute the premium in JavaScript',
+   !/premium_pct\s*\/\s*100/.test(prev) && !/\*\s*\(1\s*\+/.test(prev));
+ok('each night shows the season and the holiday that moved it',
+   /n\.season/.test(prev) && /n\.holiday/.test(prev) && /premium_pct/.test(prev));
+ok('a night with no rate says so instead of showing R0',
+   /n\.rate==null \? 'no rate set'/.test(prev));
+ok('an incomplete total is called out, not quietly summed',
+   /unpriced/.test(prev) && /this total is incomplete/.test(prev));
+// The limit belongs on the screen, not only in the migration header —
+// otherwise the first time somebody notices is when Airbnb still shows the
+// old price over a long weekend.
+ok('the screen says the platforms are not updated from here',
+   /Airbnb, Booking\.com and LekkeSlaap set their own prices/.test(prev));
+
 // ── Result ────────────────────────────────────────────────────────
 console.log('');
 if (fail.length) {
