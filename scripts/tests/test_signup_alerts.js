@@ -174,12 +174,33 @@ console.log('\n── The test button ──');
 const test = read('api', 'test-alert.js');
 
 ok('there is a way to prove the alert arrives', /hqTestAlert/.test(app) && /Send me a test alert/.test(app));
-// is_platform_owner() reads auth.uid(), so it has to be called with the
-// CALLER'S token. The service key would evaluate auth.uid() as NULL.
-ok('the check is made by the database, as the caller',
-   /rpc\/is_platform_owner/.test(test) && /Authorization: `Bearer \$\{token\}`/.test(test));
+
+// THE FIRST VERSION OF THIS ENDPOINT ANSWERED "Server not configured" —
+// nothing to do with the mailer. It called is_platform_owner() as the
+// caller, which is the more elegant shape, but that needs an anon key to
+// send as the apikey header and there is no anon key in the server
+// environment. Every other endpoint in api/ uses SUPABASE_URL plus
+// SUPABASE_SERVICE_ROLE_KEY; this one assumed a variable that was never
+// set anywhere.
+ok('it only uses environment variables the server actually has',
+   /process\.env\.SUPABASE_SERVICE_ROLE_KEY/.test(test) &&
+   !/process\.env\.SUPABASE_ANON_KEY/.test(test) &&
+   !/process\.env\.NEXT_PUBLIC_SUPABASE_ANON_KEY/.test(test));
+// The token is still the only thing trusted — who it belongs to is asked
+// of Supabase, never taken from the request.
+ok('the caller is identified by their token, not by anything they send',
+   /\/auth\/v1\/user`, \{\s*headers: \{ apikey: key, Authorization: `Bearer \$\{token\}` \}/.test(test) &&
+   !/req\.body/.test(test));
+// Must match is_platform_owner() in 904 exactly: an OWNER whose org is the
+// one named by platform_settings. Verified against production — of six
+// profiles only info@hosteasepro.com passes, including two other accounts
+// that are owners of their own orgs.
+ok('the rule is the same one the database uses',
+   /me\.role === 'owner' && me\.org_id === settings\.platform_org_id/.test(test));
 ok('and it refuses anyone who is not the platform owner',
-   /if \(!isOwner\) return res\.status\(403\)/.test(test));
+   /return res\.status\(403\)\.json\(\{ error: 'Platform owner only' \}\)/.test(test));
+ok('a failed lookup denies rather than allows',
+   /catch \(e\) \{\s*return false;/.test(test));
 // An endpoint that emails an address supplied in the request is an open
 // relay with extra steps, and this one is reachable by anyone signed in.
 ok('the destination comes from the environment, never from the request',
