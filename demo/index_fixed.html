@@ -3058,6 +3058,20 @@ function openPropertyModal(id) {
           than an amount, so it rises with the season by itself.
         </div>
       </div>
+      <!-- ALWAYS ON SCREEN, not tucked into the preview below.
+           This used to appear only in the output of "Price it", which
+           meant somebody could set a rate, a season and a holiday premium
+           and close the form having never been told what these numbers do
+           and do not reach. The limit is not a footnote to the feature,
+           it is half of what the feature is. -->
+      <div class="form-field span-full">
+        <div style="display:flex;gap:9px;align-items:flex-start;background:var(--warm);border-radius:8px;padding:9px 11px;font-size:.78rem;line-height:1.55">
+          <span aria-hidden="true">ℹ️</span>
+          <div><strong>These rates apply to direct bookings.</strong>
+          Airbnb, Booking.com and LekkeSlaap set their own prices — their calendars only tell us
+          when someone has booked, never what to charge. Change a price there in their own extranet.</div>
+        </div>
+      </div>
       <div class="form-field span-full">
         <label>Seasonal rates <span style="font-weight:400;color:var(--muted)">(optional — months not covered use the nightly rate above)</span></label>
         <div id="pr-seasons-list"></div>
