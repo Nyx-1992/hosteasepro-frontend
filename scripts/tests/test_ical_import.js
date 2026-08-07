@@ -199,8 +199,19 @@ ok('there is a dry run that writes nothing',
 const vercel = JSON.parse(read('vercel.json'));
 const job = (vercel.crons || []).find(c => c.path === '/api/cron/ical-sync');
 ok('it is actually scheduled', !!job, JSON.stringify(vercel.crons));
-ok('often enough that a cleaner can be assigned the same morning',
-   !!job && /^\*\/(5|10|15|20|30) \* \* \* \*$/.test(job.schedule), job && job.schedule);
+// It WANTS to be */15. Vercel's Hobby tier allows daily cron only, and an
+// invalid schedule does not warn — it fails the whole deployment, which is
+// exactly what happened: two commits sat unbuilt for a day. So the file
+// holds a schedule that deploys, and the note in the handler says how to
+// get the fifteen minutes back (Pro, or any external scheduler).
+ok('the schedule is one Vercel will actually accept',
+   !!job && /^0 \d{1,2} \* \* \*$/.test(job.schedule), job && job.schedule);
+ok('and how to make it more frequent is written down',
+   /TWO WAYS TO GET THE FIFTEEN MINUTES BACK/.test(cron));
+// A daily cron alone would leave Nina waiting until tomorrow, which is the
+// complaint. The button is what makes the daily schedule survivable.
+ok('a person can run it without waiting for the schedule',
+   /serverSync/.test(read('demo', 'index_fixed.html')));
 
 // ══ THE RELAY THE BROWSER USES ════════════════════════════════════
 //
