@@ -147,20 +147,21 @@ h2,h3{font-family:"DM Serif Display",serif}
    lines rather than to nothing if a browser refuses the filter.
    State is carried by FILL WEIGHT rather than by hue, so the picture
    still reads printed, photocopied, or by someone colour-blind. */
-.hv{background:#fbfaf7;border:1px solid #e7e3da;border-radius:12px;padding:16px 14px 12px;overflow-x:auto}
+.hv{background:#FCF9F2;border:1px solid #e7e3da;border-radius:12px;padding:14px 12px 10px;overflow-x:auto}
 .hv svg{display:block;margin:0 auto;max-width:100%;height:auto}
-.hv-ink{stroke:#2b2b2b;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-.hv-ink-thin{stroke:#8b8b8b;fill:none;stroke-width:1.1;stroke-linecap:round}
 .hv-cell{cursor:pointer}
-.hv-cell:hover .hv-cell-bg{fill:#ece8df}
-.hv-cell-label{font-family:inherit;font-size:12.5px;font-weight:700;fill:#2b2b2b}
-.hv-cell-sub{font-family:inherit;font-size:10.5px;fill:#6f6f6f}
-.hv-cell-clean{font-family:inherit;font-size:10px;fill:#6f6f6f}
+/* The room is a window now, not a filled rectangle, so there is no single
+   shape to recolour on hover — a whole-group nudge reads better anyway. */
+.hv-cell{transition:opacity .12s}
+.hv-cell:hover{opacity:.72}
+.hv-cell-label{font-family:inherit;font-size:12.5px;font-weight:700;fill:#3A3632}
+.hv-cell-sub{font-family:inherit;font-size:10.5px;fill:#8a8378}
+.hv-cell-clean{font-family:inherit;font-size:10px;fill:#8a8378}
 .hv-cell-clean.unassigned{fill:#b07520;font-weight:700}
-.hv-floor-name{font-family:inherit;font-size:10px;font-weight:700;fill:#9a948a;letter-spacing:.09em}
+.hv-floor-name{font-family:inherit;font-size:10px;font-weight:700;fill:#aaa196;letter-spacing:.09em}
 .hv-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:.74rem;color:#6f6f6f;align-items:center}
 .hv-legend span{display:flex;align-items:center;gap:6px}
-.hv-key{width:16px;height:12px;border:1.4px solid #2b2b2b;border-radius:2px}
+.hv-key{width:16px;height:12px;border:1.4px solid #3A3632;border-radius:2px}
 .hv-datebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .hv-empty{text-align:center;padding:26px 10px;color:var(--muted);font-size:.86rem}
 /* The date, readable as a date rather than as 2026/07/31. */
@@ -2454,99 +2455,276 @@ async function drawHouseView() {
   // what is happening in it, who is cleaning it. The broom on its own said
   // a clean existed and refused to say whose — which is the question
   // actually being asked at eight in the morning.
-  // ══ DRAWN, NOT BOXED ════════════════════════════════════════════
+  // ══ PAINTED, NOT BOXED ══════════════════════════════════════════
   //
-  // "I hoped the view will be more in a sketch view, which looks nicer in
-  // black and grey and white, or at least not like a box."
+  // "I hoped the view will be more in a sketch view" → then, on seeing
+  // straight lines under a wobble filter: "more water colour vibes and
+  // more sketching than these straight lines. it should look nice."
   //
-  // So: ink on paper. The wobble is an SVG turbulence filter displacing
-  // otherwise straight lines, which is why it looks drawn rather than
-  // rendered and why it needs no library. If a browser ignores the filter
-  // the result is clean lines, not a blank frame.
+  // Two things follow from that, and the first one is the one that
+  // matters. A LINE IS DRAWN, NOT FILTERED. The previous version emitted
+  // straight paths and pushed them through feDisplacementMap, which
+  // roughens an edge but leaves it a rectangle underneath — it reads as a
+  // box someone put a texture on. Here every stroke is a bowed cubic with
+  // jittered ends and control points, laid down TWICE at different weights
+  // so the two passes do not quite agree. That disagreement is the whole
+  // difference between a pen stroke and a border.
   //
-  // STATE IS FILL WEIGHT, NOT HUE. Free is empty paper, staying is a light
-  // wash, leaving is hatched, arriving is a dotted outline. It reads
-  // photocopied, and it reads to somebody colour-blind. The single amber
-  // is spent on the one thing that needs a decision — a clean with nobody
-  // on it.
-  const W = 132, H = 78, GAP = 10, PAD = 18;
-  const FILL = { free: '#ffffff', occupied: '#efece5', arriving: '#ffffff', departing: '#ffffff' };
+  // Second, A WASH IS THREE PASSES: a wide soft bleed that spreads past
+  // the ink, a mottled body, and a darker rim — pigment dries heavier at
+  // the edge of a puddle, and that rim is the thing the eye reads as
+  // watercolour. One flat fill is a colour, not a wash.
+  //
+  // AN OCCUPIED ROOM IS A LIT WINDOW. No legend explains that, and none
+  // needs to. But colour is never the only cue: arriving is dashed,
+  // leaving is hatched, free is empty. The picture still reads printed,
+  // photocopied, or by somebody colour-blind.
+  //
+  // Everything is seeded off the room's own id, so the same room is drawn
+  // the same way on every render. Re-rolled jitter makes a house that
+  // shivers whenever the date changes.
 
-  const cell = (r, x, y) => {
-    const sub = r.state === 'free' ? 'Free'
-      : r.state === 'departing' ? `${firstName(r.guest)} leaves`
-      : r.state === 'arriving'  ? `${firstName(r.guest)} arrives`
-      : `${firstName(r.guest)} · ${r.nights || '?'}n`;
-    const clean = r.clean_by ? firstName(r.clean_by) : (r.clean_due ? 'unassigned' : '');
-    return `
-    <g class="hv-cell" onclick="openEditProperty('${r.room_id}')" filter="url(#hvRough)">
-      <title>${escAttr(r.room_name + ' — ' + (r.guest || 'free') + (r.clean_due ? ' — clean: ' + (r.clean_by || 'unassigned') : ''))}</title>
-      <rect class="hv-cell-bg" x="${x}" y="${y}" width="${W}" height="${H}" rx="3"
-            fill="${FILL[r.state]}" stroke="#2b2b2b" stroke-width="1.6"
-            ${r.state === 'arriving' ? 'stroke-dasharray="5 4"' : ''}/>
-      ${r.state === 'departing'
-        ? `<g clip-path="url(#clip${r.room_id.slice(0,8)})">
-             ${[0,1,2,3,4,5,6,7].map(i => `<line x1="${x + i*22 - 40}" y1="${y+H}" x2="${x + i*22 + 40}" y2="${y}" stroke="#c9c3b6" stroke-width="1.1"/>`).join('')}
-           </g>
-           <clipPath id="clip${r.room_id.slice(0,8)}"><rect x="${x}" y="${y}" width="${W}" height="${H}" rx="3"/></clipPath>`
-        : ''}
-      <text class="hv-cell-label" x="${x + 11}" y="${y + 22}">${escHtml(r.room_name)}</text>
-      <text class="hv-cell-sub"   x="${x + 11}" y="${y + 39}">${escHtml(sub)}</text>
-      ${clean ? `<text class="hv-cell-clean${r.clean_by ? '' : ' unassigned'}" x="${x + 11}" y="${y + 60}">${escHtml('\u2500 ' + clean)}</text>` : ''}
-    </g>`;
+  const PAINT = {
+    ink:  '#3A3632',   // warm charcoal; pure black looks printed
+    wall: '#E8DCC6',
+    roof: '#8296A4',
+    lamp: '#EFB755',   // someone is in
+    cold: '#BFCBD2',   // nobody is
+    door: '#B4795A',
+    leaf: '#93A67C',
+    earth:'#D6C4A4',
+    sky:  '#CBDCE4',
   };
 
-  // A rough pencil line, used for the roof, the ground and the floor
-  // dividers. Two overlapping strokes at slightly different opacities is
-  // what stops it looking like a border.
-  const stroke = (d) => `<path d="${d}" class="hv-ink" filter="url(#hvRough)"/>
-                         <path d="${d}" class="hv-ink" filter="url(#hvRough)" opacity=".45" transform="translate(0.7,0.6)"/>`;
+  // Deterministic, and cheap. Seeded from a string so a room keeps its own
+  // wobble for as long as it exists.
+  const seedOf = (str) => { let h = 2166136261;
+    for (let i = 0; i < String(str).length; i++) { h ^= String(str).charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0; };
+  const rngOf = (seed) => { let x = (seed >>> 0) || 1;
+    return () => { x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296; }; };
 
-  const defs = `
-    <defs>
-      <filter id="hvRough" x="-6%" y="-6%" width="112%" height="112%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="3" seed="7" result="n"/>
-        <feDisplacementMap in="SourceGraphic" in2="n" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
-      </filter>
-    </defs>`;
+  const handD = (x1, y1, x2, y2, r, amp) => {
+    amp = amp == null ? 2.2 : amp;
+    const dx = x2 - x1, dy = y2 - y1, o = () => (r() - 0.5) * amp;
+    return `M ${x1+o()} ${y1+o()} C ${x1+dx*0.28+o()*2.4} ${y1+dy*0.28+o()*2.4}, `
+         + `${x1+dx*0.72+o()*2.4} ${y1+dy*0.72+o()*2.4}, ${x2+o()} ${y2+o()}`;
+  };
+  const ink = (x1, y1, x2, y2, r, w, amp, dash) => {
+    w = w || 1.5;
+    const d = dash ? ` stroke-dasharray="${dash}"` : '';
+    return `<path d="${handD(x1,y1,x2,y2,r,amp)}" fill="none" stroke="${PAINT.ink}" stroke-width="${w}" stroke-linecap="round" opacity=".85"${d}/>`
+         + `<path d="${handD(x1,y1,x2,y2,r,amp)}" fill="none" stroke="${PAINT.ink}" stroke-width="${w*0.75}" stroke-linecap="round" opacity=".42"${d}/>`;
+  };
+  const inkBox = (x, y, w, h, r, sw, dash) =>
+    ink(x,y,x+w,y,r,sw,null,dash) + ink(x+w,y,x+w,y+h,r,sw,null,dash) +
+    ink(x+w,y+h,x,y+h,r,sw,null,dash) + ink(x,y+h,x,y,r,sw,null,dash);
 
+  // Points walked round a rectangle, pushed about, joined with quadratics
+  // through the midpoints — so a wash has no straight edge anywhere.
+  const blob = (x, y, w, h, r, wob) => {
+    wob = wob == null ? 3.5 : wob;
+    const per = 5, pts = [];
+    const push = (px, py) => pts.push([px + (r()-0.5)*wob, py + (r()-0.5)*wob]);
+    for (let i=0;i<per;i++) push(x + w*i/per, y);
+    for (let i=0;i<per;i++) push(x + w, y + h*i/per);
+    for (let i=0;i<per;i++) push(x + w - w*i/per, y + h);
+    for (let i=0;i<per;i++) push(x, y + h - h*i/per);
+    const mid = (a,b) => [(a[0]+b[0])/2, (a[1]+b[1])/2];
+    const m0 = mid(pts[pts.length-1], pts[0]);
+    let d = `M ${m0[0]} ${m0[1]}`;
+    for (let i=0;i<pts.length;i++) {
+      const cur = pts[i], nxt = pts[(i+1)%pts.length], m = mid(cur, nxt);
+      d += ` Q ${cur[0]} ${cur[1]}, ${m[0]} ${m[1]}`;
+    }
+    return d + ' Z';
+  };
+  const washAt = (x, y, w, h, col, seed, strength) => {
+    const r1 = rngOf(seed), r2 = rngOf(seed+91), r3 = rngOf(seed+417);
+    const k = strength == null ? 1 : strength, f = 'hvW' + (seed % 4);
+    return `<path d="${blob(x-3,y-3,w+6,h+6,r1,5)}" fill="${col}" opacity="${0.20*k}" filter="url(#hvSoft)"/>`
+         + `<path d="${blob(x,y,w,h,r2,3.5)}" fill="${col}" opacity="${0.42*k}" filter="url(#${f})"/>`
+         + `<path d="${blob(x+1,y+1,w-2,h-2,r3,3)}" fill="none" stroke="${col}" stroke-width="2.4" opacity="${0.34*k}" filter="url(#${f})"/>`;
+  };
+
+  const defs = `<defs>
+    ${[0,1,2,3].map(i => `<filter id="hvW${i}" x="-25%" y="-25%" width="150%" height="150%">
+      <feTurbulence type="fractalNoise" baseFrequency="${0.035+i*0.012}" numOctaves="4" seed="${7+i*13}" result="t"/>
+      <feDisplacementMap in="SourceGraphic" in2="t" scale="${7+i*2}" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="0.7"/></filter>`).join('')}
+    <filter id="hvSoft" x="-40%" y="-40%" width="180%" height="180%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="3" seed="31" result="t"/>
+      <feDisplacementMap in="SourceGraphic" in2="t" scale="10" xChannelSelector="R" yChannelSelector="G"/>
+      <feGaussianBlur stdDeviation="4"/></filter>
+    <filter id="hvGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="7"/></filter>
+    <filter id="hvGrain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0"/></filter>
+  </defs>`;
+  const paperFor = (w, h) => `<rect width="${w}" height="${h}" fill="#FCF9F2"/>`
+    + `<rect width="${w}" height="${h}" filter="url(#hvGrain)" opacity=".05"/>`;
+
+  // How each state is painted. Colour AND a second cue, always.
+  const STATE = {
+    occupied:  { col: PAINT.lamp, k: 1.15, glow: true,  dash: null,    hatch: false },
+    arriving:  { col: PAINT.lamp, k: 0.55, glow: false, dash: '6 4',   hatch: false },
+    departing: { col: PAINT.lamp, k: 0.55, glow: false, dash: null,    hatch: true  },
+    free:      { col: PAINT.cold, k: 0.58, glow: false, dash: null,    hatch: false },
+  };
+
+  const subFor = (r) => r.state === 'free' ? 'Free'
+    : r.state === 'departing' ? `${firstName(r.guest)} leaves`
+    : r.state === 'arriving'  ? `${firstName(r.guest)} arrives`
+    : `${firstName(r.guest)} · ${r.nights || '?'}n`;
+
+  const labelsFor = (r, cx, y) => {
+    const clean = r.clean_by ? firstName(r.clean_by) : (r.clean_due ? 'unassigned' : '');
+    return `<text class="hv-cell-label" x="${cx}" y="${y}" text-anchor="middle">${escHtml(r.room_name)}</text>`
+      + `<text class="hv-cell-sub" x="${cx}" y="${y+14}" text-anchor="middle">${escHtml(subFor(r))}</text>`
+      + (clean ? `<text class="hv-cell-clean${r.clean_by ? '' : ' unassigned'}" x="${cx}" y="${y+27}" text-anchor="middle">${escHtml('─ ' + clean)}</text>` : '');
+  };
+
+  // A window. The room is the pane, the state is the light in it.
+  const paneAt = (r, x, y, w, h) => {
+    const st = STATE[r.state] || STATE.free;
+    const sd = seedOf(r.room_id);
+    const rr = rngOf(sd);
+    let g = `<g class="hv-cell" onclick="openEditProperty('${r.room_id}')">`
+      + `<title>${escAttr(r.room_name + ' — ' + (r.guest || 'free') + (r.clean_due ? ' — clean: ' + (r.clean_by || 'unassigned') : ''))}</title>`;
+    if (st.glow) g += `<path d="${blob(x-10,y-10,w+20,h+20,rngOf(sd+7),9)}" fill="${st.col}" opacity=".28" filter="url(#hvGlow)"/>`;
+    g += washAt(x+3, y+3, w-6, h-6, st.col, sd % 100000, st.k);
+    // Leaving is hatched over the wash — a second cue that survives print.
+    if (st.hatch) {
+      const n = Math.ceil(w / 13) + 3;
+      g += `<g clip-path="url(#hvClip${sd})" opacity=".5">`
+        + Array.from({length:n}, (_, i) => ink(x + i*13 - h, y + h, x + i*13, y, rngOf(sd + i*31), .9, 1.4)).join('')
+        + `</g><clipPath id="hvClip${sd}"><rect x="${x}" y="${y}" width="${w}" height="${h}"/></clipPath>`;
+    }
+    g += inkBox(x, y, w, h, rr, 1.6, st.dash);
+    g += ink(x + w/2, y+2, x + w/2, y+h-2, rr, 1.05, 1.6);
+    g += ink(x+2, y + h/2, x+w-2, y + h/2, rr, 1.05, 1.6);
+    return g + '</g>';
+  };
+
+  // ── The elevation: a building seen from the front ────────────────
+  const W = 104, H = 66, GAP = 26, SIDE = 46;
   const perRow = Math.max(...groups.map(g => g.rooms.length), 1);
   const innerW = perRow * W + (perRow - 1) * GAP;
 
   const stackedSvg = () => {
-    const roofH = 44;
-    let y = roofH + 12, body = '';
+    const bw = innerW + 68, bx = SIDE + 30, cx = bx + bw/2;
+    // rowH has to clear THREE lines under each window — room name,
+    // guest, cleaner — or the next floor's caption lands on the word
+    // "unassigned", which is the one line that must never be hard to read.
+    const peak = 40, wallY = 148, rowH = H + 82, entrance = 54;
+    const groundY = wallY + 18 + groups.length * rowH + entrance;
+    const w = bw + (SIDE + 30) * 2, h = groundY + 30;
+    const r = rngOf(seedOf(_hvParent));
+    let s = defs + paperFor(w, h);
+
+    s += `<path d="${blob(bx-60, 16, bw+120, 128, rngOf(5), 18)}" fill="${PAINT.sky}" opacity=".18" filter="url(#hvSoft)"/>`;
+    s += `<path d="${blob(20, groundY-20, w-40, 54, rngOf(9), 14)}" fill="${PAINT.leaf}" opacity=".28" filter="url(#hvSoft)"/>`;
+    s += washAt(bx, wallY, bw, groundY - wallY, PAINT.wall, 12, 1);
+
+    // Chimney before the roof, so the roof buries its base. The roof
+    // surface at x is peak + (x-cx)/(bw/2+36)*(wallY-peak); a stack that
+    // ends above that line reads as a flag stuck to the tiles.
+    s += washAt(cx + bw*0.16, 36, 26, 52, PAINT.door, 88, .7);
+    s += inkBox(cx + bw*0.16, 36, 26, 52, rngOf(66), 1.5);
+
+    const roofD = `M ${bx-36} ${wallY+4} Q ${cx-bw*0.26} ${peak+36}, ${cx} ${peak} Q ${cx+bw*0.26} ${peak+36}, ${bx+bw+36} ${wallY+4} Z`;
+    s += `<path d="${roofD}" fill="${PAINT.roof}" opacity=".30" filter="url(#hvW1)"/>`;
+    s += ink(bx-36, wallY, cx, peak, r, 1.9, 2.6) + ink(cx, peak, bx+bw+36, wallY, r, 1.9, 2.6);
+    s += ink(bx-36, wallY, bx+bw+36, wallY, r, 1.7, 2.2);
+    for (let i = 1; i <= 3; i++) {
+      const t = i/4.2, ty = peak + (wallY-peak)*t, hw = (bw/2+36)*t;
+      s += `<path d="${handD(cx-hw, ty, cx+hw, ty, r, 2.6)}" fill="none" stroke="${PAINT.ink}" stroke-width=".9" opacity=".2" stroke-linecap="round"/>`;
+    }
+    s += ink(bx, wallY, bx, groundY, r, 1.7) + ink(bx+bw, wallY, bx+bw, groundY, r, 1.7);
+    s += ink(bx-48, groundY, bx+bw+48, groundY, r, 1.9, 3);
+
+    let y = wallY + 18;
     groups.forEach(g => {
-      if (g.key) { body += `<text class="hv-floor-name" x="${PAD}" y="${y + 2}">${escHtml(g.key.toUpperCase())}</text>`; y += 14; }
-      body += g.rooms.map((r, i) => cell(r, PAD + i * (W + GAP), y)).join('');
-      y += H + GAP;
-      body += stroke(`M ${PAD - 6} ${y - GAP/2} L ${PAD + innerW + 6} ${y - GAP/2}`);
+      if (g.key) s += `<text class="hv-floor-name" x="${bx+8}" y="${y+10}">${escHtml(g.key.toUpperCase())}</text>`;
+      const rowW = g.rooms.length * W + (g.rooms.length - 1) * GAP;
+      const x0 = bx + (bw - rowW) / 2;
+      g.rooms.forEach((rm, i) => {
+        const x = x0 + i * (W + GAP), wy = y + 18;
+        s += paneAt(rm, x, wy, W, H);
+        s += ink(x-7, wy+H+5, x+W+7, wy+H+5, rngOf(seedOf(rm.room_id)+3), 1.5, 2);   // sill
+        s += labelsFor(rm, x + W/2, wy + H + 24);
+      });
+      y += rowH;
     });
-    const h = y + 8, w = innerW + PAD * 2;
-    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img">
-      ${defs}
-      ${stroke(`M ${PAD - 10} ${roofH} L ${w / 2} 8 L ${w - PAD + 10} ${roofH}`)}
-      ${stroke(`M ${w * 0.72} ${roofH - 20} L ${w * 0.72} 26 L ${w * 0.78} 26 L ${w * 0.78} ${roofH - 14}`)}
-      ${stroke(`M ${PAD - 10} ${roofH} L ${PAD - 10} ${h - 8} L ${w - PAD + 10} ${h - 8} L ${w - PAD + 10} ${roofH}`)}
-      ${body}
-    </svg>`;
+
+    // The door goes at the right-hand end. Centred it lands on the middle
+    // room's guest name, which is how the first draft looked.
+    const dw = 54, dx = bx + bw - 90, dy = groundY - 46;
+    s += washAt(dx+3, dy+3, dw-6, 40, PAINT.door, 84, .95);
+    const dr = rngOf(999);
+    s += inkBox(dx, dy, dw, 46, dr, 1.7);
+    s += ink(dx+8, dy+11, dx+dw-8, dy+11, dr, 1, 1.6);
+    s += `<circle cx="${dx+dw-9}" cy="${dy+27}" r="2.1" fill="${PAINT.ink}" opacity=".8"/>`;
+
+    [[bx-62, groundY], [bx+bw+54, groundY]].forEach(([tx, ty], i) => {
+      s += `<path d="${blob(tx-30, ty-68, 60, 68, rngOf(1200+i*17), 10)}" fill="${PAINT.leaf}" opacity=".32" filter="url(#hvW${i%4})"/>`;
+      s += ink(tx, ty, tx, ty-32, rngOf(1300+i), 1.4, 2);
+    });
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img"
+      aria-label="The building drawn front-on; rooms with someone in them are lit windows">${s}</svg>`;
   };
 
+  // ── The plot: chalets, cottages, anything standing on its own ────
   const detachedSvg = () => {
-    const roofH = 26;
-    let y = 6, body = '';
+    const CW = 132, CH = 78, ROOF = 28, COLGAP = 34, ROWGAP = 62;
+    const per = Math.min(perRow, 3);
+    let bands = [], y = 30;
     groups.forEach(g => {
-      if (g.key) { body += `<text class="hv-floor-name" x="${PAD}" y="${y + 12}">${escHtml(g.key.toUpperCase())}</text>`; y += 22; }
-      g.rooms.forEach((r, i) => {
-        const x = PAD + i * (W + GAP);
-        body += stroke(`M ${x - 4} ${y + roofH} L ${x + W / 2} ${y} L ${x + W + 4} ${y + roofH}`);
-        body += cell(r, x, y + roofH);
-      });
-      y += roofH + H + 22;
+      const rowsIn = [];
+      for (let i = 0; i < g.rooms.length; i += per) rowsIn.push(g.rooms.slice(i, i + per));
+      bands.push({ key: g.key, rows: rowsIn, y });
+      y += (g.key ? 24 : 0) + rowsIn.length * (ROOF + CH + ROWGAP);
     });
-    const w = innerW + PAD * 2;
-    body += stroke(`M ${PAD - 14} ${y - 8} L ${w - PAD + 14} ${y - 8}`);   // the ground
-    return `<svg viewBox="0 0 ${w} ${y + 6}" width="${w}" height="${y + 6}" role="img">${defs}${body}</svg>`;
+    const rowW = per * CW + (per - 1) * COLGAP;
+    const w = rowW + 130, h = y + 16;
+    let s = defs + paperFor(w, h);
+    s += `<path d="${blob(24, 22, w-48, h-48, rngOf(41), 24)}" fill="${PAINT.leaf}" opacity=".15" filter="url(#hvSoft)"/>`;
+    // A path wandering up the plot, so the cabins stand on land rather
+    // than floating in a grid.
+    const pd = `M 20 ${h-30} C ${w*0.28} ${h-58}, ${w*0.3} ${h*0.6}, ${w*0.5} ${h*0.54} C ${w*0.72} ${h*0.48}, ${w*0.74} 90, ${w-20} 64`;
+    s += `<path d="${pd}" fill="none" stroke="${PAINT.earth}" stroke-width="18" opacity=".36" filter="url(#hvW0)"/>`;
+    s += `<path d="${pd}" fill="none" stroke="${PAINT.ink}" stroke-width="1" opacity=".14" stroke-dasharray="5 9"/>`;
+
+    bands.forEach(b => {
+      let by = b.y;
+      if (b.key) { s += `<text class="hv-floor-name" x="60" y="${by+10}">${escHtml(b.key.toUpperCase())}</text>`; by += 24; }
+      b.rows.forEach((row, ri) => {
+        const thisW = row.length * CW + (row.length - 1) * COLGAP;
+        // Staggered a little row to row: a plot is not a spreadsheet.
+        const x0 = (w - thisW)/2 + (ri % 2 ? 18 : -18);
+        row.forEach((rm, i) => {
+          const sd = seedOf(rm.room_id), rr = rngOf(sd);
+          const x = x0 + i * (CW + COLGAP), cy = by + ri * (ROOF + CH + ROWGAP) + ROOF;
+          s += washAt(x+4, cy+4, CW-8, CH-8, PAINT.wall, (sd+11) % 100000, .85);
+          const roofD = `M ${x-12} ${cy+2} Q ${x+CW/2-24} ${cy-ROOF+6}, ${x+CW/2} ${cy-ROOF} Q ${x+CW/2+24} ${cy-ROOF+6}, ${x+CW+12} ${cy+2} Z`;
+          s += `<path d="${roofD}" fill="${PAINT.roof}" opacity=".32" filter="url(#hvW${sd%4})"/>`;
+          s += ink(x-12, cy, x+CW/2, cy-ROOF, rr, 1.6, 2.2) + ink(x+CW/2, cy-ROOF, x+CW+12, cy, rr, 1.6, 2.2);
+          s += inkBox(x, cy, CW, CH, rr, 1.6);
+          // Two windows and a door between them. The state lives in the
+          // WINDOWS — a wash over the whole cabin is a highlighted row,
+          // which is the look we are getting away from.
+          const wsz = 30, wy = cy + 14;
+          s += paneAt(rm, x + 16, wy, wsz, wsz);
+          s += paneAt(rm, x + CW - 46, wy, wsz, wsz);
+          const dw = 26, dx = x + CW/2 - dw/2;
+          s += washAt(dx+2, cy+CH-32+2, dw-4, 28, PAINT.door, (sd+53) % 100000, .85);
+          s += inkBox(dx, cy+CH-32, dw, 32, rr, 1.35);
+          s += labelsFor(rm, x + CW/2, cy + CH + 20);
+        });
+      });
+    });
+    return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" role="img"
+      aria-label="The chalets on the plot; the ones with someone in them have lit windows">${s}</svg>`;
   };
 
   const stacked  = stackedSvg;
@@ -2559,10 +2737,10 @@ async function drawHouseView() {
     <div class="hv">
       ${bt.layout === 'stacked' ? stacked() : detached()}
       <div class="hv-legend">
-        ${[['departing','background:repeating-linear-gradient(45deg,#fff,#fff 3px,#c9c3b6 3px,#c9c3b6 4px)','Leaving'],
-           ['arriving','border-style:dashed','Arriving'],
-           ['occupied','background:#efece5','Staying'],
-           ['free','background:#fff','Free']]
+        ${[['departing','background:repeating-linear-gradient(45deg,#F3DDB0,#F3DDB0 3px,#3A3632 3px,#3A3632 4px)','Leaving'],
+           ['arriving','background:#F7E7C4;border-style:dashed','Arriving'],
+           ['occupied','background:#EFB755','Staying'],
+           ['free','background:#DCE3E7','Free']]
           .map(([k, style, label]) => {
             const n = (counts.find(c => c[0] === k) || [,0])[1];
             return n ? `<span><span class="hv-key" style="${style}"></span>${label} ${n}</span>` : '';
