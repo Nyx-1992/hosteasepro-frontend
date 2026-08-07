@@ -374,8 +374,22 @@ ok('an incomplete total is called out, not quietly summed',
 // The limit belongs on the screen, not only in the migration header —
 // otherwise the first time somebody notices is when Airbnb still shows the
 // old price over a long weekend.
-ok('the screen says the platforms are not updated from here',
+ok('the preview repeats that the platforms are not updated from here',
    /Airbnb, Booking\.com and LekkeSlaap set their own prices/.test(prev));
+
+// AND IT MUST NOT LIVE ONLY THERE. Owner: "As long as it's clear to
+// everyone that it doesn't update the booking platforms, it's good with
+// me." A note that only renders after somebody presses "Price it" is not
+// clear to everyone — it is clear to the people who happened to press a
+// button. So the same statement sits beside the rate fields themselves,
+// and this checks it is outside the preview function rather than counting
+// two copies of the same string in one place.
+const form = app.slice(app.indexOf('function openPropertyModal'), app.indexOf('async function savePropertyRecord'));
+ok('the rate form itself says so, without pressing anything',
+   /These rates apply to direct bookings/.test(form) &&
+   /Airbnb, Booking\.com and LekkeSlaap set their own prices/.test(form));
+ok('and it sits with the rate fields, not below the fold in the preview',
+   form.indexOf('These rates apply to direct bookings') < form.indexOf('id="pr-seasons-list"'));
 
 // ── Result ────────────────────────────────────────────────────────
 console.log('');
