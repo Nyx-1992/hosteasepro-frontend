@@ -391,6 +391,47 @@ ok('the rate form itself says so, without pressing anything',
 ok('and it sits with the rate fields, not below the fold in the preview',
    form.indexOf('These rates apply to direct bookings') < form.indexOf('id="pr-seasons-list"'));
 
+// ══ 10. WHO CAN SEE AND CHANGE A RATE ═════════════════════════════
+//
+// Owner: "Also the rates are admin only viewed I hope." The screen was —
+// Settings is roles:['owner','admin'] — and the database was not. 915 gave
+// rate_seasons the simplest policy that works for a table everyone uses,
+// org_id = current_org_id() FOR ALL, which in an org containing hosts and
+// clients let a host read the entire pricing structure and rewrite it. Not
+// through the interface, which never shows them the door; through the API,
+// which is a fetch call away.
+console.log('\n── Rates are owner and admin only ──');
+const mig917 = read('supabase', 'migrations', '917_rates_admin_only.sql');
+
+ok('the rates screen lives behind an owner/admin tab',
+   /\{id:'settings',\s*label:'Settings',[^}]*roles:\['owner','admin'\]\}/.test(app));
+ok('the permissive org-wide policy is gone',
+   /DROP POLICY IF EXISTS rate_seasons_own_org/.test(mig917) &&
+   !/CREATE POLICY rate_seasons_own_org/.test(mig917));
+ok('reads and writes both require owner or admin',
+   /CREATE POLICY rate_seasons_admin ON public\.rate_seasons FOR ALL[\s\S]{0,200}USING\s+\(auth\.role\(\) = 'authenticated' AND public\.is_org_admin\(org_id\)\)/.test(mig917));
+ok('the WITH CHECK is there too, or a host could still insert',
+   /WITH CHECK \(auth\.role\(\) = 'authenticated' AND public\.is_org_admin\(org_id\)\)/.test(mig917));
+
+// A gate is worth nothing if the back door is a function call: the writer
+// is SECURITY DEFINER, so the policy above does not apply inside it.
+ok('the SECURITY DEFINER writer checks the role as well as the org',
+   /IF NOT public\.is_org_admin\(v_org\) THEN[\s\S]{0,120}RAISE EXCEPTION 'Only an owner or admin can change rates'/.test(mig917));
+ok('and it still checks the property belongs to them',
+   /WHERE id = p_property AND org_id = v_org/.test(mig917));
+
+// Deliberately still open, and the file has to say why — otherwise the
+// next person to read it "fixes" the booking site's ability to quote.
+ok('a signed-out guest can still be quoted a price',
+   /GRANT EXECUTE ON FUNCTION public\.nightly_rate\(uuid, date\) TO anon, authenticated/.test(mig) &&
+   /remain callable by anon, and that is not[\s\S]{0,60}an oversight/.test(mig917));
+// properties.base_rate is NOT locked, because a column-level REVOKE makes
+// PostgREST reject select=* for every host rather than blanking a column.
+// Half-doing it silently would be worse than not doing it.
+ok('the one gap left is written down rather than left looking accidental',
+   /These two columns are NOT locked here/.test(mig917) &&
+   /column-level REVOKE makes[\s\S]{0,80}reject `select=\*` outright/.test(mig917));
+
 // ── Result ────────────────────────────────────────────────────────
 console.log('');
 if (fail.length) {
