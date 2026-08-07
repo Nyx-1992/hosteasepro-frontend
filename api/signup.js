@@ -29,6 +29,7 @@
 // somebody else's login.
 
 import { sendWelcomeEmail } from './_lib/welcomeEmail.js';
+import { sendSignupAlert } from './_lib/ownerAlert.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const TRIAL_DAYS = 7;
@@ -141,6 +142,43 @@ export default async function handler(req, res) {
       portalKey, trialEndsAt: trialEnds,
     });
     if (mailed && mailed.error) console.warn('signup: welcome email', mailed.error);
+
+    // 6. TELL THE OWNER. Until this existed the only way to find out an
+    //    agency had signed up was to open HQ and count — on a seven-day
+    //    trial, where losing the first three days loses most of it.
+    //
+    //    Claimed before it is sent (918), so a serverless retry cannot
+    //    send twice, and the outcome is written back either way. That
+    //    second write is the point: a failed email looks exactly like a
+    //    quiet week otherwise, and the daily sweep in
+    //    api/cron/trial-reminders.js re-sends anything with no successful
+    //    row against it.
+    //
+    //    Wrapped so it can never reach the catch below. A customer's
+    //    signup must not be rolled back because our notification failed.
+    try {
+      const claimRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/claim_platform_alert`, {
+        method: 'POST', headers: svc,
+        body: JSON.stringify({ p_kind: 'signup', p_ref: orgId }),
+      });
+      if (claimRes.ok && (await claimRes.json()) === true) {
+        const alert = await sendSignupAlert({
+          business: String(business).trim(), name: String(name).trim(),
+          email, trialEndsAt: trialEnds, origin,
+        });
+        await fetch(`${SUPABASE_URL}/rest/v1/rpc/mark_platform_alert`, {
+          method: 'POST', headers: svc,
+          body: JSON.stringify({
+            p_kind: 'signup', p_ref: orgId,
+            p_ok: !!(alert && alert.ok),
+            p_detail: (alert && (alert.error || (alert.skipped ? 'skipped' : 'sent'))) || 'sent',
+          }),
+        }).catch(() => {});
+        if (alert && alert.error) console.warn('signup: owner alert', alert.error);
+      }
+    } catch (e) {
+      console.warn('signup: owner alert failed', e && e.message);
+    }
 
     return res.status(200).json({ success: true, trialEndsAt: trialEnds, trialDays: TRIAL_DAYS });
   } catch (e) {
