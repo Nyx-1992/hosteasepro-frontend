@@ -49,6 +49,7 @@
 // needs no secret at all.
 
 import { sendTrialEmail } from '../_lib/trialEmail.js';
+import { sendSignupDigest } from '../_lib/ownerAlert.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 
@@ -150,6 +151,56 @@ export default async function handler(req, res) {
       results.failed++;
       results.detail.push({ org: d.org_name, kind: d.kind, error: (out && (out.error || out.skipped)) || 'unknown' });
     }
+  }
+
+  // ══ THE SAFETY NET ══════════════════════════════════════════════
+  //
+  // Owner: "I am scared someone finds the website and tries it out and I
+  // never realise it." api/signup.js emails her the moment an agency signs
+  // up — but an email that fails looks exactly like a quiet week, which is
+  // precisely the thing she cannot afford to be wrong about.
+  //
+  // So the alert is recorded (918) and this sweeps up anything with no
+  // successful row against it. Thirty days, not one: if the mailer was
+  // down for a week, a 24-hour window would leave every one of those
+  // signups invisible forever.
+  //
+  // It runs LAST and cannot affect the trial reminders above — those are
+  // owed to customers, this one is owed to us.
+  results.signups_recovered = 0;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/signups_needing_alert`, {
+      method: 'POST', headers: svc, body: JSON.stringify({ p_days: 30 }),
+    });
+    const missed = r.ok ? await r.json() : [];
+    if (Array.isArray(missed) && missed.length) {
+      if (dry) {
+        // Names, not email addresses — same rule as the block above.
+        results.signups_missing = missed.map(m => ({ org: m.org_name, created: m.created_at }));
+      } else {
+        const out = await sendSignupDigest(missed, origin);
+        // Marked one by one, so a partial recovery is recorded honestly:
+        // the digest either reached her about all of them or none.
+        for (const m of missed) {
+          await fetch(`${SUPABASE_URL}/rest/v1/rpc/claim_platform_alert`, {
+            method: 'POST', headers: svc,
+            body: JSON.stringify({ p_kind: 'signup', p_ref: m.org_id }),
+          }).catch(() => {});
+          await fetch(`${SUPABASE_URL}/rest/v1/rpc/mark_platform_alert`, {
+            method: 'POST', headers: svc,
+            body: JSON.stringify({
+              p_kind: 'signup', p_ref: m.org_id,
+              p_ok: !!(out && out.ok),
+              p_detail: (out && (out.error || 'recovered by daily digest')) || 'recovered by daily digest',
+            }),
+          }).catch(() => {});
+        }
+        if (out && out.ok) results.signups_recovered = missed.length;
+        else results.signups_alert_error = (out && (out.error || 'skipped')) || 'unknown';
+      }
+    }
+  } catch (e) {
+    results.signups_alert_error = String((e && e.message) || e).slice(0, 200);
   }
 
   return res.status(200).json(results);
