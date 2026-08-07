@@ -162,6 +162,37 @@ ok('the digest reads correctly for a single signup',
 ok('the request decides the origin, so links are right on every deployment',
    /origin/.test(signup) && /x-forwarded-host/.test(signup));
 
+// ══ 9. PROVING THE CHANNEL WORKS ══════════════════════════════════
+//
+// The welcome email and the trial reminders are self-checking: a customer
+// eventually notices those going missing. The signup alert is not — a
+// broken mailer and a quiet week look identical from the inbox. So there
+// has to be a way to ask "does this reach me?" that does not involve
+// signing a fake agency up on production and then DELETING AN ORG from a
+// live database for the sake of a drill.
+console.log('\n── The test button ──');
+const test = read('api', 'test-alert.js');
+
+ok('there is a way to prove the alert arrives', /hqTestAlert/.test(app) && /Send me a test alert/.test(app));
+// is_platform_owner() reads auth.uid(), so it has to be called with the
+// CALLER'S token. The service key would evaluate auth.uid() as NULL.
+ok('the check is made by the database, as the caller',
+   /rpc\/is_platform_owner/.test(test) && /Authorization: `Bearer \$\{token\}`/.test(test));
+ok('and it refuses anyone who is not the platform owner',
+   /if \(!isOwner\) return res\.status\(403\)/.test(test));
+// An endpoint that emails an address supplied in the request is an open
+// relay with extra steps, and this one is reachable by anyone signed in.
+ok('the destination comes from the environment, never from the request',
+   /alertTo\(\)/.test(test) && !/req\.body/.test(test));
+ok('a drill is unmistakable in the inbox',
+   /TEST — this is a drill, no agency signed up/.test(test));
+// "Nothing happened, and here is why" is the answer the button exists to
+// give. A green tick over a silent failure would be worse than no button.
+ok('an unconfigured mailer says so instead of reporting success',
+   /configured: false/.test(test) && /no email was sent/.test(test));
+ok('the screen shows the failure reason rather than a generic error',
+   /msg\.textContent = out\.message/.test(app));
+
 // ── Result ────────────────────────────────────────────────────────
 console.log('');
 if (fail.length) {

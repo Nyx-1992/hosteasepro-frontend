@@ -8529,6 +8529,10 @@ function drawCustomers() {
     <div class="section-label" style="margin-top:24px">Going out tonight</div>
     <div class="card">
       <div id="hq-alert-health"></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn btn-ghost btn-sm" onclick="hqTestAlert(this)">✉️ Send me a test alert</button>
+        <span id="hq-test-alert-msg" style="font-size:.8rem;color:var(--muted)"></span>
+      </div>
       <div id="hq-trials-due"><div class="text-muted" style="font-size:.82rem">Loading…</div></div>
     </div>
 
@@ -8586,6 +8590,43 @@ async function drawAlertHealth() {
   } catch (e) {
     el.innerHTML = '';
   }
+}
+
+// Proves the signup alert reaches you, without inventing a customer.
+//
+// Signing up a fake agency on production to test this would mean deleting
+// an org from a live database afterwards, which is a destructive operation
+// performed for the sake of a drill. This asks the same question and
+// answers it in about a second.
+async function hqTestAlert(btn) {
+  const msg = document.getElementById('hq-test-alert-msg');
+  if (!msg || !db) return;
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Sending…';
+  msg.style.color = 'var(--muted)'; msg.textContent = '';
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    if (!session) throw new Error('Not signed in');
+    const r = await fetch('/api/test-alert', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+    });
+    const out = await r.json();
+    if (!r.ok) throw new Error(out.error || `Server said ${r.status}`);
+    if (out.sent) {
+      msg.style.color = 'var(--green2)';
+      msg.textContent = `Sent to ${out.to} — check that inbox.`;
+    } else {
+      // A failure here is the answer, not an error. Saying "nothing was
+      // sent and here is why" is the whole point of pressing the button.
+      msg.style.color = 'var(--red)';
+      msg.textContent = out.message || 'Not sent.';
+    }
+  } catch (e) {
+    msg.style.color = 'var(--red)';
+    msg.textContent = (e && e.message) || 'Could not reach the server.';
+  }
+  btn.disabled = false; btn.textContent = label;
 }
 
 async function drawTrialsDue() {
