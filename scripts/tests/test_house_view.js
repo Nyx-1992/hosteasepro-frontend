@@ -55,18 +55,54 @@ ok('the renderer actually branches on the layout',
 // will be more in a sketch view, which looks nicer in black and grey and
 // white, or at least not like a box."
 ok('stacked draws one roof spanning the whole building',
-   /const stackedSvg = \(\)[\s\S]{0,900}L \$\{w \/ 2\} 8/.test(app));
-ok('detached gives every unit its own roof, standing on a ground line',
-   /const detachedSvg = \(\)[\s\S]{0,900}L \$\{x \+ W \/ 2\} \$\{y\}/.test(app) &&
-   /\/\/ the ground/.test(app));
-ok('the hand-drawn look is a filter, so it degrades to clean lines',
-   /feTurbulence/.test(app) && /feDisplacementMap/.test(app) && /filter="url\(#hvRough\)"/.test(app));
+   /const stackedSvg = \(\)[\s\S]{0,2600}const roofD = `M \$\{bx-36\}[\s\S]{0,120}\$\{cx\} \$\{peak\}/.test(app));
+ok('detached gives every unit its own roof',
+   /const detachedSvg = \(\)[\s\S]{0,3000}const roofD = `M \$\{x-12\}[\s\S]{0,140}\$\{cy-ROOF\}/.test(app));
+
+// ── Drawn, not filtered ───────────────────────────────────────────
+// Owner, on the first attempt: "more water colour vibes and more sketching
+// than these straight lines." The old renderer emitted straight paths and
+// pushed them through feDisplacementMap, which roughens an edge but leaves
+// a rectangle underneath — it read as a box with a texture on it. Every
+// stroke is now a bowed cubic with jittered ends, laid down twice.
+ok('every stroke is a drawn curve, not a straight line with a filter on it',
+   /const handD = \(x1, y1, x2, y2, r, amp\)/.test(app) &&
+   /C \$\{x1\+dx\*0\.28\+o\(\)\*2\.4\}/.test(app));
+ok('each line is laid down twice so the two passes disagree',
+   /const ink = \(x1, y1, x2, y2, r, w, amp, dash\)[\s\S]{0,700}opacity="\.85"[\s\S]{0,300}opacity="\.42"/.test(app));
+ok('no wash has a straight edge anywhere',
+   /const blob = \(x, y, w, h, r, wob\)/.test(app) && /Q \$\{cur\[0\]\} \$\{cur\[1\]\}/.test(app));
+// One flat fill is a colour, not a wash. The rim is the pass the eye
+// actually reads as watercolour — pigment dries heavier at a puddle's edge.
+ok('a wash is three passes including the darker rim',
+   /const washAt = [\s\S]{0,900}hvSoft[\s\S]{0,400}stroke-width="2\.4"/.test(app));
+ok('the drawing is seeded off the room id, so it does not shiver on redraw',
+   /const seedOf = \(str\)/.test(app) && /rngOf\(seedOf\(/.test(app) &&
+   /shivers/.test(app));
+
 // A picture that only works in colour stops working when it is printed,
-// photocopied, or looked at by somebody colour-blind.
-ok('state is carried by fill weight, not by hue',
-   /STATE IS FILL WEIGHT, NOT HUE/.test(app) &&
-   /stroke-dasharray="5 4"/.test(app) &&
-   /r\.state === 'departing'[\s\S]{0,200}<line /.test(app));
+// photocopied, or looked at by somebody colour-blind. Colour says it fast;
+// the second cue says it at all.
+ok('colour is never the only cue for a room\'s state',
+   /colour is never the only cue/i.test(app) &&
+   /arriving:  \{ col: PAINT\.lamp, k: 0\.55, glow: false, dash: '6 4'/.test(app) &&
+   /departing: \{ col: PAINT\.lamp, k: 0\.55, glow: false, dash: null,    hatch: true/.test(app) &&
+   /free:      \{ col: PAINT\.cold/.test(app));
+ok('an occupied room is a lit window, which needs no legend',
+   /AN OCCUPIED ROOM IS A LIT WINDOW/.test(app) &&
+   /occupied:  \{ col: PAINT\.lamp, k: 1\.15, glow: true/.test(app));
+// The chalet's light is in its WINDOWS. A wash over the whole cabin is a
+// highlighted row, which is the look this replaced.
+ok('a chalet lights its windows rather than the whole building',
+   /const detachedSvg[\s\S]{0,3000}s \+= paneAt\(rm, x \+ 16, wy, wsz, wsz\)/.test(app) &&
+   /a wash over the whole cabin is a highlighted row/i.test(app));
+// Three lines sit under every window; the caption below must clear them or
+// it lands on the word "unassigned".
+ok('rows leave room for room name, guest and cleaner',
+   /rowH = H \+ 82/.test(app) && /must never be hard to read/.test(app));
+ok('the legend describes what is actually drawn',
+   /'occupied','background:#EFB755','Staying'/.test(app) &&
+   /'free','background:#DCE3E7','Free'/.test(app));
 
 // The word for a group changes with the type — a chalet park has clusters,
 // not floors, and labelling them "Floor 2" is the fiction this avoids.
