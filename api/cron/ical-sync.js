@@ -115,3 +115,28 @@ export default async function handler(req, res) {
                     .map(r => ({ feed: r.feed, created: r.created, updated: r.updated })),
   });
 }
+
+// ── ON THE SCHEDULE IN vercel.json ────────────────────────────────
+//
+// It says once a day. It wants to say every fifteen minutes, and the
+// reason it does not is a plan limit rather than a design decision:
+// Vercel's Hobby tier allows daily cron only, and an invalid schedule does
+// not warn — IT FAILS THE WHOLE DEPLOYMENT. Setting */15 here stopped the
+// project building at all, which is why two commits sat undeployed for a
+// day.
+//
+// Once a day is not enough for what this fixes. A booking that arrives at
+// 09:00 needs a cleaner assigned that morning, not tomorrow — which was
+// the original complaint.
+//
+// TWO WAYS TO GET THE FIFTEEN MINUTES BACK, either is fine:
+//
+//   1. Vercel Pro. Change the schedule above to */15 * * * * and redeploy.
+//
+//   2. Any external scheduler — cron-job.org and similar are free — set to
+//      call this endpoint every 15 minutes with the CRON_SECRET as a
+//      bearer token. Costs nothing and needs no plan change. The endpoint
+//      is identical either way; it does not care who woke it.
+//
+// Until then, the daily run plus the "Sync calendars" button in Settings
+// covers it: nobody has to wait a day, they just have to press something.
