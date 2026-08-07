@@ -3223,6 +3223,9 @@ const BRAND_FIELDS = [
   { k: 'whatsapp',       label: 'WhatsApp',        ph: '27XXXXXXXXX',                 group: 'Identity',        where: 'settings',
     hint: 'Digits and country code, no + or spaces. Guest messages are sent from this number.' },
   { k: 'website',        label: 'Website',         ph: 'https://…',                   group: 'Identity',        where: 'settings' },
+  { k: 'owner_stay_names', label: 'Owner names on your calendars', ph: 'e.g. Mirka, Antonin',  group: 'Identity', where: 'settings',
+    type: 'namelist',
+    hint: 'When one of these appears on a calendar event, the stay is recorded as the owner using the place rather than as a paying guest — so it stays out of your income and occupancy. Leave blank and only the word "owner" is used. These were four names buried in the code; any other agency with a guest of the same name had that booking quietly reclassified.' },
   { k: 'tagline',        label: 'Tagline',         ph: 'e.g. Beyond the booking',     group: 'Documents',       where: 'settings',
     hint: 'Printed under your name on invoices and owner statements. Leave blank to print nothing.' },
   { k: 'strapline',      label: 'Strapline',       ph: 'e.g. CURATED STAYS',          group: 'Documents',       where: 'settings' },
@@ -3302,6 +3305,8 @@ async function renderOrgFields(where, elId, cardId) {
                 ? `<label style="display:flex;gap:8px;align-items:center;font-size:.86rem;cursor:pointer">
                      <input type="checkbox" id="brand-${f.k}" ${_brandRow[f.k] ? 'checked' : ''}/> Yes, send them
                    </label>`
+                : f.type === 'namelist'
+                ? `<input id="brand-${f.k}" placeholder="${escAttr(f.ph)}" value="${escAttr((_brandRow[f.k] || []).join(', '))}"/>`
                 : `<input id="brand-${f.k}" placeholder="${escAttr(f.ph)}" value="${escAttr(_brandRow[f.k] || '')}"/>`}
               ${f.hint ? `<div style="font-size:.7rem;color:var(--muted);margin-top:3px">${f.hint}</div>` : ''}
             </div>`).join('')}
@@ -3322,6 +3327,10 @@ async function saveBrandSettings(where) {
     if (!el) return;
     row[f.k] = f.type === 'signatories' ? textToSignatories(el.value)
              : f.type === 'checkbox'      ? !!el.checked
+             // text[] column: split, trim, drop blanks. An empty box means
+             // an empty list, not a list containing one empty string —
+             // which would match every calendar event ever written.
+             : f.type === 'namelist'      ? el.value.split(',').map(x => x.trim()).filter(Boolean)
              : el.value.trim();
   });
   if (row.whatsapp === undefined) delete row.whatsapp;
@@ -5485,6 +5494,51 @@ async function fetchICalFeed(feed) {
     }
   }
   return [];
+}
+
+// Runs the SERVER-SIDE import for this agency and reports what it did.
+//
+// Why a button when a cron already runs every fifteen minutes: because
+// "did that booking come through?" is a question people ask in the moment,
+// and the honest answer is better than waiting a quarter of an hour to
+// find out. It is also how the dry run is reachable at all — the endpoint
+// is otherwise protected by a secret nobody should be pasting into a
+// browser bar.
+//
+// The endpoint FORCES the org from the signed-in session, so this can only
+// ever sync the agency the person belongs to.
+async function serverSync(dryRun) {
+  if (!db) { toast('Not connected', 'error'); return; }
+  toast(dryRun ? 'Checking the calendars…' : 'Fetching bookings…', 'info');
+  try {
+    const { data: sess } = await db.auth.getSession();
+    const token = sess && sess.session && sess.session.access_token;
+    if (!token) { toast('Please sign in again', 'error'); return; }
+
+    const res = await fetch('/api/cron/ical-sync' + (dryRun ? '?dry=1' : ''), {
+      headers: { Authorization: 'Bearer ' + token },
+    });
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || 'Sync failed');
+
+    const bits = [];
+    if (out.created) bits.push(`${out.created} new`);
+    if (out.updated) bits.push(`${out.updated} updated`);
+    const summary = bits.length ? bits.join(', ') : 'nothing new';
+
+    if (out.problems && out.problems.length) {
+      // A feed that will not load is the thing worth interrupting for —
+      // it is the difference between "no new bookings" and "we cannot see
+      // your bookings", and those look identical until somebody says so.
+      toast(`${summary} · ${out.problems.length} feed${out.problems.length>1?'s':''} would not load`, 'error');
+      console.warn('[sync] problems:', out.problems);
+    } else {
+      toast(dryRun ? `Would import: ${summary}` : `Done — ${summary}`, 'success');
+    }
+    if (!dryRun && (out.created || out.updated)) await loadData();
+  } catch (e) {
+    toast(e.message || 'Could not reach the sync', 'error');
+  }
 }
 
 async function syncICalFeeds(silent = false) {
@@ -8757,7 +8811,8 @@ function renderLaneView() {
         ${shown.filter(b=>b!==current).length===0&&!current ? emptyState('📭',
           `No ${bookingFilter==='all'?'':bookingFilter+' '}bookings for ${prop.name} yet`,
           `<button class="btn btn-sm btn-primary" onclick="openModal('booking-modal')" style="margin-right:6px">+ Add Booking</button>
-           <button class="btn btn-sm btn-ghost" onclick="syncICalFeeds(false)">🔄 Sync calendars</button>`
+           <button class="btn btn-sm btn-ghost" onclick="serverSync(false)">🔄 Sync calendars</button>
+           <button class="btn btn-sm btn-ghost" onclick="serverSync(true)" title="Show what would change without saving anything">👀 Check only</button>`
         ) : `<div class="lane-rail">
 
         ${current ? `

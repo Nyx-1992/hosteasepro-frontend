@@ -182,9 +182,18 @@ console.log('\n── Reachability and safety ──');
 const code = src.split('\n').filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
 ok('server-side fetch goes straight to the platform, no relay',
    !/allorigins|codetabs|ical-proxy/.test(code) && /fetch\(feed\.feed_url/.test(code));
-ok('a CRON_SECRET is honoured when set', /auth !== `Bearer \$\{secret\}`/.test(cron));
-ok('Vercel\'s cron header is the only other way in',
-   /x-vercel-cron/.test(cron) && (cron.match(/401/g) || []).length === 2);
+ok('a CRON_SECRET is honoured when set', /bearer === secret/.test(cron));
+ok('Vercel\'s cron header is the other scheduled path', /x-vercel-cron/.test(cron));
+// The third path is a signed-in owner pressing a button — without it the
+// only way to run the dry run is to have the secret, which the owner would
+// then be pasting into a browser bar.
+ok('a signed-in owner or admin may run it', /\['owner', 'admin'\]\.includes\(me\.role\)/.test(cron));
+// THE check that makes exposing it safe.
+ok('...but only ever for their own org, never the one they ask for',
+   /orgId = me\.org_id;\s*\/\/ never their choice/.test(cron));
+ok('the token is verified with Supabase, not trusted',
+   /auth\/v1\/user/.test(cron) && /function whoIs/.test(cron));
+ok('anything else is refused', /return res\.status\(401\)\.json\(\{ error: 'Not authorised' \}\);\s*\n\s*\}/.test(cron));
 ok('there is a dry run that writes nothing',
    /dry = String/.test(cron) && /if \(!dry\) await patch/.test(src) && /if \(!dry\) \{\s*\n\s*await insert/.test(src));
 const vercel = JSON.parse(read('vercel.json'));
@@ -192,6 +201,27 @@ const job = (vercel.crons || []).find(c => c.path === '/api/cron/ical-sync');
 ok('it is actually scheduled', !!job, JSON.stringify(vercel.crons));
 ok('often enough that a cleaner can be assigned the same morning',
    !!job && /^\*\/(5|10|15|20|30) \* \* \* \*$/.test(job.schedule), job && job.schedule);
+
+// ══ THE RELAY THE BROWSER USES ════════════════════════════════════
+//
+// The browser's proxy list has always had OUR path first and public
+// services as fallback — but the file did not exist, so every sync the
+// product ever did was relayed by api.allorigins.win, a free service run
+// by strangers, carrying guest names and dates.
+console.log('\n── The browser no longer relays through strangers ──');
+const proxy = read('api', 'ical-proxy.js');
+ok('our own relay exists now', proxy.length > 200);
+ok('the browser tries it first',
+   /\$\{BOOKING_API_URL\}\/api\/ical-proxy/.test(read('demo', 'index_fixed.html')));
+// An open relay is a real liability: it can be used to reach inside our
+// own network, or to launder somebody else's traffic through our server.
+ok('only calendar hosts we actually sync from', /ALLOWED_HOSTS/.test(proxy) && /hostAllowed/.test(proxy));
+ok('https only', /protocol !== 'https:'/.test(proxy));
+// "includes" would let airbnb.com.evil.example through.
+ok('host matching is a suffix match, not a substring one',
+   /h === a \|\| h\.endsWith\('\.' \+ a\)/.test(proxy));
+ok('an unknown host is refused, and says which', /Not a calendar host we sync from/.test(proxy));
+ok('there is a timeout', /AbortSignal\.timeout/.test(proxy));
 
 console.log('');
 if (fail.length) {
