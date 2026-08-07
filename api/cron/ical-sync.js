@@ -26,6 +26,26 @@
 
 import { importAllFeeds } from '../_lib/icalImport.js';
 
+// Turns a Supabase access token into "which org, what role" — asking
+// Supabase who the token belongs to rather than trusting anything the
+// request says about itself.
+async function whoIs(token, key) {
+  try {
+    const u = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: key, Authorization: `Bearer ${token}` },
+    });
+    if (!u.ok) return null;
+    const user = await u.json();
+    if (!user || !user.id) return null;
+    const p = await fetch(
+      `${process.env.SUPABASE_URL}/rest/v1/profiles?id=eq.${user.id}&select=org_id,role`,
+      { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+    if (!p.ok) return null;
+    const rows = await p.json();
+    return rows && rows[0] ? rows[0] : null;
+  } catch (e) { return null; }
+}
+
 export default async function handler(req, res) {
   const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!KEY || !process.env.SUPABASE_URL) {
@@ -34,14 +54,39 @@ export default async function handler(req, res) {
 
   const secret = process.env.CRON_SECRET || '';
   const auth = req.headers.authorization || '';
-  if (secret) {
-    if (auth !== `Bearer ${secret}`) return res.status(401).json({ error: 'Not authorised' });
-  } else if (!req.headers['x-vercel-cron']) {
+  const bearer = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+
+  let orgId = (req.query && req.query.org) || null;
+  let who = 'cron';
+
+  // THREE WAYS IN, and the third is the one a person uses.
+  //
+  // Scheduled runs come with CRON_SECRET, or with Vercel's x-vercel-cron
+  // header which Vercel strips from inbound requests and so cannot be
+  // forged. Neither is available to somebody sitting in the app pressing a
+  // button — and without a third path the only way to see what the sync
+  // does is to have the secret, which the owner should not be pasting into
+  // a browser bar.
+  //
+  // So: a signed-in owner or admin may run it, FORCED to their own org
+  // regardless of what ?org= says. That is what makes it safe to expose.
+  if (secret && bearer === secret) {
+    /* scheduled run */
+  } else if (!secret && req.headers['x-vercel-cron']) {
+    /* scheduled run, secret not configured */
+  } else if (bearer) {
+    const me = await whoIs(bearer, KEY);
+    if (!me) return res.status(401).json({ error: 'Not authorised' });
+    if (!['owner', 'admin'].includes(me.role)) {
+      return res.status(403).json({ error: 'Owners and admins only' });
+    }
+    orgId = me.org_id;          // never their choice
+    who = me.role;
+  } else {
     return res.status(401).json({ error: 'Not authorised' });
   }
 
   const dry = String((req.query && req.query.dry) || '') === '1';
-  const orgId = (req.query && req.query.org) || null;
 
   const started = Date.now();
   let results;
@@ -56,6 +101,7 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     dry,
+    ranAs: who,
     feeds: results.length,
     events: sum('events'),
     created: sum('created'),
