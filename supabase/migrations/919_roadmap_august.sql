@@ -79,3 +79,41 @@ BEGIN
 END $$;
 
 -- End 919_roadmap_august.
+
+-- ══ ADDENDUM, 7 Aug ═══════════════════════════════════════════════
+--
+-- p2-50 was written as "verify email sending is actually live", on the
+-- reasoning that all three email features are inert without
+-- RESEND_API_KEY and could therefore look built while sending nothing.
+--
+-- Nicole's inbox settles most of it: the welcome email and a trial
+-- reminder both arrived, in Gmail's PRIMARY tab rather than spam. That
+-- proves two things at once — the key is set, and DKIM/SPF are right,
+-- because a domain without them lands in junk. Two of the three features
+-- are confirmed live and the item narrows to the third.
+--
+-- The signup alert is still unproven: different code path, different
+-- address, deployed the same day. Hence the test button (p2-59), which
+-- asks the question without signing a fake agency up on production and
+-- then deleting an org from a live database for the sake of a drill.
+DO $$
+DECLARE org uuid;
+BEGIN
+  SELECT DISTINCT org_id INTO org FROM public.roadmap_phases WHERE phase_id = 'p2';
+  IF org IS NULL THEN RETURN; END IF;
+
+  UPDATE public.roadmap_items
+     SET title = 'Confirm the signup alert reaches info@hosteasepro.com',
+         note  = 'Email sending is LIVE — confirmed 7 Aug: the welcome email and a trial reminder both landed in Gmail Primary, not spam, which proves RESEND_API_KEY is set and DKIM/SPF are correct. Those two features are done. What remains is the signup alert, which goes to a different address on a different path: press "Send me a test alert" in HQ. It reports the failure reason if the mailer refuses.'
+   WHERE org_id = org AND task_key = 'p2-50';
+
+  INSERT INTO public.roadmap_items (org_id, task_key, phase_id, title, note, cat, sort) VALUES
+  (org, 'p2-59', 'p2', 'Test button for the signup alert',
+   'Proves the alert channel works without signing a fake agency up on production and then deleting an org from a live database for the sake of a drill. Platform-owner only, checked by the database as the caller; the destination comes from the environment so the endpoint cannot be used to email an arbitrary address.', 'Business', 59)
+  ON CONFLICT (org_id, task_key) DO UPDATE
+    SET title = EXCLUDED.title, note = EXCLUDED.note, cat = EXCLUDED.cat, sort = EXCLUDED.sort;
+
+  INSERT INTO public.roadmap_state (org_id, task_key, done, updated_at)
+  VALUES (org, 'p2-59', true, now())
+  ON CONFLICT (org_id, task_key) DO UPDATE SET done = true, updated_at = now();
+END $$;
