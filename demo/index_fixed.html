@@ -8528,6 +8528,7 @@ function drawCustomers() {
 
     <div class="section-label" style="margin-top:24px">Going out tonight</div>
     <div class="card">
+      <div id="hq-alert-health"></div>
       <div id="hq-trials-due"><div class="text-muted" style="font-size:.82rem">Loading…</div></div>
     </div>
 
@@ -8548,7 +8549,47 @@ function drawCustomers() {
 // addresses because it has to write to them; this one deliberately does
 // not, because HQ shows counts and names and a screen has no reason to
 // carry a customer's address just to say a reminder is queued.
+// ── "Am I actually being told about new customers?" ───────────────
+//
+// Owner: "I am scared someone finds the website and tries it out and I
+// never realise it without logging into the platform."
+//
+// api/signup.js now emails her the moment an agency signs up. But an email
+// that never arrives looks exactly like a quiet week, so this is the check
+// that needs no mail provider at all: 918 records every alert, and this
+// says out loud when one did not get out.
+//
+// Silent when everything is fine. A green "alerts working" badge is noise
+// on a screen that is read at a glance — the only reason to draw here is
+// bad news.
+async function drawAlertHealth() {
+  const el = document.getElementById('hq-alert-health');
+  if (!el || !db) return;
+  try {
+    const { data, error } = await db.rpc('platform_alert_health');
+    if (error) throw error;
+    const h = (Array.isArray(data) ? data[0] : data) || {};
+    const un = h.unannounced || 0, bad = h.failed || 0;
+    if (!un && !bad) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+      <div style="display:flex;gap:10px;align-items:flex-start;background:#fef3c7;border:1px solid #fbbf24;
+                  border-radius:9px;padding:11px 13px;margin-bottom:14px;font-size:.84rem;line-height:1.55">
+        <span aria-hidden="true">📣</span>
+        <div>
+          ${un ? `<strong>${un} signup${un === 1 ? '' : 's'} you were never told about.</strong> ` : ''}
+          ${bad ? `<strong>${bad} alert${bad === 1 ? '' : 's'} failed to send.</strong> ` : ''}
+          The customers are safe — they are in the list below. What failed is the notification,
+          which usually means the mailer is not configured or was unavailable.
+          The daily job retries automatically.
+        </div>
+      </div>`;
+  } catch (e) {
+    el.innerHTML = '';
+  }
+}
+
 async function drawTrialsDue() {
+  drawAlertHealth();
   const el = document.getElementById('hq-trials-due');
   if (!el || !db) return;
   try {
