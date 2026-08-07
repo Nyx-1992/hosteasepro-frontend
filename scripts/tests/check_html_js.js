@@ -109,7 +109,71 @@ blocks.forEach((b, i) => {
   }
 });
 
+// ══ THE SAME BUG, ONE SCOPE DOWN ══════════════════════════════════
+//
+// The check above runs the script and catches a temporal dead zone at
+// LOAD. That misses the far more likely version: a const read before its
+// declaration INSIDE A FUNCTION, where nothing throws until somebody opens
+// that screen.
+//
+// It happened. `const planLabel = PLAN_LABEL;` sat twenty lines above the
+// `const PLAN_LABEL = {...}` in the same function, so drawCustomers() threw
+// ReferenceError on its first statement and the HQ page sat on "Loading…"
+// indefinitely. Loading the page never touched it; only opening the tab
+// did, and by then the error was in a console nobody had open.
+//
+// So: for every function body, find each `const`/`let` declared at that
+// body's own top level and check the name is not READ earlier in the same
+// body. Deliberately conservative — it only looks at a body's own
+// statements, and it skips anything that could be a nested scope — because
+// a false positive here blocks a deploy.
+function tdzInFunctionBodies(src) {
+  const hits = [];
+  // COMMENTS OUT FIRST. The scan below looks for a name followed by "[", "."
+  // or ";", and prose describing the very bug this catches — "`const
+  // planLabel = PLAN_LABEL;` sat twenty lines earlier" — matches that
+  // perfectly. Blanked rather than deleted so reported line numbers still
+  // point at the real line.
+  const code = src
+    .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+    .replace(/(^|[^:'"\\])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
+  // Find function bodies by name, then take a window up to the next
+  // top-level function. Crude, and enough: the failure being caught is a
+  // declaration and a use inside one visibly-long function.
+  const fnRe = /\n(?:async )?function ([A-Za-z0-9_$]+)\s*\(/g;
+  const starts = [];
+  let m;
+  while ((m = fnRe.exec(code))) starts.push({ name: m[1], at: m.index });
+  starts.forEach((f, i) => {
+    const body = code.slice(f.at, i + 1 < starts.length ? starts[i + 1].at : code.length);
+    // Declarations at this body's own indentation (two spaces), so a const
+    // inside a nested block or callback is not mistaken for one out here.
+    const declRe = /\n  (?:const|let) ([A-Z][A-Z0-9_]{2,})\s*=/g;
+    let d;
+    while ((d = declRe.exec(body))) {
+      const name = d[1];
+      const before = body.slice(0, d.index);
+      // A read, not the declaration itself and not a property or a string.
+      const readRe = new RegExp(`(^|[^.\\w'"\`])${name}\\s*[\\[\\.\\),;]`, 'm');
+      if (readRe.test(before)) {
+        hits.push({ fn: f.name, name,
+          line: code.slice(0, f.at + d.index).split('\n').length });
+      }
+    }
+  });
+  return hits;
+}
+
+blocks.forEach((b, i) => {
+  const label = `block ${i + 1}`;
+  tdzInFunctionBodies(b.code).forEach(h => {
+    console.log(`✗ ${label}: TEMPORAL DEAD ZONE in ${h.fn}() — '${h.name}' is read above the line that declares it (about line ${h.line} of the block).`);
+    console.log(`    Nothing throws until somebody opens that screen, and then the whole render dies silently.`);
+    failures++;
+  });
+});
+
 console.log(failures
   ? `\n${failures} problem(s) — DO NOT DEPLOY`
-  : `${blocks.length} inline script block(s): parse OK, and no const used before its declaration`);
+  : `${blocks.length} inline script block(s): parse OK, no const used before its declaration at load or inside a function`);
 process.exit(failures ? 1 : 0);
