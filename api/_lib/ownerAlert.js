@@ -35,7 +35,22 @@
 // out. The email is the fast path, not the only one.
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const FROM     = process.env.WELCOME_FROM || 'HostEase Pro <info@hosteasepro.com>';
+
+// ── WHY THIS IS NOT WELCOME_FROM ─────────────────────────────────
+//
+// The first alert landed in SPAM, while the welcome email and the trial
+// reminder — same domain, same key — went to the inbox. The difference is
+// that this one was addressed to itself: From info@hosteasepro.com, To
+// info@hosteasepro.com. Mail claiming to come from your own address while
+// arriving from an outside server is one of the oldest spoofing patterns
+// there is, and Gmail treats it accordingly. The customer-facing mail
+// never hits this because it goes to somebody else.
+//
+// So alerts get their own sender. Any address on the verified domain works
+// in Resend with no extra setup, and From no longer equals To.
+const FROM     = process.env.ALERT_FROM || 'HostEase Pro Alerts <alerts@hosteasepro.com>';
+// Replies should reach a person, not the alert robot.
+const REPLY_TO = process.env.WELCOME_REPLY_TO || 'info@hosteasepro.com';
 // Where the alert goes. Separate from the customer-facing addresses on
 // purpose: this one can be a personal inbox or a phone-notified address
 // without changing what customers see in a From line.
@@ -120,7 +135,12 @@ async function send(subject, html) {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: FROM, to: [ALERT_TO], subject, html }),
+      body: JSON.stringify({
+        from: FROM, to: [ALERT_TO], reply_to: REPLY_TO, subject, html,
+        // Marks this as automated so a mail client files it as a
+        // notification rather than weighing it as ordinary correspondence.
+        headers: { 'X-Auto-Response-Suppress': 'All', 'Auto-Submitted': 'auto-generated' },
+      }),
       signal: AbortSignal.timeout(10000),
     });
     if (!r.ok) return { error: `Resend ${r.status}: ${(await r.text()).slice(0, 200)}` };
