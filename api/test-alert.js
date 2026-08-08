@@ -97,8 +97,11 @@ export default async function handler(req, res) {
 
   // Obviously a test in the subject and the body, so a real signup is never
   // confused with a drill — and so a drill is never acted on as a customer.
+  // "TEST — this is a drill" in the SUBJECT reads like spam to a filter,
+  // and the subject is built from this field. The drill marking belongs in
+  // the body, where a person reads it and a filter does not weigh it.
   const out = await sendSignupAlert({
-    business: 'TEST — this is a drill, no agency signed up',
+    business: 'Alert test (no agency signed up)',
     name: 'Test alert',
     email: alertTo(),
     trialEndsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
