@@ -136,6 +136,30 @@ ok('Booking.com "Reserved" is a real guest', evt1('booking', 'Reserved', '').sta
 ok('an empty summary is still a block', evt1('booking', '', '').status === 'blocked');
 ok('a dash is still a block', evt1('airbnb', '-', '').status === 'blocked');
 
+// ── THE LIMIT, LEARNED BY OVERSHOOTING ────────────────────────────
+//
+// The first version of the Booking.com rule lifted three TV House rows
+// that were genuine closures — 2, 88 and 183 nights. Nobody books a house
+// for six months through Booking.com. The threshold is not a round number
+// chosen for comfort: the longest real reservation in this data is 20
+// nights and the closures begin at 88, so a month sits comfortably
+// between them.
+console.log('\n── A Booking.com "CLOSED" too long to be a stay ──');
+const span = (nights) => {
+  const start = new Date(Date.UTC(2026, 8, 1));
+  const end = new Date(start.getTime() + nights * 86400000);
+  const f = (d) => d.toISOString().slice(0, 10).replace(/-/g, '');
+  return parse.parseICalText(cal(ev(
+    `UID:s-${nights}\r\nDTSTART;VALUE=DATE:${f(start)}\r\nDTEND;VALUE=DATE:${f(end)}\r\n` +
+    `SUMMARY:CLOSED - Not available`)), feed('booking'))[0];
+};
+ok('4 nights is a stay (Tiago)',            span(4).status === 'confirmed');
+ok('20 nights is a stay (the longest real one here)', span(20).status === 'confirmed');
+ok('31 nights is still a stay',             span(31).status === 'confirmed');
+ok('32 nights is a closed house',           span(32).status === 'blocked');
+ok('88 nights is a closed house',           span(88).status === 'blocked');
+ok('183 nights is a closed house',          span(183).status === 'blocked');
+
 // ══ BLOCKS, OWNERS, CANCELLATIONS ═════════════════════════════════
 console.log('\n── Everything that is not a paying guest ──');
 const one = (summary, platform = 'airbnb', extra = '') => parse.parseICalText(cal(ev(

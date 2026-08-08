@@ -190,7 +190,18 @@ export function parseICalText(text, feed, ownerNames = []) {
     // as blocks is wrong most of the time and hides an arrival from the
     // person who has to clean for it. A dirty flat on arrival day costs
     // more than a glance.
-    const bookingComClosed = feed.platform === 'booking' && sumLower.includes('closed');
+    //
+    // WITH ONE LIMIT, LEARNED BY OVERSHOOTING. The first version of this
+    // lifted three TV House rows that were closures: 2 nights, 88 nights
+    // and 183 nights. Nobody books a house for six months through
+    // Booking.com. The threshold is not a round number picked for comfort
+    // — the longest genuine reservation in this data is 20 nights, and the
+    // closures start at 88, so a month is comfortably between them and
+    // wrong in neither direction.
+    const TOO_LONG_FOR_A_STAY = 31;
+    const bookingComClosed = feed.platform === 'booking'
+      && sumLower.includes('closed')
+      && nights <= TOO_LONG_FOR_A_STAY;
 
     const isManualBlock = !isOwnerStay && !hasReservationUrl && !bookingComClosed && (
       sumTrim === '' || sumTrim === '-' ||
