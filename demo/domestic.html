@@ -1539,7 +1539,7 @@ async function staffSync(btn) {
     setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 4000);
   };
   try {
-    const r = await fetch('/api/staff-sync', {
+    const r = await fetch('/api/cron/ical-sync', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ portalKey: PORTAL_KEY, name: sessionName, pin: sessionPin }),
     });

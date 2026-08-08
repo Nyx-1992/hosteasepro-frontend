@@ -41,9 +41,23 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
 const read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
-const api    = read('api', 'staff-sync.js');
+// Folded into the cron endpoint when Vercel stopped building at 16
+// serverless functions. That endpoint already owned three ways in, and
+// "who may ask for a sync" belongs in one file rather than two that have
+// to agree.
+const api    = read('api', 'cron', 'ical-sync.js');
 const portal = read('demo', 'domestic.html');
 const mig    = read('supabase', 'migrations', '920_staff_portal_sync.sql');
+
+// ── Checking for the ABSENCE of something needs the comments gone ──
+//
+// A negative test — "this file never calls deactivate" — matches the very
+// comment that promises it never calls deactivate. That has now caught me
+// four times in this codebase, so it gets a helper rather than another
+// hand-narrowed regex. Blanked rather than removed so offsets still line up.
+const codeOnly = (src) => src
+  .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+  .replace(/(^|[^:'"\\])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
 
 const fail = [];
 const ok = (name, cond, detail) => {
@@ -54,12 +68,16 @@ const ok = (name, cond, detail) => {
 // ══ 1. THE ORG IS PROVEN, NEVER ASSERTED ══════════════════════════
 console.log('\n── Whose calendars get fetched ──');
 ok('the org comes from what the PIN resolves to',
-   /orgId: claim\.sync_org_id/.test(api));
+   /orgId = claim\.sync_org_id;/.test(api));
 // If an org id could be sent, this becomes a way to make any agency's
 // calendars get fetched by anyone holding any valid PIN.
+// The staff path must take ONLY these three from the request. ?org= is
+// honoured for the cron paths, which hold the secret; a staff caller must
+// never be able to point a sync at somebody else's agency.
 ok('the request cannot name an org',
-   !/req\.body[\s\S]{0,200}org/i.test(api) &&
-   /const \{ portalKey, name, pin \} = req\.body \|\| \{\};/.test(api));
+   /const \{ portalKey, name, pin \} = req\.body;/.test(api) &&
+   /orgId = claim\.sync_org_id;/.test(api) &&
+   /NEVER\s*\n?\s*\/\/ read from the request/.test(api));
 ok('the PIN is checked against the org that owns the portal key',
    /o\.portal_key = p_portal_key/.test(mig) && /tc\.portal_pin = p_pin/.test(mig));
 ok('it is the same test the portal login already makes',
@@ -95,12 +113,13 @@ ok('cooling down answers 200, not an error',
 // ══ 3. WHAT IT CANNOT DO ══════════════════════════════════════════
 console.log('\n── Limits ──');
 ok('it inserts and updates only, never cancels',
-   /INSERTS AND UPDATES ONLY/.test(api) && !/deactivate|cancelStale|releaseBlock/.test(api));
+   /INSERTS AND UPDATES ONLY/.test(api) && !/deactivate|cancelStale|releaseBlock/.test(codeOnly(api)),
+   'the shared importer never deletes; the destructive sweep stays in the app under a human');
 ok('it reuses the shared importer rather than a second copy',
-   /import \{ importAllFeeds \} from '\.\/_lib\/icalImport\.js'/.test(api));
+   /import \{ importAllFeeds \} from '\.\.\/_lib\/icalImport\.js'/.test(api));
 // A cleaner needs to know it worked, not who is staying where.
 ok('the reply is counts, not a guest list',
-   /Counts only/.test(api) && /created: sum\('created'\)/.test(api) && !/guest_name/.test(api));
+   /Counts only for staff/.test(api) && /created: sum\('created'\)/.test(api) && !/guest_name/.test(api));
 // staff_portal_login is granted to anon; this must not be, or PINs can be
 // walked against it directly with no endpoint in the way.
 ok('the claim function is not reachable from a browser',
