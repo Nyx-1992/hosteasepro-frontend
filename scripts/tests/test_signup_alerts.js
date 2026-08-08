@@ -205,8 +205,35 @@ ok('a failed lookup denies rather than allows',
 // relay with extra steps, and this one is reachable by anyone signed in.
 ok('the destination comes from the environment, never from the request',
    /alertTo\(\)/.test(test) && !/req\.body/.test(test));
+// The drill has to be unmistakable to a PERSON without being spammy to a
+// FILTER. Leading the subject with "TEST — this is a drill" did the second
+// — the subject is built from the business name — so the marking moved to
+// wording that reads plainly and scores normally.
 ok('a drill is unmistakable in the inbox',
-   /TEST — this is a drill, no agency signed up/.test(test));
+   /Alert test \(no agency signed up\)/.test(test) && /name: 'Test alert'/.test(test));
+ok('and the reason the wording changed is recorded',
+   /reads like spam to a filter/.test(test));
+
+// ══ 9b. WHY IT WENT TO SPAM ═══════════════════════════════════════
+//
+// The first real alert landed in Gmail's spam folder while the welcome
+// email and a trial reminder — same domain, same key — reached the inbox.
+// The alert was addressed to itself: From info@hosteasepro.com, To
+// info@hosteasepro.com. Mail claiming to come from your own address while
+// arriving from an outside server is one of the oldest spoofing patterns
+// there is. Customer-facing mail never hits this because it goes to
+// somebody else.
+console.log('\n── Not from the address it is sent to ──');
+ok('alerts have their own sender, so From never equals To',
+   /const FROM     = process\.env\.ALERT_FROM \|\| 'HostEase Pro Alerts <alerts@hosteasepro\.com>'/.test(alert));
+ok('and it is not the customer-facing WELCOME_FROM',
+   !/const FROM[^\n]*WELCOME_FROM/.test(alert));
+ok('the reason is written where the constant is',
+   /addressed to itself/.test(alert) && /oldest spoofing patterns/.test(alert));
+ok('replies reach a person, not the alert robot',
+   /reply_to: REPLY_TO/.test(alert));
+ok('and it is marked as automated mail',
+   /'Auto-Submitted': 'auto-generated'/.test(alert));
 // "Nothing happened, and here is why" is the answer the button exists to
 // give. A green tick over a silent failure would be worse than no button.
 ok('an unconfigured mailer says so instead of reporting success',
