@@ -89,17 +89,52 @@ const lsBare = parse.parseICalText(cal(ev(
 )), feed('lekkeslaap'));
 ok('a bare reference is used as the name', lsBare[0] && lsBare[0].guest_name === 'LS-ABC123');
 
-// ══ THE "RESERVED" TRAP ═══════════════════════════════════════════
-// Booking.com anonymises GENUINE reservations as a bare "Reserved".
-// Airbnb uses the same word for a block. Treating them alike either
-// invents bookings or loses them.
-console.log('\n── "Reserved" means different things on different platforms ──');
-const reservedOn = (platform) => parse.parseICalText(cal(ev(
-  `UID:r-1\r\nDTSTART;VALUE=DATE:20260901\r\nDTEND;VALUE=DATE:20260905\r\nSUMMARY:Reserved`
+// ══ THE "RESERVED" TRAP, WHICH THIS TEST GOT WRONG ════════════════
+//
+// This section used to assert `Airbnb "Reserved" is a block`, on the
+// belief that Airbnb reuses the word for closures. It does not, and the
+// assertion protected a bug that hid a guest arriving that afternoon:
+// Nina, "Still missing Tiago booking 😢".
+//
+// Read off S&N's real feeds rather than believed:
+//
+//   Airbnb reservation   "Reserved"                DESCRIPTION has
+//                                                  "Reservation URL: …/HM…"
+//   Airbnb block         "Airbnb (Not available)"  DESCRIPTION empty
+//   Booking.com, BOTH    "CLOSED - Not available"  DESCRIPTION empty
+//
+// Airbnb blocks say "Not available", which the generic test already
+// catches, so the airbnb-specific 'reserved' rule could only ever fire on
+// a genuine reservation.
+console.log('\n── What the platforms actually mean ──');
+const evt1 = (platform, summary, desc) => parse.parseICalText(cal(ev(
+  `UID:r-1\r\nDTSTART;VALUE=DATE:20260901\r\nDTEND;VALUE=DATE:20260905\r\n` +
+  `SUMMARY:${summary}` + (desc ? `\r\nDESCRIPTION:${desc}` : '')
 )), feed(platform))[0];
-ok('Booking.com "Reserved" is a real guest', reservedOn('booking').status === 'confirmed');
-ok('...and is labelled as one', reservedOn('booking').guest_name === 'Booking.com Guest');
-ok('Airbnb "Reserved" is a block', reservedOn('airbnb').status === 'blocked');
+
+const AIRBNB_RES_DESC = 'Reservation URL: https://www.airbnb.com/hosting/reservations/details/HMQYBA2F88\\nPhone Number (Last 4 Digits): 2152';
+
+ok('Airbnb "Reserved" with a reservation URL is a real guest',
+   evt1('airbnb', 'Reserved', AIRBNB_RES_DESC).status === 'confirmed');
+ok('Airbnb "(Not available)" is still a block',
+   evt1('airbnb', 'Airbnb (Not available)', '').status === 'blocked');
+ok('Airbnb "Blocked" is still a block',
+   evt1('airbnb', 'Blocked', '').status === 'blocked');
+
+// Booking.com sends the identical string for a reservation and a closure,
+// so this is a choice, not a deduction: show the arrival. Of 19 rows filed
+// as blocks on production, 12 already carried a real guest name Nicole had
+// typed off Booking.com's emails.
+ok('Booking.com "CLOSED - Not available" is treated as a guest',
+   evt1('booking', 'CLOSED - Not available', '').status === 'confirmed');
+ok('...and is given a name Nina can act on',
+   evt1('booking', 'CLOSED - Not available', '').guest_name === 'Booking.com Guest');
+ok('Booking.com "Reserved" is a real guest', evt1('booking', 'Reserved', '').status === 'confirmed');
+
+// A closure with nothing in it stays a closure on every platform, or a
+// cleaner gets sent to an empty flat.
+ok('an empty summary is still a block', evt1('booking', '', '').status === 'blocked');
+ok('a dash is still a block', evt1('airbnb', '-', '').status === 'blocked');
 
 // ══ BLOCKS, OWNERS, CANCELLATIONS ═════════════════════════════════
 console.log('\n── Everything that is not a paying guest ──');
@@ -164,7 +199,28 @@ console.log('\n── The guards that were learned the hard way ──');
 ok('a human\'s status is not overruled by a feed',
    /\['checked-out', 'checked-in', 'owner'\]/.test(src));
 ok('a real guest name is never overwritten',
-   /storedIsPlaceholder/.test(src) && /NEVER overwrite a real name/.test(src));
+   /nameIsHuman/.test(src) && /NEVER overwrite a real name/.test(src));
+
+// ── THE TWO RULES THAT CONTRADICTED EACH OTHER ────────────────────
+//
+// The name rule said a human's name always wins. The status rule listed
+// 'checked-out', 'checked-in' and 'owner' — not 'confirmed' — so a feed
+// was free to demote a confirmed booking to 'blocked' while keeping the
+// name. The row then carried a guest name only a person could have known
+// and a status saying nobody was coming, and the cron redid it every run.
+//
+// Both now ask the same helper, which is the actual fix: one definition
+// of "did a human decide this", not two that drift apart.
+ok('a feed cannot demote a booking that carries a human name',
+   /feedWouldDemote/.test(src) &&
+   /evt\.status === 'blocked' && nameIsHuman/.test(src) &&
+   /&& !feedWouldDemote/.test(src));
+ok('both rules share one definition of a real name',
+   /export function isPlaceholderName/.test(src) &&
+   (src.match(/isPlaceholderName\(/g) || []).length >= 3);
+ok('the placeholders the importer itself writes all count as placeholders',
+   ['Guest', 'Booking.com Guest'].every(p => new RegExp(`'${p.replace('.', '\\.')}'`).test(src)) &&
+   /includes\('🔒'\)/.test(src));
 // Without this a long closure re-issued with a new UID inserts a duplicate
 // every run — and this runs every 15 minutes now, not on login.
 ok('re-issued blocks match by overlap instead of duplicating',

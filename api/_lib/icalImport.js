@@ -91,6 +91,32 @@ export function parseICalSummaryFields(rawSummary) {
 }
 
 /**
+ * Is this a name the system invented, or one a person actually knows?
+ *
+ * THE WHOLE POINT OF HAVING THIS IN ONE PLACE. Two rules in importFeed
+ * needed to answer this question, each answered it separately, and they
+ * disagreed. The guest-name rule said a real name must never be
+ * overwritten; the status rule did not consult names at all and let the
+ * feed mark the row 'blocked'. A booking therefore ended up with a guest
+ * name only Nicole could have typed and a status saying nobody was
+ * coming, and Nina could not see it.
+ *
+ * Anything a platform or this importer generated is a placeholder. A name
+ * that is not on this list came from a human, and beats a calendar feed.
+ *
+ * @param {string} name
+ */
+export function isPlaceholderName(name) {
+  const s = (name || '').trim();
+  if (!s) return true;
+  if (s === 'Guest' || s === 'Booking.com Guest') return true;
+  if (s.includes('🔒') || /^blocked$/i.test(s)) return true;
+  // A bare LekkeSlaap reference is an id, not a person.
+  if (/^LS-[A-Z0-9]+$/i.test(s)) return true;
+  return false;
+}
+
+/**
  * @param {string} text     raw .ics
  * @param {object} feed     { property_id, property_name, platform }
  * @param {string[]} ownerNames  per-org names that mean "the owner is staying"
@@ -130,13 +156,46 @@ export function parseICalText(text, feed, ownerNames = []) {
       sumLower.includes('owner') || desc.includes('owner') ||
       ownerNames.some(n => n && sumLower.includes(String(n).toLowerCase()));
 
-    // Booking.com anonymises genuine reservations as a bare "Reserved", so
-    // that word only means a block on Airbnb.
-    const isManualBlock = !isOwnerStay && (
+    // ── WHAT THE PLATFORMS ACTUALLY SEND ─────────────────────────
+    //
+    // Checked against S&N's real feeds rather than assumed, because the
+    // rule that used to live here was backwards and hid a guest arriving
+    // the same afternoon:
+    //
+    //   Airbnb reservation   SUMMARY "Reserved"
+    //                        DESCRIPTION "Reservation URL: …/HMQYBA2F88
+    //                                     Phone Number (Last 4 Digits): 2152"
+    //   Airbnb block         SUMMARY "Airbnb (Not available)"
+    //                        DESCRIPTION empty
+    //   Booking.com, BOTH    SUMMARY "CLOSED - Not available"
+    //                        DESCRIPTION empty
+    //
+    // So Airbnb separates them cleanly and we were reading it inside out:
+    // `airbnb && includes('reserved')` marked every genuine reservation as
+    // a block, while real Airbnb blocks say "Not available" and were
+    // already caught by the test above it. That rule could only ever
+    // misfire. A reservation URL in the description is the positive proof,
+    // and it is present on every Airbnb booking in the data.
+    const hasReservationUrl = /airbnb\.com\/hosting\/reservations/i.test(rawDesc);
+
+    // Booking.com cannot be separated. Their export says "CLOSED - Not
+    // available" with an empty description for a real reservation AND for
+    // a closure the host set — 15 rows in S&N's data, identical.
+    //
+    // SO IT IS A JUDGEMENT CALL, AND THIS IS THE SIDE TO ERR ON. Of the 19
+    // Booking.com rows filed as blocks, at least 12 had a real guest name
+    // Nicole had typed in from Booking.com's own emails — they were
+    // reservations. Treating them as bookings that need a name is wrong
+    // occasionally and shows one extra line she can correct; treating them
+    // as blocks is wrong most of the time and hides an arrival from the
+    // person who has to clean for it. A dirty flat on arrival day costs
+    // more than a glance.
+    const bookingComClosed = feed.platform === 'booking' && sumLower.includes('closed');
+
+    const isManualBlock = !isOwnerStay && !hasReservationUrl && !bookingComClosed && (
       sumTrim === '' || sumTrim === '-' ||
       sumLower.includes('not available') || sumLower.includes('unavailable') ||
-      sumLower.includes('closed') || sumLower === 'blocked' ||
-      (feed.platform === 'airbnb' && sumLower.includes('reserved'))
+      sumLower.includes('closed') || sumLower === 'blocked'
     );
 
     let status, guestName;
@@ -300,22 +359,52 @@ export async function importFeed(key, feed, { ownerNames = [], dry = false } = {
         // status change respects what a human did: once somebody has
         // checked a guest in or out, or marked it an owner stay, a
         // calendar feed does not get to overrule them.
+        //
+        // ── AND A NAME ONLY A HUMAN COULD KNOW COUNTS AS A DECISION ──
+        //
+        // These next few lines and the guest-name rule below used to
+        // contradict each other, and the row ended up believing both. The
+        // name rule says "NEVER overwrite a real name a human typed"; the
+        // status rule did not list 'confirmed', so the feed was free to
+        // demote it. On a Booking.com stay that reads "CLOSED - Not
+        // available" in the feed, the result was a booking carrying a real
+        // guest name — which only Nicole could have entered, off their
+        // emails — and a status saying nobody was coming.
+        //
+        // Nina then could not see it, said so, and the fifteen-minute cron
+        // undid the fix every time it was made. Tiago Borralho was
+        // arriving that same afternoon; his row was rewritten at 18:30 and
+        // she messaged at 18:56.
+        //
+        // A feed that cannot name a guest does not get to overrule
+        // somebody who can.
+        const nameIsHuman = !isPlaceholderName(existing.guest_name);
+        const feedWouldDemote = evt.status === 'blocked' && nameIsHuman;
+
         if (evt.status === 'cancelled') {
           if (existing.status !== 'cancelled') {
             updates.status = 'cancelled';
             updates.cancelled_at = new Date().toISOString();
           }
         } else if (!['checked-out', 'checked-in', 'owner'].includes(existing.status)
-                   && existing.status !== evt.status) {
+                   && existing.status !== evt.status
+                   && !feedWouldDemote) {
           updates.status = evt.status;
         }
 
         // NEVER overwrite a real name a human typed. Only fill in when
-        // what is stored is a placeholder or a bare LekkeSlaap reference
-        // and the feed now has something better.
-        const stored = (existing.guest_name || '').trim();
-        const storedIsPlaceholder = !stored || stored === 'Guest' || /^LS-[A-Z0-9]+$/i.test(stored);
-        if (storedIsPlaceholder && evt.guest_name && evt.guest_name !== 'Guest') {
+        // what is stored is a placeholder and the feed has something
+        // better. Same helper the status rule above uses — they are two
+        // halves of one question and used to answer it differently.
+        //
+        // "Better" is a real name, or anything at all when the row
+        // currently has nothing: one LekkeSlaap booking in the data
+        // (LS-5XRK4T) arrives with a reference and no Customer line, and
+        // a bare reference on screen still beats a blank.
+        const storedIsEmpty = !(existing.guest_name || '').trim();
+        const feedNameIsBetter = evt.guest_name &&
+          (!isPlaceholderName(evt.guest_name) || storedIsEmpty);
+        if (!nameIsHuman && feedNameIsBetter) {
           updates.guest_name = evt.guest_name;
           if (!/^LS-[A-Z0-9]+$/i.test(evt.guest_name.trim())) {
             updates.guest_first_name = evt.guest_name.trim().split(' ')[0];
