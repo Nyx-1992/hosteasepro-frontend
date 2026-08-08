@@ -142,5 +142,26 @@ ok('switchTab checks it too — the nav is not the only way in',
 ok('no raw NAV.filter left that would bypass it',
    !/NAV\.filter\(n\s*=>\s*n\.roles\.includes\(currentUser\.role\)\)/.test(html));
 
+// ══ SIGNING IN DOES NOT INHERIT THE LAST PERSON'S TAB ═════════════
+//
+// Nina signed in as a HOST on a browser just signed out of HQ, and landed
+// on HQ — the platform console, revenue cards and customer list.
+//
+// Nothing leaked: platform_summary() and platform_customers() are gated on
+// is_platform_owner() in the database, so every figure was zero and the
+// list empty. The guard inside switchTab() was correct too. It was simply
+// never CALLED — currentTab was still 'customers', its pane still had
+// .active, and signing in re-rendered around a tab nobody re-checked.
+//
+// An empty shell of someone else's private screen is still exactly what
+// another agency's staff would report as a leak.
+console.log('\n── A new sign-in re-checks the open tab ──');
+ok('logging in routes the open tab through the guard',
+   /if \(typeof switchTab === 'function'\) switchTab\('dashboard'\);/.test(html));
+ok('it happens in the shared post-login path, so every way in is covered',
+   /async function _afterLogin\(user\)[\s\S]{0,1800}switchTab\('dashboard'\)/.test(html));
+ok('and the reason is recorded where it happened',
+   /signed in as a host on a browser that had just been signed out of/i.test(html));
+
 console.log(fail.length ? `\n${fail.length} FAILED\n` : '\nAll checks passed\n');
 process.exit(fail.length ? 1 : 0);
