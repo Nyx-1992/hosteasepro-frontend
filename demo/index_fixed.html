@@ -5006,6 +5006,29 @@ function showClientOnly() {
 async function _afterLogin(user) {
   CURRENT_ORG_ID = user.org_id || null;
 
+  // ── SEND THE NEW PERSON TO A TAB THEY MAY ACTUALLY OPEN ──────────
+  //
+  // Nina signed in as a host on a browser that had just been signed out of
+  // HQ, and landed on HQ — the platform console, with the revenue cards
+  // and the customer list on it.
+  //
+  // NOTHING LEAKED. Every figure was zero and the list was empty, because
+  // platform_summary() and platform_customers() are gated on
+  // is_platform_owner() in the database and returned nothing for her. The
+  // guard inside switchTab() is right as well. The bug is that switchTab
+  // was never CALLED: currentTab was still 'customers' from the previous
+  // session, its pane still had .active on it, and signing in re-rendered
+  // around a tab nobody had re-checked.
+  //
+  // So an empty shell of somebody else's private screen appeared, which is
+  // alarming even when it is hollow — and it is precisely what another
+  // agency's staff would report as a data leak. switchTab re-runs the role
+  // and platform checks, so routing through it fixes every version of
+  // this: any tab, any role change, however the page was left. It also
+  // handles a client, who gets their own screen and returns.
+  if (typeof switchTab === 'function') switchTab('dashboard');
+  else currentTab = 'dashboard';
+
   // A CLIENT is an external property owner, not staff. They get their own
   // screen instead of the staff interface — which for them would be a
   // sidebar of tabs they cannot open over data they cannot see. The
