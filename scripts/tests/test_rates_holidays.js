@@ -220,7 +220,19 @@ ok('the property falls back to the agency, then to ZA',
    /COALESCE\(p\.country_code, s\.country_code, 'ZA'\)/.test(mig));
 
 // ══ 4. WHAT A NIGHT COSTS ═════════════════════════════════════════
-console.log('\n── nightly_rate ──');
+//
+// HISTORICAL FROM HERE ON, FOR nightly_rate AND stay_quote. 924 dropped
+// and recreated both to add weekend pricing, so what follows describes
+// 915's originals and not what production runs. It is kept because the
+// season-and-holiday arithmetic it pins down survived unchanged into 924,
+// and because deleting the record of why it was built that way loses more
+// than it saves.
+//
+// The live assertions live in test_weekend_rates.js, which finds the
+// newest migration defining each function instead of naming a file — this
+// section cannot fail no matter what a later migration does, and a test
+// that cannot fail is a claim nobody rechecks.
+console.log('\n── nightly_rate, as 915 first wrote it ──');
 const nightly = mig.slice(mig.indexOf('FUNCTION public.nightly_rate'), mig.indexOf('COMMENT ON FUNCTION public.nightly_rate'));
 ok('a season beats the base rate', /COALESCE\(s\.rate, p\.base_rate\)/.test(nightly));
 ok('the premium is a percentage on top, not a replacement rate',
@@ -268,11 +280,19 @@ ok('it is callable by a signed-out visitor too',
    /GRANT EXECUTE ON FUNCTION public\.stay_quote\(uuid, date, date\) TO anon, authenticated/.test(mig));
 
 // ══ 6. RATES ARE ONE AGENCY'S BUSINESS ════════════════════════════
+//
+// THIS SECTION USED TO CERTIFY A HOLE. It read 915 and ticked
+// "rate_seasons is row-level secured to the owning agency" against
+// rate_seasons_own_org — `FOR ALL USING (org_id = current_org_id())` —
+// which scopes to the agency and says nothing about the person. Any HOST
+// could read and rewrite every price in the agency through the API. 917
+// replaced it, and this test kept passing, because it was asserting
+// against a file and files do not change.
+//
+// The two stale assertions are gone rather than repointed: the section
+// further down ("Rates are admin-only") already checks 917 properly, and
+// duplicating it here would just be two places to update.
 console.log('\n── Tenant isolation on rates ──');
-ok('rate_seasons is row-level secured to the owning agency',
-   /rate_seasons_own_org ON public\.rate_seasons FOR ALL[\s\S]{0,140}USING \(org_id = public\.current_org_id\(\)\)/.test(mig));
-ok('inserts are checked too, not just reads',
-   /WITH CHECK \(org_id = public\.current_org_id\(\)\)/.test(mig.slice(mig.indexOf('rate_seasons_own_org'))));
 // current_org_id() is NULL for a signed-out visitor, so a table grant to
 // anon would return nothing while reading like a decision — and become a
 // real hole the first time the policy was loosened.
