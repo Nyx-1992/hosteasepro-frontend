@@ -407,6 +407,7 @@ h1,h2,h3{font-family:Syne,sans-serif}
       </div>
     </div>
     <div class="lang-row">
+      <button class="nina-signout" id="staff-sync-btn" onclick="staffSync(this)" data-t="syncNow">Sync bookings</button>
       <select class="lang-select" onchange="setStaffLang(this.value)" aria-label="Language"></select>
       <button class="nina-signout" onclick="ninaSignOut()" data-t="signOutShort">Sign out</button>
     </div>
@@ -791,6 +792,9 @@ const STAFF_T = {
     markedDone:'Marked as done ✓', errorPrefix:'Error',
 
     coordinator:'Coordinator', signOutShort:'Sign out',
+    syncNow:'Sync bookings', syncing:'Checking…',
+    syncDone:'Up to date', syncNew:'{n} new booking(s)',
+    syncSoon:'Just synced — try again in {n}s', syncFailed:'Could not sync. Try again.',
     tabSchedule:'📋 Schedule', tabInspect:'🔍 Inspect', tabReports:'📁 Reports',
     upcomingCheckoutsTitle:'Upcoming Checkouts', next30assign:'Next 30 days · assign a cleaner',
     noCheckouts30:'No checkouts in the next 30 days.',
@@ -890,6 +894,9 @@ const STAFF_T = {
     markedDone:'Gemerk as klaar ✓', errorPrefix:'Fout',
 
     coordinator:'Koördineerder', signOutShort:'Meld af',
+    syncNow:'Sinkroniseer besprekings', syncing:'Besig om te kyk…',
+    syncDone:'Op datum', syncNew:'{n} nuwe besprekings',
+    syncSoon:'Pas gesinkroniseer — probeer weer oor {n}s', syncFailed:'Kon nie sinkroniseer nie. Probeer weer.',
     tabSchedule:'📋 Skedule', tabInspect:'🔍 Inspekteer', tabReports:'📁 Verslae',
     upcomingCheckoutsTitle:'Komende Uitboekings', next30assign:'Volgende 30 dae · wys \'n skoonmaker toe',
     noCheckouts30:'Geen uitboekings in die volgende 30 dae nie.',
@@ -989,6 +996,9 @@ const STAFF_T = {
     markedDone:'Zvanyorwa sezvapera ✓', errorPrefix:'Kanganiso',
 
     coordinator:'Muronga', signOutShort:'Buda',
+    syncNow:'Tora mabhukingi', syncing:'Kutarisa…',
+    syncDone:'Zvose zviripo', syncNew:'Mabhukingi matsva {n}',
+    syncSoon:'Zvichangobva kutorwa — edza zvakare mumasekondi {n}', syncFailed:'Hazvina kubudirira. Edza zvakare.',
     tabSchedule:'📋 Rongo', tabInspect:'🔍 Ongorora', tabReports:'📁 Zvitupa',
     upcomingCheckoutsTitle:'Vaenzi Vari Kubuda', next30assign:'Mazuva 30 anotevera · pa mushandi basa',
     noCheckouts30:'Hapana vaenzi vari kubuda mumazuva 30 anotevera.',
@@ -1088,6 +1098,9 @@ const STAFF_T = {
     markedDone:'Kuphawulwe njengokugqityiweyo ✓', errorPrefix:'Impazamo',
 
     coordinator:'Umlungiseleli', signOutShort:'Phuma',
+    syncNow:'Landa iibhukingi', syncing:'Iyajonga…',
+    syncDone:'Konke kuhlaziyiwe', syncNew:'Iibhukingi ezintsha ezingu-{n}',
+    syncSoon:'Kusandwa ukulandwa — zama kwakhona kwimizuzwana engu-{n}', syncFailed:'Ayikwazanga ukulanda. Zama kwakhona.',
     tabSchedule:'📋 Ushedyuli', tabInspect:'🔍 Hlola', tabReports:'📁 Iingxelo',
     upcomingCheckoutsTitle:'Iindwendwe Ezimkayo', next30assign:'Iintsuku ezingama-30 ezizayo · nika umcoci umsebenzi',
     noCheckouts30:'Akukho ndwendwe zimkayo kwiintsuku ezingama-30 ezizayo.',
@@ -1236,6 +1249,19 @@ function renderLangPickers() {
 
 let db = null;
 let currentCleaner = null;
+// ── THE PIN, HELD FOR THE SESSION ─────────────────────────────────
+//
+// The sync button (920) authenticates the same way the portal does: portal
+// key, first name, PIN. The PIN was cleared the moment login succeeded, so
+// there was nothing left to authenticate with.
+//
+// IN MEMORY ONLY. Never localStorage, never a cookie. It lives for as long
+// as the tab is open and goes when they sign out or close it — the same
+// lifetime as being signed in, which is exactly what it represents. Putting
+// it in storage would leave the one credential these staff have sitting on
+// a shared phone after the browser is closed.
+let sessionName = '';
+let sessionPin  = '';
 let myCleans = [];
 let allUpcomingCleans = []; // all cleaners' assignments — for checkout badges
 let cleansFilter = 'upcoming';
@@ -1453,6 +1479,9 @@ async function checkPin() {
       if(!error){
         if(data && data.length){
           const u=data[0];
+          // Kept only after the server said the PIN was right, so a wrong
+          // one is never retained.
+          sessionName = selectedCleaner.name; sessionPin = entered;
           if(u.is_coordinator) showNinaView();
           else doLogin({name:u.name, initials:u.initials||selectedCleaner.initials, color:u.color||selectedCleaner.color});
         } else pinRejected();
@@ -1481,12 +1510,54 @@ async function doLogin(cleaner) {
 
 function doLogout() {
   currentCleaner=null; myCleans=[];
+  sessionName=''; sessionPin='';
   document.getElementById('auth').style.display='flex';
   document.getElementById('app').style.display='none';
   pinInput=''; selectedCleaner=null;
   document.getElementById('pin-section').style.display='none';
   document.querySelectorAll('.cleaner-btn').forEach(b=>b.classList.remove('selected'));
   updatePinDots();
+}
+
+// ── Pull the bookings in, without a login ─────────────────────────
+//
+// The complaint this answers: a LekkeSlaap booking arrived, Nina needed to
+// assign a cleaner to it, and she had no way to ask for it — the cron had
+// not run yet and the button in Settings needs an owner or admin.
+//
+// The server checks the PIN and enforces a per-agency cooldown (920). This
+// side only reports what it is told, including "somebody already synced a
+// moment ago", which is not a failure and should not look like one.
+async function staffSync(btn) {
+  if (!sessionName || !sessionPin) { alert(t('syncFailed')); return; }
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = t('syncing');
+  const done = (msg) => {
+    btn.textContent = msg;
+    // Long enough to read on a phone in a hurry, then back to a button
+    // that can be pressed again.
+    setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 4000);
+  };
+  try {
+    const r = await fetch('/api/staff-sync', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ portalKey: PORTAL_KEY, name: sessionName, pin: sessionPin }),
+    });
+    const out = await r.json();
+    if (!r.ok) { done(t('syncFailed')); return; }
+    if (out.cooling) { done(t('syncSoon', { n: out.waitSeconds || 0 })); return; }
+    const fresh = (out.created || 0) + (out.updated || 0);
+    done(fresh ? t('syncNew', { n: fresh }) : t('syncDone'));
+    // Only redraw when something actually changed — a list that flickers
+    // every time somebody checks makes them wonder what they missed.
+    if (fresh) {
+      if (typeof loadNinaCheckouts === 'function') loadNinaCheckouts();
+      if (typeof loadNinaSchedule === 'function') loadNinaSchedule();
+      if (typeof loadData === 'function' && currentCleaner) { await loadData(); renderHome(); }
+    }
+  } catch (e) {
+    done(t('syncFailed'));
+  }
 }
 
 // ── Nina entry/exit ───────────────────────────────────────────────────────────
