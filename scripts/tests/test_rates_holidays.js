@@ -432,6 +432,38 @@ ok('the one gap left is written down rather than left looking accidental',
    /These two columns are NOT locked here/.test(mig917) &&
    /column-level REVOKE makes[\s\S]{0,80}reject `select=\*` outright/.test(mig917));
 
+// ══ 11. QUOTING A GUEST WHO IS NOT SIGNED IN ══════════════════════
+//
+// The booking site priced from a hardcoded TypeScript file, so changing a
+// price was a deploy and the holiday premium never reached a guest at all.
+// It now asks the database — which needed a way in that does not involve
+// showing a stranger the properties table.
+console.log('\n── The booking site\'s way in ──');
+const mig921 = read('supabase', 'migrations', '921_public_stay_quote.sql');
+
+// THE BUG THIS AVOIDED, and it would have been silent: anon cannot read
+// public.properties, so looking the property up from the site would have
+// returned nothing, 404'd every request, and left the booking form on its
+// hardcoded fallback for ever. Found by running the query as anon BEFORE
+// shipping it.
+ok('the property is resolved inside the database, not by the caller',
+   /SELECT p\.id, COALESCE\(p\.cleaning_fee, 0\) INTO v_prop, v_fee/.test(mig921));
+ok('and the migration records why the obvious version fails silently',
+   /anon cannot read/.test(mig921) && /looked done and done nothing|would have looked done/i.test(mig921));
+// short_key is unique per ORG. Keyed on it alone, LIMIT 1 could return
+// another agency's property — a cross-tenant leak on a public page.
+ok('it is scoped by agency as well as by property key',
+   /WHERE o\.portal_key = p_portal_key\s*\n?\s*AND p\.short_key = p_property_key/.test(mig921));
+ok('and says why the property key alone is not enough',
+   /unique per ORG, not globally/.test(mig921));
+ok('a signed-out visitor may call it', /GRANT EXECUTE ON FUNCTION public\.public_stay_quote\(text, text, date, date\) TO anon, authenticated/.test(mig921));
+// It returns a price and a cleaning fee. Not an address, not a name, not
+// the other properties.
+ok('it returns the quote and nothing else about the property',
+   /RETURNS TABLE \(\s*\n?\s*nights int, total numeric, holiday_nights int, unpriced_nights int,\s*\n?\s*cleaning_fee numeric, detail jsonb\)/.test(mig921));
+ok('an unknown pairing returns nothing rather than raising',
+   /IF v_prop IS NULL THEN RETURN; END IF;/.test(mig921));
+
 // ── Result ────────────────────────────────────────────────────────
 console.log('');
 if (fail.length) {
