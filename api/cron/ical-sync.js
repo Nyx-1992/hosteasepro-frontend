@@ -26,6 +26,29 @@
 
 import { importAllFeeds } from '../_lib/icalImport.js';
 
+// Staff-portal sign-in, for people with no auth.users row.
+//
+// This lived in its own endpoint, api/staff-sync.js, until Vercel started
+// refusing to build: the project went from 15 serverless functions to 16
+// and every deployment failed, preview and production alike. Fifteen had
+// deployed fine the day before, so the 16th was the straw.
+//
+// Folding it in here is not just a workaround. This endpoint already had
+// three ways in — CRON_SECRET, Vercel's own header, and a signed-in owner
+// or admin — and "who is allowed to ask for a sync" belongs in one place
+// rather than spread across two files that must agree.
+async function staffClaim(url, key, portalKey, name, pin) {
+  try {
+    const r = await fetch(`${url}/rest/v1/rpc/staff_portal_sync_claim`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_portal_key: portalKey, p_name: name, p_pin: pin }),
+    });
+    if (!r.ok) return null;
+    return (await r.json())[0] || null;
+  } catch (e) { return null; }
+}
+
 // Turns a Supabase access token into "which org, what role" — asking
 // Supabase who the token belongs to rather than trusting anything the
 // request says about itself.
@@ -74,6 +97,29 @@ export default async function handler(req, res) {
     /* scheduled run */
   } else if (!secret && req.headers['x-vercel-cron']) {
     /* scheduled run, secret not configured */
+  } else if (req.method === 'POST' && req.body && req.body.portalKey) {
+    // A cleaner or coordinator pressing "Sync bookings" in the staff
+    // portal. The org comes from what the PIN resolves to and is NEVER
+    // read from the request — a caller cannot name an agency, only prove
+    // they belong to one, which is what stops this being a way to make a
+    // stranger's calendars get fetched.
+    //
+    // Rate limited per agency inside staff_portal_sync_claim (920), so a
+    // frustrated double-tap cannot turn into six fetches of three
+    // platforms we depend on.
+    const { portalKey, name, pin } = req.body;
+    if (!portalKey || !name || !pin) return res.status(400).json({ error: 'Missing sign-in details' });
+    const claim = await staffClaim(process.env.SUPABASE_URL, KEY, portalKey, name, pin);
+    // Wrong PIN, wrong name, or a portal key that is not theirs — one
+    // answer for all three.
+    if (!claim || !claim.sync_org_id) return res.status(401).json({ error: 'Sign in again to sync' });
+    if (!claim.allowed) {
+      // 200, not 429. Being told somebody already synced a moment ago is a
+      // normal thing to hear, not a failure the page should render as one.
+      return res.status(200).json({ synced: false, cooling: true, waitSeconds: claim.wait_seconds || 0 });
+    }
+    orgId = claim.sync_org_id;
+    who = 'staff';
   } else if (bearer) {
     const me = await whoIs(bearer, KEY);
     if (!me) return res.status(401).json({ error: 'Not authorised' });
@@ -98,6 +144,18 @@ export default async function handler(req, res) {
 
   const sum = (k) => results.reduce((n, r) => n + r[k], 0);
   const failed = results.filter(r => r.errors.length);
+
+  // Counts only for staff. A cleaner needs to know it worked, not which
+  // feeds exist or which of them are unhappy.
+  if (who === 'staff') {
+    return res.status(200).json({
+      synced: true,
+      feeds: results.length,
+      created: sum('created'),
+      updated: sum('updated'),
+      problems: failed.length,
+    });
+  }
 
   return res.status(200).json({
     dry,
