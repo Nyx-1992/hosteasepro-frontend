@@ -3169,14 +3169,14 @@ async function previewStayQuote(propertyId) {
         <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:.8rem">
           <span>${escHtml(fmtNightLabel(n.night))}
             ${n.season ? `<span style="color:var(--muted)"> · ${escHtml(n.season)}</span>` : ''}
-            ${n.holiday ? `<span style="color:var(--accent2);font-weight:600"> · ${escHtml(n.holiday)} +${n.premium_pct}%</span>` : ''}
+            ${premiumLabel(n)}
           </span>
           <span style="font-variant-numeric:tabular-nums;${n.rate==null?'color:var(--red)':''}">
             ${n.rate==null ? 'no rate set' : 'R'+Number(n.rate).toLocaleString('en-ZA',{minimumFractionDigits:0,maximumFractionDigits:2})}
           </span>
         </div>`).join('')}
       <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 10px;font-weight:700;background:var(--warm)">
-        <span>${q.nights} night${q.nights===1?'':'s'}${q.holiday_nights ? ` · ${q.holiday_nights} public holiday` : ''}</span>
+        <span>${q.nights} night${q.nights===1?'':'s'}${q.holiday_nights ? ` · ${q.holiday_nights} public holiday` : ''}${q.weekend_nights ? ` · ${q.weekend_nights} weekend` : ''}</span>
         <span style="font-variant-numeric:tabular-nums">${q.total==null ? '—' : 'R'+Number(q.total).toLocaleString('en-ZA',{minimumFractionDigits:0,maximumFractionDigits:2})}</span>
       </div>
     </div>
@@ -3187,6 +3187,29 @@ async function previewStayQuote(propertyId) {
       Check-out day is not charged. This is what a <strong>direct</strong> booking costs —
       Airbnb, Booking.com and LekkeSlaap set their own prices, and we cannot change them from here.
     </div>`;
+}
+
+// WHY A NIGHT COSTS MORE, in the words the database used.
+//
+// premium_kind comes from nightly_rate (924) and says which of the two
+// premiums actually applied — they do not stack, the higher one wins. The
+// old line assumed a night with a holiday name was priced BY the holiday,
+// which stops being true the moment a weekend premium beats it: a
+// Christmas Day that is also a Friday, priced at the weekend rate, would
+// have read "Christmas Day +25%" and blamed the wrong rule.
+//
+// A holiday that lost still gets named, without a percentage, because the
+// fact that it is Christmas is worth seeing either way.
+function premiumLabel(n) {
+  const pct = Number(n.premium_pct || 0);
+  const hol = n.holiday ? escHtml(n.holiday) : '';
+  if (!pct) {
+    return hol ? `<span style="color:var(--muted)"> · ${hol}</span>` : '';
+  }
+  const why = n.premium_kind === 'weekend'
+    ? (hol ? `${hol} · Weekend` : 'Weekend')
+    : (hol || 'Premium');
+  return `<span style="color:var(--accent2);font-weight:600"> · ${why} +${pct}%</span>`;
 }
 
 // "Fri 3 Apr" — a date somebody can match against a calendar without
@@ -3234,6 +3257,17 @@ function openPropertyModal(id) {
         <div style="font-size:.7rem;color:var(--muted);margin-top:3px">
           Added on top on a public holiday — 40 means +40%. A percentage rather
           than an amount, so it rises with the season by itself.
+        </div>
+      </div>
+      <!-- Worth roughly nine times the holiday premium at the same
+           percentage: about 104 Friday and Saturday nights a year against
+           12 public holidays. It shipped second only because the holiday
+           question was the one being asked. -->
+      <div class="form-field"><label>Weekend premium (%)</label>
+        <input id="pr-wkndpct" type="number" min="0" step="1" placeholder="0" value="${existing&&existing.weekend_premium_pct?String(existing.weekend_premium_pct):''}"/>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:3px">
+          Friday and Saturday nights. When one is <em>also</em> a public holiday
+          the higher of the two applies — never both added together.
         </div>
       </div>
       <!-- ALWAYS ON SCREEN, not tucked into the preview below.
@@ -3382,6 +3416,9 @@ async function savePropertyRecord(id) {
     // only ever be seen by a guest.
     base_rate: ratesFieldOrNull('pr-rate'),
     holiday_premium_pct: parseFloat(document.getElementById('pr-holpct').value) || 0,
+    // 0 here is right, unlike base_rate above: no weekend premium and a
+    // weekend premium of nothing are the same thing.
+    weekend_premium_pct: parseFloat(document.getElementById('pr-wkndpct').value) || 0,
     country_code: document.getElementById('pr-country').value || null,
   };
   // Only sent when the field is on screen. Writing floor:null for a whole
