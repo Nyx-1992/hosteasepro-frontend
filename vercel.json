@@ -12,11 +12,11 @@
   "rewrites": [
     {
       "source": "/api/calendar/speranta.ics",
-      "destination": "/api/speranta-cal"
+      "destination": "/api/calendar/0b73fedde75a0359afd1316d725c4bb2"
     },
     {
       "source": "/api/calendar/tvhouse.ics",
-      "destination": "/api/tvhouse-cal"
+      "destination": "/api/calendar/032033befd126a303fa3284ab36baccd"
     },
     {
       "source": "/api/calendar/:token",

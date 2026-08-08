@@ -49,11 +49,77 @@
 // needs no secret at all.
 
 import { sendTrialEmail } from '../_lib/trialEmail.js';
-import { sendSignupDigest } from '../_lib/ownerAlert.js';
+import { sendSignupDigest, sendSignupAlert, alertTo, alertsConfigured } from '../_lib/ownerAlert.js';
+
+// ── PROVING THE ALERT CHANNEL WORKS ───────────────────────────────
+//
+// This lived in api/test-alert.js until Vercel refused to build: the
+// Hobby plan allows twelve serverless functions and the project had
+// fifteen. It belongs here anyway — this is the endpoint that already
+// sends mail and already knows whether RESEND_API_KEY exists, so "is the
+// mail channel working" is a question about this file.
+//
+// Reached as POST /api/cron/trial-reminders?test=alert with a signed-in
+// platform owner's token. The cron paths below are untouched.
+async function isPlatformOwner(token, url, key) {
+  const svc = { apikey: key, Authorization: `Bearer ${key}` };
+  try {
+    // Who does this token belong to? Asked of Supabase, not of the request.
+    const u = await fetch(`${url}/auth/v1/user`, {
+      headers: { apikey: key, Authorization: `Bearer ${token}` },
+    });
+    if (!u.ok) return false;
+    const user = await u.json();
+    if (!user || !user.id) return false;
+
+    const [pRes, sRes] = await Promise.all([
+      fetch(`${url}/rest/v1/profiles?id=eq.${user.id}&select=org_id,role`, { headers: svc }),
+      fetch(`${url}/rest/v1/platform_settings?select=platform_org_id&limit=1`, { headers: svc }),
+    ]);
+    if (!pRes.ok || !sRes.ok) return false;
+    const me = (await pRes.json())[0];
+    const settings = (await sRes.json())[0];
+    if (!me || !settings || !settings.platform_org_id) return false;
+
+    return me.role === 'owner' && me.org_id === settings.platform_org_id;
+  } catch (e) {
+    return false;
+  }
+}
+
+
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 
 export default async function handler(req, res) {
+  // The drill, before any of the cron auth below — it uses a person's token
+  // rather than the secret.
+  if (req.method === 'POST' && req.query && req.query.test === 'alert') {
+    const URL_ = process.env.SUPABASE_URL, K = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!URL_ || !K) return res.status(500).json({ error: 'Server not configured' });
+    const a = req.headers.authorization || '';
+    const tok = a.startsWith('Bearer ') ? a.slice(7) : '';
+    if (!tok) return res.status(401).json({ error: 'Not authorised' });
+    if (!(await isPlatformOwner(tok, URL_, K))) return res.status(403).json({ error: 'Platform owner only' });
+    if (!alertsConfigured()) {
+      return res.status(200).json({ sent: false, configured: false, to: alertTo(),
+        message: 'RESEND_API_KEY is not set on this deployment, so no email was sent. Nothing else is wrong.' });
+    }
+    const pr = (req.headers['x-forwarded-proto'] || 'https').split(',')[0];
+    const hs = (req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0];
+    // "TEST — this is a drill" in the SUBJECT reads like spam to a filter,
+    // and the subject is built from this field. The drill marking belongs in
+    // the body, where a person reads it and a filter does not weigh it.
+    const out = await sendSignupAlert({
+      business: 'Alert test (no agency signed up)', name: 'Test alert', email: alertTo(),
+      trialEndsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+      origin: hs ? `${pr}://${hs}` : 'https://hosteasepro.com',
+    });
+    if (out && out.ok) return res.status(200).json({ sent: true, configured: true, to: alertTo() });
+    return res.status(200).json({ sent: false, configured: true, to: alertTo(),
+      message: (out && out.error) || 'The mailer refused it and did not say why.' });
+  }
+
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SERVICE_ROLE_KEY || !SUPABASE_URL) {
     return res.status(500).json({ error: 'Server not configured' });

@@ -171,7 +171,11 @@ ok('the request decides the origin, so links are right on every deployment',
 // signing a fake agency up on production and then DELETING AN ORG from a
 // live database for the sake of a drill.
 console.log('\n── The test button ──');
-const test = read('api', 'test-alert.js');
+// Folded into the email cron when Vercel refused to build: the Hobby plan
+// allows twelve serverless functions and the project had fifteen. It
+// belongs there anyway — that endpoint already sends mail and already
+// knows whether RESEND_API_KEY exists.
+const test = read('api', 'cron', 'trial-reminders.js');
 
 ok('there is a way to prove the alert arrives', /hqTestAlert/.test(app) && /Send me a test alert/.test(app));
 

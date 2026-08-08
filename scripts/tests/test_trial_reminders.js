@@ -128,7 +128,21 @@ ok('a CRON_SECRET, when set, is required',
 // forged from outside and is a safe fallback before the secret is set.
 ok("Vercel's own cron header is the only other way in",
    /x-vercel-cron/.test(cron) && /else if \(!fromVercelCron\)[\s\S]{0,80}401/.test(cron));
-ok('there is no third way in', (cron.match(/401/g) || []).length === 2);
+// WAS a count of 401s, expecting exactly two. That broke the moment the
+// alert drill was folded into this file — a correct change — because the
+// drill has its own 401. Counting the guards was never the point; what
+// matters is that no path reaches the sending code unauthenticated.
+//
+// The drill is the only other way in, it is gated on being the platform
+// owner, and it returns before the cron auth below rather than falling
+// through into it.
+ok('the only other way in is the platform-owner drill, and it is gated',
+   /req\.query\.test === 'alert'/.test(cron) &&
+   /if \(!\(await isPlatformOwner\(tok, URL_, K\)\)\) return res\.status\(403\)/.test(cron) &&
+   /if \(!tok\) return res\.status\(401\)/.test(cron));
+ok('and the drill cannot fall through into the reminder run',
+   cron.indexOf("req.query.test === 'alert'") < cron.indexOf('const secret') &&
+   /message: \(out && out\.error\)[\s\S]{0,80}\}\);\s*\n  \}/.test(cron));
 ok('the service-role key is required, not optional',
    /if \(!SERVICE_ROLE_KEY \|\| !SUPABASE_URL\)/.test(cron));
 
