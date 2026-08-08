@@ -6604,7 +6604,12 @@ async function loadSubscription() {
   if (error) { console.warn('loadSubscription:', error.message); return; }
   orgSubscription = (data || [])[0] || null;
   try {
-    const ps = await db.from('platform_settings').select('billing_live,platform_org_id').limit(1);
+    // Through a function, not the table (922). platform_settings also
+    // holds HostEase Pro's own bank account, and its read policy used to
+    // be `auth.role() IN ('authenticated','anon')` — no scoping at all,
+    // so anyone with the anon key could read it. The table is owner-only
+    // now; these two values are the only ones a browser ever needed.
+    const ps = await db.rpc('platform_public_settings');
     const row = (ps.data || [])[0] || {};
     billingLive = !!row.billing_live;
     platformOrgId = row.platform_org_id || null;
