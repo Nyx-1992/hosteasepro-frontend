@@ -160,6 +160,34 @@ ok('32 nights is a closed house',           span(32).status === 'blocked');
 ok('88 nights is a closed house',           span(88).status === 'blocked');
 ok('183 nights is a closed house',          span(183).status === 'blocked');
 
+// ── AN EMPTY OPINION MUST NOT OVERWRITE A DECISION ────────────────
+//
+// "CLOSED - Not available" means a reservation AND a closure, so it knows
+// nothing. Guessing 'confirmed' is right for a row nobody has classified
+// — Nina needs to see an arrival — and wrong for one already decided.
+//
+// TV House id 570, a 2-night CLOSED period, oscillated on exactly this:
+// the repair blocked it, the next sync guessed 'confirmed' and flipped it
+// back, every run. Visible in the data as rows all rewritten at :07 past
+// by the cron. Same shape as the Tiago bug — something that knows nothing
+// overruling something that knows more.
+console.log('\n── An ambiguous feed does not get a vote on an existing row ──');
+ok('Booking.com CLOSED is marked ambiguous',
+   /const ambiguousStatus = bookingComClosed/.test(src));
+ok('it is carried on the event but stripped before insert',
+   /ambiguousStatus,/.test(src) &&
+   /const \{ uid: _drop, ambiguousStatus: _drop2, \.\.\.row \} = evt;/.test(src),
+   'leaving it in would make PostgREST reject the whole insert');
+ok('an ambiguous event leaves an existing status alone',
+   /\} else if \(evt\.ambiguousStatus\) \{/.test(src));
+ok('Airbnb is unaffected — its feed actually distinguishes the two',
+   !/ambiguousStatus[^\n]*airbnb/i.test(src));
+// The parse still has to propose something, or a brand new Booking.com
+// reservation would arrive with no status at all.
+ok('a brand new ambiguous row still arrives as a guest',
+   evt1('booking', 'CLOSED - Not available', '').status === 'confirmed' &&
+   evt1('booking', 'CLOSED - Not available', '').ambiguousStatus === true);
+
 // ══ BLOCKS, OWNERS, CANCELLATIONS ═════════════════════════════════
 console.log('\n── Everything that is not a paying guest ──');
 const one = (summary, platform = 'airbnb', extra = '') => parse.parseICalText(cal(ev(

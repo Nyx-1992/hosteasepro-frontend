@@ -203,6 +203,26 @@ export function parseICalText(text, feed, ownerNames = []) {
       && sumLower.includes('closed')
       && nights <= TOO_LONG_FOR_A_STAY;
 
+    // AND IT ONLY GETS A VOTE ON ROWS THAT DO NOT EXIST YET.
+    //
+    // "CLOSED - Not available" carries no information: Booking.com sends
+    // it for a reservation and for a closure alike. Guessing 'confirmed'
+    // is the right default for a row nobody has seen — Nina needs to know
+    // somebody is arriving. It is the wrong thing to do to a row that has
+    // already been classified, because the guess then overwrites a
+    // decision using no evidence.
+    //
+    // That is what started oscillating on TV House id 570, a 2-night
+    // CLOSED period: the repair marked it a block, the next sync guessed
+    // 'confirmed' and flipped it back, every run. Same disagreement as the
+    // original bug — a feed that knows nothing overruling something that
+    // knows more — in a new place.
+    //
+    // So an ambiguous event proposes a status for an INSERT and stays
+    // silent on an UPDATE. Airbnb is unaffected: its feed genuinely
+    // distinguishes the two, so it always has something to say.
+    const ambiguousStatus = bookingComClosed;
+
     const isManualBlock = !isOwnerStay && !hasReservationUrl && !bookingComClosed && (
       sumTrim === '' || sumTrim === '-' ||
       sumLower.includes('not available') || sumLower.includes('unavailable') ||
@@ -227,6 +247,9 @@ export function parseICalText(text, feed, ownerNames = []) {
 
     events.push({
       uid,
+      // Not a column — stripped before insert, read only by the update
+      // path to know this event has no opinion worth acting on.
+      ambiguousStatus,
       property_id: feed.property_id,
       property_name: feed.property_name,
       platform: feed.platform,
@@ -397,6 +420,11 @@ export async function importFeed(key, feed, { ownerNames = [], dry = false } = {
             updates.status = 'cancelled';
             updates.cancelled_at = new Date().toISOString();
           }
+        } else if (evt.ambiguousStatus) {
+          // Booking.com's "CLOSED - Not available" means both things at
+          // once, so it has nothing to add about a row that already has a
+          // status. Saying nothing is the answer; overwriting on a guess
+          // is what made id 570 flip on every run.
         } else if (!['checked-out', 'checked-in', 'owner'].includes(existing.status)
                    && existing.status !== evt.status
                    && !feedWouldDemote) {
@@ -432,7 +460,9 @@ export async function importFeed(key, feed, { ownerNames = [], dry = false } = {
         if (!dry) await patch(key, `bookings?id=eq.${existing.id}`, updates);
         out.updated++;
       } else {
-        const { uid: _drop, ...row } = evt;
+        // Both of these are parse-time signals, not columns. Leaving
+        // ambiguousStatus in would make PostgREST reject the whole insert.
+        const { uid: _drop, ambiguousStatus: _drop2, ...row } = evt;
         if (!dry) {
           await insert(key, 'bookings', [{
             ...row,
