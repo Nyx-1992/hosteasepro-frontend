@@ -188,6 +188,24 @@ ok('a brand new ambiguous row still arrives as a guest',
    evt1('booking', 'CLOSED - Not available', '').status === 'confirmed' &&
    evt1('booking', 'CLOSED - Not available', '').ambiguousStatus === true);
 
+// ── AND THE DUPLICATE GUARD HAD TO FOLLOW IT ──────────────────────
+//
+// The overlap fallback keyed on evt.status === 'blocked'. The moment
+// Booking.com's CLOSED started arriving as 'confirmed', these events fell
+// past it — and Booking.com is exactly the platform that re-issues a
+// period under a fresh UID, which is why the fallback exists. Changing
+// the classification would have reinstated the duplicate flood from the
+// other side.
+//
+// Checked by simulation, not by reading: three syncs where Booking.com
+// re-issues the same period under UIDs A, B, C. With the widened
+// condition one row; with the old narrow one, two by the second sync.
+ok('the overlap guard covers ambiguous events too',
+   /if \(!existing && \(evt\.status === 'blocked' \|\| evt\.ambiguousStatus\)\) \{/.test(src));
+ok('and drops the status filter only for those',
+   /evt\.ambiguousStatus \? `&status=in\.\(blocked,confirmed\)` : `&status=eq\.blocked`/.test(src),
+   'safe only because one property cannot hold two overlapping Booking.com stays');
+
 // ══ BLOCKS, OWNERS, CANCELLATIONS ═════════════════════════════════
 console.log('\n── Everything that is not a paying guest ──');
 const one = (summary, platform = 'airbnb', extra = '') => parse.parseICalText(cal(ev(
