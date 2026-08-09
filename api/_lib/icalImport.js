@@ -364,11 +364,25 @@ export async function importFeed(key, feed, { ownerNames = [], dry = false } = {
       // without this a new duplicate row appears on every single sync —
       // and this now runs every fifteen minutes rather than when somebody
       // happens to be logged in, which turns a slow leak into a flood.
+      // AND THE SAME PROTECTION HAD TO WIDEN WHEN 'CLOSED' STOPPED BEING
+      // A BLOCK. The guard above keyed on evt.status === 'blocked'. The
+      // moment Booking.com's "CLOSED - Not available" started arriving as
+      // 'confirmed', these events fell straight past it — and Booking.com
+      // is precisely the platform that re-issues a period under a fresh
+      // UID. That would have reinstated the duplicate flood this guard
+      // exists to stop, from the other side.
+      //
+      // For an ambiguous Booking.com period the status filter also has to
+      // go, because the stored row may now be either. Dropping it is safe
+      // here and nowhere else: one property cannot hold two overlapping
+      // Booking.com reservations, so an overlapping row on the same
+      // property and platform IS this period, re-issued.
       let matchedByOverlap = false;
-      if (!existing && evt.status === 'blocked') {
+      if (!existing && (evt.status === 'blocked' || evt.ambiguousStatus)) {
         const byOverlap = await q(key,
           `bookings?property_id=eq.${feed.property_id}&platform=eq.${enc(feed.platform)}` +
-          `&status=eq.blocked&is_active=eq.true` +
+          (evt.ambiguousStatus ? `&status=in.(blocked,confirmed)` : `&status=eq.blocked`) +
+          `&is_active=eq.true` +
           `&check_in_date=lte.${evt.check_out_date}&check_out_date=gte.${evt.check_in_date}` +
           `&select=id,status,guest_name,number_of_guests,source_uid&limit=1`);
         if (byOverlap.length) { existing = byOverlap[0]; matchedByOverlap = true; }
