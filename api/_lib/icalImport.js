@@ -347,7 +347,7 @@ export async function importFeed(key, feed, { ownerNames = [], dry = false } = {
       if (evt.uid) {
         const byUid = await q(key,
           `bookings?source_uid=eq.${enc(evt.uid)}&org_id=eq.${feed.org_id}` +
-          `&select=id,status,guest_name,number_of_guests,source_uid&limit=1`);
+          `&select=id,status,guest_name,number_of_guests,source_uid,is_active&limit=1`);
         if (byUid.length) existing = byUid[0];
       }
 
@@ -355,7 +355,7 @@ export async function importFeed(key, feed, { ownerNames = [], dry = false } = {
         const byDates = await q(key,
           `bookings?property_id=eq.${feed.property_id}&check_in_date=eq.${evt.check_in_date}` +
           `&check_out_date=eq.${evt.check_out_date}&platform=eq.${enc(evt.platform)}` +
-          `&select=id,status,guest_name,number_of_guests,source_uid&limit=1`);
+          `&select=id,status,guest_name,number_of_guests,source_uid,is_active&limit=1`);
         if (byDates.length) existing = byDates[0];
       }
 
@@ -384,12 +384,29 @@ export async function importFeed(key, feed, { ownerNames = [], dry = false } = {
           (evt.ambiguousStatus ? `&status=in.(blocked,confirmed)` : `&status=eq.blocked`) +
           `&is_active=eq.true` +
           `&check_in_date=lte.${evt.check_out_date}&check_out_date=gte.${evt.check_in_date}` +
-          `&select=id,status,guest_name,number_of_guests,source_uid&limit=1`);
+          `&select=id,status,guest_name,number_of_guests,source_uid,is_active&limit=1`);
         if (byOverlap.length) { existing = byOverlap[0]; matchedByOverlap = true; }
       }
 
       if (existing) {
-        const updates = { is_active: true };
+        // ── DELETED MEANS DELETED ────────────────────────────────
+        //
+        // This used to open `{ is_active: true }` on every match, which
+        // silently undid every deletion. The button in the app says
+        // "Permanently delete this booking? This cannot be undone." — it
+        // sets is_active = false, and the next sync set it straight back.
+        // Nothing in the cron ever deactivates a row (it inserts and
+        // updates only, by design), so is_active = false can only have
+        // come from a person or a repair, and both meant it.
+        //
+        // It also quietly reversed the deduplication in 929 within the
+        // hour. Skipping rather than updating is deliberate: a deleted
+        // booking should not be quietly maintained in the background, and
+        // finding `existing` here is what stops the row being re-inserted
+        // as a fresh duplicate instead.
+        if (existing.is_active === false) { out.skipped++; continue; }
+
+        const updates = {};
         if (matchedByOverlap) {
           updates.check_in_date = evt.check_in_date;
           updates.check_out_date = evt.check_out_date;
@@ -468,9 +485,10 @@ export async function importFeed(key, feed, { ownerNames = [], dry = false } = {
           updates.number_of_guests = evt.number_of_guests;
         }
 
-        // Nothing beyond the is_active touch: leave the row alone rather
-        // than burning a write and a updated_at on every run.
-        if (Object.keys(updates).length === 1) { out.skipped++; continue; }
+        // Nothing actually changed: leave the row alone rather than
+        // burning a write and an updated_at on every run. (Was `=== 1`,
+        // for the is_active touch that no longer happens.)
+        if (Object.keys(updates).length === 0) { out.skipped++; continue; }
         if (!dry) await patch(key, `bookings?id=eq.${existing.id}`, updates);
         out.updated++;
       } else {

@@ -202,6 +202,32 @@ ok('a brand new ambiguous row still arrives as a guest',
 // condition one row; with the old narrow one, two by the second sync.
 ok('the overlap guard covers ambiguous events too',
    /if \(!existing && \(evt\.status === 'blocked' \|\| evt\.ambiguousStatus\)\) \{/.test(src));
+
+// ── "THIS CANNOT BE UNDONE", UNDONE EVERY FIFTEEN MINUTES ─────────
+//
+// The delete button in the app says "Permanently delete this booking?
+// This cannot be undone." It sets is_active = false. This importer opened
+// its update with `{ is_active: true }` on every match — so any platform
+// booking she deleted came back on the next sync, and the deduplication
+// in 929 was reversed within the hour.
+//
+// Nothing in the cron ever deactivates a row (inserts and updates only, by
+// design), so is_active = false can only have come from a person or a
+// repair. Both meant it.
+console.log('\n── A deleted booking stays deleted ──');
+ok('the update no longer forces is_active back on',
+   !/const updates = \{ is_active: true \};/.test(src) &&
+   /const updates = \{\};/.test(src));
+ok('a deactivated row is skipped outright',
+   /if \(existing\.is_active === false\) \{ out\.skipped\+\+; continue; \}/.test(src));
+ok('and the lookups fetch is_active so that check has something to read',
+   (src.match(/select=id,status,guest_name,number_of_guests,source_uid,is_active/g) || []).length === 3);
+// Finding `existing` is what stops a deleted row being re-inserted as a
+// fresh duplicate instead — skipping only works because the match happened.
+ok('skipping happens after the match, so no duplicate replaces it',
+   src.indexOf('if (existing.is_active === false)') > src.indexOf('let matchedByOverlap = false;'));
+ok('the no-op check was corrected for the removed is_active touch',
+   /if \(Object\.keys\(updates\)\.length === 0\) \{ out\.skipped\+\+; continue; \}/.test(src));
 ok('and drops the status filter only for those',
    /evt\.ambiguousStatus \? `&status=in\.\(blocked,confirmed\)` : `&status=eq\.blocked`/.test(src),
    'safe only because one property cannot hold two overlapping Booking.com stays');
@@ -297,8 +323,11 @@ ok('re-issued blocks match by overlap instead of duplicating',
    /matchedByOverlap/.test(src) && /status=eq\.blocked/.test(src));
 ok('one bad event does not abandon the feed',
    /out\.errors\.push\(`\$\{evt\.check_in_date\}/.test(src));
+// Was `=== 1`, allowing for the unconditional is_active touch. That touch
+// was the bug that resurrected deleted bookings, so the no-op threshold is
+// now zero.
 ok('an unchanged booking is not rewritten',
-   /if \(Object\.keys\(updates\)\.length === 1\) \{ out\.skipped\+\+; continue; \}/.test(src));
+   /if \(Object\.keys\(updates\)\.length === 0\) \{ out\.skipped\+\+; continue; \}/.test(src));
 
 console.log('\n── Reachability and safety ──');
 // Comments stripped first: this file EXPLAINS that the browser relays
