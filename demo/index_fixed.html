@@ -9652,8 +9652,20 @@ function openBookingDetail(bookingId) {
       <div id="bd-edit-${b.id}" style="display:none;border-top:1px solid var(--border);margin-top:10px;padding-top:10px">
         <div class="form-grid" style="gap:8px">
           <div class="form-field span-full"><label>Property</label>
+            <!-- PROPS is keyed BY short key and holds the uuid; UUID_MAP
+                 goes the other way, uuid to short key. This list used to
+                 look the short key up in UUID_MAP, which is always
+                 undefined, so every option fell back to the short key
+                 itself and submitted it into a uuid column: "Could not
+                 save: invalid input syntax for type uuid". Editing a
+                 manual booking was impossible for anybody, on every
+                 property.
+                 No fallback now: a property with no uuid cannot be a valid
+                 target, so it is left out rather than offered and then
+                 rejected. -->
             <select id="bd-prop-${b.id}">
-              ${Object.keys(PROPS).map(k => `<option value="${escAttr(UUID_MAP[k] || k)}" ${String(UUID_MAP[k] || k) === String(b.property_id) ? 'selected' : ''}>${escHtml(PROPS[k].name)}</option>`).join('')}
+              ${Object.keys(PROPS).filter(k => PROPS[k].uuid).map(k =>
+                `<option value="${escAttr(PROPS[k].uuid)}" ${String(PROPS[k].uuid) === String(b.property_id) ? 'selected' : ''}>${escHtml(PROPS[k].name)}</option>`).join('')}
             </select>
           </div>
           <div class="form-field"><label>Check-in</label>
@@ -10958,6 +10970,14 @@ async function bdSaveStay(bookingId) {
   const say = (text, bad) => { msg.style.color = bad ? 'var(--red)' : 'var(--green2)'; msg.textContent = text; };
 
   const propId = document.getElementById('bd-prop-' + bookingId).value;
+  // property_id is a uuid column. Anything else is a bug upstream in the
+  // picker, and Postgres reports it as "invalid input syntax for type
+  // uuid" — accurate, and no use at all to somebody trying to move a
+  // booking. Caught here so the wrong value never reaches the database
+  // and the person is told something they can act on.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propId)) {
+    return say('That property is not set up properly — reload the page and try again.', true);
+  }
   const ci     = document.getElementById('bd-in-' + bookingId).value;
   const co     = document.getElementById('bd-out-' + bookingId).value;
   const guests = parseInt(document.getElementById('bd-guests-' + bookingId).value, 10) || 1;
