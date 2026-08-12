@@ -84,6 +84,63 @@ ok('platform bookings say why they cannot be edited here',
    /refreshed on every sync/.test(modal) &&
    /Change it on \$\{escHtml\(PLATFORM_LABELS/.test(modal));
 ok('a host cannot edit a booking at all', /isOwnEntry\(b\) && canManage/.test(modal));
+
+// ── THE FIELD EXISTED AND THE FEATURE DID NOT WORK ────────────────
+//
+// Everything above passed while editing a booking was impossible for
+// everybody, on every property:
+//
+//     Could not save: invalid input syntax for type uuid: "speranta"
+//
+// The picker built its option values from `UUID_MAP[k] || k`. UUID_MAP
+// goes uuid -> short key, so looking a SHORT KEY up in it is always
+// undefined, and every option quietly fell back to `|| k` — the short key
+// — which then went into a uuid column.
+//
+// Checking that an input exists says nothing about what it submits. So
+// this runs the real expression out of the file against properties shaped
+// the way loadProperties() builds them, and asserts the value is a uuid.
+console.log('\n── What the property picker actually submits ──');
+{
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  // Exactly as loadProperties() populates them: PROPS keyed by short key
+  // and carrying .uuid; UUID_MAP the reverse.
+  const PROPS = {
+    speranta: { name: 'Speranta Flat', uuid: 'e9737638-d83a-4947-940a-8746789e4d9f' },
+    tvhouse:  { name: 'TV House',      uuid: '83b2a84a-5451-4be5-a84f-2efc0d2602d5' },
+    broken:   { name: 'No uuid yet',   uuid: null },
+  };
+  const UUID_MAP = {};
+  Object.keys(PROPS).forEach(k => { if (PROPS[k].uuid) UUID_MAP[PROPS[k].uuid] = k; });
+
+  const line = (modal.match(/\$\{Object\.keys\(PROPS\)[\s\S]*?\.join\(''\)\}/) || [])[0];
+  ok('the option list is built from PROPS', !!line, 'could not find the picker expression');
+
+  if (line) {
+    const b = { id: 1, property_id: PROPS.speranta.uuid };
+    const escAttr = (s) => String(s);
+    const escHtml = (s) => String(s);
+    // Evaluate the real template expression from the shipped file.
+    const html = new Function('PROPS', 'UUID_MAP', 'b', 'escAttr', 'escHtml',
+      'return `' + line + '`;')(PROPS, UUID_MAP, b, escAttr, escHtml);
+
+    const values = [...html.matchAll(/value="([^"]*)"/g)].map(m => m[1]);
+    ok('every option submits a uuid, never a short key',
+       values.length > 0 && values.every(v => UUID_RE.test(v)),
+       'got: ' + JSON.stringify(values));
+    ok('a property with no uuid is left out rather than offered',
+       !values.includes('') && !html.includes('No uuid yet'));
+    ok('the booking\'s current property comes up selected',
+       /value="e9737638-d83a-4947-940a-8746789e4d9f" selected/.test(html));
+  }
+}
+
+// And the same value is checked again before it reaches the database, so
+// a future mistake in the picker is reported in words somebody can act on
+// rather than as a Postgres type error.
+ok('a non-uuid is refused before the update is sent',
+   /\^\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{12\}\$/.test(app) &&
+   /not set up properly/.test(app));
 ok('the summary stays visible while editing, to compare against',
    /it is the thing being compared against/.test(app));
 
