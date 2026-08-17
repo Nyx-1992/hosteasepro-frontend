@@ -232,6 +232,30 @@ ok('and drops the status filter only for those',
    /evt\.ambiguousStatus \? `&status=in\.\(blocked,confirmed\)` : `&status=eq\.blocked`/.test(src),
    'safe only because one property cannot hold two overlapping Booking.com stays');
 
+// ── TOUCHING IS NOT OVERLAPPING ───────────────────────────────────
+//
+// Owner: "I need to know if it's individual guests as we need cleaning in
+// between. I don't think two bookings come at once, so each feed should be
+// an individual booking."
+//
+// The overlap query used lte/gte, which are BOTH true when two stays merely
+// touch. One guest leaving on the 21st and the next arriving on the 21st
+// matched, so the second event overwrote the first row: two bookings became
+// one and the changeover clean between them disappeared — on a same-day
+// turnover, the one nobody can afford to miss.
+//
+// Simulated rather than read. With lte/gte, feeding two back-to-back stays
+// leaves a single row (2026-08-21 → 2026-08-28) and the first stay is gone
+// entirely. With lt/gt both survive, a repeat sync adds nothing, and a
+// genuinely re-issued period still merges instead of duplicating.
+console.log('\n── Back-to-back guests stay two bookings ──');
+ok('the overlap test excludes stays that merely touch',
+   /check_in_date=lt\.\$\{evt\.check_out_date\}&check_out_date=gt\.\$\{evt\.check_in_date\}/.test(src),
+   'lte/gte here merges a checkout into the next check-in');
+ok('and the reason is written down where the query is',
+   /TOUCHING IS NOT OVERLAPPING/.test(src) &&
+   /changeover clean between them disappeared/.test(src));
+
 // ══ BLOCKS, OWNERS, CANCELLATIONS ═════════════════════════════════
 console.log('\n── Everything that is not a paying guest ──');
 const one = (summary, platform = 'airbnb', extra = '') => parse.parseICalText(cal(ev(
