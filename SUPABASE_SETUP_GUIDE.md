@@ -216,3 +216,49 @@ Your property management system now has:
 ---
 
 *Need help? Check the browser console for detailed logs and error messages.*
+
+---
+
+## ⏸ Keeping hep-staging awake (free tier)
+
+**What happened.** Supabase emailed: *"Your project hep-staging is going to
+be paused"* — free-tier projects pause after 7 days without activity. By
+the time the email was read it had already paused.
+
+**Why staging matters.** Every migration goes to staging first and is
+proved there before production. That is how the empty-`months` CHECK, the
+rate-seasons hole and the weekend-vs-holiday rule were all caught before
+they reached real bookings. Testing straight on production instead is the
+expensive way to find those.
+
+**Restoring.** Supabase dashboard → the project → **Restore**. Free, takes
+a few minutes. Only possible **within 90 days** of pausing; after that the
+project is gone for good.
+
+### The fix that costs nothing
+
+A daily read keeps it awake. Use cron-job.org — already set up for the
+HEP cron, free, and needs no code, no deploy and no extra Vercel function
+(the account is at Vercel's 12-function limit).
+
+Add a job:
+
+| Field    | Value                                                                                          |
+|----------|------------------------------------------------------------------------------------------------|
+| URL      | `https://rwsfbgtvqbkunbfvviiz.supabase.co/rest/v1/public_holidays?select=country_code&limit=1`  |
+| Schedule | Once a day, any time                                                                            |
+| Method   | GET                                                                                             |
+| Header   | `apikey` = `sb_publishable_ze-KmzAYuc3JRq2RKVhx5w_Pgb1lc46`                                     |
+
+That key is the **publishable** key. It is meant to be public — it is in
+the page source of every staff portal — and `public_holidays` is a global
+table of calendar dates with no agency data in it. Nothing sensitive is
+exposed by this job, and nothing it can reach is writable.
+
+### While you are in there: `old-host-ease-pro`
+
+There is a third project, `old-host-ease-pro`, paused since **October
+2025** — well past the 90-day window, so it cannot be restored and is not
+coming back. It is dead weight in the dashboard. Deleting it is safe as
+far as HEP is concerned; nothing points at it. Left alone here because
+deleting somebody's database is their call, not a script's.

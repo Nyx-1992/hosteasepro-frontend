@@ -377,13 +377,32 @@ export async function importFeed(key, feed, { ownerNames = [], dry = false } = {
       // here and nowhere else: one property cannot hold two overlapping
       // Booking.com reservations, so an overlapping row on the same
       // property and platform IS this period, re-issued.
+      //
+      // ══ TOUCHING IS NOT OVERLAPPING ═════════════════════════════
+      //
+      // Owner: "I need to know if it's individual guests as we need
+      // cleaning in between. I don't think two bookings come at once, so
+      // each feed should be an individual booking."
+      //
+      // This read `check_in_date=lte.<evt end>` and
+      // `check_out_date=gte.<evt start>`, which are true when two stays
+      // merely TOUCH. One guest leaving on the 21st and the next arriving
+      // on the 21st satisfied both, so the second event matched the first
+      // row and overwrote it — two bookings collapsed into one, and the
+      // changeover clean between them disappeared. On a same-day turnover,
+      // which is the one nobody can afford to miss.
+      //
+      // Strict inequalities instead: a stay that ends exactly where the
+      // next begins shares no night with it, and is a different booking.
+      // A re-issued period still overlaps properly and still matches, so
+      // the duplicate guard is unaffected.
       let matchedByOverlap = false;
       if (!existing && (evt.status === 'blocked' || evt.ambiguousStatus)) {
         const byOverlap = await q(key,
           `bookings?property_id=eq.${feed.property_id}&platform=eq.${enc(feed.platform)}` +
           (evt.ambiguousStatus ? `&status=in.(blocked,confirmed)` : `&status=eq.blocked`) +
           `&is_active=eq.true` +
-          `&check_in_date=lte.${evt.check_out_date}&check_out_date=gte.${evt.check_in_date}` +
+          `&check_in_date=lt.${evt.check_out_date}&check_out_date=gt.${evt.check_in_date}` +
           `&select=id,status,guest_name,number_of_guests,source_uid,is_active&limit=1`);
         if (byOverlap.length) { existing = byOverlap[0]; matchedByOverlap = true; }
       }
