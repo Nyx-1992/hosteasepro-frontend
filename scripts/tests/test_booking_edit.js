@@ -141,6 +141,66 @@ console.log('\n── What the property picker actually submits ──');
 ok('a non-uuid is refused before the update is sent',
    /\^\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{12\}\$/.test(app) &&
    /not set up properly/.test(app));
+
+// ── SENT AS A UUID, KEPT AS A SHORT KEY ───────────────────────────
+//
+// Fixing the picker created a second bug. The database stores property_id
+// as a uuid, but in memory every booking carries the SHORT KEY, normalised
+// through UUID_MAP on load. Assigning the update straight onto the row put
+// a uuid back, so one booking spoke a different language from all the
+// others: the lane view filters `b.property_id === pid` against PROPS
+// keys, and an edited booking matched no property and disappeared from the
+// list — while the calendar, which resolves it differently, still showed
+// it. Reported as "I updated my booking and now it seems gone? It shows in
+// the calendar."
+console.log('\n── After saving, the row still speaks the app\'s language ──');
+ok('the in-memory booking keeps the short key, not the uuid',
+   /Object\.assign\(b, updates, \{ property_id: UUID_MAP\[propId\] \|\| propId \}\)/.test(app));
+ok('and the uuid is still what gets sent to the database',
+   /property_id: propId,/.test(app));
+
+// ══ OWNER STAYS ═══════════════════════════════════════════════════
+//
+// Owner: "How do I change it to an owner stay? It shows as direct/manual
+// for now."
+console.log('\n── Marking a stay as the owner\'s ──');
+ok('there is a button to say so', /bdToggleOwnerStay\('\$\{b\.id\}'\)/.test(app));
+ok('it toggles both ways', /\$\{b\.status === 'owner' \? '↩️ Not an owner stay' : '🏡 Mark as owner stay'\}/.test(app));
+ok('it writes a status rather than a name',
+   /const next = makeOwner \? 'owner' : 'confirmed';/.test(app) &&
+   /db\.from\('bookings'\)\.update\(\{ status: next \}\)/.test(app));
+// A platform booking's status is refreshed from its feed, so setting it
+// here would be undone within the hour.
+ok('only bookings we own can be marked',
+   /if \(!isOwnEntry\(b\)\) \{ toast\('Only bookings you entered can be marked as an owner stay'/.test(app));
+
+// ── THE NAME-MATCHING TRAP, WHICH LOOKED LIKE THE FIX ─────────────
+//
+// isOwnerStay hardcoded S&N's family names, which is the multi-tenant
+// fault this codebase keeps having to correct. The obvious repair was to
+// read org_settings.owner_stay_names, as the iCal importer does.
+//
+// Checked against the real data first: S&N's list is
+// ["mirka","antonin","nicole","silja"], which matches Nicole van Aswegen
+// (Booking.com), Nicole Phiri (Airbnb) and Nicole Babczyk. Two paying
+// guests erased from income and occupancy, and the owner's own booking
+// hidden again — the very thing being fixed.
+//
+// A per-agency list only makes a bad guess configurable. The app has an
+// explicit status; it should use it.
+{
+  const fn = app.slice(app.indexOf('function isOwnerStay(b)'),
+                       app.indexOf('function isOwnerStay(b)') + 260);
+  ok('no person\'s name decides whether a stay is the owner\'s',
+     !/mirka|antonin|silja|nicole/i.test(fn), fn.replace(/\s+/g, ' ').slice(0, 140));
+  ok('an explicit status does', /b\.status === 'owner'/.test(fn));
+  // "Owner" is a label, not a name — it keeps every existing owner stay
+  // classified exactly as before, which is why no data migration was needed.
+  ok('and the literal word "owner" still counts', /includes\('owner'\)/.test(fn));
+  ok('the app deliberately does not read owner_stay_names',
+     /deliberately NOT read here/.test(app) &&
+     !/OWNER_STAY_NAMES/.test(app));
+}
 ok('the summary stays visible while editing, to compare against',
    /it is the thing being compared against/.test(app));
 
