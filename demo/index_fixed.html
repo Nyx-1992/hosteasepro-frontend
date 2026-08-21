@@ -4696,7 +4696,37 @@ function emptyState(icon, text, actionHtml) {
 function skeletonRows(n=3) {
   return `<div style="padding:6px 0">${Array.from({length:n}).map(()=>'<div class="skeleton-row"></div>').join('')}</div>`;
 }
-function isOwnerStay(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return b.status==='owner'||n.includes('owner')||n.includes('mirka')||n.includes('nicole & silja')||n.includes('antonin'); }
+// Is this the owner staying in their own place, rather than a let?
+//
+// WHY THERE IS NO LONGER A LIST OF PEOPLE'S NAMES HERE. It used to read:
+//
+//   n.includes('mirka') || n.includes('nicole & silja') || n.includes('antonin')
+//
+// S&N's own family, hardcoded into code every agency runs — so another
+// agency's guest called Mirka would have been quietly reclassified as an
+// owner stay and dropped out of their occupancy and income.
+//
+// THE OBVIOUS FIX WAS THE WRONG ONE. org_settings.owner_stay_names exists
+// for exactly this and the iCal importer reads it, so moving the browser
+// onto it looked like finishing the job. S&N's list is
+// ["mirka","antonin","nicole","silja"] — and checked against the real
+// data, that matches Nicole van Aswegen (Booking.com), Nicole Phiri
+// (Airbnb) and Nicole Babczyk. Two of those are paying guests whose
+// revenue would have silently vanished, and the third is the owner's own
+// booking, which she had just reported as MISSING from the list.
+//
+// The hardcoding was never the real fault. Guessing from a person's name
+// is, and a per-agency list only makes the guess configurable.
+//
+// So: an owner stay is one that SAYS it is. 'owner' as a status, set
+// deliberately by the button on the booking, or the literal word "owner"
+// in the name — which is a label, not a name, and no guest is called it.
+// Checked against every affected row: this changes nothing about how any
+// existing booking is classified.
+function isOwnerStay(b) {
+  if (b.status === 'owner') return true;
+  return (b.guest_name || b.notes || '').toLowerCase().includes('owner');
+}
 function isCaretaker(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return n.includes('caretaker')||n.includes('tino'); }
 function getCleanerRate(cleaner, propId) {
   const c = getDomesticStaff().find(x=>x.name===cleaner);
@@ -6814,6 +6844,13 @@ async function loadOrgSettings(quiet) {
     if (!data || !data.length) { if (!quiet) toast('org_settings: table returned 0 rows','error'); return; }
     if (!quiet) toast('org_settings loaded: '+data[0].business_name,'success');
     const s = data[0];
+
+    // NOTE: org_settings.owner_stay_names is deliberately NOT read here.
+    // It exists for the iCal importer, which has only a calendar SUMMARY
+    // to go on and no status to read. In the app a booking carries an
+    // explicit status, so matching on a person's name adds nothing and
+    // costs a great deal — see isOwnerStay() for the two paying guests it
+    // would have erased.
 
     // The app's identity follows the org. Anything the org has not set
     // stays on the neutral default rather than borrowing another
@@ -9630,8 +9667,15 @@ function openBookingDetail(bookingId) {
         <div><strong style="color:var(--ink)">🛫</strong> ${fmtDate(b.check_out)}</div>
         <div><strong style="color:var(--ink)">🌙</strong> ${nights} nights</div>
         ${b.revenue&&canManage?`<div><strong style="color:var(--green)">💰</strong> R${Number(b.revenue).toLocaleString()}</div>`:''}
-        ${isOwnEntry(b) && canManage ? `<div style="grid-column:1/-1;margin-top:2px">
+        ${isOwnEntry(b) && canManage ? `<div style="grid-column:1/-1;margin-top:2px;display:flex;gap:6px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="bdEdit('${b.id}')">✏️ Edit stay</button>
+          <!-- Owner: "How do I change it to an owner stay? It shows as
+               direct/manual for now." There was no way to say so — the
+               app guessed, from a hardcoded list of S&N's family names.
+               Now it is a decision recorded on the booking. -->
+          <button class="btn btn-ghost btn-sm" onclick="bdToggleOwnerStay('${b.id}')">
+            ${b.status === 'owner' ? '↩️ Not an owner stay' : '🏡 Mark as owner stay'}
+          </button>
         </div>` : ''}
       </div>
 
@@ -10963,6 +11007,39 @@ function bdEdit(bookingId, cancel) {
   if (msg) msg.textContent = '';
 }
 
+// Mark a stay as the owner's, or put it back.
+//
+// WHAT THIS CHANGES, and it is worth knowing before pressing it. An owner
+// stay is not a guest: it is left out of occupancy and income, and out of
+// the lane view, because counting the owner's own week as a let would
+// overstate both. It still holds the dates, so nobody books over it, and
+// it still needs a clean afterwards.
+//
+// Only ever applied to bookings we own. A platform booking's status is
+// refreshed from its feed on the next sync, so setting it here would be
+// undone within the hour — the same trap the edit form warns about.
+async function bdToggleOwnerStay(bookingId) {
+  const b = bookings.find(x => String(x.id) === String(bookingId));
+  if (!b) return;
+  if (!isOwnEntry(b)) { toast('Only bookings you entered can be marked as an owner stay', 'error'); return; }
+
+  const makeOwner = b.status !== 'owner';
+  // Back to 'confirmed' rather than to whatever it was before: a manual
+  // booking that is not an owner stay is a confirmed one, and guessing at
+  // a previous value nobody recorded would be worse than saying so.
+  const next = makeOwner ? 'owner' : 'confirmed';
+
+  if (db) {
+    const { error } = await db.from('bookings').update({ status: next }).eq('id', bookingId);
+    if (error) { toast('Could not save: ' + error.message, 'error'); return; }
+  }
+  b.status = next;
+  toast(makeOwner ? 'Marked as an owner stay ✓' : 'Back to a normal booking ✓', 'success');
+  closeModal('day-modal');
+  renderCalendar(); renderBookings(); renderDashboard();
+  if (typeof renderLaneView === 'function') renderLaneView();
+}
+
 async function bdSaveStay(bookingId) {
   const b = bookings.find(x => String(x.id) === String(bookingId));
   const msg = document.getElementById('bd-msg-' + bookingId);
@@ -11021,7 +11098,20 @@ async function bdSaveStay(bookingId) {
   const { error } = await db.from('bookings').update(updates).eq('id', bookingId);
   if (error) return say('Could not save: ' + error.message, true);
 
-  Object.assign(b, updates);
+  // ── AND BACK INTO THE SHAPE THE REST OF THE APP USES ───────────
+  //
+  // The database stores property_id as a uuid; in memory every booking
+  // carries the SHORT KEY instead, normalised through UUID_MAP when it
+  // loads. Assigning `updates` straight onto the row put the uuid back
+  // and left this one booking speaking a different language from all the
+  // others: the lane view filters `b.property_id === pid` against
+  // PROPS keys, so an edited booking matched no property and vanished
+  // from the list — while the calendar, which looks it up differently,
+  // still showed it. Reported as "I updated my booking and now it seems
+  // gone? It shows in the calendar."
+  //
+  // Sent as a uuid, kept as a short key. Same value, two audiences.
+  Object.assign(b, updates, { property_id: UUID_MAP[propId] || propId });
   b.display_name = b.guest_name || (b.platform || 'Manual') + ' Guest';
   toast('Booking updated ✓', 'success');
   closeModal('day-modal');
