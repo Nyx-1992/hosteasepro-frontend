@@ -4774,6 +4774,26 @@ function isOwnerStay(b) {
   if (b.status === 'owner') return true;
   return (b.guest_name || b.notes || '').toLowerCase().includes('owner');
 }
+
+// Owner names FOR THE iCAL IMPORTER, from org_settings.owner_stay_names.
+//
+// WHY THE IMPORTER MAY MATCH NAMES AND isOwnerStay() ABOVE MAY NOT. The
+// importer is reading a calendar SUMMARY — a line of text and nothing
+// else. There is no status to consult, so a name is the only signal it
+// has, and the server importer uses the same column for the same reason.
+//
+// Once a booking exists it carries an explicit status, and guessing from
+// a name stops being the only option and starts being a hazard: matching
+// "nicole" against stored bookings would have swallowed two real paying
+// guests. Same column, opposite conclusions, because the two are answering
+// the question at different moments.
+//
+// WORTH KNOWING: S&N's list is ["mirka","antonin","nicole","silja"] —
+// first names that real guests also have. A LekkeSlaap booking is the one
+// feed carrying a guest's name in the summary, so a LekkeSlaap guest
+// called Nicole would import as an owner stay. Narrowing those two to full
+// names would fix it, and that is a setting to change rather than code.
+let IMPORT_OWNER_NAMES = [];
 function isCaretaker(b) { const n=(b.guest_name||b.notes||'').toLowerCase(); return n.includes('caretaker')||n.includes('tino'); }
 function getCleanerRate(cleaner, propId) {
   const c = getDomesticStaff().find(x=>x.name===cleaner);
@@ -6041,19 +6061,51 @@ function parseICalText(text, feed) {
     const parsedRef          = lsFields.externalRef  || null;
 
     // ── Classify the event ──────────────────────────────────────
+    //
+    // ══ THIS MUST AGREE WITH api/_lib/icalImport.js ═════════════
+    //
+    // There are two importers. This one runs in the browser whenever an
+    // admin has HEP open; the other runs on the server for the daily cron
+    // and for Nina's "Sync bookings" button. They write to the same table,
+    // and when they disagree the last one to run wins.
+    //
+    // They HAD drifted, and it cost a working day. The server was taught
+    // that Booking.com's "CLOSED - Not available" is how a real
+    // reservation looks; this copy still called it a block. So a booking
+    // that arrived at 13:15 for that same afternoon was filed as a closure
+    // and never reached Nina's list — "New booking in and not showing yet
+    // for Nina, it's for today."
+    //
+    // scripts/tests/test_ical_import.js now fails if the two stop matching.
+    // Better still would be one implementation; that means retiring this
+    // one in favour of the server endpoint, which is a bigger change than
+    // a bug fix should carry.
+    //
+    // OWNER NAMES COME FROM THE ORG. This used to name S&N's family in
+    // code every agency runs — and worse than the copy in isOwnerStay(),
+    // because this one WRITES what it decides. 'nicole' matched, so a
+    // LekkeSlaap guest called Nicole would have been imported as "Owner
+    // Stay — Nicole & Silja" and dropped out of income and occupancy.
     const isOwnerStayEvent =
-      sumLower.includes('mirka') ||
-      sumLower.includes('antonin') ||
-      sumLower.includes('nicole') ||
-      sumLower.includes('silja') ||
       sumLower.includes('owner') ||
-      desc.includes('owner');
+      desc.includes('owner') ||
+      IMPORT_OWNER_NAMES.some(n => n && sumLower.includes(String(n).toLowerCase()));
 
-   // MANUAL BLOCK: platform placeholder text (not a real guest)
-    // Note: Booking.com anonymises genuine reservations as bare "Reserved" (no guest name) —
-    // that's a real booking, not a block. Only Airbnb uses "Reserved" as a block placeholder.
+    // Airbnb separates reservations from blocks properly: a reservation
+    // carries "Reservation URL: …/HM…" in the description, a block says
+    // "Airbnb (Not available)" with nothing in it. The old rule here —
+    // airbnb + "reserved" means a block — was exactly backwards and could
+    // only ever fire on a genuine booking.
+    const hasReservationUrl = /airbnb\.com\/hosting\/reservations/i.test(rawDesc);
+
+    // Booking.com sends the identical string for a reservation and for a
+    // closure, so this is a choice: show the arrival. A stay longer than a
+    // month is not a stay, though — that is a closed house.
+    const bookingComClosed =
+      feed.platform === 'booking' && sumLower.includes('closed') && nights <= 31;
+
     const isManualBlock =
-      !isOwnerStayEvent && (
+      !isOwnerStayEvent && !hasReservationUrl && !bookingComClosed && (
         sumTrim === '-' ||
         sumTrim === '' ||
         sumLower === 'not available' ||
@@ -6061,7 +6113,6 @@ function parseICalText(text, feed) {
         sumLower.includes('closed') ||
         sumLower.includes('airbnb (not available)') ||
         sumLower.includes('booking.com (not available)') ||
-        (feed.platform === 'airbnb' && sumLower.includes('reserved')) ||
         sumLower.includes('unavailable') ||
         sumLower === 'blocked'
       );
@@ -6076,11 +6127,10 @@ function parseICalText(text, feed) {
       guestName = parsedCustomerName || sumTrim || 'Cancelled';
     } else if (isOwnerStayEvent) {
       status    = 'owner';
-      guestName = 'Owner Stay — ' + (
-        sumLower.includes('mirka') || sumLower.includes('antonin') ? 'Mirka & Antonin' :
-        sumLower.includes('nicole') || sumLower.includes('silja')  ? 'Nicole & Silja'  :
-        summary
-      );
+      // The summary itself, not a guess at which pair of owners it is —
+      // that mapping named S&N's two couples and would have relabelled
+      // another agency's owner as somebody else entirely.
+      guestName = 'Owner Stay — ' + (sumTrim || 'owner');
     } else if (isManualBlock) {
       status    = 'blocked';
       guestName = '🔒 Blocked';
@@ -6892,12 +6942,8 @@ async function loadOrgSettings(quiet) {
     if (!quiet) toast('org_settings loaded: '+data[0].business_name,'success');
     const s = data[0];
 
-    // NOTE: org_settings.owner_stay_names is deliberately NOT read here.
-    // It exists for the iCal importer, which has only a calendar SUMMARY
-    // to go on and no status to read. In the app a booking carries an
-    // explicit status, so matching on a person's name adds nothing and
-    // costs a great deal — see isOwnerStay() for the two paying guests it
-    // would have erased.
+    // Owner names, for THE IMPORTER ONLY — see IMPORT_OWNER_NAMES.
+    IMPORT_OWNER_NAMES = Array.isArray(s.owner_stay_names) ? s.owner_stay_names : [];
 
     // The app's identity follows the org. Anything the org has not set
     // stays on the neutral default rather than borrowing another
