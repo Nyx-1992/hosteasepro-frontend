@@ -208,10 +208,57 @@ ok('the form explains the collision rule',
 ok('the preview names the rule that actually applied',
    /function premiumLabel\(n\)/.test(app) &&
    /n\.premium_kind === 'weekend'/.test(app));
+
+// ── THE NIGHT CALCULATOR IS A TABLE ───────────────────────────────
+//
+// Owner: "make sure it reflects in a nice table with the night calculator."
+//
+// It was a stack of flex rows, which reads as a receipt — fine for "what
+// is the total", useless for "why is that Friday dearer than that
+// Thursday". Rates get checked by scanning DOWN a column, so the night,
+// what was applied, and the resulting figure each get one.
+//
+// Rendered with a real quote out of production (24-27 Sep on Speranta:
+// Heritage Day on a Thursday, then an ordinary Fri/Sat/Sun) and looked at,
+// which is how the stray leading separator in the middle column was found
+// — it belonged to the old inline layout and hung off the cell edge in a
+// table.
+console.log('\n── The night calculator ──');
+{
+  const tbl = app.slice(app.indexOf('const money = (v)'), app.indexOf('Check-out day is not charged'));
+  ok('it renders a real table, not a stack of rows',
+     /<table style=/.test(tbl) && /<thead>/.test(tbl) && /<tbody>/.test(tbl) && /<tfoot>/.test(tbl));
+  ok('the columns are the three questions being asked',
+     /Night<\/th>/.test(tbl) && /Rate applied<\/th>/.test(tbl) && /Charged<\/th>/.test(tbl));
+  ok('the figures line up for comparison by eye',
+     /font-variant-numeric:tabular-nums;text-align:right/.test(tbl));
+  // The base is shown only where a premium was added — a column repeating
+  // the same number on every ordinary night hides the ones that differ.
+  ok('the arithmetic is shown where something was added',
+     /\$\{money\(n\.base\)\} \+ \$\{pct\}%/.test(tbl) && /pct && n\.rate != null/.test(tbl));
+  ok('weekend nights are tinted so they read as a group',
+     /n\.weekend \? ' style="background:#fbfaff"' : ''/.test(tbl));
+  ok('an ordinary night says Standard rather than sitting blank',
+     /'<span style="color:var\(--muted\)">Standard<\/span>'/.test(tbl));
+  ok('the totals row counts weekend and holiday nights',
+     /q\.weekend_nights\} weekend/.test(tbl) && /q\.holiday_nights\} public holiday/.test(tbl));
+  // She reads this on a phone.
+  ok('it scrolls sideways rather than squeezing on a narrow screen',
+     /overflow-x:auto/.test(tbl));
+  ok('a night with no rate is still called out in red',
+     /n\.rate == null \? 'no rate set'/.test(tbl) && /color:var\(--red\)/.test(tbl));
+}
+// The separator that only made sense inline.
+ok('the reason column has no leading separator',
+   !/<span style="color:var\(--accent2\);font-weight:600"> · /.test(app) &&
+   /No leading separator any more/.test(app));
+// Both of these described the old inline layout and were rewritten with
+// it, not relaxed: the behaviour they pin still matters, the markup
+// carrying it moved into a table cell and a table footer.
 ok('a holiday that lost is still named, without a percentage',
-   /if \(!pct\) \{[\s\S]{0,120}hol \? `<span style="color:var\(--muted\)"> · \$\{hol\}<\/span>`/.test(app));
-ok('the total line counts weekend nights',
-   /q\.weekend_nights \? ` · \$\{q\.weekend_nights\} weekend`/.test(app));
+   /if \(!pct\) \{[\s\S]{0,140}hol \? `<span style="color:var\(--muted\)">\$\{hol\}<\/span>`/.test(app));
+ok('the totals row counts weekend nights',
+   /\$\{q\.weekend_nights \? `<span[^`]*> · \$\{q\.weekend_nights\} weekend<\/span>` : ''\}/.test(app));
 
 console.log('');
 if (fail.length) {

@@ -3163,22 +3163,64 @@ async function previewStayQuote(propertyId) {
   // quote missing three nights' price is a broken quote, not a cheap one,
   // and the total below would otherwise look like a real number.
   const unpriced = q.unpriced_nights || 0;
+  // A REAL TABLE, because the question being asked of it is arithmetic.
+  //
+  // This was a stack of flex rows, which reads as a receipt: fine for "what
+  // is the total", useless for "why is that Friday more than that
+  // Thursday". Rates are checked by scanning DOWN a column and comparing —
+  // so the base rate, what was added and why, and the resulting rate each
+  // get their own column, aligned, and the numbers are tabular-lined so
+  // they compare by eye without being read.
+  //
+  // Three columns, not four: this is used on a phone. The season name sits
+  // under the date rather than taking a column of its own, and the whole
+  // table can scroll sideways rather than squeezing.
+  const money = (v) => 'R' + Number(v).toLocaleString('en-ZA', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  const cell  = 'padding:6px 9px;border-bottom:1px solid var(--border)';
+  const num   = 'font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap';
+
   out.innerHTML = `
-    <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden">
-      ${nights.map(n => `
-        <div style="display:flex;justify-content:space-between;gap:10px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:.8rem">
-          <span>${escHtml(fmtNightLabel(n.night))}
-            ${n.season ? `<span style="color:var(--muted)"> · ${escHtml(n.season)}</span>` : ''}
-            ${premiumLabel(n)}
-          </span>
-          <span style="font-variant-numeric:tabular-nums;${n.rate==null?'color:var(--red)':''}">
-            ${n.rate==null ? 'no rate set' : 'R'+Number(n.rate).toLocaleString('en-ZA',{minimumFractionDigits:0,maximumFractionDigits:2})}
-          </span>
-        </div>`).join('')}
-      <div style="display:flex;justify-content:space-between;gap:10px;padding:8px 10px;font-weight:700;background:var(--warm)">
-        <span>${q.nights} night${q.nights===1?'':'s'}${q.holiday_nights ? ` · ${q.holiday_nights} public holiday` : ''}${q.weekend_nights ? ` · ${q.weekend_nights} weekend` : ''}</span>
-        <span style="font-variant-numeric:tabular-nums">${q.total==null ? '—' : 'R'+Number(q.total).toLocaleString('en-ZA',{minimumFractionDigits:0,maximumFractionDigits:2})}</span>
-      </div>
+    <div style="overflow-x:auto;border:1px solid var(--border);border-radius:8px">
+      <table style="width:100%;border-collapse:collapse;font-size:.78rem">
+        <thead>
+          <tr style="background:var(--warm);text-align:left">
+            <th style="${cell};font-weight:700">Night</th>
+            <th style="${cell};font-weight:700">Rate applied</th>
+            <th style="${cell};${num};font-weight:700">Charged</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${nights.map(n => {
+            const pct = Number(n.premium_pct || 0);
+            // The base is worth showing only where something was added to
+            // it — on an ordinary night it is the same number twice, and a
+            // column of repeated figures hides the ones that differ.
+            const base = pct && n.rate != null
+              ? `<div style="color:var(--muted);font-size:.72rem">${money(n.base)} + ${pct}%</div>` : '';
+            return `
+            <tr${n.weekend ? ' style="background:#fbfaff"' : ''}>
+              <td style="${cell}">
+                ${escHtml(fmtNightLabel(n.night))}
+                ${n.season ? `<div style="color:var(--muted);font-size:.72rem">${escHtml(n.season)}</div>` : ''}
+              </td>
+              <td style="${cell}">${premiumLabel(n) || '<span style="color:var(--muted)">Standard</span>'}${base}</td>
+              <td style="${cell};${num};${n.rate == null ? 'color:var(--red)' : ''}">
+                ${n.rate == null ? 'no rate set' : money(n.rate)}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+        <tfoot>
+          <tr style="background:var(--warm);font-weight:700">
+            <td style="${cell};border-bottom:none" colspan="2">
+              ${q.nights} night${q.nights === 1 ? '' : 's'}
+              ${q.weekend_nights ? `<span style="font-weight:400;color:var(--muted)"> · ${q.weekend_nights} weekend</span>` : ''}
+              ${q.holiday_nights ? `<span style="font-weight:400;color:var(--muted)"> · ${q.holiday_nights} public holiday</span>` : ''}
+            </td>
+            <td style="${cell};${num};border-bottom:none">${q.total == null ? '—' : money(q.total)}</td>
+          </tr>
+        </tfoot>
+      </table>
     </div>
     ${unpriced ? `<div style="margin-top:6px;font-size:.76rem;color:var(--red)">
       ${unpriced} night${unpriced===1?'':'s'} have no rate, so this total is incomplete — set a nightly rate above, or a season covering ${unpriced===1?'that month':'those months'}.
@@ -3200,16 +3242,21 @@ async function previewStayQuote(propertyId) {
 //
 // A holiday that lost still gets named, without a percentage, because the
 // fact that it is Christmas is worth seeing either way.
+//
+// No leading separator any more: this used to sit inline after the date
+// and needed a ' · ' in front of it. It now has a column of its own, where
+// that dot just hangs off the left edge of the cell. Spotted by rendering
+// the table and looking at it, not by reading the markup.
 function premiumLabel(n) {
   const pct = Number(n.premium_pct || 0);
   const hol = n.holiday ? escHtml(n.holiday) : '';
   if (!pct) {
-    return hol ? `<span style="color:var(--muted)"> · ${hol}</span>` : '';
+    return hol ? `<span style="color:var(--muted)">${hol}</span>` : '';
   }
   const why = n.premium_kind === 'weekend'
     ? (hol ? `${hol} · Weekend` : 'Weekend')
     : (hol || 'Premium');
-  return `<span style="color:var(--accent2);font-weight:600"> · ${why} +${pct}%</span>`;
+  return `<span style="color:var(--accent2);font-weight:600">${why} +${pct}%</span>`;
 }
 
 // "Fri 3 Apr" — a date somebody can match against a calendar without

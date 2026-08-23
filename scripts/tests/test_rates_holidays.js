@@ -387,8 +387,12 @@ ok('it does not recompute the premium in JavaScript',
    !/premium_pct\s*\/\s*100/.test(prev) && !/\*\s*\(1\s*\+/.test(prev));
 ok('each night shows the season and the holiday that moved it',
    /n\.season/.test(prev) && /n\.holiday/.test(prev) && /premium_pct/.test(prev));
+// Whitespace-tolerant: the preview became a table, so this moved from
+// `n.rate==null` to `n.rate == null`. The behaviour it pins — an unpriced
+// night saying so rather than rendering as free — is unchanged, and a test
+// that fails on a space is a test that gets loosened for the wrong reason.
 ok('a night with no rate says so instead of showing R0',
-   /n\.rate==null \? 'no rate set'/.test(prev));
+   /n\.rate\s*==\s*null\s*\?\s*'no rate set'/.test(prev));
 ok('an incomplete total is called out, not quietly summed',
    /unpriced/.test(prev) && /this total is incomplete/.test(prev));
 // The limit belongs on the screen, not only in the migration header —
