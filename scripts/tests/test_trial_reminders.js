@@ -183,6 +183,56 @@ ok('looking at it does not send anything',
    drawBody.length > 200 && !/fetch\(|trial-reminders/.test(drawBody));
 ok('it explains that extending re-arms the sequence', /re-arms the whole sequence/.test(app));
 
+// ══ KEEPING STAGING AWAKE ═════════════════════════════════════════
+//
+// Owner, on the second warning email: "Why is this still happening? Must I
+// do the cron job?" No. Supabase pauses a free project after 7 days idle,
+// and losing staging past 90 days is permanent. This job already runs
+// daily, so it reads one row from staging on the way past — no new Vercel
+// function, which matters at the twelve-function limit, and nothing for
+// her to remember.
+console.log('\n── The staging keep-alive ──');
+ok('the daily job pings staging', /results\.staging_keepalive/.test(cron));
+ok('it rides on a job that already runs daily, adding no new function',
+   vercel.crons.some(c => c.path === '/api/cron/trial-reminders') &&
+   fs.readdirSync(path.join(ROOT, 'api', 'cron')).filter(f => f.endsWith('.js')).length === 2);
+// A keep-alive nobody checks is worse than none: it can fail for six weeks
+// and only be discovered once the project has gone.
+ok('a failure is reported rather than swallowed',
+   /staging_keepalive = ping\.ok \? 'ok' : \('http ' \+ ping\.status\)/.test(cron) &&
+   /staging_keepalive = 'failed: '/.test(cron));
+// ── Comments stripped before any of this is matched ──────────────
+//
+// The block below is checked for the ABSENCE of words like "bookings",
+// and the commentary above it happens to say "before they touched real
+// bookings". Matching raw text makes the explanation fail the check it
+// explains. That has now happened four times in this codebase, so it gets
+// the same helper every other test here uses. Blanked, not removed, so
+// offsets still line up.
+const codeOnly = (src) => src
+  .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+  .replace(/(^|[^:'"\\])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
+const cronCode = codeOnly(cron);
+const keepAlive = cronCode.slice(cronCode.indexOf('const stagingUrl'));
+
+ok('it cannot take the whole job down with it',
+   /try \{[\s\S]*?staging_keepalive[\s\S]*?\} catch \(e\) \{[\s\S]{0,160}staging_keepalive = 'failed/
+     .test(cronCode.slice(cronCode.lastIndexOf('try {'))));
+ok('there is a timeout, so a hung request does not stall the run',
+   /AbortSignal\.timeout\(10000\)[\s\S]{0,200}\}\);\s*\n\s*\/\/ Reported either way/.test(cron) ||
+   /signal: AbortSignal\.timeout\(10000\)/.test(cron));
+ok('both the url and the key can be overridden by environment',
+   /process\.env\.STAGING_KEEPALIVE_URL \|\|/.test(cron) &&
+   /process\.env\.STAGING_KEEPALIVE_KEY \|\|/.test(cron));
+// The one thing a ping cannot do, said out loud so nobody assumes it can.
+ok('it says a ping cannot revive an already-paused project',
+   /cannot REVIVE a paused project/.test(cron));
+// It reads a global table of calendar dates with the public key — not
+// tenant data, and nothing writable.
+ok('it reads public_holidays, not anybody\'s bookings',
+   /public_holidays\?select=country_code&limit=1/.test(keepAlive) &&
+   !/bookings|guest_|domestics/.test(keepAlive));
+
 // ── Result ────────────────────────────────────────────────────────
 console.log('');
 if (fail.length) {
