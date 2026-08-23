@@ -235,25 +235,27 @@ expensive way to find those.
 a few minutes. Only possible **within 90 days** of pausing; after that the
 project is gone for good.
 
-### The fix that costs nothing
+### The fix — already done, nothing for you to do
 
-A daily read keeps it awake. Use cron-job.org — already set up for the
-HEP cron, free, and needs no code, no deploy and no extra Vercel function
-(the account is at Vercel's 12-function limit).
+`api/cron/trial-reminders.js` already runs every day at 07:00 UTC for the
+trial reminders. It now also reads one row from staging on the way past.
+That is enough activity to stop the 7-day clock.
 
-Add a job:
+No new Vercel function (the account is at the twelve-function limit), no
+env vars to set, no cron-job.org entry to remember. The daily run reports
+`staging_keepalive: "ok"` in its JSON response, so a keep-alive that has
+quietly been failing is visible rather than discovered when the project has
+already gone.
 
-| Field    | Value                                                                                          |
-|----------|------------------------------------------------------------------------------------------------|
-| URL      | `https://rwsfbgtvqbkunbfvviiz.supabase.co/rest/v1/public_holidays?select=country_code&limit=1`  |
-| Schedule | Once a day, any time                                                                            |
-| Method   | GET                                                                                             |
-| Header   | `apikey` = `sb_publishable_ze-KmzAYuc3JRq2RKVhx5w_Pgb1lc46`                                     |
+The URL and key sit in that file rather than in environment variables, and
+both are overridable with `STAGING_KEEPALIVE_URL` / `STAGING_KEEPALIVE_KEY`.
+They are safe to commit: it is HostEase Pro's own staging project rather
+than any tenant's data, the key is the public anon key that RLS guards, and
+`public_holidays` is a global table of calendar dates.
 
-That key is the **publishable** key. It is meant to be public — it is in
-the page source of every staff portal — and `public_holidays` is a global
-table of calendar dates with no agency data in it. Nothing sensitive is
-exposed by this job, and nothing it can reach is writable.
+**A ping cannot revive a project that has already paused** — that needs a
+human pressing **Restore** in the dashboard, and only works within 90 days.
+The keep-alive stops it getting there in the first place.
 
 ### While you are in there: `old-host-ease-pro`
 
