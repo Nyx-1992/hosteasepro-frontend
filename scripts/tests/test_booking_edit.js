@@ -189,17 +189,32 @@ ok('only bookings we own can be marked',
 // A per-agency list only makes a bad guess configurable. The app has an
 // explicit status; it should use it.
 {
-  const fn = app.slice(app.indexOf('function isOwnerStay(b)'),
-                       app.indexOf('function isOwnerStay(b)') + 260);
+  // The function body only — cut at its closing brace rather than by a
+  // character count. A fixed window used to reach past the end and pick up
+  // whatever comment followed, which is how this check started failing on
+  // the note explaining it.
+  const fnStart = app.indexOf('function isOwnerStay(b)');
+  const fn = app.slice(fnStart, app.indexOf('\n}', fnStart) + 2);
   ok('no person\'s name decides whether a stay is the owner\'s',
      !/mirka|antonin|silja|nicole/i.test(fn), fn.replace(/\s+/g, ' ').slice(0, 140));
   ok('an explicit status does', /b\.status === 'owner'/.test(fn));
   // "Owner" is a label, not a name — it keeps every existing owner stay
   // classified exactly as before, which is why no data migration was needed.
   ok('and the literal word "owner" still counts', /includes\('owner'\)/.test(fn));
-  ok('the app deliberately does not read owner_stay_names',
-     /deliberately NOT read here/.test(app) &&
-     !/OWNER_STAY_NAMES/.test(app));
+  // The names list is not banned from the app — the iCal importer inside
+  // it genuinely needs one, because a calendar SUMMARY is all it has to go
+  // on. What must never happen is isOwnerStay() consulting it: by then the
+  // booking carries an explicit status, and matching "nicole" against
+  // stored rows swallows two real paying guests.
+  //
+  // Same column, opposite conclusions, because they answer the question at
+  // different moments. This pins that the reader of the list is the
+  // importer and not the classifier.
+  ok('isOwnerStay does not consult the names list',
+     !/IMPORT_OWNER_NAMES|owner_stay_names/.test(fn));
+  ok('but the importer does, and says why it may',
+     /IMPORT_OWNER_NAMES = Array\.isArray\(s\.owner_stay_names\)/.test(app) &&
+     /WHY THE IMPORTER MAY MATCH NAMES AND isOwnerStay\(\) ABOVE MAY NOT/.test(app));
 }
 ok('the summary stays visible while editing, to compare against',
    /it is the thing being compared against/.test(app));

@@ -256,6 +256,66 @@ ok('and the reason is written down where the query is',
    /TOUCHING IS NOT OVERLAPPING/.test(src) &&
    /changeover clean between them disappeared/.test(src));
 
+// ══ THE TWO IMPORTERS MUST AGREE ══════════════════════════════════
+//
+// There are two. api/_lib/icalImport.js runs on the server for the daily
+// cron and Nina's "Sync bookings" button; demo/index_fixed.html has its
+// own copy that runs whenever an admin has HEP open. They write to the
+// same table, so when they disagree the last one to run wins.
+//
+// THEY DID DISAGREE, AND IT COST A DAY. The server had been taught that
+// Booking.com's "CLOSED - Not available" is what a real reservation looks
+// like. The browser copy still called it a block. A booking that arrived
+// at 13:15 for that same afternoon was filed as a closure and never
+// reached Nina: "New booking in and not showing yet for Nina, it's for
+// today."
+//
+// Every fix in this file had to be made twice, and nothing said so. This
+// is what says so.
+console.log('\n── The browser copy agrees with the server ──');
+{
+  const browser = read('demo', 'index_fixed.html');
+  const cls = browser.slice(browser.indexOf('THIS MUST AGREE WITH api/_lib/icalImport.js'),
+                            browser.indexOf('// REAL GUEST: everything else'));
+
+  ok('the browser knows Booking.com CLOSED is a reservation',
+     /feed\.platform === 'booking' && sumLower\.includes\('closed'\) && nights <= 31/.test(cls));
+  ok('...with the same one-month limit as the server',
+     /nights <= 31/.test(cls) && /nights <= TOO_LONG_FOR_A_STAY/.test(src));
+  ok('the browser reads Airbnb the right way round too',
+     /airbnb\\\.com\\\/hosting\\\/reservations/.test(cls) &&
+     !/feed\.platform === 'airbnb' && sumLower\.includes\('reserved'\)/.test(cls));
+  ok('an Airbnb reservation url wins over the block words in both',
+     /!isOwnerStayEvent && !hasReservationUrl && !bookingComClosed/.test(cls) &&
+     /!isOwnerStay && !hasReservationUrl && !bookingComClosed/.test(src));
+
+  // This copy WRITES what it decides, so a hardcoded name here is worse
+  // than one used for display: it would have imported a LekkeSlaap guest
+  // of that name as an owner stay.
+  //
+  // Comments stripped first. Explaining which names used to be baked in
+  // means writing them down, and matching raw text makes the explanation
+  // fail the check it explains — the fifth time that has happened in this
+  // session, so it gets the helper the other tests use.
+  const codeOnly = (s) => s
+    .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+    .replace(/(^|[^:'"\\])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
+  ok('neither importer hardcodes anybody\'s family',
+     !/mirka|antonin|silja/i.test(codeOnly(cls)) &&
+     !/mirka|antonin|silja/i.test(codeOnly(src)));
+  ok('both take owner names from the org instead',
+     /IMPORT_OWNER_NAMES\.some\(n => n && sumLower\.includes/.test(cls) &&
+     /ownerNames\.some\(n => n && sumLower\.includes/.test(src));
+  ok('and the browser loads them from org_settings',
+     /IMPORT_OWNER_NAMES = Array\.isArray\(s\.owner_stay_names\)/.test(browser));
+  // The old code guessed WHICH pair of owners it was, from the same
+  // hardcoded names, and would have relabelled another agency's owner.
+  ok('an owner stay is labelled from the feed, not from a guessed couple',
+     /guestName = 'Owner Stay — ' \+ \(sumTrim \|\| 'owner'\)/.test(browser));
+  ok('the browser file says the two must be kept in step',
+     /THIS MUST AGREE WITH api\/_lib\/icalImport\.js/.test(browser));
+}
+
 // ══ BLOCKS, OWNERS, CANCELLATIONS ═════════════════════════════════
 console.log('\n── Everything that is not a paying guest ──');
 const one = (summary, platform = 'airbnb', extra = '') => parse.parseICalText(cal(ev(
