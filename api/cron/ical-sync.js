@@ -25,6 +25,7 @@
 // produce rather than an estimate of them.
 
 import { importAllFeeds } from '../_lib/icalImport.js';
+import { keepStagingAwake } from '../_lib/keepAlive.js';
 
 // Staff-portal sign-in, for people with no auth.users row.
 //
@@ -157,9 +158,16 @@ export default async function handler(req, res) {
     });
   }
 
+  // Staging keep-alive. It rides HERE as well as on the trial-reminder
+  // cron because this is the endpoint an external scheduler actually
+  // calls — Vercel's own cron has left no trace in thirty days. See
+  // api/_lib/keepAlive.js.
+  const stagingKeepalive = await keepStagingAwake();
+
   return res.status(200).json({
     dry,
     ranAs: who,
+    stagingKeepalive,
     feeds: results.length,
     events: sum('events'),
     created: sum('created'),

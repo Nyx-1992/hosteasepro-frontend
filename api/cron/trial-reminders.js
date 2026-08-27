@@ -49,6 +49,7 @@
 // needs no secret at all.
 
 import { sendTrialEmail } from '../_lib/trialEmail.js';
+import { keepStagingAwake } from '../_lib/keepAlive.js';
 import { sendSignupDigest, sendSignupAlert, alertTo, alertsConfigured } from '../_lib/ownerAlert.js';
 
 // ── PROVING THE ALERT CHANNEL WORKS ───────────────────────────────
@@ -269,59 +270,10 @@ export default async function handler(req, res) {
     results.signups_alert_error = String((e && e.message) || e).slice(0, 200);
   }
 
-  // ══ KEEP THE STAGING DATABASE AWAKE ══════════════════════════════
-  //
-  // Owner: "Why is this still happening? Must I do the cron job?"
-  //
-  // No. Supabase pauses a free project after 7 days without activity, and
-  // the warning email had arrived twice. The documented fix was a
-  // cron-job.org entry she had to create by hand — which is a chore that
-  // has to be remembered, and the cost of forgetting is losing staging for
-  // good after 90 days.
-  //
-  // This job already runs every day at 07:00 for the trial reminders, so
-  // the ping costs one HTTP request and no new serverless function — which
-  // matters, because Vercel's Hobby plan allows twelve and this account is
-  // at twelve.
-  //
-  // WHY STAGING IS WORTH KEEPING. Every migration goes there first. The
-  // empty-months CHECK, the rate-seasons hole a host could have rewritten
-  // prices through, and the weekend-versus-holiday rule were all proved
-  // there before they touched real bookings.
-  //
-  // THE VALUES ARE IN THE CODE ON PURPOSE, and it is worth saying why,
-  // because "a default that is one tenant's real data is never a safe
-  // default" is a rule this codebase has had to relearn repeatedly. This
-  // is not tenant data: it is HostEase Pro's own staging project, the same
-  // kind of thing as the repo URL. The key is the PUBLISHABLE one, which
-  // is designed to be public and is guarded by RLS, and public_holidays is
-  // a global table of calendar dates with nothing private in it. Both are
-  // overridable by environment variable for anyone running their own copy.
-  //
-  // A ping cannot REVIVE a paused project — that needs a human pressing
-  // Restore in the dashboard. It only stops it getting there.
-  try {
-    const stagingUrl = process.env.STAGING_KEEPALIVE_URL ||
-      'https://rwsfbgtvqbkunbfvviiz.supabase.co/rest/v1/public_holidays?select=country_code&limit=1';
-    // The legacy anon JWT rather than the newer sb_publishable_ key: both
-    // are public by design, but this is the form the rest of this codebase
-    // already uses against PostgREST, and the sandbox cannot reach
-    // supabase.co to prove the other one works. An untested keep-alive
-    // that fails silently is the thing this is meant to prevent.
-    const stagingKey = process.env.STAGING_KEEPALIVE_KEY ||
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ3c2ZiZ3R2cWJrdW5iZnZ2aWl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQxODcxNzUsImV4cCI6MjA5OTc2MzE3NX0.f4RhNOm_Hz05dVgXr8y1gouq6eQ6AQJ6Ge72AiDHz9c';
-
-    const ping = await fetch(stagingUrl, {
-      headers: { apikey: stagingKey, Authorization: 'Bearer ' + stagingKey },
-      signal: AbortSignal.timeout(10000),
-    });
-    // Reported either way rather than swallowed: a keep-alive that has
-    // quietly been failing for six weeks is worse than none, because
-    // nobody looks until the project is already gone.
-    results.staging_keepalive = ping.ok ? 'ok' : ('http ' + ping.status);
-  } catch (e) {
-    results.staging_keepalive = 'failed: ' + String((e && e.message) || e).slice(0, 120);
-  }
+  // Staging keep-alive. Lives in _lib and is called from both cron
+  // endpoints, because Vercel's own schedule is not firing — see
+  // api/_lib/keepAlive.js for the evidence.
+  results.staging_keepalive = await keepStagingAwake();
 
   return res.status(200).json(results);
 }

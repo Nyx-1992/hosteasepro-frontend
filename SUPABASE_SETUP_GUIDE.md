@@ -235,27 +235,52 @@ expensive way to find those.
 a few minutes. Only possible **within 90 days** of pausing; after that the
 project is gone for good.
 
-### The fix — already done, nothing for you to do
+### What actually keeps it awake
 
-`api/cron/trial-reminders.js` already runs every day at 07:00 UTC for the
-trial reminders. It now also reads one row from staging on the way past.
-That is enough activity to stop the 7-day clock.
+**The first attempt did not work, and it is worth knowing why.** The ping
+was put inside `api/cron/trial-reminders.js`, which `vercel.json` schedules
+for 07:00 daily. The project paused anyway.
 
-No new Vercel function (the account is at the twelve-function limit), no
-env vars to set, no cron-job.org entry to remember. The daily run reports
-`staging_keepalive: "ok"` in its JSON response, so a keep-alive that has
-quietly been failing is visible rather than discovered when the project has
-already gone.
+**Vercel's cron is not firing.** Booking.com publishes a rolling block
+whose dates shift by a day every day, so any daily sync leaves an
+`updated_at` mark on those rows. Across thirty days of bookings there is
+**not one mark at 04:00 or 07:00 UTC** — the only two times `vercel.json`
+schedules. Every mark that does exist is at an irregular hour, matching the
+cron-job.org job and somebody having HEP open.
 
-The URL and key sit in that file rather than in environment variables, and
-both are overridable with `STAGING_KEEPALIVE_URL` / `STAGING_KEEPALIVE_KEY`.
-They are safe to commit: it is HostEase Pro's own staging project rather
-than any tenant's data, the key is the public anon key that RLS guards, and
-`public_holidays` is a global table of calendar dates.
+So the ping now lives in `api/_lib/keepAlive.js` and is called from **both**
+cron endpoints, including `/api/cron/ical-sync`, which the external
+scheduler demonstrably calls. Each run reports the result
+(`stagingKeepalive` / `staging_keepalive`) in its JSON.
 
-**A ping cannot revive a project that has already paused** — that needs a
-human pressing **Restore** in the dashboard, and only works within 90 days.
-The keep-alive stops it getting there in the first place.
+### Still worth adding the cron-job.org entry
+
+Belt and braces, because it depends on nothing inside Vercel and you can
+see its success log yourself:
+
+| Field    | Value                                                                                          |
+|----------|------------------------------------------------------------------------------------------------|
+| URL      | `https://rwsfbgtvqbkunbfvviiz.supabase.co/rest/v1/public_holidays?select=country_code&limit=1`  |
+| Schedule | Once a day, any time                                                                            |
+| Method   | GET                                                                                             |
+| Header   | `apikey` = `sb_publishable_ze-KmzAYuc3JRq2RKVhx5w_Pgb1lc46`                                     |
+
+That key is the **publishable** key: public by design, guarded by RLS, and
+`public_holidays` is a global table of calendar dates with no agency data.
+
+### The bigger question this uncovered
+
+If Vercel's cron is not running, the **daily booking sync is not running
+either** — the job built so bookings arrive without anyone having HEP open.
+What has been covering for it is the external cron-job.org job and people
+pressing Sync.
+
+Worth checking in **Vercel → the project → Settings → Cron Jobs**, which
+shows each job's last run. If they are disabled or have never fired, that
+explains more than a paused staging database.
+
+**A ping cannot revive a project that has already paused** — that needs
+**Restore** in the Supabase dashboard, within 90 days.
 
 ### While you are in there: `old-host-ease-pro`
 
