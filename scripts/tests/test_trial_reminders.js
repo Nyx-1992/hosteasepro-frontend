@@ -185,53 +185,65 @@ ok('it explains that extending re-arms the sequence', /re-arms the whole sequenc
 
 // ══ KEEPING STAGING AWAKE ═════════════════════════════════════════
 //
-// Owner, on the second warning email: "Why is this still happening? Must I
-// do the cron job?" No. Supabase pauses a free project after 7 days idle,
-// and losing staging past 90 days is permanent. This job already runs
-// daily, so it reads one row from staging on the way past — no new Vercel
-// function, which matters at the twelve-function limit, and nothing for
-// her to remember.
+// Owner, on the pause email arriving a third time: "Didn't we fix this?"
+//
+// We had not. The ping was put inside this cron, which vercel.json runs at
+// 07:00 daily — and Vercel's cron is not firing. Checked against
+// production rather than assumed: Booking.com's feed publishes a rolling
+// block whose dates shift by a day every day, so any daily sync leaves an
+// updated_at mark. Across thirty days of bookings there is not one mark at
+// hour 04 or hour 07 UTC, the two times vercel.json schedules. Every mark
+// that exists sits at an irregular hour, consistent with the owner's own
+// cron-job.org job and with somebody having HEP open.
+//
+// So the ping now lives in _lib and is called from BOTH cron endpoints,
+// including the one an external scheduler demonstrably calls. That is the
+// check that matters here: hanging it off a single unverified schedule is
+// the mistake that was already made once.
 console.log('\n── The staging keep-alive ──');
-ok('the daily job pings staging', /results\.staging_keepalive/.test(cron));
-ok('it rides on a job that already runs daily, adding no new function',
-   vercel.crons.some(c => c.path === '/api/cron/trial-reminders') &&
+const keepAlive = read('api', '_lib', 'keepAlive.js');
+const icalCron  = read('api', 'cron', 'ical-sync.js');
+
+ok('the ping lives in one place, not copied into each cron',
+   /export async function keepStagingAwake\(\)/.test(keepAlive));
+// The whole point of the rewrite.
+ok('BOTH cron endpoints call it, not just the Vercel-scheduled one',
+   /import \{ keepStagingAwake \} from '\.\.\/_lib\/keepAlive\.js'/.test(cron) &&
+   /import \{ keepStagingAwake \} from '\.\.\/_lib\/keepAlive\.js'/.test(icalCron) &&
+   /await keepStagingAwake\(\)/.test(cron) &&
+   /await keepStagingAwake\(\)/.test(icalCron));
+ok('and it still adds no serverless function',
    fs.readdirSync(path.join(ROOT, 'api', 'cron')).filter(f => f.endsWith('.js')).length === 2);
 // A keep-alive nobody checks is worse than none: it can fail for six weeks
 // and only be discovered once the project has gone.
+ok('the outcome is reported in both responses',
+   /staging_keepalive = await keepStagingAwake\(\)/.test(cron) &&
+   /stagingKeepalive,/.test(icalCron));
 ok('a failure is reported rather than swallowed',
-   /staging_keepalive = ping\.ok \? 'ok' : \('http ' \+ ping\.status\)/.test(cron) &&
-   /staging_keepalive = 'failed: '/.test(cron));
-// ── Comments stripped before any of this is matched ──────────────
-//
-// The block below is checked for the ABSENCE of words like "bookings",
-// and the commentary above it happens to say "before they touched real
-// bookings". Matching raw text makes the explanation fail the check it
-// explains. That has now happened four times in this codebase, so it gets
-// the same helper every other test here uses. Blanked, not removed, so
-// offsets still line up.
-const codeOnly = (src) => src
-  .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
-  .replace(/(^|[^:'"\\])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
-const cronCode = codeOnly(cron);
-const keepAlive = cronCode.slice(cronCode.indexOf('const stagingUrl'));
-
-ok('it cannot take the whole job down with it',
-   /try \{[\s\S]*?staging_keepalive[\s\S]*?\} catch \(e\) \{[\s\S]{0,160}staging_keepalive = 'failed/
-     .test(cronCode.slice(cronCode.lastIndexOf('try {'))));
+   /return res\.ok \? 'ok' : \('http ' \+ res\.status\)/.test(keepAlive) &&
+   /return 'failed: '/.test(keepAlive));
+ok('it cannot take the job it rides on down with it',
+   /try \{[\s\S]*?\} catch \(e\) \{[\s\S]{0,120}return 'failed/.test(keepAlive));
 ok('there is a timeout, so a hung request does not stall the run',
-   /AbortSignal\.timeout\(10000\)[\s\S]{0,200}\}\);\s*\n\s*\/\/ Reported either way/.test(cron) ||
-   /signal: AbortSignal\.timeout\(10000\)/.test(cron));
+   /signal: AbortSignal\.timeout\(10000\)/.test(keepAlive));
 ok('both the url and the key can be overridden by environment',
-   /process\.env\.STAGING_KEEPALIVE_URL \|\|/.test(cron) &&
-   /process\.env\.STAGING_KEEPALIVE_KEY \|\|/.test(cron));
+   /process\.env\.STAGING_KEEPALIVE_URL \|\|/.test(keepAlive) &&
+   /process\.env\.STAGING_KEEPALIVE_KEY \|\|/.test(keepAlive));
+ok('and it can be switched off entirely',
+   /if \(url === 'off' \|\| !url\) return 'disabled';/.test(keepAlive));
 // The one thing a ping cannot do, said out loud so nobody assumes it can.
 ok('it says a ping cannot revive an already-paused project',
-   /cannot REVIVE a paused project/.test(cron));
-// It reads a global table of calendar dates with the public key — not
-// tenant data, and nothing writable.
-ok('it reads public_holidays, not anybody\'s bookings',
+   /cannot revive a project that has ALREADY paused/.test(keepAlive));
+// It reads a global table of calendar dates with the public key.
+ok("it reads public_holidays, not anybody's bookings",
    /public_holidays\?select=country_code&limit=1/.test(keepAlive) &&
-   !/bookings|guest_|domestics/.test(keepAlive));
+   !/bookings|guest_|domestics/.test(
+     keepAlive.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ')));
+// The evidence, kept with the code so the next person does not have to
+// rediscover why it is not simply sitting in the Vercel cron.
+ok('the reason it moved is written down where the ping is',
+   /not a single mark at hour 04 or hour\s*\n?\/\/ 07 UTC/.test(keepAlive) ||
+   /there is not a single mark at hour 04/.test(keepAlive.replace(/\n\/\/ /g, ' ')));
 
 // ── Result ────────────────────────────────────────────────────────
 console.log('');
