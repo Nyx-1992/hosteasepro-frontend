@@ -1595,8 +1595,19 @@ async function loadNinaCheckouts() {
   try {
     const today=tod();
     const in30=new Date(Date.now()+30*86400000).toISOString().split('T')[0];
+    // is_active is the flag the app's Delete button sets. Leaving it out
+    // of this filter meant Nina kept seeing bookings that had been
+    // deleted, and kept a cleaner assigned to a stay that was not
+    // happening: "I deleted the booking earlier but it still shows on
+    // Nina's side."
+    //
+    // The other bookings read in this file (loadNinaData, below) always
+    // had .eq('is_active', true). Two reads of the same table, one
+    // filtered and one not — and the unfiltered one is the screen the
+    // coordinator actually works from.
     const {data:bookings,error}=await db.from('bookings')
       .select('id,guest_name,property_id,check_out,status')
+      .eq('is_active',true)
       .gte('check_out',today).lte('check_out',in30+'T23:59:59')
       .neq('status','cancelled').neq('status','blocked').order('check_out',{ascending:true});
     if(error) throw error;

@@ -19,10 +19,6 @@
       "destination": "/api/calendar/032033befd126a303fa3284ab36baccd"
     },
     {
-      "source": "/api/calendar/:token",
-      "destination": "/api/calendar/[token]"
-    },
-    {
       "source": "/api/(.*)",
       "destination": "/api/$1"
     },
