@@ -43,28 +43,65 @@ console.log('\n── Routing ──');
 
 const sources = vercel.rewrites.map(r => r.source);
 const idx = (s) => sources.indexOf(s);
+const dest = (s) => (vercel.rewrites.find(r => r.source === s) || {}).destination;
 
+// ══ THE REWRITE THAT EMPTIED THE CALENDAR ═════════════════════════
+//
+// vercel.json used to carry:
+//
+//     /api/calendar/:token  ->  /api/calendar/[token]
+//
+// Vercel does not substitute :token into a bracketed destination; it
+// rewrites to that path LITERALLY. Every feed HEP hands out is
+// /api/calendar/<token>.ics, so every one of them reached the endpoint
+// with a last path segment of "[token]", failed its hex test and returned
+// 404.
+//
+// Booking.com reads a 404 as a feed with no events in it and carried on
+// selling nights the owner had blocked for herself. She could not stay in
+// her own flat.
+//
+// AND THIS FILE ASSERTED THE BROKEN LINE HAD TO BE THERE — "a tokenised
+// route exists" was green throughout. Without the rewrite, Vercel's own
+// file-system routing maps /api/calendar/anything onto [token].js with
+// the path intact, which is all that was ever needed.
+ok('the rewrite that swallowed the token is gone',
+   idx('/api/calendar/:token') < 0);
+ok('nothing else rewrites a calendar path to a literal bracket',
+   !vercel.rewrites.some(r => String(r.destination).includes('[')));
+// File-system routing only gets a look in because /api/(.*) passes the
+// path through ahead of the catch-all that serves the app shell.
+ok('/api/(.*) still passes API paths through untouched',
+   dest('/api/(.*)') === '/api/$1');
+ok('and it is matched before the catch-all app route',
+   idx('/api/(.*)') < idx('/(.*)'));
+
+// The legacy URLs are live on three booking platforms and cannot 404.
+// They are not tokens, so they need an explicit mapping.
 ok('the legacy Speranta URL still resolves', idx('/api/calendar/speranta.ics') >= 0);
 ok('the legacy TV House URL still resolves', idx('/api/calendar/tvhouse.ics') >= 0);
-ok('a tokenised route exists', idx('/api/calendar/:token') >= 0);
-// Order matters: :token would otherwise swallow speranta.ics and serve a
-// 404 for a URL that is live on three booking platforms.
-ok('the legacy URLs are matched BEFORE the token route',
-   idx('/api/calendar/speranta.ics') < idx('/api/calendar/:token') &&
-   idx('/api/calendar/tvhouse.ics') < idx('/api/calendar/:token'));
-ok('the token route is matched before the generic /api passthrough',
-   idx('/api/calendar/:token') < idx('/api/(.*)'));
+ok('the legacy URLs point at real 32-hex tokens',
+   /^\/api\/calendar\/[a-f0-9]{32}$/.test(dest('/api/calendar/speranta.ics') || '') &&
+   /^\/api\/calendar\/[a-f0-9]{32}$/.test(dest('/api/calendar/tvhouse.ics') || ''));
+ok('the legacy URLs are matched before the generic /api passthrough',
+   idx('/api/calendar/speranta.ics') < idx('/api/(.*)') &&
+   idx('/api/calendar/tvhouse.ics') < idx('/api/(.*)'));
 
 // ── The endpoint ──────────────────────────────────────────────────
 console.log('\n── The endpoint ──');
 
-// Reproduce its parsing so the accepted/rejected shapes are pinned
-// rather than described.
+// THE REAL EXTRACTION, LIFTED OUT OF THE ENDPOINT — not a copy of it.
+// The previous version reimplemented the parsing here, so it went on
+// passing while the deployed route was handed "[token]" by a rewrite and
+// answered 404 to every platform. A test that reproduces the code cannot
+// notice the code being bypassed.
 const parse = (pathname) => {
-  const raw = pathname.split('/').pop() || '';
-  const token = decodeURIComponent(raw).replace(/\.ics$/i, '').trim();
-  return /^[a-f0-9]{16,64}$/i.test(token) ? token : null;
+  const body = endpoint.slice(endpoint.indexOf('const u = new URL(req.url);'),
+                              endpoint.indexOf('if (!token) return notFound();'));
+  const fn = new Function('req', body + '\n  return token || null;');
+  return fn({ url: 'https://x' + pathname });
 };
+
 
 const good = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
 ok('a 32-hex token with .ics parses', parse(`/api/calendar/${good}.ics`) === good);

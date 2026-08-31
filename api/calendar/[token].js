@@ -36,10 +36,38 @@ export default async function handler(req) {
   const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SERVICE_ROLE_KEY || !SUPABASE_URL) return notFound();
 
-  // Vercel hands the whole last path segment over, extension included.
-  const raw = new URL(req.url).pathname.split('/').pop() || '';
-  const token = decodeURIComponent(raw).replace(/\.ics$/i, '').trim();
-  if (!/^[a-f0-9]{16,64}$/i.test(token)) return notFound();
+  // ── WHERE THE TOKEN COMES FROM, AND WHY THERE ARE TWO PLACES ────
+  //
+  // Normally Vercel hands the whole last path segment over, extension
+  // included, and that is all this read.
+  //
+  // IT WAS NOT ALL THAT WAS NEEDED. vercel.json carried a rewrite:
+  //
+  //     /api/calendar/:token  ->  /api/calendar/[token]
+  //
+  // Vercel does not substitute :token into a bracketed destination — it
+  // rewrites to that path LITERALLY. So every feed HEP hands out,
+  // /api/calendar/<token>.ics, arrived here with a last segment of
+  // "[token]", failed the hex test below, and returned 404.
+  //
+  // Booking.com reads a 404 as a feed with nothing in it, so it went on
+  // selling nights the owner had blocked for herself. She could not stay
+  // in her own flat. That is what a silently empty calendar costs.
+  //
+  // The rewrite is gone, so file-system routing handles it and the path
+  // is intact. The query fallback stays because this cannot be tested
+  // from the sandbox — supabase.co and the deployment are both
+  // unreachable from here — and a feed that fails silently is exactly the
+  // failure being fixed. If Vercel ever passes the segment as a param
+  // instead, this keeps working.
+  const u = new URL(req.url);
+  const fromPath  = u.pathname.split('/').pop() || '';
+  const fromQuery = u.searchParams.get('token') || '';
+  const clean = (s) => decodeURIComponent(s || '').replace(/\.ics$/i, '').trim();
+
+  const token = [clean(fromPath), clean(fromQuery)]
+    .find(t => /^[a-f0-9]{16,64}$/i.test(t)) || '';
+  if (!token) return notFound();
 
   const r = await fetch(
     `${SUPABASE_URL}/rest/v1/properties?ical_token=eq.${encodeURIComponent(token)}&select=id,name,short_key`,
