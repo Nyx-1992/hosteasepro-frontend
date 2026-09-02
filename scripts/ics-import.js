@@ -132,7 +132,8 @@ function parseLSSummary(raw) {
   return result;
 }
 
-function parseICal(text, feed) {
+function parseICal(text, feed, ownerNames) {
+  ownerNames = ownerNames || [];
   var unfolded = unfold(text);
   var events = [];
   var blocks = unfolded.split('BEGIN:VEVENT');
@@ -161,19 +162,49 @@ function parseICal(text, feed) {
     // ── Classify ────────────────────────────────────────────────────────────
     var isCancelledByStatus = icalStatus === 'CANCELLED';
 
-    var isOwner = sumLow.indexOf('mirka') >= 0 || sumLow.indexOf('antonin') >= 0 ||
-                  sumLow.indexOf('nicole') >= 0 || sumLow.indexOf('silja') >= 0 ||
-                  sumLow.indexOf('owner') >= 0 || desc.indexOf('owner') >= 0;
+    // ══ THIS IS THE IMPORTER THAT ACTUALLY RUNS ══════════════════════════
+    //
+    // There are three copies of this logic: api/_lib/icalImport.js (the
+    // endpoint behind Nina's Sync button), demo/index_fixed.html (runs when
+    // an admin has HEP open), and this one — driven by .github/workflows/
+    // ics-import.yml every six hours. THIS is the one on a schedule that
+    // demonstrably fires; the Vercel cron has left no trace in thirty days.
+    //
+    // A fortnight of fixes went into the other two while this one kept
+    // writing the old answers back every six hours. Booking.com stays that
+    // had been corrected reverted to 'blocked' and vanished from Nina's
+    // screen; deleted bookings came back. All three now agree, and
+    // test_ical_import.js fails if they drift.
+    //
+    // OWNER NAMES COME FROM THE ORG, not from code. 'nicole' matched here,
+    // and LekkeSlaap is the one feed carrying a guest's name in the
+    // summary — so a LekkeSlaap guest called Nicole was imported as an
+    // owner stay and dropped out of income and occupancy.
+    var isOwner = sumLow.indexOf('owner') >= 0 || desc.indexOf('owner') >= 0 ||
+                  ownerNames.some(function (n) {
+                    return n && sumLow.indexOf(String(n).toLowerCase()) >= 0;
+                  });
 
-    // Booking.com anonymises genuine reservations as bare "Reserved" (no
-    // guest name) — that's a real booking, not a block. Only Airbnb uses
-    // "Reserved" as a block placeholder.
-    var isBlocked = !isOwner && (
+    // Airbnb separates reservations from blocks properly: a reservation
+    // carries "Reservation URL: …/HM…" in its description, a block says
+    // "Airbnb (Not available)" with nothing in it. The old rule — airbnb +
+    // "reserved" means a block — was exactly backwards and could only ever
+    // fire on a genuine booking.
+    var hasReservationUrl = /airbnb\.com\/hosting\/reservations/i.test(rawDesc || '');
+
+    // Booking.com sends the identical string for a reservation and for a
+    // closure, so this is a choice: show the arrival, because a hidden
+    // arrival costs a dirty flat and an extra line costs a glance. Beyond
+    // a month it is a closed house, not a stay — the longest real
+    // reservation in this data is 20 nights and the closures start at 88.
+    var bookingComClosed = feed.platform === 'booking' &&
+                           sumLow.indexOf('closed') >= 0 && nights <= 31;
+
+    var isBlocked = !isOwner && !hasReservationUrl && !bookingComClosed && (
       !sumTrim || sumTrim === '-' ||
       sumLow === 'not available' || sumLow.indexOf('not available') >= 0 ||
       sumLow.indexOf('closed') >= 0 || sumLow.indexOf('airbnb (not available)') >= 0 ||
       sumLow.indexOf('booking.com (not available)') >= 0 ||
-      (feed.platform === 'airbnb' && sumLow.indexOf('reserved') >= 0) ||
       sumLow.indexOf('unavailable') >= 0 || sumLow === 'blocked'
     );
 
@@ -188,11 +219,10 @@ function parseICal(text, feed) {
       guestName = ls.customer || sumTrim || 'Cancelled';
     } else if (isOwner) {
       status    = 'owner';
-      guestName = 'Owner Stay — ' + (
-        (sumLow.indexOf('mirka') >= 0 || sumLow.indexOf('antonin') >= 0) ? 'Mirka & Antonin' :
-        (sumLow.indexOf('nicole') >= 0 || sumLow.indexOf('silja') >= 0)  ? 'Nicole & Silja'  :
-        summary
-      );
+      // The summary itself, not a guess at which pair of owners it is —
+      // that mapping named S&N's two couples and would have relabelled
+      // another agency's owner as somebody else's family.
+      guestName = 'Owner Stay — ' + (sumTrim || 'owner');
     } else if (isBlocked) {
       status    = 'blocked';
       guestName = '🔒 Blocked';
@@ -221,6 +251,11 @@ function parseICal(text, feed) {
       number_of_guests: guestCount,
       status:           status,
       is_active:        true,
+      // Not a column — read only by the update path, and stripped
+      // before insert. Booking.com's CLOSED means a stay and a
+      // closure at once, so it may propose a status for a NEW row
+      // and must not blindly overwrite an existing one.
+      ambiguousStatus:  bookingComClosed,
       org_id:           feed.org_id,
       total_amount:     0,
       payment_status:   isCancelledByStatus ? 'cancelled' : 'pending',
@@ -237,6 +272,15 @@ function parseICal(text, feed) {
 }
 
 // ── Name placeholder detection ────────────────────────────────────────────────
+// Does this name say "nobody is coming", rather than "we don't know
+// who"? Narrower than isPlaceholderName: 'Booking.com Guest' is a
+// placeholder but still means a guest.
+function isBlockMarkerName(name) {
+  var t = (name || '').trim();
+  if (!t) return true;
+  return /^(\u{1F512}\s*)?blocked$/iu.test(t);
+}
+
 function isPlaceholderName(name) {
   if (!name || name === 'Guest' || name === 'Blocked' || name === '🔒 Blocked') return true;
   if (/^LS-[A-Z0-9]+$/i.test(name.trim())) return true;
@@ -281,6 +325,20 @@ async function run() {
     return;
   }
 
+  // Which names mean "the owner is staying", per agency. Read from the
+  // org rather than baked into this file: the previous version matched
+  // 'mirka', 'antonin', 'nicole' and 'silja' — S&N's own family — inside
+  // a script that runs for every agency, and LekkeSlaap is the one feed
+  // that carries a guest's name in the summary. A LekkeSlaap guest called
+  // Nicole was therefore imported as an owner stay and dropped out of
+  // income and occupancy. Same column api/_lib/icalImport.js reads.
+  var settingsRes = await supabaseRequest('GET',
+    'org_settings?select=org_id,owner_stay_names', null);
+  var ownersOf = {};
+  (settingsRes.data || []).forEach(function (r) {
+    ownersOf[r.org_id] = r.owner_stay_names || [];
+  });
+
   for (var fi = 0; fi < FEEDS.length; fi++) {
     var feed = FEEDS[fi];
     try {
@@ -293,7 +351,7 @@ async function run() {
         continue;
       }
 
-      var events = parseICal(text, feed);
+      var events = parseICal(text, feed, ownersOf[feed.org_id] || []);
       console.log('  ' + events.length + ' events parsed');
       // Record a successful fetch+parse for sync-health visibility on the
       // dashboard (demo/index_fixed.html's renderSyncHealth()) — this is
@@ -312,7 +370,7 @@ async function run() {
         if (evt.source_uid) {
           var byUid = await supabaseRequest('GET',
             'bookings?source_uid=eq.' + encodeURIComponent(evt.source_uid) +
-            '&select=id,status,guest_name,number_of_guests,source_uid&limit=1', null);
+            '&select=id,status,guest_name,number_of_guests,source_uid,is_active&limit=1', null);
           if (byUid.data && byUid.data.length > 0) existing = byUid.data[0];
         }
 
@@ -322,7 +380,7 @@ async function run() {
                    '&check_in_date=eq.'  + evt.check_in_date +
                    '&check_out_date=eq.' + evt.check_out_date +
                    '&platform=eq.'       + evt.platform +
-                   '&select=id,status,guest_name,number_of_guests,source_uid&limit=1';
+                   '&select=id,status,guest_name,number_of_guests,source_uid,is_active&limit=1';
           var byDates = await supabaseRequest('GET', 'bookings?' + qs, null);
           if (byDates.data && byDates.data.length > 0) existing = byDates.data[0];
         }
@@ -333,22 +391,39 @@ async function run() {
         // regenerates — same closure, different UID, so Steps 1/2 never
         // match it. Update the existing overlapping blocked row's dates/UID
         // in place instead of inserting a duplicate. No duration cutoff.
+        // TOUCHING IS NOT OVERLAPPING. lte/gte are both true when one stay
+        // ends exactly where the next begins, so two back-to-back guests
+        // matched each other and collapsed into one row — taking the
+        // changeover clean between them with it, on a same-day turnover.
+        // Strict inequalities: a stay sharing no night with another is a
+        // different booking. And the guard now covers ambiguous
+        // Booking.com events, which stopped being 'blocked'.
         var matchedByOverlap = false;
-        if (!existing && evt.status === 'blocked') {
+        if (!existing && (evt.status === 'blocked' || evt.ambiguousStatus)) {
           var overlapRes = await supabaseRequest('GET',
             'bookings?property_id=eq.' + evt.property_id +
             '&platform=eq.' + evt.platform +
-            '&status=eq.blocked' +
+            (evt.ambiguousStatus ? '&status=in.(blocked,confirmed)' : '&status=eq.blocked') +
             '&is_active=eq.true' +
-            '&check_in_date=lte.' + evt.check_out_date +
-            '&check_out_date=gte.' + evt.check_in_date +
-            '&select=id,status,guest_name,number_of_guests,source_uid&limit=1', null);
+            '&check_in_date=lt.' + evt.check_out_date +
+            '&check_out_date=gt.' + evt.check_in_date +
+            '&select=id,status,guest_name,number_of_guests,source_uid,is_active&limit=1', null);
           if (overlapRes.data && overlapRes.data.length > 0) { existing = overlapRes.data[0]; matchedByOverlap = true; }
         }
 
         if (existing) {
+          // ── DELETED MEANS DELETED ─────────────────────────────────────────
+          // This opened `{ is_active: true }` on every match, so every
+          // booking deleted in the app came back within six hours. The app
+          // says "Permanently delete this booking? This cannot be undone."
+          // Nothing here ever deactivates except the sweep below, so
+          // is_active === false came from a person or a repair, and both
+          // meant it. Skipping AFTER the match is what stops the row being
+          // re-inserted as a fresh duplicate instead.
+          if (existing.is_active === false) continue;
+
           // ── UPDATE ────────────────────────────────────────────────────────
-          var updates = { is_active: true };
+          var updates = {};
 
           if (matchedByOverlap) {
             updates.check_in_date  = evt.check_in_date;
@@ -371,8 +446,21 @@ async function run() {
             updates.cancelled_at = new Date().toISOString();
             totalCancelled++;
             console.log('  ✗ Cancelled: ' + existing.id + ' (' + evt.check_in_date + ')');
+          } else if (evt.ambiguousStatus) {
+            // Booking.com's "CLOSED" means a stay AND a closure, so it
+            // cannot overwrite a settled status — that made rows flip on
+            // every run. But saying nothing froze the wrongly-blocked ones
+            // for good and emptied Nina's screen. The stored NAME is the
+            // evidence the feed lacks: 'Blocked' is a closure somebody
+            // recorded; anything else names a guest.
+            if (existing.status === 'blocked' && !isBlockMarkerName(existing.guest_name)) {
+              updates.status = 'confirmed';
+            }
           } else if (['checked-out','checked-in','owner'].indexOf(existing.status) < 0) {
-            if (existing.status !== evt.status) updates.status = evt.status;
+            // A feed that cannot name a guest does not get to demote a row
+            // that carries a name only a human could have typed.
+            var demoting = evt.status === 'blocked' && !isPlaceholderName(existing.guest_name);
+            if (existing.status !== evt.status && !demoting) updates.status = evt.status;
           }
 
           // Only update name if current is a placeholder
@@ -394,6 +482,9 @@ async function run() {
           // ── INSERT: new booking — never delete old rows ────────────────────
           var evtForInsert = Object.assign({}, evt);
           delete evtForInsert.uid; // local-matching only, not a DB column
+          // Parse-time signal, not a column: leaving it in makes
+          // PostgREST reject the whole insert.
+          delete evtForInsert.ambiguousStatus;
           var result = await supabaseRequest('POST', 'bookings', evtForInsert);
           if (result.status >= 200 && result.status < 300) {
             totalNew++;
