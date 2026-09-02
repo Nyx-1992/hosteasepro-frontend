@@ -32,6 +32,14 @@ const ok = (name, cond, detail) => {
   if (!cond) { if (detail) console.log('      ' + detail); fail.push(name); }
 };
 
+// Comments blanked before any check for the ABSENCE of something.
+// Explaining which names used to be baked in means writing them down, and
+// matching raw text makes the explanation fail the check it explains.
+// Shared by every "does not contain" assertion below.
+const codeOnly = (s) => s
+  .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+  .replace(/(^|[^:'"\\])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
+
 // The module is ESM; this test is CJS like its siblings. Rather than add a
 // build step for four functions, evaluate the parsing half directly — it
 // has no imports and no side effects.
@@ -326,9 +334,6 @@ console.log('\n── The browser copy agrees with the server ──');
   // means writing them down, and matching raw text makes the explanation
   // fail the check it explains — the fifth time that has happened in this
   // session, so it gets the helper the other tests use.
-  const codeOnly = (s) => s
-    .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
-    .replace(/(^|[^:'"\\])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
   ok('neither importer hardcodes anybody\'s family',
      !/mirka|antonin|silja/i.test(codeOnly(cls)) &&
      !/mirka|antonin|silja/i.test(codeOnly(src)));
@@ -343,6 +348,55 @@ console.log('\n── The browser copy agrees with the server ──');
      /guestName = 'Owner Stay — ' \+ \(sumTrim \|\| 'owner'\)/.test(browser));
   ok('the browser file says the two must be kept in step',
      /THIS MUST AGREE WITH api\/_lib\/icalImport\.js/.test(browser));
+}
+
+// ══ AND THE THIRD ONE — THE ONE THAT ACTUALLY RUNS ════════════════
+//
+// There are THREE copies of this logic, not two:
+//
+//   api/_lib/icalImport.js     Nina's Sync button, and a Vercel cron that
+//                              has left no trace in thirty days
+//   demo/index_fixed.html      runs when an admin has HEP open
+//   scripts/ics-import.js      .github/workflows/ics-import.yml, every six
+//                              hours, 588 successful runs
+//
+// The third is the only one on a schedule that demonstrably fires, and it
+// was the last to be found. A fortnight of fixes went into the other two
+// while this one wrote the old answers back every six hours: corrected
+// Booking.com stays reverted to 'blocked' and vanished from Nina's screen;
+// deleted bookings came back.
+//
+// The workflow file warned about exactly this — "a hand-maintained copy,
+// not a shared module, so it CAN drift again" — and nothing enforced it.
+// This does.
+console.log('\n── The scheduled importer agrees too ──');
+{
+  const job = read('scripts', 'ics-import.js');
+  const wf  = read('.github', 'workflows', 'ics-import.yml');
+  const jobCode = codeOnly(job);
+
+  ok('the workflow still runs it on a schedule', /cron: '0 \*\/6 \* \* \*'/.test(wf));
+  ok('Booking.com CLOSED is a reservation here as well',
+     /feed\.platform === 'booking' &&\s*\n?\s*sumLow\.indexOf\('closed'\) >= 0 && nights <= 31/.test(jobCode));
+  ok('Airbnb is read the right way round',
+     /airbnb\\\.com\\\/hosting\\\/reservations/.test(job) &&
+     !/feed\.platform === 'airbnb' && sumLow\.indexOf\('reserved'\)/.test(jobCode));
+  ok('it hardcodes nobody\'s family',
+     !/mirka|antonin|silja/i.test(jobCode));
+  ok('owner names come from org_settings',
+     /owner_stay_names/.test(job) && /ownersOf\[feed\.org_id\]/.test(job));
+  ok('a deleted booking is not resurrected',
+     /if \(existing\.is_active === false\) continue;/.test(jobCode) &&
+     !/var updates = \{ is_active: true \};/.test(jobCode));
+  ok('back-to-back stays are not merged',
+     /check_in_date=lt\.' \+ evt\.check_out_date/.test(job) &&
+     /check_out_date=gt\.' \+ evt\.check_in_date/.test(job));
+  ok('a frozen blocked row that names somebody is lifted',
+     /existing\.status === 'blocked' && !isBlockMarkerName\(existing\.guest_name\)/.test(jobCode));
+  ok('and a feed cannot demote a row carrying a human name',
+     /var demoting = evt\.status === 'blocked' && !isPlaceholderName\(existing\.guest_name\)/.test(jobCode));
+  ok('the parse-time flag never reaches the insert',
+     /delete evtForInsert\.ambiguousStatus;/.test(job));
 }
 
 // ══ BLOCKS, OWNERS, CANCELLATIONS ═════════════════════════════════
