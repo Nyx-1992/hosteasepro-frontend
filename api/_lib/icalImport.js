@@ -106,6 +106,26 @@ export function parseICalSummaryFields(rawSummary) {
  *
  * @param {string} name
  */
+/**
+ * Does this name say "nobody is coming", rather than "we don't know who"?
+ *
+ * A narrower question than isPlaceholderName. 'Booking.com Guest' is a
+ * placeholder — the feed did not tell us who — but it still means a guest.
+ * '🔒 Blocked' and 'Blocked' mean the opposite: a closure, written either
+ * by this importer or by a repair that decided so.
+ *
+ * The distinction matters because Booking.com's feed cannot tell the two
+ * apart, so the stored name is the only evidence left about what anybody
+ * believed was happening on those dates.
+ *
+ * @param {string} name
+ */
+export function isBlockMarkerName(name) {
+  const s = (name || '').trim();
+  if (!s) return true;
+  return /^(🔒\s*)?blocked$/i.test(s);
+}
+
 export function isPlaceholderName(name) {
   const s = (name || '').trim();
   if (!s) return true;
@@ -472,9 +492,28 @@ export async function importFeed(key, feed, { ownerNames = [], dry = false } = {
           }
         } else if (evt.ambiguousStatus) {
           // Booking.com's "CLOSED - Not available" means both things at
-          // once, so it has nothing to add about a row that already has a
-          // status. Saying nothing is the answer; overwriting on a guess
-          // is what made id 570 flip on every run.
+          // once, so it cannot simply overwrite a status somebody already
+          // settled — doing that made id 570 flip on every run.
+          //
+          // BUT SAYING NOTHING AT ALL WAS WORSE, and it took a week to
+          // show. It froze every wrongly-blocked row permanently: four
+          // Speranta stays, Prudence and Muano among them, sat at
+          // 'blocked' where no sync could ever lift them, and Nina's
+          // screen — which hides blocked rows — went completely empty.
+          // "Nina can't see any upcoming cleans needed."
+          //
+          // The stored NAME is the evidence the feed lacks. 'Blocked' or
+          // '🔒 Blocked' is a closure somebody recorded, and stays one.
+          // Anything else — a real guest, or even 'Booking.com Guest',
+          // which means "a guest we could not name" — is a stay, and a
+          // stay that has been sitting at 'blocked' needs correcting.
+          //
+          // No oscillation: the outcome now depends on the stored name,
+          // which the repairs set deliberately, rather than on which of
+          // two writers happened to run last.
+          if (existing.status === 'blocked' && !isBlockMarkerName(existing.guest_name)) {
+            updates.status = 'confirmed';
+          }
         } else if (!['checked-out', 'checked-in', 'owner'].includes(existing.status)
                    && existing.status !== evt.status
                    && !feedWouldDemote) {
