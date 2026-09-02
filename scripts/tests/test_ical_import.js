@@ -178,8 +178,37 @@ ok('it is carried on the event but stripped before insert',
    /ambiguousStatus,/.test(src) &&
    /const \{ uid: _drop, ambiguousStatus: _drop2, \.\.\.row \} = evt;/.test(src),
    'leaving it in would make PostgREST reject the whole insert');
-ok('an ambiguous event leaves an existing status alone',
+// ── SAYING NOTHING WAS ALSO WRONG ─────────────────────────────────
+//
+// The first version of this branch was empty: an ambiguous feed simply
+// did not touch an existing status. That stopped the oscillation and
+// created a worse fault a week later — it FROZE every wrongly-blocked row
+// for good. Four Speranta stays, Prudence and Muano among them, sat at
+// 'blocked' where no sync could ever lift them, and Nina's screen (which
+// hides blocked rows) went completely empty: "Nina can't see any upcoming
+// cleans needed."
+//
+// The stored NAME is the evidence the feed itself lacks. 'Blocked' is a
+// closure somebody recorded and stays one; a real name — or even
+// 'Booking.com Guest', meaning "a guest we could not name" — is a stay,
+// and a stay stuck at 'blocked' needs correcting.
+//
+// Still no oscillation, because the outcome now depends on the stored
+// name rather than on which of two writers ran last. Checked by running
+// three consecutive syncs against each case.
+ok('an ambiguous event still cannot overwrite a settled status blindly',
    /\} else if \(evt\.ambiguousStatus\) \{/.test(src));
+ok('but it lifts a row that names somebody and is stuck at blocked',
+   /if \(existing\.status === 'blocked' && !isBlockMarkerName\(existing\.guest_name\)\) \{/.test(src) &&
+   /updates\.status = 'confirmed';/.test(src));
+ok('and a row recorded as a closure keeps its status',
+   /export function isBlockMarkerName/.test(src) &&
+   /return \/\^\(🔒\\s\*\)\?blocked\$\/i\.test\(s\);/.test(src));
+// The narrower question: 'Booking.com Guest' is a placeholder but not a
+// block marker, or the rows Nina needs would stay hidden.
+ok("'Booking.com Guest' counts as a guest, not as a block",
+   /isBlockMarkerName\('Booking\.com Guest'\)/.test(src) === false &&
+   /A narrower question than isPlaceholderName/.test(src));
 ok('Airbnb is unaffected — its feed actually distinguishes the two',
    !/ambiguousStatus[^\n]*airbnb/i.test(src));
 // The parse still has to propose something, or a brand new Booking.com
