@@ -9825,11 +9825,40 @@ function openBookingDetail(bookingId) {
       </div>` : ''}
       ${!isOwnEntry(b) && canManage ? `
       <div style="font-size:.72rem;color:var(--muted);margin-top:8px;line-height:1.5;border-top:1px solid var(--border);padding-top:8px">
-          Dates and guest numbers come from ${escHtml(PLATFORM_LABELS[b.platform] || b.platform)} and are refreshed on every sync,
-          so changing them here would be undone. Change it on ${escHtml(PLATFORM_LABELS[b.platform] || b.platform)} and it will follow.
+          <!-- This used to say guest numbers would be undone too. Not true,
+               and it stopped a real job being done: all three importers only
+               fill the guest count in when the FEED says more than one and
+               the stored value does not — so a number typed here survives
+               every sync. Booking.com's calendar rarely carries a count at
+               all, which is why these arrive as "1 guest".
+               Owner: "I can't edit the guests here. Which would be nice as
+               if it pulls to the staff platform, the domestics can put out
+               the towels accordingly." -->
+          <strong>Dates</strong> come from ${escHtml(PLATFORM_LABELS[b.platform] || b.platform)} and are refreshed on
+          every sync, so changing them here would be undone — change them there and they will follow.
+          The <strong>guest count below can be corrected</strong> and will stick: their calendar
+          usually does not send one, and the cleaners use it to know how many towels to put out.
       </div>` : ''}
       <!-- Contact info — editable inline -->
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:7px">
+        <!-- HOW MANY TOWELS. Editable on every booking, platform ones
+             included: the importers only fill this in when the feed says
+             more than one and the stored value does not, so a corrected
+             number is never overwritten. Booking.com's calendar almost
+             never carries a count, which is why their stays arrive as
+             "1 guest" regardless of who turns up.
+             It reaches the cleaners: the staff portal shows it on the
+             checkout card, which is the whole point of being able to set
+             it. -->
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:.8rem;color:var(--ink);width:20px" title="Guests">👥</span>
+          <input id="gcount-${b.id}" type="number" min="1" max="30" step="1"
+            value="${b.number_of_guests || 1}" placeholder="1"
+            style="width:72px;padding:5px 9px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.82rem;outline:none;background:#fff"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"/>
+          <span style="font-size:.74rem;color:var(--muted);flex:1">guests — the cleaners see this for towels</span>
+          <button onclick="saveGuestCount('${b.id}')" style="padding:5px 10px;border-radius:7px;background:var(--ocean);color:#fff;border:none;font-size:.76rem;cursor:pointer;font-family:inherit;font-weight:600">Save</button>
+        </div>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:.8rem;color:var(--ink);width:20px">📱</span>
           <input id="gphone-${b.id}" type="tel" value="${b.guest_phone||''}" placeholder="Add phone number…"
@@ -11698,6 +11727,32 @@ function renderGuestManagement() {
       </div>`;
     }).join('')}
   </div>`;
+}
+
+// How many people are actually staying, so the right number of towels goes
+// out. Editable on platform bookings too, which the modal used to say was
+// pointless: all three importers only write number_of_guests when the FEED
+// reports more than one AND the stored value does not, so a corrected
+// number survives every sync. Booking.com's calendar almost never sends a
+// count, so their stays arrive as "1 guest" whoever turns up.
+async function saveGuestCount(bookingId) {
+  const input = document.getElementById('gcount-' + bookingId);
+  const b = bookings.find(x => String(x.id) === String(bookingId));
+  if (!input || !b) return;
+
+  // Clamped rather than trusted: this is typed on a phone, and a stray
+  // digit sends a cleaner out with towels for sixty.
+  const n = Math.max(1, Math.min(30, parseInt(input.value, 10) || 1));
+  input.value = n;
+
+  if (db) {
+    const { error } = await db.from('bookings').update({ number_of_guests: n }).eq('id', bookingId);
+    if (error) { toast('Could not save: ' + error.message, 'error'); return; }
+  }
+  b.number_of_guests = n;
+  toast(n === 1 ? 'Saved — 1 guest ✓' : `Saved — ${n} guests ✓`, 'success');
+  renderCalendar(); renderBookings();
+  if (typeof renderLaneView === 'function') renderLaneView();
 }
 
 async function saveContactInfo(bookingId) {
