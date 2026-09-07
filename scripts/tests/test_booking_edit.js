@@ -79,10 +79,14 @@ ok('the edit is offered only on bookings we own',
    /\$\{isOwnEntry\(b\) && canManage \? `/.test(modal));
 // An Airbnb booking is a copy of their calendar; the importer updates in
 // place, so an edit here is reverted on the next sync with no error.
-ok('platform bookings say why they cannot be edited here',
+// Reworded when the guest count became editable: the note used to lump
+// dates and guest numbers together as "would be undone", which was wrong
+// about the count and blocked a real job for months. It still has to say
+// the DATES come from the platform.
+ok('platform bookings say why their DATES cannot be edited here',
    /\$\{!isOwnEntry\(b\) && canManage \? `/.test(modal) &&
-   /refreshed on every sync/.test(modal) &&
-   /Change it on \$\{escHtml\(PLATFORM_LABELS/.test(modal));
+   /refreshed on\s*\n?\s*every sync/.test(modal) &&
+   /<strong>Dates<\/strong> come from \$\{escHtml\(PLATFORM_LABELS/.test(modal));
 ok('a host cannot edit a booking at all', /isOwnEntry\(b\) && canManage/.test(modal));
 
 // ── THE FIELD EXISTED AND THE FEATURE DID NOT WORK ────────────────
@@ -158,6 +162,56 @@ ok('the in-memory booking keeps the short key, not the uuid',
    /Object\.assign\(b, updates, \{ property_id: UUID_MAP\[propId\] \|\| propId \}\)/.test(app));
 ok('and the uuid is still what gets sent to the database',
    /property_id: propId,/.test(app));
+
+// ══ HOW MANY TOWELS ══════════════════════════════════════════════
+//
+// Owner: "I can't edit the guests here. Which would be nice as if it pulls
+// to the staff platform, the domestics can put out the towels
+// accordingly."
+//
+// The modal claimed guest numbers would be overwritten by the next sync.
+// That was never true: all three importers only write number_of_guests
+// when the FEED reports more than one AND the stored value does not, so a
+// corrected number survives. Booking.com's calendar almost never carries a
+// count, which is why their stays all arrive as "1 guest".
+//
+// A wrong warning stopped a real job being done for months.
+console.log('\n── Guest count, and where it ends up ──');
+{
+  const rd = (...q) => fs.readFileSync(path.join(ROOT, ...q), 'utf8');
+  const portal = rd('demo', 'domestic.html');
+  const server = rd('api', '_lib', 'icalImport.js');
+  const job    = rd('scripts', 'ics-import.js');
+
+  ok('the count is editable on every booking, platform ones included',
+     /id="gcount-\$\{b\.id\}"/.test(app) && /saveGuestCount\('\$\{b\.id\}'\)/.test(app));
+  ok('it is clamped rather than trusted',
+     /Math\.max\(1, Math\.min\(30, parseInt\(input\.value, 10\) \|\| 1\)\)/.test(app),
+     'typed on a phone; a stray digit sends a cleaner out with towels for sixty');
+  ok('the note no longer claims the count would be undone',
+     /guest count below can be corrected/.test(app) &&
+     !/Dates and guest numbers come from/.test(app));
+
+  // The claim the note now makes has to be true in all three importers,
+  // or the field is a lie in the other direction.
+  ok('no importer overwrites a count somebody set',
+     /evt\.number_of_guests > 1 && !\(existing\.number_of_guests > 1\)/.test(server) &&
+     /evt\.number_of_guests > 1 && \(!existing\.number_of_guests \|\| existing\.number_of_guests <= 1\)/.test(job) &&
+     /evt\.number_of_guests > 1 && \(!ex\.number_of_guests \|\| ex\.number_of_guests <= 1\)/.test(app));
+
+  // Being able to set it is only worth anything if it reaches the people
+  // carrying the towels.
+  ok("Nina's checkout list fetches the count",
+     /select\('id,guest_name,property_id,check_out,status,number_of_guests'\)/.test(portal));
+  ok('and shows it on the card', /👥 \$\{b\.number_of_guests\} guests/.test(portal));
+  ok("the cleaner's own checkout list fetches it too",
+     /select\('check_out_date,property_id,guest_name,nights,number_of_guests'\)/.test(portal));
+  ok('and shows it on their card', /b\.guests>1\?' · 👥 '\+b\.guests:''/.test(portal));
+  // "1 guest" on every card is noise, and 1 usually means "nobody said"
+  // rather than "one person" — Booking.com sends no count at all.
+  ok('a count of one is left off, since it usually means nobody said',
+     /\(b\.number_of_guests\|\|1\) > 1/.test(portal) && /b\.guests>1/.test(portal));
+}
 
 // ══ OWNER STAYS ═══════════════════════════════════════════════════
 //

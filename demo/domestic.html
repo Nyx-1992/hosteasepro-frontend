@@ -1606,7 +1606,7 @@ async function loadNinaCheckouts() {
     // filtered and one not — and the unfiltered one is the screen the
     // coordinator actually works from.
     const {data:bookings,error}=await db.from('bookings')
-      .select('id,guest_name,property_id,check_out,status')
+      .select('id,guest_name,property_id,check_out,status,number_of_guests')
       .eq('is_active',true)
       .gte('check_out',today).lte('check_out',in30+'T23:59:59')
       .neq('status','cancelled').neq('status','blocked').order('check_out',{ascending:true});
@@ -1658,6 +1658,14 @@ async function loadNinaCheckouts() {
         <div class="nina-checkout-date" style="${urgStyle}">
           Checkout: ${fmtDate(coDate)} ${days===0?'· TODAY':days===1?'· tomorrow':'· in '+days+' days'}
         </div>
+        <!-- How many towels. Owner: "if it pulls to the staff platform,
+             the domestics can put out the towels accordingly." Shown only
+             when it is more than one — a "1 guest" line on every card is
+             noise, and Booking.com sends no count at all, so 1 usually
+             means "nobody said", not "one person". -->
+        ${(b.number_of_guests||1) > 1
+          ? `<div class="nina-checkout-date" style="color:var(--muted)">👥 ${b.number_of_guests} guests</div>`
+          : ''}
         <div class="nina-checkout-bottom">
           ${assigned
             ?`<span class="nina-assigned-tag">✓ ${assigned.cleaner} assigned</span>
@@ -2245,7 +2253,7 @@ async function loadData() {
   try {
     const [cleanRes, bookRes, allRes, manualRes] = await Promise.all([
       db.from('domestics').select('*').eq('cleaner',currentCleaner.name).order('date',{ascending:true}),
-      db.from('bookings').select('check_out_date,property_id,guest_name,nights').eq('is_active',true).gte('check_out_date',tod()).order('check_out_date',{ascending:true}).limit(60),
+      db.from('bookings').select('check_out_date,property_id,guest_name,nights,number_of_guests').eq('is_active',true).gte('check_out_date',tod()).order('check_out_date',{ascending:true}).limit(60),
       db.from('domestics').select('date,cleaner,status,property_id').gte('date',tod()).neq('status','cancelled'),
       db.from('property_manuals').select('property_id,content').eq('org_id',ORG_ID).eq('section','inventory'),
     ]);
@@ -2260,7 +2268,7 @@ async function loadData() {
     const propIds = Object.keys(PROPS);
     myBookingCheckouts = (bookRes.data||[])
       .filter(b=>propIds.includes(b.property_id))
-      .map(b=>({date:b.check_out_date, pid:b.property_id, prop:PROPS[b.property_id]?.short||'—', guest:(b.guest_name||'Guest').trim().split(/\s+/)[0]}));
+      .map(b=>({date:b.check_out_date, pid:b.property_id, prop:PROPS[b.property_id]?.short||'—', guest:(b.guest_name||'Guest').trim().split(/\s+/)[0], guests:b.number_of_guests||1}));
     // Collapse to one card per property per day — multiple platforms can report
     // the same physical checkout (e.g. a block mirrored on BDC + Airbnb).
     // Prefer a real guest name over a blocked placeholder.
@@ -2414,7 +2422,7 @@ function renderCheckoutsNeeded() {
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--card);border:1px solid '+(hasClean?'rgba(45,212,160,.3)':'rgba(193,127,60,.3)')+';border-radius:10px;margin-bottom:6px">'
         +'<div style="display:flex;align-items:center;gap:10px">'
         +'<div style="text-align:center;min-width:32px"><div style="font-family:Syne,sans-serif;font-size:1.1rem;font-weight:800">'+parseInt(d)+'</div><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase">'+monS(parseInt(m)-1)+'</div></div>'
-        +'<div><div style="font-weight:600;font-size:.84rem">'+b.prop+'</div><div style="font-size:.72rem;color:var(--muted)">'+t('checksOut',{name:b.guest})+'</div></div>'
+        +'<div><div style="font-weight:600;font-size:.84rem">'+b.prop+'</div><div style="font-size:.72rem;color:var(--muted)">'+t('checksOut',{name:b.guest})+(b.guests>1?' · 👥 '+b.guests:'')+'</div></div>'
         +'</div>'
         +'<span style="font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:10px;background:'+(hasClean?'rgba(45,212,160,.15)':'rgba(193,127,60,.15)')+';color:'+(hasClean?'var(--green)':'var(--accent)')+'">'+( hasClean?'✓ '+(cleanForDate?.cleaner||t('booked')):t('needed'))+'</span>'
         +'</div>';
