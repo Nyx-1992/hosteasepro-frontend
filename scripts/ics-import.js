@@ -589,7 +589,34 @@ async function run() {
   console.log('Released:  ' + totalReleased);
   console.log('Errors:    ' + errors + ' / ' + FEEDS.length + ' feeds');
 
-  if (errors > 0) process.exit(1);
+  // ── ONE SULKING FEED IS NOT A FAILED IMPORT ───────────────────────────────
+  // This exited 1 if any single feed misbehaved, which turned a LekkeSlaap
+  // hiccup into "ICS Import: All jobs have failed" in the owner's inbox — for
+  // a run that had just synced 17 bookings from the other four feeds. Six
+  // hours earlier the same commit had run clean, and six hours later
+  // LekkeSlaap was answering again: nothing was broken here, and the alarm
+  // said everything was.
+  //
+  // Crying wolf every time a third party has a bad minute is worse than
+  // quiet, because the one run that matters gets skimmed past with the rest.
+  // So: fail only when NOTHING got through — no feed answered, which really
+  // is our problem (credentials, network, Supabase) and really does need
+  // somebody. A partial outage is a warning on the run instead.
+  //
+  // This does not bury a feed that is genuinely dead. last_import_at is only
+  // written after a successful parse, and the dashboard's sync-health badge
+  // turns amber then red on anything not imported for 12 hours — visible on
+  // the screen the owner already looks at, every day it stays broken, rather
+  // than in a mail that says all jobs failed when most of them worked.
+  if (errors > 0 && errors === FEEDS.length) {
+    console.error('Every feed failed — that is not an upstream hiccup.');
+    process.exit(1);
+  }
+  if (errors > 0) {
+    console.log('::warning::' + errors + ' of ' + FEEDS.length +
+      ' calendar feeds did not answer this run. The rest imported. ' +
+      'A feed still missing after 12 hours shows amber/red on the dashboard.');
+  }
 }
 
 run().catch(function(e) { console.error(e); process.exit(1); });
