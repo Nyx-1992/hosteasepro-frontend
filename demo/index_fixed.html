@@ -1750,21 +1750,30 @@ function _buildMobileNavStub(){/* replaced by main script */}
     <div class="modal-header"><div class="modal-title">New Booking</div><button class="modal-close" onclick="closeModal('booking-modal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-field span-full"><label>Guest Name *</label><input id="b-guest" placeholder="Full name"/></div>
+        <div class="form-field span-full" id="b-guest-field"><label>Guest Name *</label><input id="b-guest" placeholder="Full name"/></div>
         <div class="form-field"><label>Property</label><select id="b-prop"></select></div>
-        <div class="form-field"><label>Platform</label><select id="b-platform"><option value="airbnb">Airbnb</option><option value="booking">Booking.com</option><option value="lekkeslaap">LekkeSlaap</option><option value="manual">Manual/Direct</option></select></div>
-        <div class="form-field"><label>Check-in *</label><input type="date" id="b-checkin"/></div>
-        <div class="form-field"><label>Check-out *</label><input type="date" id="b-checkout"/></div>
+        <div class="form-field" id="b-platform-field"><label>Platform</label><select id="b-platform"><option value="airbnb">Airbnb</option><option value="booking">Booking.com</option><option value="lekkeslaap">LekkeSlaap</option><option value="manual">Manual/Direct</option></select></div>
+        <div class="form-field"><label id="b-checkin-label">Check-in *</label><input type="date" id="b-checkin" onchange="bmDatesChanged()"/></div>
+        <div class="form-field"><label id="b-checkout-label">Check-out *</label><input type="date" id="b-checkout"/></div>
         <div class="form-field" id="b-revenue-field"><label>Revenue (ZAR)</label><input type="number" id="b-revenue" placeholder="0"/></div>
-        <div class="form-field"><label>Guests</label><input type="number" id="b-guests" value="1" min="1"/></div>
-        <div class="form-field"><label>Guest Email</label><input type="email" id="b-email" placeholder="Optional"/></div>
-        <div class="form-field"><label>Guest Phone</label><input type="tel" id="b-phone" placeholder="Optional"/></div>
-        <div class="form-field"><label>Status</label><select id="b-status"><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="cancelled">Cancelled</option><option value="owner">Owner Stay</option></select></div>
-        <div class="form-field span-full"><label>Notes</label><input id="b-notes" placeholder="Optional notes"/></div>
+        <div class="form-field" id="b-guests-field"><label>Guests</label><input type="number" id="b-guests" value="1" min="1"/></div>
+        <div class="form-field" id="b-email-field"><label>Guest Email</label><input type="email" id="b-email" placeholder="Optional"/></div>
+        <div class="form-field" id="b-phone-field"><label>Guest Phone</label><input type="tel" id="b-phone" placeholder="Optional"/></div>
+        <div class="form-field"><label>Status</label><select id="b-status" onchange="bmBlockMode()"><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="cancelled">Cancelled</option><option value="owner">Owner Stay</option><option value="blocked">Blocked — not bookable</option></select></div>
+        <div class="form-field span-full"><label id="b-notes-label">Notes</label><input id="b-notes" placeholder="Optional notes"/></div>
+        <div class="form-field span-full" id="b-block-note" style="display:none">
+          <div style="font-size:.78rem;color:var(--muted);background:var(--sand);border:1px solid var(--border);border-radius:8px;padding:9px 11px;line-height:1.5">
+            Nobody can book these nights, and they count as free — not as a stay.
+            <b>First night</b> is the night you want held; check-out fills in as the morning after.
+            The block goes out to Airbnb, Booking.com and LekkeSlaap the next time each of them
+            reads our calendar — usually within the hour, but it is not instant. If the night is
+            tonight, close it in that platform's own extranet too.
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-ghost btn-sm" onclick="closeModal('booking-modal')">Cancel</button>
-        <button class="btn btn-primary btn-sm" onclick="saveBooking()">Add Booking</button>
+        <button class="btn btn-primary btn-sm" id="b-save-btn" onclick="saveBooking()">Add Booking</button>
       </div>
     </div>
   </div>
@@ -10139,30 +10148,92 @@ function renderTodaysCheckouts() {
 }
 
 let _savingBooking = false;
+// ── BLOCKING DAYS OFF ─────────────────────────────────────────────────────
+// Owner: "I want to Block the calendar for a day as our format is only
+// cleaning a day later of the checkout." There was no way to do it. The
+// status list offered Confirmed/Pending/Cancelled/Owner Stay, and Guest Name
+// was required, so holding a night back meant inventing a fake guest.
+//
+// A block is not a booking with the guest left blank — it has no guest, no
+// platform, no revenue and no head count, and a form that keeps asking for
+// them invites someone to fill them in. So the fields that mean nothing for
+// a block are hidden rather than merely ignored.
+function bmBlockMode() {
+  const blocked = document.getElementById('b-status').value === 'blocked';
+  ['b-guest-field','b-platform-field','b-guests-field','b-email-field','b-phone-field','b-revenue-field']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = blocked ? 'none' : ''; });
+  const note = document.getElementById('b-block-note');
+  if (note) note.style.display = blocked ? '' : 'none';
+  const btn  = document.getElementById('b-save-btn');
+  if (btn)  btn.textContent  = blocked ? 'Block these nights' : 'Add Booking';
+  // "Check-in" and "Guest Name" are the guest's words. Nobody is checking in.
+  const ciL = document.getElementById('b-checkin-label');
+  const coL = document.getElementById('b-checkout-label');
+  const nL  = document.getElementById('b-notes-label');
+  if (ciL) ciL.textContent = blocked ? 'First night blocked *' : 'Check-in *';
+  if (coL) coL.textContent = blocked ? 'Free again from *'     : 'Check-out *';
+  if (nL)  nL.textContent  = blocked ? 'Reason (shown to staff)' : 'Notes';
+  const nI = document.getElementById('b-notes');
+  if (nI)  nI.placeholder  = blocked ? 'e.g. cleaning day, maintenance' : 'Optional notes';
+  if (blocked) bmDatesChanged();
+}
+
+// One night off is check-in on the day, check-out the morning after — and
+// typing 11/09 into both boxes, which is the obvious thing to do when you
+// mean "block the 11th", silently books nothing at all. Fill the second date
+// in rather than let that happen on a phone.
+function bmDatesChanged() {
+  if (document.getElementById('b-status').value !== 'blocked') return;
+  const ci = document.getElementById('b-checkin').value;
+  if (!ci) return;
+  const co = document.getElementById('b-checkout').value;
+  if (!co || co <= ci) {
+    document.getElementById('b-checkout').value =
+      new Date(new Date(ci).getTime() + 86400000).toISOString().slice(0,10);
+  }
+}
+
 async function saveBooking() {
   if (_savingBooking) return; // guard against double-tap creating duplicate bookings
-  const guest = document.getElementById('b-guest').value.trim();
+  const isBlock = document.getElementById('b-status').value === 'blocked';
+  const guest = isBlock ? 'Blocked' : document.getElementById('b-guest').value.trim();
   const cin   = document.getElementById('b-checkin').value;
   const cout  = document.getElementById('b-checkout').value;
   if (!guest||!cin||!cout) { toast('Please fill required fields','error'); return; }
   const nights = Math.round((new Date(cout)-new Date(cin))/86400000);
+  // A stay that ends before it starts, or on the same day, covers no nights
+  // and blocks no dates. It saved happily and did nothing visible.
+  if (nights < 1) {
+    toast(isBlock ? 'The free-again date must be after the first blocked night'
+                  : 'Check-out must be after check-in', 'error');
+    return;
+  }
   const pid = document.getElementById('b-prop').value;
   const propUuid = (PROPS[pid] || {}).uuid || pid;
   const row = {
     org_id:       getOrgId(),
     property_id:  propUuid,
-    guest_name:guest, guest_first_name:guest.split(' ')[0], guest_last_name:guest.split(' ').slice(1).join(' '),
-    platform:document.getElementById('b-platform').value,
+    guest_name:guest,
+    guest_first_name: isBlock ? null : guest.split(' ')[0],
+    guest_last_name:  isBlock ? null : guest.split(' ').slice(1).join(' '),
+    // A HAND-MADE BLOCK MUST NOT CARRY A FEED'S PLATFORM, or the importer
+    // eats it. Its blocked-event overlap fallback claims any overlapping
+    // blocked row on the same property AND platform and rewrites that row's
+    // dates to the feed event's — so a block saved as 'booking' would be
+    // swallowed by the next Booking.com closure and silently moved off the
+    // night it was protecting. 'manual' matches no feed, and with no
+    // source_uid the stale-block sweep (source_uid=not.is.null) skips it too.
+    platform: isBlock ? 'manual' : document.getElementById('b-platform').value,
     property_name:PROPS[pid]?.name||pid,
     check_in_date:cin, check_out_date:cout,
     check_in:cin+' 15:00:00+02', check_out:cout+' 10:00:00+02',
-    nights, number_of_guests:Number(document.getElementById('b-guests').value)||1,
+    nights, number_of_guests: isBlock ? 1 : (Number(document.getElementById('b-guests').value)||1),
     status:document.getElementById('b-status').value, payment_status:'pending',
-    total_amount:Number(document.getElementById('b-revenue').value)||0,
-    revenue:Number(document.getElementById('b-revenue').value)||0,
+    total_amount: isBlock ? 0 : (Number(document.getElementById('b-revenue').value)||0),
+    revenue:      isBlock ? 0 : (Number(document.getElementById('b-revenue').value)||0),
     currency:'ZAR', notes:document.getElementById('b-notes').value, is_active:true,
-    guest_email: document.getElementById('b-email')?.value?.trim() || null,
-    guest_phone: document.getElementById('b-phone')?.value?.trim() || null,
+    guest_email: isBlock ? null : (document.getElementById('b-email')?.value?.trim() || null),
+    guest_phone: isBlock ? null : (document.getElementById('b-phone')?.value?.trim() || null),
   };
   _savingBooking = true;
   try {
@@ -10171,7 +10242,8 @@ async function saveBooking() {
       if (error) { toast('Save error: '+error.message,'error'); return; }
       bookings.unshift(nb({...data,property_id:pid}));
     } else { bookings.unshift(nb({...row,id:'b'+Date.now(),property_id:pid})); }
-    toast('Booking added ✓','success'); closeModal('booking-modal'); renderBookings(); renderDashboard();
+    toast(isBlock ? 'Dates blocked ✓' : 'Booking added ✓','success');
+    closeModal('booking-modal'); renderBookings(); renderDashboard(); renderCalendar();
   } finally {
     _savingBooking = false;
   }
@@ -13834,6 +13906,10 @@ function openModal(id){
     document.getElementById('b-prop').value     = defaultPropKey();
     if (document.getElementById('b-email')) document.getElementById('b-email').value = '';
     if (document.getElementById('b-phone')) document.getElementById('b-phone').value = '';
+    // Status is reset to 'confirmed' above; put the hidden-field state back to
+    // match it, or the form reopens with the guest fields still hidden from
+    // the last time it was used to block something.
+    bmBlockMode();
   }
 
   // ── Reset task modal every time it opens fresh ────────────────────────────
