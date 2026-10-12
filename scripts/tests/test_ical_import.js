@@ -616,6 +616,52 @@ console.log('\n── An empty feed is not a list of cancellations ──');
      'a genuine cancellation must still be caught');
 }
 
+// ══ ABSENCE IS NOT A CANCELLATION ═════════════════════════════════════════
+// The empty-feed guard above was not enough. Booking.com's export for TV
+// House returned 4 events, then 0, then 2 across three runs on 2026-10-12,
+// and michelle fourie's real six-night December reservation was cancelled
+// TWICE in forty minutes — once by the empty read, once by the partial one.
+// No guard on event COUNT can separate an unreliable feed from a real
+// cancellation, so the rule has to be about what is at stake instead.
+console.log('\n── A named booking is never cancelled on absence alone ──');
+{
+  const jobSrc = codeOnly(read('scripts', 'ics-import.js'));
+  const browserSrc = codeOnly(read('demo', 'index_fixed.html'));
+
+  // The auto-cancel write must be gone from the absence path in both.
+  ok('the scheduled importer no longer auto-cancels a missing booking',
+     !/status: 'cancelled', is_active: false, cancelled_at/.test(jobSrc),
+     'absence from a feed is not evidence a guest cancelled');
+  ok('the browser importer no longer does either',
+     !/status: 'cancelled', is_active: false, cancelled_at: new Date\(\)\.toISOString\(\) \}\)\s*\n\s*\.eq\('id', row\.id\)/.test(browserSrc));
+
+  ok('both say so loudly instead', /NEEDS REVIEW/.test(jobSrc) && /NEEDS REVIEW/.test(browserSrc));
+
+  // Placeholder blocks ARE still released — the cheap, reversible half.
+  ok('a placeholder block is still released automatically',
+     /isPlaceholder/.test(jobSrc) && /totalReleased\+\+/.test(jobSrc));
+
+  // And an EXPLICIT cancellation in the feed is real evidence, so it stays.
+  ok('an explicit STATUS:CANCELLED in a feed still cancels',
+     /evt\.status === 'cancelled' && existing\.status !== 'cancelled'/.test(jobSrc),
+     'that is the platform telling us, not us inferring from silence');
+
+  // The decision, run both ways.
+  const decide = (opts) => {
+    if (opts.feedSaysCancelled) return 'cancel';
+    if (!opts.inFeed && opts.placeholderName) return 'release';
+    if (!opts.inFeed) return 'needs-review';
+    return 'keep';
+  };
+  ok('  proof: named booking vanishes from feed → review, not cancel',
+     decide({ inFeed: false, placeholderName: false }) === 'needs-review',
+     'this is michelle fourie, twice in forty minutes');
+  ok('  proof: placeholder block vanishes → released',
+     decide({ inFeed: false, placeholderName: true }) === 'release');
+  ok('  proof: feed explicitly cancels → cancelled',
+     decide({ inFeed: false, feedSaysCancelled: true }) === 'cancel');
+}
+
 console.log('');
 if (fail.length) {
   console.log(`✗ ${fail.length} check(s) failed:`);
