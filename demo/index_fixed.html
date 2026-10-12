@@ -1232,7 +1232,7 @@ function _buildMobileNavStub(){/* replaced by main script */}
             <div class="card-title" style="margin:0">🧹 Cleaner Inventory Reports</div>
             <div style="display:flex;gap:6px">
               <button onclick="filterInvReports('all',this)" class="btn btn-sm btn-primary" id="inv-filter-all">All</button>
-              <button onclick="filterInvReports('flagged',this)" class="btn btn-sm btn-ghost" id="inv-filter-flagged">⚠ Flagged only</button>
+              <button onclick="filterInvReports('flagged',this)" class="btn btn-sm btn-ghost" id="inv-filter-flagged">⚠ Issue history</button>
               <button onclick="filterInvReports('unreviewed',this)" class="btn btn-sm btn-ghost" id="inv-filter-unreviewed">Unreviewed</button>
             </div>
           </div>
@@ -5684,6 +5684,14 @@ function setInspFilter(filter, btn) {
   renderReportInspections();
 }
 
+// THE SCREEN USED TO LIE ABOUT WHAT IT WAS SHOWING. Marking a report
+// reviewed called renderReportInventory() with no argument, which defaults to
+// 'all' — so the list silently jumped from Unreviewed to every report ever,
+// while the Unreviewed button stayed highlighted. Tick one thing off and the
+// view you were working through is replaced by a different one that looks
+// like it. "All are reviewed now" is what that looks like from the outside.
+let _invFilter = 'all';
+
 function filterInvReports(f, btn) {
   document.querySelectorAll('#inv-filter-all,#inv-filter-flagged,#inv-filter-unreviewed').forEach(b=>{
     b.className='btn btn-sm btn-ghost';
@@ -5695,7 +5703,9 @@ function filterInvReports(f, btn) {
 function renderReportInventory(filter) {
   const el = document.getElementById('report-inv-list');
   if (!el) return;
-  filter = filter || 'all';
+  // Remember it, so a re-render after an action stays where the person was.
+  if (filter) _invFilter = filter;
+  filter = filter || _invFilter || 'all';
   let reports = [...inventoryReports];
   if (filter === 'flagged')    reports = reports.filter(r => !r.all_ok);
   if (filter === 'unreviewed') reports = reports.filter(r => !r.reviewed);
@@ -5703,7 +5713,12 @@ function renderReportInventory(filter) {
     el.innerHTML = emptyState('🔍', filter==='all' ? 'No inventory reports yet — they\'ll appear here once a cleaner submits one' : 'No reports match this filter');
     return;
   }
-  el.innerHTML = reports.slice(0,30).map(r => {
+  // 30 is a reasonable cap on a chronological list of mostly-fine cleans. It
+  // is not a reasonable cap on the record of what has gone wrong — that is
+  // the one view whose whole job is to reach back. Issues are rare (3 in the
+  // first three months here), so showing all of them costs nothing.
+  const shown = (filter === 'all') ? reports.slice(0,30) : reports;
+  el.innerHTML = shown.map(r => {
     const propN = propName(r.property_id);
     const flags = r.flagged_items||[];
     const borderCol = (!r.all_ok && !r.reviewed) ? '#f59e0b44' : 'var(--border)';
@@ -5712,6 +5727,31 @@ function renderReportInventory(filter) {
       : '<span style="background:#fef3c7;color:#d97706;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:10px">⚠ '+flags.length+' flag'+(flags.length!==1?'s':'')+'</span>';
     const reviewedBadge = r.reviewed
       ? '<span style="background:#f1f5f9;color:#64748b;font-size:.68rem;padding:2px 8px;border-radius:10px">Reviewed</span>' : '';
+
+    // WHEN IT WAS REPORTED, AND WHEN IT WAS DEALT WITH — as text on the card,
+    // not a title= tooltip, because this is read on a phone where there is
+    // nothing to hover.
+    //
+    // clean_date is the day the flat was cleaned; submitted_at is the day the
+    // cleaner actually sent it, and they are not the same — Patricia's 31 July
+    // clean arrived on 21 August. "When was this reported" means the second
+    // one, so it is shown whenever the two differ rather than silently
+    // standing in for it.
+    const subDay = r.submitted_at ? String(r.submitted_at).slice(0,10) : '';
+    const cleanDay = String(r.clean_date || '').slice(0,10);
+    const metaBits = [];
+    if (subDay && subDay !== cleanDay) metaBits.push('Reported ' + fmtDate(subDay));
+    if (r.reviewed) {
+      metaBits.push(r.reviewed_at
+        ? 'Reviewed ' + fmtDate(String(r.reviewed_at).slice(0,10))
+            + (r.reviewed_by ? ' by ' + escHtml(r.reviewed_by) : '')
+        // Honest about what is not known: these rows were ticked before HEP
+        // recorded the date. Better than back-filling a plausible-looking one.
+        : 'Reviewed — date not recorded');
+    }
+    const metaHtml = metaBits.length
+      ? '<div style="font-size:.72rem;color:var(--muted);margin-bottom:6px">' + metaBits.join(' · ') + '</div>'
+      : '';
     const flagsHtml = flags.length > 0
       ? '<div style="margin:8px 0">' + flags.map(f=>'<div style="font-size:.78rem;padding:4px 10px;background:#fef9c3;border-radius:6px;margin-bottom:3px;color:#92400e"><strong>'+f.room+':</strong> '+f.item+(f.note?' — '+f.note:'')+'</div>').join('') + '</div>'
       : '';
@@ -5727,7 +5767,7 @@ function renderReportInventory(filter) {
       ? '<button onclick="createTaskFromFlag(\'' + r.id + '\')" style="padding:4px 12px;border-radius:8px;background:#fef3c7;border:1px solid #fcd34d;font-size:.74rem;cursor:pointer;color:#92400e">⚡ Create task</button>' : '';
 const rid = r.id;
     const reviewBtn = !r.reviewed
-      ? '<button data-rid="'+rid+'" onclick="markReviewed(this.dataset.rid);renderReportInventory()" style="padding:4px 12px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);font-size:.74rem;cursor:pointer;color:var(--ink)">✓ Mark reviewed</button>' : '';
+      ? '<button data-rid="'+rid+'" onclick="markReviewed(this.dataset.rid)" style="padding:4px 12px;border-radius:8px;background:var(--surface-2);border:1px solid var(--border);font-size:.74rem;cursor:pointer;color:var(--ink)">✓ Mark reviewed</button>' : '';
     const actionsHtml = (reviewBtn || createBtn)
       ? '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+reviewBtn+createBtn+'</div>'
       : '';
@@ -5739,7 +5779,7 @@ const rid = r.id;
       + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:6px">'
       + '<div><strong style="font-size:.9rem">'+r.cleaner+'</strong><span style="color:var(--muted);font-size:.78rem"> · '+propN+' · '+fmtDate(r.clean_date)+'</span></div>'
       + '<div style="display:flex;gap:5px;align-items:center">'+statusBadge+reviewedBadge+'</div>'
-      + '</div>'+flagsHtml+noteHtml+'<div style="display:flex;gap:6px;flex-wrap:wrap">'+actionsHtml+deleteBtn+'</div></div>';
+      + '</div>'+metaHtml+flagsHtml+noteHtml+'<div style="display:flex;gap:6px;flex-wrap:wrap">'+actionsHtml+deleteBtn+'</div></div>';
   }).join('');
 }
 
@@ -17251,10 +17291,18 @@ async function saveTaskDrawer() {
 async function markReviewed(reportId) {
   const r = inventoryReports.find(x=>x.id===reportId);
   if(!r) return;
-  r.reviewed = true;
-  if(db) await db.from('inventory_reports').update({reviewed:true}).eq('id',reportId);
+  // reviewed=true alone could not answer "when did I deal with this, and did
+  // I?" — which is the whole reason anyone looks back at a flagged report.
+  const stamp = {
+    reviewed: true,
+    reviewed_at: new Date().toISOString(),
+    reviewed_by: (window.currentUser && currentUser.name) || 'unknown',
+  };
+  Object.assign(r, stamp);
+  if(db) await db.from('inventory_reports').update(stamp).eq('id',reportId);
   toast('Marked as reviewed ✓','success');
   if(currentTab==='cleaning') renderDomesticCalView();
+  if(typeof renderReportInventory==='function') renderReportInventory();
   renderDashboard();
 }
 
@@ -17281,8 +17329,14 @@ async function createTaskFromFlag(reportId) {
     const {data,error} = await db.from('tasks').insert([row]).select().single();
     if(error){toast('Error: '+error.message,'error');return;}
     tasks.unshift(nt({...data}));
-    await db.from('inventory_reports').update({task_created:true,reviewed:true}).eq('id',reportId);
-    r.task_created=true; r.reviewed=true;
+    const stamp = {
+      task_created: true,
+      reviewed: true,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: (window.currentUser && currentUser.name) || 'unknown',
+    };
+    await db.from('inventory_reports').update(stamp).eq('id',reportId);
+    Object.assign(r, stamp);
   }
   toast('Task created ✓','success');
   if(currentTab==='cleaning') renderDomesticCalView();
