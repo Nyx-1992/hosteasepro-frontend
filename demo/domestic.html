@@ -356,15 +356,49 @@ h1,h2,h3{font-family:Syne,sans-serif}
           <div style="font-size:.78rem;color:var(--muted)" id="inv-sub"></div>
         </div>
       </div>
-      <div id="inventory-form"></div>
-      <div class="ping-box">
-        <!-- "Note for Nicole & Silja" named one agency's two owners to every
-             cleaner on the platform. "the office" is who it is for in any
-             agency, including this one. -->
-        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px" data-t="noteOffice">📌 Note for the office</div>
-        <textarea class="ping-textarea" id="inv-note" data-t-ph="notePlaceholder" placeholder="Anything else to mention? e.g. geyser making noise, gate stiff, neighbour complaint…"></textarea>
+      <!-- ══ ONE QUESTION FIRST ═══════════════════════════════════════════
+           This screen used to open on 41 items (Speranta) or 48 (TV House),
+           every one needing a tap to flag. In three months it produced a
+           single finding. Seventeen of twenty reports came back "all OK" with
+           nothing else — not because nothing was ever wrong, but because
+           "all fine" was the only answer the form made cheap to give.
+           Both genuinely useful reports in that period arrived through the
+           free-text box at the bottom, which cost one tap to reach past a
+           list nobody filled in.
+           So the list is no longer the question. "Is anything wrong?" is, and
+           saying yes is now the easy path rather than the expensive one. -->
+      <div id="inv-triage">
+        <div style="text-align:center;padding:18px 8px 6px">
+          <div style="font-family:Syne,sans-serif;font-weight:800;font-size:1.15rem;margin-bottom:6px" data-t="invAskTitle">Everything fine?</div>
+          <div style="font-size:.82rem;color:var(--muted);line-height:1.5" data-t="invAskSub">If anything is broken, missing or running out, tell us. Otherwise one tap and you're done.</div>
+        </div>
+        <button class="submit-btn green" onclick="invAllGood()" data-t="invAllGood">✓ All good — finish</button>
+        <button class="submit-btn" style="background:var(--card2);color:var(--text);border:1px solid var(--border)"
+                onclick="invSomethingWrong()" data-t="invWrong">⚠ Something needs attention</button>
       </div>
-      <button class="submit-btn green" onclick="submitInventory()" data-t="submitInv">✓ Submit Inventory Report</button>
+
+      <!-- Shown only when they say something is wrong. The note comes FIRST:
+           it is where every useful report has actually come from. -->
+      <div id="inv-detail" style="display:none">
+        <div class="ping-box">
+          <!-- "Note for Nicole & Silja" named one agency's two owners to every
+               cleaner on the platform. "the office" is who it is for in any
+               agency, including this one. -->
+          <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px" data-t="invWhatsWrong">📌 What's wrong?</div>
+          <textarea class="ping-textarea" id="inv-note" data-t-ph="notePlaceholder" placeholder="Anything else to mention? e.g. geyser making noise, gate stiff, neighbour complaint…"></textarea>
+        </div>
+
+        <!-- The room list is still here for anyone who wants to be precise,
+             but it is now opt-in rather than the toll gate. -->
+        <button id="inv-list-toggle" onclick="invToggleList()"
+                style="width:100%;margin-top:12px;padding:12px;border-radius:12px;border:1px dashed var(--border);background:transparent;color:var(--muted);font-family:inherit;font-size:.84rem;cursor:pointer"
+                data-t="invShowList">Or tick the exact item ▾</button>
+        <div id="inventory-form" style="display:none"></div>
+
+        <button class="submit-btn green" onclick="submitInventory()" data-t="submitInv">✓ Submit Inventory Report</button>
+        <button class="submit-btn" style="background:transparent;color:var(--muted);border:1px solid var(--border);margin-top:8px"
+                onclick="invBackToTriage()" data-t="invNothingAfterAll">Actually, everything's fine</button>
+      </div>
     </div>
     <div class="screen" id="screen-avail">
       <div class="section-title" data-t="myAvail">My Availability</div>
@@ -777,6 +811,12 @@ const STAFF_T = {
     submittedFlagged_one:'✓ Submitted — {n} item flagged',
     submittedFlagged_other:'✓ Submitted — {n} items flagged',
     submittedNote:'✓ Submitted with note', allDone:'🎉 Nice one — all done!',
+    invAskTitle:'Everything fine?',
+    invAskSub:'If anything is broken, missing or running out, tell us. Otherwise one tap and you\'re done.',
+    invAllGood:'✓ All good — finish', invWrong:'⚠ Something needs attention',
+    invWhatsWrong:'📌 What\'s wrong?',
+    invShowList:'Or tick the exact item ▾', invHideList:'Hide the list ▴',
+    invNothingAfterAll:'Actually, everything\'s fine',
 
     myAvail:'My Availability', tapDay:'Tap a day to mark yourself unavailable',
     prev:'← Prev', next:'Next →',
@@ -879,6 +919,12 @@ const STAFF_T = {
     submittedFlagged_one:'✓ Ingedien — {n} item gemerk',
     submittedFlagged_other:'✓ Ingedien — {n} items gemerk',
     submittedNote:'✓ Ingedien met \'n nota', allDone:'🎉 Mooi so — alles klaar!',
+    invAskTitle:'Is alles reg?',
+    invAskSub:'As iets stukkend, weg of op is, laat weet ons. Anders is een tik genoeg.',
+    invAllGood:'✓ Alles reg — klaar', invWrong:'⚠ Iets kort aandag',
+    invWhatsWrong:'📌 Wat is fout?',
+    invShowList:'Of merk die presiese item ▾', invHideList:'Versteek die lys ▴',
+    invNothingAfterAll:'Eintlik is alles reg',
 
     myAvail:'My Beskikbaarheid', tapDay:'Tik \'n dag om jouself as onbeskikbaar te merk',
     prev:'← Vorige', next:'Volgende →',
@@ -981,6 +1027,12 @@ const STAFF_T = {
     submittedFlagged_one:'✓ Zvatumirwa — chinhu {n} chataurwa',
     submittedFlagged_other:'✓ Zvatumirwa — zvinhu {n} zvataurwa',
     submittedNote:'✓ Zvatumirwa nechinyorwa', allDone:'🎉 Wazviita zvakanaka — zvese zvapera!',
+    invAskTitle:'Zvose zvakanaka here?',
+    invAskSub:'Kana paine chakatyoka, chisipo kana chopera, tiudzei. Kana pasina, dzvanya kamwe chete wapedza.',
+    invAllGood:'✓ Zvose zvakanaka — pedza', invWrong:'⚠ Pane chinoda kuonekwa',
+    invWhatsWrong:'📌 Chii chakakanganisika?',
+    invShowList:'Kana sarudza chinhu chaicho ▾', invHideList:'Vanza rondedzero ▴',
+    invNothingAfterAll:'Chokwadi, zvose zvakanaka',
 
     myAvail:'Mazuva Andinogona', tapDay:'Baya zuva kuti uratidze kuti haugoni',
     prev:'← Yapfuura', next:'Inotevera →',
@@ -1083,6 +1135,12 @@ const STAFF_T = {
     submittedFlagged_one:'✓ Kungenisiwe — into e-{n} iphawuliwe',
     submittedFlagged_other:'✓ Kungenisiwe — izinto ezi-{n} ziphawuliwe',
     submittedNote:'✓ Kungenisiwe kunye nenqaku', allDone:'🎉 Wenze kakuhle — konke kugqityiwe!',
+    invAskTitle:'Ingaba konke kulungile?',
+    invAskSub:'Ukuba kukho into eyophukileyo, elahlekileyo okanye ephelayo, sixelele. Ngaphandle koko, cofa kanye ugqibe.',
+    invAllGood:'✓ Konke kulungile — gqiba', invWrong:'⚠ Kukho into efuna ingqwalasela',
+    invWhatsWrong:'📌 Yintoni engalunganga?',
+    invShowList:'Okanye khetha into echanekileyo ▾', invHideList:'Fihla uluhlu ▴',
+    invNothingAfterAll:'Enyanisweni, konke kulungile',
 
     myAvail:'Iintsuku Zam', tapDay:'Cofa usuku ukubonisa ukuba awufumaneki',
     prev:'← Ngaphambili', next:'Elandelayo →',
@@ -2484,7 +2542,61 @@ function openInventory(cleanId) {
         </div>`;
       }).join('')}
     </div>`).join('');
+  // Always open on the question, never on the list — including when they come
+  // back to a second clean in the same session.
+  invBackToTriage();
   showScreen('inventory');
+}
+
+// ── The two answers ───────────────────────────────────────────────────────
+// "All good" submits immediately. No list, no note, no second screen: the
+// report that says nothing is wrong is the one that should cost least, and it
+// is ~85% of them.
+function invAllGood() {
+  inventoryState = {};
+  const n = document.getElementById('inv-note');
+  if (n) n.value = '';
+  submitInventory();
+}
+
+function invSomethingWrong() {
+  const tri = document.getElementById('inv-triage');
+  const det = document.getElementById('inv-detail');
+  if (tri) tri.style.display = 'none';
+  if (det) det.style.display = '';
+  // Put the cursor in the box that has produced every useful report so far,
+  // rather than make them find it.
+  const n = document.getElementById('inv-note');
+  if (n) setTimeout(() => n.focus(), 50);
+}
+
+function invBackToTriage() {
+  const tri = document.getElementById('inv-triage');
+  const det = document.getElementById('inv-detail');
+  const list = document.getElementById('inventory-form');
+  const tgl = document.getElementById('inv-list-toggle');
+  if (tri) tri.style.display = '';
+  if (det) det.style.display = 'none';
+  // Collapse the list again, and drop anything ticked on the way through —
+  // a flag left behind from a change of mind would submit as a real finding.
+  if (list) list.style.display = 'none';
+  if (tgl) { tgl.style.display = ''; tgl.textContent = t('invShowList'); }
+  inventoryState = {};
+  const n = document.getElementById('inv-note');
+  if (n) n.value = '';
+  document.querySelectorAll('#inventory-form .item-row.flagged').forEach(r => r.classList.remove('flagged'));
+  document.querySelectorAll('#inventory-form .flag-note.show').forEach(r => r.classList.remove('show'));
+  document.querySelectorAll('#inventory-form .item-toggle').forEach(r => { r.textContent = '✓'; });
+  document.querySelectorAll('#inventory-form .flag-input').forEach(i => { i.value = ''; });
+}
+
+function invToggleList() {
+  const list = document.getElementById('inventory-form');
+  const tgl = document.getElementById('inv-list-toggle');
+  if (!list) return;
+  const open = list.style.display !== 'none';
+  list.style.display = open ? 'none' : '';
+  if (tgl) tgl.textContent = open ? t('invShowList') : t('invHideList');
 }
 
 function toggleItem(room,item,k) {
