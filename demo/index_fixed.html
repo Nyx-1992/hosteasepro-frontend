@@ -6512,41 +6512,32 @@ async function syncICalFeeds(silent = false) {
             console.warn('[iCal] Skipped auto-cancel — check-in already passed, needs manual review:', feed.property_name, row.guest_name, row.check_in_date, '→', row.check_out_date);
             continue;
           }
-          // ── Cancellation workflow: named guest, booking gone from feed ──────
-          const { data: canc, error: cancErr } = await db.from('bookings')
-            .update({ status: 'cancelled', is_active: false, cancelled_at: new Date().toISOString() })
-            .eq('id', row.id).select('id');
-          if (cancErr || !canc || !canc.length) {
-            console.warn('[iCal] Cancellation FAILED (RLS?):', feed.property_name, row.guest_name, row.check_in_date, '→', row.check_out_date, cancErr?.message||'0 rows updated');
-            continue;
-          }
-          totalCancelled++;
-          console.log('[iCal] Booking cancelled upstream:', feed.property_name, row.guest_name, row.check_in_date, '→', row.check_out_date);
-          // If a clean was already scheduled for this checkout, flag it
-          // cancelled too — kept on record (never deleted), surfaced in
-          // Urgent Actions until Nina acknowledges it. Same ±2-day
-          // property-match convention used throughout both files.
-          try {
-            // domestics.property_id stores the short key ('speranta'/'tvhouse'),
-            // not the UUID feed.property_id is — same convention nb() uses to
-            // normalize bookings.property_id via UUID_MAP. Without this
-            // translation the query below matches nothing, ever.
-            const domesticsPid = UUID_MAP[feed.property_id] || feed.property_id;
-            const { data: linkedCleans } = await db.from('domestics')
-              .select('id, date, cleaner')
-              .eq('property_id', domesticsPid)
-              .eq('status', 'scheduled');
-            const match = (linkedCleans || []).find(d =>
-              Math.abs(new Date(d.date) - new Date(row.check_out_date)) <= 2 * 86400000
-            );
-            if (match) {
-              const { error: cleanErr } = await db.from('domestics')
-                .update({ status: 'cancelled' })
-                .eq('id', match.id);
-              if (cleanErr) console.warn('[iCal] Could not flag linked clean cancelled:', match.id, cleanErr.message);
-              else console.log('[iCal] Linked clean flagged cancelled:', match.cleaner, match.date);
-            }
-          } catch (linkErr) { console.warn('[iCal] Linked-clean lookup error:', linkErr); }
+          // ── A NAMED BOOKING IS NEVER CANCELLED ON ABSENCE ALONE ─────────
+          // Everything above reasons from "the UID is not in the feed". That
+          // is weak evidence, and it was being treated as proof.
+          //
+          // Booking.com's export for TV House returned 4 events, then 0, then
+          // 2 over three runs on 2026-10-12, and michelle fourie's real
+          // six-night December reservation was cancelled TWICE in forty
+          // minutes — once by the empty read, once by the partial one. She
+          // was booked throughout. A feed that drops events it listed an hour
+          // ago is being unreliable, not reporting cancellations, and no
+          // guard on event COUNT can tell those apart.
+          //
+          // The rule is about what is at stake. A placeholder block released
+          // wrongly costs a night that might have been held, logged and
+          // reversible. A named reservation cancelled wrongly destroys the
+          // record of a real person with a contract and puts their room back
+          // on sale. Only the first is automatic.
+          //
+          // An explicit STATUS:CANCELLED in a feed is different — that is
+          // evidence, and it still cancels, higher up in this same function.
+          console.warn('[iCal] NEEDS REVIEW —', feed.property_name + ':', '"' + row.guest_name + '"',
+            row.check_in_date, '\u2192', row.check_out_date,
+            'is no longer in the', feed.platform,
+            'feed. NOT cancelled automatically: a named booking is never cancelled on',
+            'absence alone. Check the platform and cancel it by hand if it really is gone.');
+          continue;
         }
       } catch(swErr) { console.warn('[iCal] Stale sweep error:', feed.platform, swErr); }
     } catch(e) {
