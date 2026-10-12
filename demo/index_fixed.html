@@ -14072,6 +14072,13 @@ function getDomesticStaff() {
     name: (c.name || '').split(' ')[0],
     fullName: c.name,
     phone: c.phone,
+    // team_contacts carries a SEPARATE, already-normalised WhatsApp number
+    // alongside the contact phone, and this dropped it — so anything
+    // messaging a cleaner re-derived WhatsApp from `phone` instead. The two
+    // match for all four cleaners today, which is exactly why it went
+    // unnoticed; the `wa` column exists because they need not, and the day
+    // one differs the message goes silently to the wrong number.
+    wa: c.wa || '',
     payment: c.cleaner_payment,
     properties: c.cleaner_properties || [],
     rate: c.cleaner_rate,
@@ -14101,6 +14108,15 @@ function getDomesticStaff() {
 // people). Counting remaining days would flag all four every week and teach
 // her to ignore the card.
 const AVAIL_STALE_DAYS = 30;
+
+// The number to reach a cleaner on: their saved WhatsApp number if there is
+// one, otherwise their contact phone normalised to international form. Not
+// the other way round — `wa` is the one they actually read messages on.
+function cleanerWaNumber(c) {
+  const wa = (c && c.wa ? String(c.wa) : '').replace(/\D/g, '');
+  if (wa) return wa;
+  return normalizeZaPhone(c && c.phone);
+}
 
 function staleAvailabilityCleaners() {
   const staff = (typeof getDomesticStaff === 'function' ? getDomesticStaff() : []);
@@ -14133,7 +14149,7 @@ function renderAvailabilityNudge() {
     + ' not updated availability in over ' + AVAIL_STALE_DAYS + ' days</div>'
     + stale.map(c => {
         const when = c.daysSince === null ? 'never set any' : c.daysSince + ' days ago';
-        const canSend = !!(c.phone && normalizeZaPhone(c.phone));
+        const canSend = !!cleanerWaNumber(c);
         return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:5px 0">'
           + '<div style="font-size:.82rem;color:#92400e"><strong>' + escHtml(c.name) + '</strong>'
           + '<span style="color:#b45309;font-size:.76rem"> · ' + when + '</span></div>'
@@ -14153,7 +14169,7 @@ function nudgeAvailability(name) {
   const c = staleAvailabilityCleaners().find(x => x.name === name)
          || getDomesticStaff().find(x => x.name === name);
   if (!c) return;
-  const phone = normalizeZaPhone(c.phone);
+  const phone = cleanerWaNumber(c);
   if (!phone) { toast('No WhatsApp number saved for ' + name, 'error'); return; }
   const who = (CLIENT_BRAND && CLIENT_BRAND.name) ? CLIENT_BRAND.name : 'the office';
   // Short, specific, and asks for one thing. "Remember to do your admin" is
