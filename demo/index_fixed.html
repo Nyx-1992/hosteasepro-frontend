@@ -830,6 +830,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <!-- Cleaner Availability -->
         <div class="card" style="margin-top:16px">
           <div class="card-title" style="margin-bottom:12px">📅 Cleaner Availability</div>
+          <!-- Renders ONLY when somebody has actually gone stale. A nudge that
+               is always on screen is wallpaper; one that appears when it is
+               true gets read. -->
+          <div id="dom-avail-nudge"></div>
           <div id="dom-availability"><div style="color:var(--muted);font-size:.82rem;text-align:center;padding:16px">No availability data yet</div></div>
         </div>
 
@@ -10847,6 +10851,8 @@ function renderDomesticCalView() {
   // Render earnings
   renderDomEarnings();
 
+  renderAvailabilityNudge();
+
   // Render cleaner availability
   const availEl = document.getElementById('dom-availability');
   if (availEl && cleanerAvailability.length) {
@@ -14074,6 +14080,90 @@ function getDomesticStaff() {
 }
 // All domestic-category contacts with a birthday set, cleaners and
 // caretakers alike — used by the calendar's birthday widget.
+// ── WHO ACTUALLY NEEDS NUDGING ───────────────────────────────────────────
+// Owner: "I want maybe a weekly whatsapp reminder … 'remember to check your
+// availability and if cleaning inventory report submitted' — or is this too
+// much and spam?"
+//
+// Half of it was spam, and the numbers said which half. Inventory reports
+// came back for 71%, 100%, 80% and 100% of completed cleans across July to
+// October — reminding four people weekly to do a thing they already do is how
+// a number gets muted, and then the message that matters is muted with it.
+//
+// Availability is the real gap: Fatima last set hers in July, Blessing in
+// August, while Spiwe and Patricia are current. So the nudge is availability
+// only, and it goes to whoever is actually stale rather than to everybody on
+// a timer.
+//
+// 30 DAYS, measured on when they last SET anything, not on how many free days
+// they have left. Everyone here shows one or two free days a month, and that
+// is not neglect — it matches the work (4-7 cleans shared between four
+// people). Counting remaining days would flag all four every week and teach
+// her to ignore the card.
+const AVAIL_STALE_DAYS = 30;
+
+function staleAvailabilityCleaners() {
+  const staff = (typeof getDomesticStaff === 'function' ? getDomesticStaff() : []);
+  const now = Date.now();
+  return staff.map(c => {
+    // cleanerAvailability holds future-dated rows; created_at on them is when
+    // the cleaner last saved. Nobody with no future rows at all has set
+    // anything we can still use, which is the strongest case for a nudge.
+    const mine = (cleanerAvailability || []).filter(a => a.cleaner === c.name && a.created_at);
+    let last = null;
+    mine.forEach(a => { const t = new Date(a.created_at).getTime();
+                        if (!isNaN(t) && (last === null || t > last)) last = t; });
+    const days = last === null ? null : Math.floor((now - last) / 86400000);
+    return { ...c, lastSet: last, daysSince: days };
+  }).filter(c => c.daysSince === null || c.daysSince >= AVAIL_STALE_DAYS)
+    .sort((a, b) => (b.daysSince ?? 1e9) - (a.daysSince ?? 1e9));
+}
+
+function renderAvailabilityNudge() {
+  const el = document.getElementById('dom-avail-nudge');
+  if (!el) return;
+  const stale = staleAvailabilityCleaners();
+  // Nothing to say: say nothing. No "0 cleaners need reminding" card.
+  if (!stale.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML =
+    '<div style="border:1px solid #fcd34d;background:#fffbeb;border-radius:10px;padding:12px 14px;margin-bottom:12px">'
+    + '<div style="font-size:.82rem;font-weight:700;color:#92400e;margin-bottom:8px">'
+    + '📅 ' + stale.length + ' cleaner' + (stale.length !== 1 ? 's have' : ' has')
+    + ' not updated availability in over ' + AVAIL_STALE_DAYS + ' days</div>'
+    + stale.map(c => {
+        const when = c.daysSince === null ? 'never set any' : c.daysSince + ' days ago';
+        const canSend = !!(c.phone && normalizeZaPhone(c.phone));
+        return '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:5px 0">'
+          + '<div style="font-size:.82rem;color:#92400e"><strong>' + escHtml(c.name) + '</strong>'
+          + '<span style="color:#b45309;font-size:.76rem"> · ' + when + '</span></div>'
+          + (canSend
+              ? '<button onclick="nudgeAvailability(\'' + escAttr(c.name) + '\')" style="padding:4px 12px;border-radius:8px;background:#fef3c7;border:1px solid #fcd34d;font-size:.74rem;cursor:pointer;color:#92400e;font-weight:600">💬 Remind on WhatsApp</button>'
+              : '<span style="font-size:.72rem;color:#b45309">No WhatsApp number on their staff record</span>')
+          + '</div>';
+      }).join('')
+    + '</div>';
+}
+
+// Opens WhatsApp with the message ready, from whichever number is signed in —
+// deliberately NOT an automated send. A real WhatsApp Business API costs money
+// and needs Meta approval, and the whole point of this card is that a person
+// glances at it and decides. One tap is cheap enough.
+function nudgeAvailability(name) {
+  const c = staleAvailabilityCleaners().find(x => x.name === name)
+         || getDomesticStaff().find(x => x.name === name);
+  if (!c) return;
+  const phone = normalizeZaPhone(c.phone);
+  if (!phone) { toast('No WhatsApp number saved for ' + name, 'error'); return; }
+  const who = (CLIENT_BRAND && CLIENT_BRAND.name) ? CLIENT_BRAND.name : 'the office';
+  // Short, specific, and asks for one thing. "Remember to do your admin" is
+  // what people stop reading.
+  const text = 'Hi ' + c.name + ', it\'s ' + who + '. Could you open the staff portal '
+    + 'and mark which days you\'re free to work over the next few weeks? '
+    + 'It\'s the "My Availability" screen — tap the days and Save. Thank you!';
+  deliverWhatsAppMessage(phone, text);
+}
+
 function getDomesticBirthdays() {
   return contacts.filter(c => c.cat === 'domestic' && c.birthday)
     .map(c => ({ name: (c.name || '').split(' ')[0], birthday: c.birthday }));
