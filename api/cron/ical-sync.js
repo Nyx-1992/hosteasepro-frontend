@@ -182,27 +182,41 @@ export default async function handler(req, res) {
   });
 }
 
-// ── ON THE SCHEDULE IN vercel.json ────────────────────────────────
+// ── WHO ACTUALLY RUNS THE SCHEDULE: NOT THIS FILE ─────────────────
 //
-// It says once a day. It wants to say every fifteen minutes, and the
-// reason it does not is a plan limit rather than a design decision:
-// Vercel's Hobby tier allows daily cron only, and an invalid schedule does
-// not warn — IT FAILS THE WHOLE DEPLOYMENT. Setting */15 here stopped the
-// project building at all, which is why two commits sat undeployed for a
-// day.
+// The cron in vercel.json says once a day and has never been observed to
+// fire. The gap was filled by an external cron-job.org job calling this
+// endpoint every fifteen minutes — and cron-job.org DISABLED that job on
+// 2026-09-14 for too many failed executions. Nobody noticed for a month,
+// because .github/workflows/ics-import.yml was quietly keeping bookings
+// current the whole time.
 //
-// Once a day is not enough for what this fixes. A booking that arrives at
-// 09:00 needs a cleaner assigned that morning, not tomorrow — which was
-// the original complaint.
+// So the schedule now lives there, at every 30 minutes: free and unmetered
+// on a public repo, 722 green runs behind it, and no third party to go
+// quiet on us. Do not reach for an external scheduler again without
+// checking what that workflow is already doing.
 //
-// TWO WAYS TO GET THE FIFTEEN MINUTES BACK, either is fine:
+// WHAT THIS ENDPOINT IS STILL FOR is the part no scheduler covers: the
+// "Sync calendars" button an owner presses in Settings, and "Sync bookings"
+// in the staff portal. Those run the same import for one org, on demand.
 //
-//   1. Vercel Pro. Change the schedule above to */15 * * * * and redeploy.
+// ── maxDuration, AND THE TEN SECONDS IT USED TO HAVE ──────────────
 //
-//   2. Any external scheduler — cron-job.org and similar are free — set to
-//      call this endpoint every 15 minutes with the CRON_SECRET as a
-//      bearer token. Costs nothing and needs no plan change. The endpoint
-//      is identical either way; it does not care who woke it.
+// Vercel's Hobby default is a 10-second function. A six-feed import takes
+// about ten seconds — each feed fetched over the network, then a Supabase
+// round trip per event to match it. Sitting exactly on the limit is why the
+// failures were intermittent rather than total, and why "too many failed
+// executions" was the shape of it.
 //
-// Until then, the daily run plus the "Sync calendars" button in Settings
-// covers it: nobody has to wait a day, they just have to press something.
+// vercel.json now gives this function 60 seconds, which Hobby allows. That
+// is the ceiling on the plan, so if feed count ever grows past what fits in
+// a minute, the answer is to give the button a bounded slice of the work
+// rather than a bigger timeout — the scheduled full import already has
+// nowhere near that pressure on Actions.
+//
+// NOTE the exact failure above was never reproduced from here: the sandbox
+// cannot reach hosteasepro.com. The timeout is the best-supported
+// explanation, not a confirmed one. This endpoint answers with
+// {"error":"Sync failed","detail":"..."} on a real throw, and cron-job.org
+// keeps response bodies in its execution history — that, or Vercel's own
+// function logs, is where the truth is if it fails again.
