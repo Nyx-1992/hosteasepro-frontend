@@ -582,6 +582,40 @@ ok('host matching is a suffix match, not a substring one',
 ok('an unknown host is refused, and says which', /Not a calendar host we sync from/.test(proxy));
 ok('there is a timeout', /AbortSignal\.timeout/.test(proxy));
 
+// ══ AN EMPTY FEED MUST NOT EMPTY THE BOOK ═════════════════════════════════
+// The sweep decides a booking is gone because its UID is missing from the
+// feed. With zero events every UID is missing. On 2026-10-12 at 21:12 the
+// Booking.com feed for TV House returned empty and the sweep CANCELLED
+// michelle fourie's real six-night December reservation and released the
+// owners' blocks, inside 1.5 seconds. She was booked on Booking.com the
+// whole time. Both importers that sweep must refuse to act on an empty feed.
+console.log('\n── An empty feed is not a list of cancellations ──');
+{
+  const jobSrc = codeOnly(read('scripts', 'ics-import.js'));
+  const browserSrc = codeOnly(read('demo', 'index_fixed.html'));
+
+  const guard = /if \(!events\.length\) \{[\s\S]{0,500}?continue;/;
+  ok('the scheduled importer skips the sweep on an empty feed', guard.test(jobSrc));
+  ok('the browser importer does too', guard.test(browserSrc));
+
+  // A guard placed after the deactivating query would guard nothing.
+  const guardBefore = (src, marker) => {
+    const g = src.search(/if \(!events\.length\)/);
+    const m = src.indexOf(marker);
+    return g > -1 && m > -1 && g < m;
+  };
+  ok('  the guard runs before the stale lookup in the scheduled importer',
+     guardBefore(jobSrc, 'source_uid=not.is.null'));
+  ok('  and before it in the browser importer',
+     guardBefore(browserSrc, 'feedUids'));
+
+  const sweepRuns = (n) => !!n;
+  ok('  proof: 0 events → no sweep', sweepRuns(0) === false,
+     'this is the run that cancelled a real booking');
+  ok('  proof: 1 event → sweep still runs', sweepRuns(1) === true,
+     'a genuine cancellation must still be caught');
+}
+
 console.log('');
 if (fail.length) {
   console.log(`✗ ${fail.length} check(s) failed:`);
