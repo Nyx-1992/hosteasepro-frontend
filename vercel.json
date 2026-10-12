@@ -1,4 +1,7 @@
 {
+  "functions": {
+    "api/cron/ical-sync.js": { "maxDuration": 60 }
+  },
   "crons": [
     {
       "path": "/api/cron/ical-sync",

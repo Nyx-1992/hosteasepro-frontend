@@ -375,7 +375,16 @@ console.log('\n── The scheduled importer agrees too ──');
   const wf  = read('.github', 'workflows', 'ics-import.yml');
   const jobCode = codeOnly(job);
 
-  ok('the workflow still runs it on a schedule', /cron: '0 \*\/6 \* \* \*'/.test(wf));
+  // This pinned the literal '0 */6 * * *'. That asserted a value, not the
+  // property worth protecting, and six hours turned out to be the thing that
+  // needed changing: it was slow enough that an external scheduler dying
+  // went unnoticed for a month, because bookings still arrived.
+  const wfCron = (wf.match(/schedule:\s*\n\s*-\s*cron:\s*'([^']+)'/) || [])[1];
+  ok('the workflow still runs it on a schedule', !!wfCron, wfCron);
+  const everyNMin = (wfCron || '').match(/^\*\/(\d+) \* \* \* \*$/);
+  ok('  often enough that a morning booking gets a cleaner that morning',
+     !!everyNMin && Number(everyNMin[1]) <= 60,
+     wfCron + ' — this is the only scheduler that has ever been observed to run');
   ok('Booking.com CLOSED is a reservation here as well',
      /feed\.platform === 'booking' &&\s*\n?\s*sumLow\.indexOf\('closed'\) >= 0 && nights <= 31/.test(jobCode));
   ok('Airbnb is read the right way round',
@@ -521,15 +530,32 @@ ok('there is a dry run that writes nothing',
 const vercel = JSON.parse(read('vercel.json'));
 const job = (vercel.crons || []).find(c => c.path === '/api/cron/ical-sync');
 ok('it is actually scheduled', !!job, JSON.stringify(vercel.crons));
-// It WANTS to be */15. Vercel's Hobby tier allows daily cron only, and an
-// invalid schedule does not warn — it fails the whole deployment, which is
-// exactly what happened: two commits sat unbuilt for a day. So the file
-// holds a schedule that deploys, and the note in the handler says how to
-// get the fifteen minutes back (Pro, or any external scheduler).
+// Vercel's Hobby tier allows daily cron only, and an invalid schedule does
+// not warn — it fails the whole deployment, which is exactly what happened:
+// two commits sat unbuilt for a day.
 ok('the schedule is one Vercel will actually accept',
    !!job && /^0 \d{1,2} \* \* \*$/.test(job.schedule), job && job.schedule);
-ok('and how to make it more frequent is written down',
-   /TWO WAYS TO GET THE FIFTEEN MINUTES BACK/.test(cron));
+
+// This used to require the handler to explain how to point an EXTERNAL
+// scheduler at it. One was pointed at it, cron-job.org disabled it on
+// 2026-09-14 for too many failed executions, and a month passed before
+// anyone looked — the GitHub workflow had been carrying the load all along.
+// So the note has to say where the schedule really lives, or the next person
+// re-adds a third party that can go quiet.
+ok('the handler says which scheduler actually runs it',
+   /ics-import\.yml/.test(cron),
+   'pointing somebody at an external scheduler again is how this repeats');
+
+// A six-feed import takes about ten seconds. Hobby's default function is ten
+// seconds. Sitting exactly on the limit is why the failures were
+// intermittent, and why the same endpoint behind the owner's "Sync
+// calendars" button and the staff portal's "Sync bookings" could fail too.
+const fnCfg = (vercel.functions || {})['api/cron/ical-sync.js'];
+ok('the sync function is given more than the 10-second default',
+   !!fnCfg && Number(fnCfg.maxDuration) >= 30,
+   JSON.stringify(vercel.functions || null));
+ok('  and no more than Hobby allows, or the deployment fails',
+   !!fnCfg && Number(fnCfg.maxDuration) <= 60, fnCfg && String(fnCfg.maxDuration));
 // A daily cron alone would leave Nina waiting until tomorrow, which is the
 // complaint. The button is what makes the daily schedule survivable.
 ok('a person can run it without waiting for the schedule',

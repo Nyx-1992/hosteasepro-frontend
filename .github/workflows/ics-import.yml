@@ -9,10 +9,34 @@ name: ICS Import
 # hand-maintained copy, not a shared module (this repo has no bundler for
 # the client-side app), so it CAN drift again — when changing sync or
 # classification logic in one file, check the other.
+#
+# ── WHY EVERY HALF HOUR, AND WHY HERE ────────────────────────────────────
+#
+# This was every six hours, and the gap was being filled by an external
+# cron-job.org job calling /api/cron/ical-sync every fifteen minutes.
+# cron-job.org disabled that job on 2026-09-14 after too many failed
+# executions, and nobody noticed for a month — because THIS workflow went on
+# working, so bookings kept arriving and nothing looked wrong. Six hours is
+# still too slow for the thing it was built for: a booking that lands at
+# 09:00 needs a cleaner assigned that morning.
+#
+# The frequency belongs here rather than on an external scheduler. This repo
+# is public, so Actions minutes are free and unlimited — the reason the work
+# was pushed to cron-job.org in the first place was Vercel's Hobby tier
+# allowing only daily cron, which was never a constraint on Actions. 722 runs
+# and counting, against an endpoint that has been dead for a month.
+#
+# Half-hourly, not quarter-hourly: it already solves the same-morning
+# problem, and six feeds fetched 48 times a day is polite to Airbnb,
+# Booking.com and LekkeSlaap in a way that 96 starts not to be. A channel
+# that rate-limits us is far worse than a sync that is thirty minutes old.
+#
+# GitHub disables scheduled workflows on a public repo after 60 days with no
+# commits. If this ever goes quiet, that is the first thing to check.
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '*/30 * * * *'
 
 # Prevent overlapping runs if manually triggered multiple times.
 concurrency:
