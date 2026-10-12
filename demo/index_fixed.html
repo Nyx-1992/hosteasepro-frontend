@@ -6444,6 +6444,28 @@ async function syncICalFeeds(silent = false) {
       // rows are untouched. Only iCal-originated rows (source_uid set),
       // only future check-outs, only this property+platform.
       try {
+        // ── AN EMPTY FEED IS NOT A LIST OF CANCELLATIONS ──────────────────
+        // This decides a booking is gone because its UID is absent from the
+        // feed. With ZERO events every UID is absent, so a feed answering
+        // 200 with nothing in it reads as "every future booking on this
+        // platform was cancelled" — and the sweep cancels them all.
+        //
+        // 2026-10-12 21:12: the Booking.com feed for TV House came back
+        // empty, and michelle fourie's real six-night December reservation
+        // was CANCELLED alongside the owners' blocks, within 1.5 seconds.
+        // She was still booked on Booking.com throughout.
+        //
+        // A platform with genuinely nothing on it looks identical here to
+        // one that failed to answer properly, and the two are not worth the
+        // same: doing nothing to a truly empty calendar costs one stale
+        // block until the next run; believing an empty one wipes the book.
+        if (!events.length) {
+          console.warn('[iCal] 0 events from', feed.platform, feed.property_name,
+            '— skipping the cancellation sweep. An empty calendar is not evidence '
+            + 'that every booking was cancelled.');
+          continue;
+        }
+
         const feedUids = new Set(events.map(ev => ev.uid).filter(Boolean));
         const todayStr = new Date().toISOString().slice(0,10);
         // Horizon guard: only judge rows within the window this feed actually covers.

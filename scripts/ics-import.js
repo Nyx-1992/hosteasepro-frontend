@@ -503,6 +503,31 @@ async function run() {
       // only this property+platform; never touches anything beyond what
       // this feed actually covers.
       try {
+        // ── AN EMPTY FEED IS NOT A LIST OF CANCELLATIONS ──────────────────
+        // This sweep decides a booking is gone because its UID is absent
+        // from the feed. With ZERO events every UID is absent, so a feed
+        // that answers 200 with nothing in it reads as "every future
+        // booking on this platform was cancelled" — and the sweep cancels
+        // them all.
+        //
+        // That is not a hypothetical. On 2026-10-12 at 21:12 the
+        // Booking.com feed for TV House came back empty and this ran:
+        // michelle fourie's real six-night December reservation was
+        // CANCELLED, and the owners' two blocks were released, inside 1.5
+        // seconds of each other. The guest was still booked on
+        // Booking.com the whole time.
+        //
+        // A platform with genuinely nothing on it is indistinguishable
+        // here from a platform that failed to answer properly, and the two
+        // readings are not worth the same: doing nothing to a truly empty
+        // calendar costs one stale block until the next run, while
+        // believing an empty one wipes the book. So: no events, no sweep.
+        if (!events.length) {
+          console.warn('  Feed returned 0 events — skipping the cancellation sweep. '
+            + 'An empty calendar is not evidence that every booking was cancelled.');
+          continue;
+        }
+
         var feedUids = {};
         events.forEach(function(ev) { if (ev.uid) feedUids[ev.uid] = true; });
         var todayStr = new Date().toISOString().slice(0,10);
