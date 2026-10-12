@@ -133,10 +133,17 @@ const rows = [
   { cleaner:'Blessing', created_at: daysAgo(63), date:'2026-11-03', available:true },
   { cleaner:'Fatima',   created_at: daysAgo(83), date:'2027-01-05', available:true },
 ];
+// The real team_contacts rows. An earlier version of this file invented a
+// Fatima with no number to exercise the "no number" branch, and that fiction
+// was then repeated to the owner as a fact about her own data. Every cleaner
+// here has BOTH a contact phone and a separate, already-normalised `wa`.
 const staff = [
-  { name:'Spiwe', phone:'0821112222' }, { name:'Patricia', phone:'0823334444' },
-  { name:'Blessing', phone:'0825556666' }, { name:'Fatima', phone:'' },
-  { name:'Newcomer', phone:'0827778888' }, // never set anything
+  { name:'Spiwe',    phone:'084 915 0894', wa:'27849150894' },
+  { name:'Patricia', phone:'063 735 3892', wa:'27637353892' },
+  { name:'Blessing', phone:'062 532 2932', wa:'27625322932' },
+  { name:'Fatima',   phone:'063 175 8111', wa:'27631758111' },
+  { name:'Newcomer', phone:'082 777 8888', wa:'' },   // phone only — must fall back
+  { name:'Nobody',   phone:'',             wa:'' },   // genuinely unreachable
 ];
 // Take the threshold from the source too, so the test cannot drift from it.
 const STALE_DAYS = Number((app.match(/const AVAIL_STALE_DAYS = (\d+)/) || [])[1]);
@@ -153,17 +160,50 @@ ok('  Spiwe (8 days) is NOT', !names.includes('Spiwe'),
    'nudging someone who did it last week is the spam she was worried about');
 ok('  Patricia (9 days) is NOT', !names.includes('Patricia'));
 ok('  somebody who has never set any is flagged', names.includes('Newcomer'));
-ok('  worst offender first', names[0] === 'Newcomer' || names[0] === 'Fatima', names.join(', '));
+ok('  worst offender first', names[0] === 'Newcomer' || names[0] === 'Nobody', names.join(', '));
 
 ok('a cleaner with no number is shown, not silently dropped',
    /No WhatsApp number on their staff record/.test(app),
-   'Fatima has no number here — dropping her would hide the person most behind');
+   'dropping them would hide somebody who may be the furthest behind');
+
+// ── The number we actually message ────────────────────────────────────────
+// team_contacts stores a separate, already-normalised `wa` next to `phone`.
+// getDomesticStaff() used to drop it, so every message re-derived WhatsApp
+// from the contact phone. They match for all four cleaners today, which is
+// why it went unnoticed — and is no reason to keep guessing.
+ok('getDomesticStaff passes the saved WhatsApp number through',
+   /wa: c\.wa \|\| '',/.test(app),
+   'it returned phone only, so `wa` could never be used');
+
+const waSrc = (app.match(/function cleanerWaNumber\(c\)[\s\S]*?\n\}/) || [''])[0];
+ok('there is one place that decides which number to use', !!waSrc);
+{
+  const pick = new Function('c', 'normalizeZaPhone',
+    waSrc + '\nreturn cleanerWaNumber(c);');
+  const nz = (raw) => { let d = (raw||'').replace(/\D/g,''); if (!d) return '';
+    if (d.startsWith('0')) d = '27' + d.slice(1); else if (!d.startsWith('27')) d = '27' + d; return d; };
+  ok('  Fatima is reachable on the number in her record',
+     pick(staff[3], nz) === '27631758111', pick(staff[3], nz));
+  ok('  the saved WhatsApp number wins over the contact phone',
+     pick({ phone:'021 555 0000', wa:'27631758111' }, nz) === '27631758111',
+     'a work landline must never be messaged instead of their WhatsApp');
+  ok('  and the phone is used when no WhatsApp number is saved',
+     pick(staff[4], nz) === '27827778888', pick(staff[4], nz));
+  ok('  somebody with neither is reported, not messaged', pick(staff[5], nz) === '');
+}
 
 const nudge = (app.match(/function nudgeAvailability\(name\)[\s\S]*?\n\}/) || [''])[0];
 ok('the message goes through the one delivery point',
    /deliverWhatsAppMessage\(phone, text\)/.test(nudge),
    'so swapping in a real Business API later is one function');
-ok('the number is normalised to international form', /normalizeZaPhone\(c\.phone\)/.test(nudge));
+// This required normalizeZaPhone(c.phone) at this call site, which pinned the
+// bug: it could only ever pass if the contact phone was the number used.
+// The property is "whatever reaches WhatsApp is international form", and that
+// now lives in cleanerWaNumber() — exercised against real numbers above.
+ok('the number comes from the one helper that decides it',
+   /cleanerWaNumber\(c\)/.test(nudge));
+ok('  which normalises anything not already in international form',
+   /normalizeZaPhone\(c && c\.phone\)/.test(waSrc));
 ok('it asks for one specific thing, not "do your admin"',
    /My Availability/.test(nudge) && !/inventory/i.test(nudge));
 ok('it names the agency from brand settings, not a hardcoded one',
