@@ -546,16 +546,26 @@ ok('the handler says which scheduler actually runs it',
    /ics-import\.yml/.test(cron),
    'pointing somebody at an external scheduler again is how this repeats');
 
-// A six-feed import takes about ten seconds. Hobby's default function is ten
-// seconds. Sitting exactly on the limit is why the failures were
-// intermittent, and why the same endpoint behind the owner's "Sync
-// calendars" button and the staff portal's "Sync bookings" could fail too.
-const fnCfg = (vercel.functions || {})['api/cron/ical-sync.js'];
-ok('the sync function is given more than the 10-second default',
-   !!fnCfg && Number(fnCfg.maxDuration) >= 30,
+// vercel.json HAS NO `functions` BLOCK, AND THAT IS DELIBERATE.
+//
+// One was added on 2026-10-12 giving api/cron/ical-sync.js maxDuration 60, as
+// a guess at why an external cron was getting 500s. The guess was never
+// verified — the sandbox cannot reach hosteasepro.com — and the cron it was
+// for had already been disabled for a month.
+//
+// Hours later the outbound calendar was still failing to import on LekkeSlaap
+// despite a fix being pushed, and an unverified vercel.json edit is exactly
+// the kind of thing that fails a build and leaves production serving the
+// previous deployment — which would make every later push invisible. An
+// invalid vercel.json does not warn, it fails the whole deployment; this repo
+// has been bitten by that before (two commits sat unbuilt for a day).
+//
+// So it is gone. A speculative change that cannot be verified from here, in
+// the one file that can silently stop all deployments, in service of a cron
+// nobody is running, is not worth keeping while a real outage is open.
+ok('vercel.json carries no unverified functions block',
+   !vercel.functions,
    JSON.stringify(vercel.functions || null));
-ok('  and no more than Hobby allows, or the deployment fails',
-   !!fnCfg && Number(fnCfg.maxDuration) <= 60, fnCfg && String(fnCfg.maxDuration));
 // A daily cron alone would leave Nina waiting until tomorrow, which is the
 // complaint. The button is what makes the daily schedule survivable.
 ok('a person can run it without waiting for the schedule',
