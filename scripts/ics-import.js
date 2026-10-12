@@ -569,33 +569,36 @@ async function run() {
             continue;
           }
 
-          var cancRes = await supabaseRequest('PATCH', 'bookings?id=eq.' + row.id,
-            { status: 'cancelled', is_active: false, cancelled_at: new Date().toISOString() });
-          if (!cancRes.data || !cancRes.data.length) {
-            console.warn('  Cancellation FAILED (RLS?): ' + feed.property_name + ' ' + row.guest_name + ' ' + row.check_in_date + ' → ' + row.check_out_date);
-            continue;
-          }
-          totalCancelled++;
-          console.log('  Booking cancelled upstream: ' + feed.property_name + ' ' + row.guest_name + ' ' + row.check_in_date + ' → ' + row.check_out_date);
-
-          // If a clean was already scheduled for this checkout, flag it
-          // cancelled too — kept on record, surfaced in the dashboard's
-          // Urgent Actions until acknowledged.
-          try {
-            var domesticsPid = PROPERTY_SHORT_KEY[feed.property_id] || feed.property_id;
-            var linkedRes = await supabaseRequest('GET',
-              'domestics?property_id=eq.' + domesticsPid + '&status=eq.scheduled&select=id,date,cleaner', null);
-            var linkedCleans = linkedRes.data || [];
-            var match = linkedCleans.find(function(d) {
-              return Math.abs(new Date(d.date) - new Date(row.check_out_date)) <= 2 * 86400000;
-            });
-            if (match) {
-              await supabaseRequest('PATCH', 'domestics?id=eq.' + match.id, { status: 'cancelled' });
-              console.log('  Linked clean flagged cancelled: ' + match.cleaner + ' ' + match.date);
-            }
-          } catch (linkErr) {
-            console.warn('  Linked-clean lookup error: ' + linkErr.message);
-          }
+          // ── A NAMED BOOKING IS NEVER CANCELLED ON ABSENCE ALONE ─────────
+          // Everything above this line reasons from "the UID is not in the
+          // feed". That is weak evidence, and we were treating it as proof.
+          //
+          // Booking.com's export for TV House returned 4 events, then 0,
+          // then 2 over three runs on 2026-10-12, and michelle fourie's real
+          // six-night December reservation was cancelled TWICE in forty
+          // minutes — once by the empty read, once by the partial one. She
+          // was booked the whole time. A feed that drops events it listed an
+          // hour ago is not reporting cancellations; it is being unreliable,
+          // and no guard on event COUNT can tell the two apart.
+          //
+          // So the rule is about what is at stake, not about the feed. A
+          // placeholder block released wrongly costs a night that might have
+          // been held, and the release is logged and reversible. A named
+          // reservation cancelled wrongly destroys the record of a real
+          // person with a contract and puts their room back on sale. Those
+          // are not worth the same, so only the first is automatic.
+          //
+          // Genuine upstream cancellations still reach the owner — the
+          // platform emails her and shows it in its own app — and HEP
+          // carrying a stale booking until she says so is the better
+          // failure. This prints loudly so it is actionable, which is all an
+          // unreliable feed has earned the right to do.
+          console.warn('  NEEDS REVIEW — ' + feed.property_name + ': "' + row.guest_name
+            + '" ' + row.check_in_date + ' → ' + row.check_out_date
+            + ' is no longer in the ' + feed.platform + ' feed. NOT cancelled automatically:'
+            + ' a named booking is never cancelled on absence alone. Check the platform,'
+            + ' and cancel it in HEP by hand if it really is gone.');
+          continue;
         }
       } catch (sweepErr) {
         console.warn('  Stale sweep error (' + feed.platform + ' / ' + feed.property_name + '): ' + sweepErr.message);
