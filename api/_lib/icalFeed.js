@@ -38,55 +38,43 @@ export async function generateIcalFeed(propertyId, propertyName, feedId) {
     if (!res.ok) throw new Error(`Supabase error: ${res.status}`);
     const bookings = await res.json();
 
-    // ── A FEED THAT GOES QUIET DOES NOT FREE THE DATES ────────────────────
-    // When a booking is cancelled or deleted it simply vanished from this
-    // list, and the event stopped appearing. That is enough for a consumer
-    // that re-reads the whole calendar and replaces what it had. It is NOT
-    // enough for one that only adds what it sees, and several channels work
-    // that way: the dates stay closed for ever, sold by nobody.
+    // ── WHY THIS FEED PUBLISHES ONLY WHAT IS BOOKED ───────────────────────
     //
-    // Found in production 2026-10-08 on TV House. An Airbnb reservation over
-    // Christmas (23 Dec → 2 Jan with its two adjacent blocks) was published
-    // here, cancelled on Airbnb on 2-3 October, and correctly dropped from
-    // the feed. LekkeSlaap went on showing the property as unavailable, and
-    // attributed the block to us — Christmas and New Year, the most
-    // expensive nights of the year, closed on a channel by a booking that no
-    // longer existed. Nothing in HEP was wrong; the calendar simply never
-    // said the word "cancelled" out loud.
+    // It briefly did more. On 2026-10-09 this started re-publishing cancelled
+    // bookings as tombstones — same UID, SEQUENCE 1, STATUS:CANCELLED — so a
+    // channel that only ever ADDS what it sees would release dates instead of
+    // holding them for ever. The reasoning still looks sound and the output
+    // was valid iCal. It is reverted anyway.
     //
-    // RFC 5545 has the answer: re-publish the same UID with STATUS:CANCELLED
-    // and a higher SEQUENCE. A consumer that honours cancellations releases
-    // the dates; one that diffs properly has already dropped it and ignores
-    // this. Bounded to a window — a tombstone has to be repeated long enough
-    // to be seen, not kept for ever. 90 days is roughly three months of daily
-    // polls to notice one cancellation; past that the event is bloat in every
-    // read. Clearing a backlog that predates this code is a re-add of the
-    // feed URL on the channel, not a longer window here.
-    const RELEASE_WINDOW_DAYS = 90;
-    const releaseCutoff = new Date(Date.now() - RELEASE_WINDOW_DAYS * 86400000)
-      .toISOString();
-    const goneUrl = `${SUPABASE_URL}/rest/v1/bookings?property_id=eq.${propertyId}&or=(is_active.eq.false,status.eq.cancelled)&check_out_date=gte.${todayStr}&select=id,guest_name,check_in_date,check_out_date,status,platform,notes,cancelled_at,updated_at&order=check_in_date.asc`;
-
-    let withdrawn = [];
-    try {
-      const goneRes = await fetch(goneUrl, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': `Bearer ${SUPABASE_KEY}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (goneRes.ok) {
-        const all = await goneRes.json();
-        withdrawn = all.filter(b =>
-          (b.cancelled_at || b.updated_at || '') >= releaseCutoff);
-      }
-    } catch (_) {
-      // Releasing dates is a repair, not the job. If this lookup fails the
-      // feed must still publish what IS booked — going quiet about live
-      // bookings to report cancellations would double-book the property.
-      withdrawn = [];
-    }
+    // On 2026-10-12 LekkeSlaap reported "Failed to import" for the HEP
+    // calendar on BOTH listings, while its Booking.com and Airbnb imports
+    // succeeded minutes earlier. This file had not been touched for months
+    // before that commit, and nothing else about the endpoint changed.
+    //
+    // The suspect is METHOD:PUBLISH carrying STATUS:CANCELLED events. iTIP
+    // (RFC 5546) treats cancellation as its own method, and importers built
+    // on strict iTIP libraries reject a whole calendar that mixes them. Not
+    // proven — the sandbox cannot reach hosteasepro.com and LekkeSlaap's
+    // parser is not ours to test — but it does not need to be proven to be
+    // the wrong bet.
+    //
+    // THE ASYMMETRY IS THE WHOLE ARGUMENT. A rejected feed means NO blocks
+    // reach the channel at all, so every genuinely booked night is on sale
+    // there: double bookings, on both properties, on real guests. A missing
+    // tombstone means a channel holds a date too long and loses one booking.
+    // A feed that definitely parses beats a feature that might be rejected.
+    //
+    // There is also a simpler story for the ghost that prompted tombstones in
+    // the first place: if the feed was already failing, LekkeSlaap was frozen
+    // on its last good read — which still contained the Christmas booking.
+    // "The link hasn't been updating anymore" says precisely that, and it
+    // needs no cancellation protocol to explain. Re-adding the URL on the
+    // channel clears a frozen copy.
+    //
+    // If a stale block does reappear on a channel whose feed is importing
+    // cleanly, that is the evidence this needs, and the answer then is a
+    // separate CANCEL-method calendar — never cancellations smuggled into
+    // this one.
 
     const now = formatICalDate(new Date());
     const lines = [
@@ -100,14 +88,10 @@ export async function generateIcalFeed(propertyId, propertyName, feedId) {
     ];
 
     let emitted = 0;
-    let released = 0;
-    const seenUids = new Set();
 
-    // Both lists go through the same gate. A tombstone is only honest for
-    // something this feed would actually have published: emitting
-    // STATUS:CANCELLED for a caretaker placeholder or a 200-night glitch we
-    // always skipped would be telling a channel to release dates we never
-    // told it to close.
+    // One gate, so the two rules below are stated once. It was extracted for
+    // a second pass that has since been reverted; it stays because having
+    // them in one place is right regardless of how many callers there are.
     const publishable = (b) => {
       if (!b.check_in_date || !b.check_out_date) return false;
       const nameLower = (b.guest_name || b.notes || '').toLowerCase();
@@ -132,9 +116,6 @@ export async function generateIcalFeed(propertyId, propertyName, feedId) {
       //   connected platform. Found in production 2026-07-29 on both
       //   properties independently. Skip anything over ~4 months.
       //
-      // They live in one function now because the cancellation pass below
-      // has to apply exactly the same rules. Two copies would drift, and the
-      // way they would drift is a tombstone for an event we never published.
       if (!publishable(b)) continue;
 
       // For iCal: DTSTART = check-in date, DTEND = check-out date (exclusive)
@@ -153,40 +134,21 @@ export async function generateIcalFeed(propertyId, propertyName, feedId) {
       lines.push(`DTSTART;VALUE=DATE:${dtStart}`);
       lines.push(`DTEND;VALUE=DATE:${dtEnd}`);
       lines.push(`SUMMARY:${summary}`);
-      lines.push(`SEQUENCE:0`);
       lines.push(`STATUS:CONFIRMED`);
       lines.push('END:VEVENT');
-      seenUids.add(uid);
       emitted++;
     }
 
-    // ── Tombstones: say "cancelled" instead of saying nothing ─────────────
-    // Same UID, SEQUENCE one higher so it supersedes the event the consumer
-    // already holds. Guarded against a UID that is also live above — a
-    // calendar that both confirms and cancels the same event is worse than
-    // either, and that is how a real booking would get released.
-    for (const b of withdrawn) {
-      if (!publishable(b)) continue;
-      const uid = `hep-${feedId}-${b.id}@snapartments.co.za`;
-      if (seenUids.has(uid)) continue;
-
-      lines.push('BEGIN:VEVENT');
-      lines.push(`UID:${uid}`);
-      lines.push(`DTSTAMP:${now}`);
-      lines.push(`DTSTART;VALUE=DATE:${b.check_in_date.replace(/-/g, '')}`);
-      lines.push(`DTEND;VALUE=DATE:${b.check_out_date.replace(/-/g, '')}`);
-      lines.push(`SUMMARY:Available — booking cancelled`);
-      lines.push(`SEQUENCE:1`);
-      lines.push(`STATUS:CANCELLED`);
-      lines.push('END:VEVENT');
-      seenUids.add(uid);
-      released++;
-    }
-
     // Some platforms reject empty feeds — add a placeholder if no events.
-    // Counts live events only: a calendar carrying nothing but cancellations
-    // still has no availability information in it.
-    if (emitted === 0 && released === 0) {
+    //
+    // NOTE this placeholder is the one STATUS:CANCELLED left in the file. It
+    // is reached only by a property with nothing booked at all, it predates
+    // the tombstones by a long way, and a zero-length cancelled event is the
+    // conventional way to ship a calendar that is valid but blocks nothing.
+    // Left alone deliberately: if the iTIP theory above is right this path is
+    // suspect too, but changing it to CONFIRMED would publish a real block on
+    // today's date, which is a worse failure than the one being guessed at.
+    if (emitted === 0) {
       const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
       lines.push('BEGIN:VEVENT');
       lines.push(`UID:hep-${feedId}-placeholder@snapartments.co.za`);
