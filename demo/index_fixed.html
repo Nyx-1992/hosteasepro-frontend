@@ -1358,9 +1358,16 @@ function _buildMobileNavStub(){/* replaced by main script */}
                 <textarea class="form-input" id="inv-notes" rows="3" style="resize:vertical" oninput="invRender()"></textarea>
               </div>
 
+              <!-- Zwischenspeichern. An invoice is not always written in one
+                   sitting, and until now the ONLY thing that saved anything
+                   was generating the PDF — so stopping halfway lost the lot. -->
+              <button id="inv-draft-btn" onclick="invSaveDraft()" style="width:100%;padding:11px;border-radius:8px;border:1.5px solid var(--border);background:transparent;color:var(--ink);font-size:.86rem;font-weight:700;cursor:pointer;letter-spacing:.03em;margin-bottom:8px">
+                💾 Save draft — finish later
+              </button>
               <button onclick="generateInvoicePDF()" style="width:100%;padding:12px;border-radius:8px;border:none;background:#1A2340;color:#F5EFE6;font-size:.9rem;font-weight:700;cursor:pointer;letter-spacing:.04em">
                 Download PDF
               </button>
+              <div id="inv-draft-note" style="font-size:.72rem;color:var(--muted);margin-top:7px;text-align:center"></div>
             </div>
 
             <!-- RIGHT: Live preview -->
@@ -8176,6 +8183,9 @@ async function loadInvHistory() {
     let q = db.from('invoices')
       .select('id,doc_type,number,reference,guest_name,company,total,date_issued,status,created_at')
       .neq('platform','management')
+      // Drafts first: unfinished work is what someone opens this list to find,
+      // and ordered by date alone an old half-written one sinks out of sight.
+      .order('status',{ascending:true})
       .order('created_at',{ascending:false})
       .limit(100);
     if(filter !== 'all') q = q.eq('doc_type', filter);
@@ -8191,19 +8201,163 @@ async function loadInvHistory() {
         const badge = r.doc_type==='QUOTATION'
           ? '<span style="font-size:.68rem;padding:1px 7px;border-radius:10px;background:var(--bg-accent,#eef);color:var(--text-accent,#25f)">Quote</span>'
           : '<span style="font-size:.68rem;padding:1px 7px;border-radius:10px;background:var(--warm);color:var(--ink)">Invoice</span>';
-        const stColor = {draft:'var(--muted)',sent:'#2E75B6',paid:'var(--green2)',cancelled:'var(--red)'}[r.status]||'var(--muted)';
-        return '<tr style="'+(i%2?'background:var(--surface-2)':'')+'">'+
+        const stColor = {draft:'#B45309',issued:'var(--ink)',sent:'#2E75B6',paid:'var(--green2)',cancelled:'var(--red)'}[r.status]||'var(--muted)';
+        const isDraft = (r.status||'draft')==='draft';
+        return '<tr style="'+(isDraft?'background:#fffbeb':(i%2?'background:var(--surface-2)':''))+'">'+
           '<td style="font-size:.8rem;font-weight:600">'+(r.number||'—')+'</td>'+
           '<td>'+badge+'</td>'+
           '<td style="font-size:.8rem">'+(r.guest_name||'—')+(r.company?' · '+r.company:'')+'</td>'+
           '<td style="font-size:.75rem;color:var(--muted)">'+(r.reference||'—')+'</td>'+
           '<td style="font-size:.78rem;white-space:nowrap">'+(r.date_issued||(r.created_at||'').slice(0,10))+'</td>'+
           '<td style="text-align:right;font-size:.8rem;font-weight:600">R'+Number(r.total||0).toLocaleString('en-ZA',{minimumFractionDigits:2})+'</td>'+
-          '<td style="font-size:.72rem;color:'+stColor+';text-transform:capitalize">'+(r.status||'draft')+'</td>'+
+          '<td style="font-size:.72rem;color:'+stColor+';text-transform:capitalize;white-space:nowrap">'+
+            (r.status||'draft')+
+            ' <button onclick="invOpenDraft(\''+r.id+'\')" style="margin-left:6px;padding:2px 9px;border-radius:7px;border:1px solid var(--border);background:'+(isDraft?'#fef3c7':'transparent')+';font-size:.7rem;cursor:pointer;color:var(--ink)">'+
+            (isDraft?'Continue':'Reopen')+'</button></td>'+
         '</tr>';
       }).join('')+'</tbody></table></div>';
   } catch(e){
     el.innerHTML = '<div class="text-muted text-sm" style="color:var(--red)">Could not load history: '+e.message+' — has the invoices table been created?</div>';
+  }
+}
+
+// ── DRAFTS: Zwischenspeichern ─────────────────────────────────────────────
+// Silja asked for a save button for when an invoice cannot be finished in one
+// sitting. Generating the PDF was the only writer, so a half-written document
+// was lost on the next page load.
+//
+// WHAT HAS TO BE CAPTURED IS MORE THAN THE TABLE HOLDS. The address, the
+// discount percentage, the deposit toggle and amount, and the check-in/
+// check-out pair behind the date picker are all on the form and none of them
+// have columns. Restoring a draft without them would hand her back a form
+// that had quietly dropped her work — worse than having no draft button at
+// all. So the whole form goes into draft_state as one snapshot, and the flat
+// columns stay the record of the document rather than of the edit.
+const INV_DRAFT_FIELDS = ['inv-number','inv-date','inv-valid','inv-ref','inv-guest',
+  'inv-company','inv-email','inv-addr','inv-prop','inv-dates','inv-checkin',
+  'inv-checkout','inv-daterange-display','inv-platform','inv-discount-pct',
+  'inv-deposit-amt','inv-notes'];
+
+function invCollectDraftState() {
+  const fields = {};
+  INV_DRAFT_FIELDS.forEach(id => { fields[id] = invV(id); });
+  const dep = document.getElementById('inv-deposit-enabled');
+  return {
+    v: 1,
+    docType: invType,
+    fields: fields,
+    depositEnabled: !!(dep && dep.checked),
+    lines: invLines.map(l => ({ desc: l.desc, amount: Number(l.amount) })),
+    manual: { ref: invRefManual, lines: invLinesManual, number: invNumberManual },
+  };
+}
+
+function invDraftTotal() {
+  const sub = invLines.reduce((s,l) => s + Number(l.amount || 0), 0);
+  const pct = Math.max(0, Math.min(100, parseFloat(invV('inv-discount-pct')) || 0));
+  return sub - (sub * pct / 100);
+}
+
+let _savingInvDraft = false;
+async function invSaveDraft() {
+  if (_savingInvDraft) return;
+  if (!db) { toast('No connection — cannot save a draft','error'); return; }
+  const number = invV('inv-number');
+  // The number is the row's identity (upsert onConflict). Without one there
+  // is nothing to save against, and nothing to find it by later.
+  if (!number) { toast('Give the document a number first','error'); return; }
+
+  const btn = document.getElementById('inv-draft-btn');
+  const orig = btn ? btn.textContent : '';
+  _savingInvDraft = true;
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const { error } = await db.from('invoices').upsert({
+      org_id:      getOrgId(),
+      doc_type:    invType,
+      number:      number,
+      status:      'draft',
+      reference:   invGetRef() || null,
+      // Nullable for drafts since 933 — a half-written invoice often has no
+      // guest yet, and inventing "Guest" to satisfy a column would put a
+      // fake name on a real document the moment it was finished.
+      guest_name:  invV('inv-guest') || null,
+      company:     invV('inv-company') || null,
+      email:       invV('inv-email') || null,
+      property:    invV('inv-prop') || null,
+      dates:       invV('inv-dates') || null,
+      platform:    invV('inv-platform') || null,
+      line_items:  invLines.map(l => ({ desc: l.desc, amount: Number(l.amount) })),
+      total:       invDraftTotal(),
+      notes:       (invV('inv-notes')||'').split('\n').filter(n => n.trim()),
+      date_issued: invV('inv-date') || null,
+      date_valid:  invV('inv-valid') || null,
+      draft_state: invCollectDraftState(),
+      updated_at:  new Date().toISOString(),
+      created_by:  (window.currentUser && currentUser.name) || 'unknown',
+    }, { onConflict: 'number' });
+    if (error) { toast('Could not save the draft: '+error.message,'error'); return; }
+    const note = document.getElementById('inv-draft-note');
+    if (note) note.textContent = 'Draft saved ' + new Date().toLocaleTimeString('en-ZA',
+      { hour:'2-digit', minute:'2-digit' }) + ' — reopen it from Past documents';
+    toast('Draft saved ✓','success');
+    loadInvHistory();
+  } catch (e) {
+    toast('Could not save the draft: '+e.message,'error');
+  } finally {
+    _savingInvDraft = false;
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+  }
+}
+
+// Reopening one. Restores from draft_state where there is one; falls back to
+// the flat columns for a row saved before 933, so an old document can still
+// be used as a starting point.
+async function invOpenDraft(id) {
+  if (!db) return;
+  try {
+    const { data, error } = await db.from('invoices').select('*').eq('id', id).single();
+    if (error || !data) { toast('Could not open that document','error'); return; }
+    const st = data.draft_state;
+
+    setInvType(data.doc_type === 'INVOICE' ? 'INVOICE' : 'QUOTATION',
+               document.getElementById(data.doc_type === 'INVOICE' ? 'inv-type-inv' : 'inv-type-quot'));
+
+    if (st && st.fields) {
+      INV_DRAFT_FIELDS.forEach(fid => {
+        const el = document.getElementById(fid);
+        if (el && st.fields[fid] !== undefined) el.value = st.fields[fid];
+      });
+      const dep = document.getElementById('inv-deposit-enabled');
+      if (dep) { dep.checked = !!st.depositEnabled; invToggleDeposit(); }
+      invLines = (st.lines || []).map(l => ({ desc: l.desc, amount: Number(l.amount) }));
+      if (st.manual) {
+        invRefManual = !!st.manual.ref;
+        invLinesManual = !!st.manual.lines;
+        invNumberManual = !!st.manual.number;
+      }
+    } else {
+      const set = (fid, val) => { const el = document.getElementById(fid); if (el) el.value = val || ''; };
+      set('inv-number', data.number); set('inv-ref', data.reference);
+      set('inv-guest', data.guest_name); set('inv-company', data.company);
+      set('inv-email', data.email); set('inv-prop', data.property);
+      set('inv-dates', data.dates); set('inv-platform', data.platform);
+      set('inv-date', data.date_issued); set('inv-valid', data.date_valid);
+      set('inv-notes', (data.notes || []).join('\n'));
+      invLines = (data.line_items || []).map(l => ({ desc: l.desc, amount: Number(l.amount) }));
+    }
+    // The number came from the row, so it must not be regenerated underneath her.
+    invNumberManual = true;
+
+    invRenderLines();
+    invRender();
+    const note = document.getElementById('inv-draft-note');
+    if (note) note.textContent = 'Reopened ' + (data.number || '') +
+      (data.status === 'draft' ? ' (draft)' : ' — this one was already issued');
+    document.getElementById('inv-number').scrollIntoView({ behavior:'smooth', block:'center' });
+    toast('Opened ' + (data.number || 'document'), 'success');
+  } catch (e) {
+    toast('Could not open that document: '+e.message,'error');
   }
 }
 
@@ -8232,6 +8386,12 @@ async function saveInvoiceRecord(payload, total){
       notes:       payload.notes,
       date_issued: invV('inv-date') || null,
       date_valid:  invV('inv-valid') || null,
+      // The document now exists, so it stops being a draft and its saved form
+      // snapshot is dropped. 'issued' rather than 'sent' — this app has no way
+      // of knowing whether she actually sent it.
+      status:      'issued',
+      draft_state: null,
+      updated_at:  new Date().toISOString(),
       created_by:  (window.currentUser && currentUser.name) || 'unknown'
     }, {onConflict:'number'});
     if (error) {
