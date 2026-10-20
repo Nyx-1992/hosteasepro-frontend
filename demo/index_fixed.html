@@ -5744,6 +5744,12 @@ function renderReportInventory(filter) {
     const subDay = r.submitted_at ? String(r.submitted_at).slice(0,10) : '';
     const cleanDay = String(r.clean_date || '').slice(0,10);
     const metaBits = [];
+    // After a reassignment the report belongs to the new cleaner, but it was
+    // somebody else who walked the flat and pressed send. Say both, rather
+    // than quietly reattribute the work.
+    if (r.submitted_by && r.submitted_by !== r.cleaner) {
+      metaBits.push('Submitted by ' + escHtml(r.submitted_by));
+    }
     if (subDay && subDay !== cleanDay) metaBits.push('Reported ' + fmtDate(subDay));
     if (r.reviewed) {
       metaBits.push(r.reviewed_at
@@ -11486,6 +11492,32 @@ async function markDone(id) {
   if(db) await db.from('domestics').update({status:'completed',checklist:allDone}).eq('id',id);
   toast('Cleaning marked complete ✓','success'); renderDomesticCalView(); renderDomCal(); renderDomEarnings();
 }
+// ── REASSIGNING A CLEAN, AND WHEN IT STOPS BEING ALLOWED ──────────────────
+// Owner: "When a clean was reassigned in a booking, it needs to move over to
+// another domestic. I would say this can retrospectively done for up to 2-3
+// weeks and then it probably should lock in?"
+//
+// Both halves matter. Nina's roster goes stale, and the portal only shows a
+// cleaner the cleans assigned to THEM — so when the roster is wrong, the
+// person who actually went cannot file the report, and the clean ends up
+// recorded against one person with a report naming another. Fixing the
+// roster has to carry the report across, or the pay run and the paperwork
+// disagree.
+//
+// And it has to stop. These rows ARE the pay run: amount_paid is summed per
+// cleaner per month. Moving a clean from one cleaner to another after both
+// have been paid rewrites a settled month, which is the kind of thing that
+// costs trust rather than money. Three weeks is long enough to notice a
+// roster mistake and short enough that last month stays last month.
+const CLEAN_REASSIGN_WINDOW_DAYS = 21;
+
+function cleanReassignLock(cleanDate) {
+  if (!cleanDate) return { locked: false, days: 0 };
+  const days = Math.floor(
+    (new Date(todaySAST()) - new Date(String(cleanDate).slice(0, 10))) / 86400000);
+  return { locked: days > CLEAN_REASSIGN_WINDOW_DAYS, days: days };
+}
+
 let _savingDomestic = false;
 // sendOpts: { sendWhatsApp: true, waWin } — set only by the dedicated
 // "Send inventory link" button (via sendOutsideCleanerNow above). waWin is
@@ -11530,6 +11562,25 @@ async function saveDomestic(sendOpts) {
     org_id: getOrgId(),
   };
   const editId = window._editCleanId;
+  const prior  = editId ? domestics.find(d => String(d.id) === String(editId)) : null;
+
+  // A clean past the window keeps the cleaner it was paid out under.
+  if (prior && prior.cleaner && prior.cleaner !== cleaner) {
+    const lock = cleanReassignLock(prior.date);
+    if (lock.locked) {
+      toast('That clean was ' + lock.days + ' days ago — past the '
+            + CLEAN_REASSIGN_WINDOW_DAYS + '-day window, so the cleaner is locked in.', 'error');
+      bail(); return;
+    }
+  }
+
+  // EDITING A CLEAN USED TO UN-COMPLETE IT. `status: 'scheduled'` sits in the
+  // row above unconditionally, so changing a cleaner — or a time, or a note —
+  // on a finished clean quietly marked it outstanding again, and it
+  // reappeared in Nina's list as work still to do. Only a brand new clean
+  // starts out scheduled.
+  if (prior && prior.status) row.status = prior.status;
+
   // Preserve an existing booking link on edit if the form fields came back empty
   // (guards against nulling the link when the linked booking isn't in the loaded list)
   if (editId && !row.linked_booking_id) {
@@ -11546,7 +11597,38 @@ async function saveDomestic(sendOpts) {
       if (error) { toast('Update error: '+error.message,'error'); bail(); return; }
       const idx = domestics.findIndex(d=>d.id===editId);
       if (idx>-1) domestics[idx] = nd(data);
-      toast('Cleaning updated ✓','success');
+
+      // ── Carry the inventory report across with the clean ────────────────
+      // The report is attached to this clean by domestic_id. Leaving it
+      // behind is what produced a 19 Oct Speranta clean assigned to Patricia
+      // whose own report said Fatima. `cleaner` is "who this clean belongs
+      // to now"; submitted_by is untouched, because whose hands were on the
+      // phone is a separate fact and the only record of it.
+      let movedReports = 0;
+      if (prior && prior.cleaner && prior.cleaner !== cleaner) {
+        try {
+          const { data: moved, error: movErr } = await db.from('inventory_reports')
+            .update({ cleaner })
+            .eq('domestic_id', String(editId))
+            .select('id');
+          if (movErr) {
+            // Say so rather than let the two records drift apart silently.
+            toast('Clean reassigned, but its inventory report could not be moved: '
+                  + movErr.message, 'error');
+          } else {
+            movedReports = (moved || []).length;
+            inventoryReports.forEach(r => {
+              if (String(r.domestic_id) === String(editId)) r.cleaner = cleaner;
+            });
+          }
+        } catch (e) {
+          toast('Clean reassigned, but its inventory report could not be moved', 'error');
+        }
+      }
+      toast(movedReports
+        ? 'Cleaning reassigned to ' + cleaner + ' — inventory report moved too ✓'
+        : 'Cleaning updated ✓', 'success');
+      if (movedReports && typeof renderReportInventory === 'function') renderReportInventory();
       if (wantsSend && cleanerPhone && data.access_token) {
         sendOutsideCleanerWhatsApp(data, waWin);
         data.link_sent_at = new Date().toISOString();
