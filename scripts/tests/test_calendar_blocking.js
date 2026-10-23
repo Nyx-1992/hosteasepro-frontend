@@ -134,8 +134,13 @@ ok('  proof: the safety net would promote "Cleaning day" to a confirmed stay',
    netFn('blocked', 'Cleaning day') === 'confirmed');
 ok('  and leaves the placeholder we actually save alone',
    netFn('blocked', savedName) === 'blocked');
-ok('so the reason goes in Notes, which stays visible',
-   /nL\.textContent\s*=\s*blocked \? 'Reason/.test(blockMode));
+// So the category got a column of its own rather than a friendlier
+// placeholder — see test_block_reasons.js, which runs nb() over the real
+// labels. The free text keeps its own box underneath.
+ok('the category is saved separately from the name',
+   /block_reason: isBlock \?/.test(codeOnly(saveBooking)));
+ok('and the free text still has a box, now for the detail',
+   /nL\.textContent\s*=\s*blocked \? 'Detail/.test(blockMode));
 ok('nb() still carries its safety net for feed rows',
    /status === 'blocked' && isRealGuestName\(gn\)/.test(nbSrc));
 

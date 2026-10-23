@@ -1771,6 +1771,10 @@ function _buildMobileNavStub(){/* replaced by main script */}
         <div class="form-field" id="b-email-field"><label>Guest Email</label><input type="email" id="b-email" placeholder="Optional"/></div>
         <div class="form-field" id="b-phone-field"><label>Guest Phone</label><input type="tel" id="b-phone" placeholder="Optional"/></div>
         <div class="form-field"><label>Status</label><select id="b-status" onchange="bmBlockMode()"><option value="confirmed">Confirmed</option><option value="pending">Pending</option><option value="cancelled">Cancelled</option><option value="owner">Owner Stay</option><option value="blocked">Blocked — not bookable</option></select></div>
+        <div class="form-field span-full" id="b-block-reason-field" style="display:none">
+          <label>What is it for? <span style="font-weight:400;color:var(--muted)">— optional</span></label>
+          <div id="b-block-reasons" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:2px"></div>
+        </div>
         <div class="form-field span-full"><label id="b-notes-label">Notes</label><input id="b-notes" placeholder="Optional notes"/></div>
         <div class="form-field span-full" id="b-block-note" style="display:none">
           <div style="font-size:.78rem;color:var(--muted);background:var(--sand);border:1px solid var(--border);border-radius:8px;padding:9px 11px;line-height:1.5">
@@ -4668,6 +4672,65 @@ function isRealGuestName(name) {
   return !!name && !BLOCK_PLACEHOLDERS.includes(name.trim().toLowerCase());
 }
 
+// ── WHAT A BLOCK IS FOR ───────────────────────────────────────────────────
+//
+// Owner: "I blocked the TV house for one day where the electrician is fixing
+// the DB Board. I wasn't able to choose a category for blocking, only adding
+// it for a guest booking."
+//
+// She had already found the only workaround there was: the night went in as
+// a CONFIRMED guest booking called "Maintenance", one guest, R0. Nothing
+// downstream can tell that from a real arrival — it counts as an upcoming
+// stay, it becomes the property's "next" arrival, and the nightly job books
+// a turnover clean for the morning the electrician leaves.
+//
+// The category can NOT live in guest_name. A blocked row carrying a real
+// name is read by nb() below as a misclassified booking and flipped to
+// confirmed, which is right for the feed quirk it was written for and
+// exactly wrong here. Hence its own column, and `notes` still holds the
+// free text ("Electrician — DB board").
+//
+// `short` is for the calendar bar, which keeps the first word cut to ten
+// characters — "Maintenance" lands there as "Maintenanc".
+const BLOCK_REASONS = [
+  { key:'maintenance', icon:'🔧', chip:'Maintenance',  label:'Maintenance',  short:'Repairs'  },
+  { key:'cleaning',    icon:'🧹', chip:'Cleaning day', label:'Cleaning day', short:'Cleaning' },
+  { key:'renovation',  icon:'🎨', chip:'Renovation',   label:'Renovation',   short:'Reno'     },
+  { key:'other',       icon:'🚫', chip:'Other',        label:'Blocked',      short:'Blocked'  },
+];
+const blockReason = k => BLOCK_REASONS.find(r => r.key === k) || null;
+const isBlockRow  = b => !!b && b.status === 'blocked';
+
+// Picking a category is optional. Skipping it leaves exactly the generic
+// block that existed before, so holding a night back is still one tap and
+// two dates — the label is an offer, not a form to fill in.
+function blockLabel(b) {
+  const r = blockReason(b && b.block_reason);
+  if (r) return r.icon + ' ' + r.label;
+  // No category. Either a block made before this existed, or one mirrored
+  // from a platform's own calendar — where the platform IS the reason.
+  // source_uid is what tells them apart: the importers set it, hand-made
+  // blocks never have one.
+  if (b && b.source_uid) return '🔒 Blocked on ' + (PLATFORM_LABELS[b.platform] || b.platform || 'a platform');
+  return '🔒 Blocked';
+}
+function blockShort(b) {
+  const r = blockReason(b && b.block_reason);
+  return r ? r.short : 'Blocked';
+}
+// One row of chips, rendered the same in the Add-booking modal and in the
+// booking detail. mkOnclick builds the handler because the two callers
+// identify the block differently — one has no row yet.
+function blockReasonChips(selected, mkOnclick) {
+  return BLOCK_REASONS.map(r => {
+    const on = r.key === selected;
+    return `<button type="button" onclick="${mkOnclick(r.key)}"
+      style="border:1.5px solid ${on?'var(--ocean)':'var(--border)'};background:${on?'var(--ocean)':'var(--card-bg)'};
+             color:${on?'#fff':'var(--ink)'};border-radius:999px;padding:6px 13px;font-size:.8rem;
+             font-family:inherit;font-weight:${on?'700':'500'};cursor:pointer;white-space:nowrap">${r.icon} ${r.chip}</button>`;
+  }).join('');
+}
+
 function nb(b) {
   let pid = b.property_id || '';
   if (UUID_MAP[pid]) pid = UUID_MAP[pid];
@@ -4689,7 +4752,12 @@ function nb(b) {
     ...b,
     status,
     guest_name: gn,
-    display_name: gn || (b.platform ? b.platform.charAt(0).toUpperCase()+b.platform.slice(1)+' Guest' : 'Guest'),
+    // A block is named by what it is for, never by its placeholder guest
+    // name. Everything on screen reads display_name, so this is the one
+    // place that has to know.
+    display_name: status === 'blocked'
+      ? blockLabel(b)
+      : (gn || (b.platform ? b.platform.charAt(0).toUpperCase()+b.platform.slice(1)+' Guest' : 'Guest')),
     check_in:  String(b.check_in_date  || b.check_in  || '').slice(0,10),
     check_out: String(b.check_out_date || b.check_out || '').slice(0,10),
     revenue: b.revenue ?? b.total_amount ?? 0,
@@ -9764,6 +9832,43 @@ function lifecycleSteps(b, cleanOk, pid) {
   </div>`;
 }
 
+// A held night on the Bookings rail. Dashed and grey on purpose: it is a
+// gap in the letting calendar, not a stay, and it should not read as one at
+// a glance. Nights are measured off the dates rather than the `nights`
+// column, which disagrees with its own dates on some live rows.
+function blockLaneCard(b, today) {
+  const nights    = Math.max(0, Math.round((new Date(b.check_out) - new Date(b.check_in)) / 86400000));
+  const daysUntil = Math.ceil((new Date(b.check_in) - new Date()) / 86400000);
+  const running   = b.check_in <= today && b.check_out > today;
+  const isPast    = b.check_out <= today;
+  const tag = running   ? '<span style="background:#e0f2fe;color:#0369a1;font-size:.62rem;padding:2px 7px;border-radius:10px;font-weight:700">On now</span>'
+            : isPast    ? '<span style="background:var(--border);color:var(--muted);font-size:.62rem;padding:2px 7px;border-radius:10px">Past</span>'
+            : daysUntil>=0 && daysUntil<=7
+                        ? '<span style="background:#f1f5f9;color:#475569;font-size:.62rem;padding:2px 6px;border-radius:6px;font-weight:600">⏳ '+daysUntil+'d</span>'
+                        : '';
+  return `<div class="lane-node">
+    <span class="lane-dot"></span>
+    <div class="lane-item" style="border-color:var(--border);border-style:dashed;background:var(--sand);opacity:${isPast?'.7':'1'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:.88rem;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            ${escHtml(b.display_name || blockLabel(b))}
+            ${tag}
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:.77rem;color:var(--muted);margin-top:6px">
+            <span>📅 ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)}</span>
+            <span>🌙 ${nights}n</span>
+            <span>🚫 Not bookable</span>
+          </div>
+          ${b.notes ? `<div style="font-size:.74rem;color:var(--muted);margin-top:5px;font-style:italic">${escHtml(String(b.notes).split('|')[0])}</div>` : ''}
+        </div>
+        <button onclick="event.stopPropagation();openBookingDetail('${b.id}')"
+          style="background:var(--card-bg);border:1px solid var(--border);border-radius:7px;padding:4px 9px;font-size:.74rem;cursor:pointer;color:var(--ink);flex-shrink:0">View ›</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderLaneView() {
   const today = todaySAST();
   const laneEl = document.getElementById('booking-lane-view');
@@ -9794,6 +9899,31 @@ function renderLaneView() {
     const pending = allProp.filter(b=>b.status==='pending');
     const shown   = filterForLane(allProp).sort((a,b)=> bookingFilter==='upcoming' ? a.check_in.localeCompare(b.check_in) : b.check_in.localeCompare(a.check_in));
     const upcoming= allProp.filter(b=>b.check_in>today&&b.status!=='cancelled').sort((a,b)=>a.check_in.localeCompare(b.check_in));
+
+    // ── BLOCKS BELONG ON THIS SCREEN TOO ──────────────────────────────────
+    //
+    // allProp above filters them out, and did so everywhere: blocking a
+    // night correctly made it VANISH from the Bookings tab. That is why the
+    // TV House maintenance day was typed in as a guest called "Maintenance"
+    // — it was the only way to block a night and still be able to see it.
+    //
+    // They stay out of allProp rather than being folded into it, because
+    // Pending / Upcoming / Next and the current-guest card all count stays,
+    // and a held night is not one. It is shown on the rail beside them and
+    // counted separately in the footer.
+    const blocksProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false && b.status==='blocked');
+    // A block has no check-in to be "upcoming" from — the one running today
+    // is the one most worth seeing — so the split is by whether it is over.
+    const shownBlocks = (bookingFilter==='pending' || bookingFilter==='cancelled') ? []
+      : blocksProp.filter(b => bookingFilter==='upcoming' ? b.check_out >  today
+                             : bookingFilter==='past'     ? b.check_out <= today
+                             : true);
+    // One rail, in date order, so a held night sits where it falls between
+    // the stays on either side of it.
+    const rail = shown.filter(b => b.id !== current?.id).concat(shownBlocks)
+      .sort((a,b) => bookingFilter==='upcoming'
+        ? String(a.check_in).localeCompare(String(b.check_in))
+        : String(b.check_in).localeCompare(String(a.check_in)));
 
     // Occupied status — warm neutral
     const isOccupied = !!current;
@@ -9830,7 +9960,7 @@ function renderLaneView() {
 
       <!-- ── Rail: current guest (with lifecycle) + upcoming/past bookings ── -->
       <div class="lane-body">
-        ${shown.filter(b=>b!==current).length===0&&!current ? emptyState('📭',
+        ${rail.length===0&&!current ? emptyState('📭',
           `No ${bookingFilter==='all'?'':bookingFilter+' '}bookings for ${prop.name} yet`,
           `<button class="btn btn-sm btn-primary" onclick="openModal('booking-modal')" style="margin-right:6px">+ Add Booking</button>
            <button class="btn btn-sm btn-ghost" onclick="serverSync(false)">🔄 Sync calendars</button>
@@ -9862,7 +9992,11 @@ function renderLaneView() {
           </div>
         </div>` : ''}
 
-        ${shown.filter(b=>b.id!==current?.id).map(b => {
+        ${rail.map(b => {
+          // A block has no guest, no head count, no lifecycle and no clean,
+          // so it gets its own card rather than a guest card with five
+          // things greyed out.
+          if (isBlockRow(b)) return blockLaneCard(b, today);
           const isPending  = b.status==='pending';
           const isPast     = b.check_out < today;
           const daysUntil  = Math.ceil((new Date(b.check_in)-new Date())/86400000);
@@ -9945,7 +10079,7 @@ function renderLaneView() {
 
       <!-- ── Footer ── -->
       <div style="padding:10px 20px;border-top:1px solid var(--border);background:var(--sand);display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:.75rem;color:var(--muted)">${shown.length} booking${shown.length!==1?'s':''} shown</span>
+        <span style="font-size:.75rem;color:var(--muted)">${shown.length} booking${shown.length!==1?'s':''} shown${shownBlocks.length?` · ${shownBlocks.length} blocked`:''}</span>
         <button onclick="openModal('booking-modal')"
           style="background:var(--ocean);color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:.78rem;cursor:pointer;font-weight:600">
           + Add booking
@@ -9985,6 +10119,15 @@ function openBookingDetail(bookingId) {
           <span class="badge badge-${(b.status||'').replace(' ','-')}">${b.status}</span>
         </div>
       </div>
+      <!-- A mis-tapped category would otherwise be permanent, and the only
+           way to relabel a block would be to delete it and block the nights
+           again. Saves on tap; there is nothing else on this row to save. -->
+      ${isBlockRow(b) ? `<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Why these nights are held</div>
+        <div id="bd-reasons-${b.id}" style="display:flex;flex-wrap:wrap;gap:7px">
+          ${blockReasonChips(b.block_reason, k => `bdSetBlockReason('${b.id}','${k}')`)}
+        </div>
+      </div>` : ''}
       <div id="bd-view-${b.id}" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.8rem;color:var(--muted)">
         <div><strong style="color:var(--ink)">📍</strong> ${propName(b.property_id)}</div>
         <div><strong style="color:var(--ink)">👥</strong> ${b.number_of_guests||1} guest${(b.number_of_guests||1)!==1?'s':''}</div>
@@ -10381,12 +10524,27 @@ let _savingBooking = false;
 // platform, no revenue and no head count, and a form that keeps asking for
 // them invites someone to fill them in. So the fields that mean nothing for
 // a block are hidden rather than merely ignored.
+let _blockReason = null;
+function bmPickReason(key) {
+  // Tapping the chip that is already on clears it, so a mis-tap does not
+  // need a fifth "none of these" chip to undo.
+  _blockReason = (_blockReason === key) ? null : key;
+  bmRenderReasons();
+}
+function bmRenderReasons() {
+  const el = document.getElementById('b-block-reasons');
+  if (el) el.innerHTML = blockReasonChips(_blockReason, k => `bmPickReason('${k}')`);
+}
+
 function bmBlockMode() {
   const blocked = document.getElementById('b-status').value === 'blocked';
   ['b-guest-field','b-platform-field','b-guests-field','b-email-field','b-phone-field','b-revenue-field']
     .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = blocked ? 'none' : ''; });
   const note = document.getElementById('b-block-note');
   if (note) note.style.display = blocked ? '' : 'none';
+  const rf = document.getElementById('b-block-reason-field');
+  if (rf) rf.style.display = blocked ? '' : 'none';
+  if (blocked) bmRenderReasons();
   const btn  = document.getElementById('b-save-btn');
   if (btn)  btn.textContent  = blocked ? 'Block these nights' : 'Add Booking';
   // "Check-in" and "Guest Name" are the guest's words. Nobody is checking in.
@@ -10395,9 +10553,11 @@ function bmBlockMode() {
   const nL  = document.getElementById('b-notes-label');
   if (ciL) ciL.textContent = blocked ? 'First night blocked *' : 'Check-in *';
   if (coL) coL.textContent = blocked ? 'Free again from *'     : 'Check-out *';
-  if (nL)  nL.textContent  = blocked ? 'Reason (shown to staff)' : 'Notes';
+  // The chips above now carry the reason, so this box is for the detail
+  // that makes it actionable — who is coming, and for what.
+  if (nL)  nL.textContent  = blocked ? 'Detail (shown to staff)' : 'Notes';
   const nI = document.getElementById('b-notes');
-  if (nI)  nI.placeholder  = blocked ? 'e.g. cleaning day, maintenance' : 'Optional notes';
+  if (nI)  nI.placeholder  = blocked ? 'e.g. electrician — DB board' : 'Optional notes';
   if (blocked) bmDatesChanged();
 }
 
@@ -10452,6 +10612,9 @@ async function saveBooking() {
     check_in:cin+' 15:00:00+02', check_out:cout+' 10:00:00+02',
     nights, number_of_guests: isBlock ? 1 : (Number(document.getElementById('b-guests').value)||1),
     status:document.getElementById('b-status').value, payment_status:'pending',
+    // Only a block has a reason. Carrying one onto a guest booking would
+    // put "🔧 Maintenance" on a real arrival's card.
+    block_reason: isBlock ? (_blockReason || null) : null,
     total_amount: isBlock ? 0 : (Number(document.getElementById('b-revenue').value)||0),
     revenue:      isBlock ? 0 : (Number(document.getElementById('b-revenue').value)||0),
     currency:'ZAR', notes:document.getElementById('b-notes').value, is_active:true,
@@ -10588,7 +10751,10 @@ function buildCalGrid(year, month, bkgs, doms, gridId, labelId, clickFn) {
         const propTag = showProp ? '['+propTagOf(b.property_id)+'] ' : '';
         // Short name for mobile — first name only, max 10 chars
         const fullName = b.display_name || b.guest_name || b.platform || 'Guest';
-        const shortName = fullName.split(' ')[0].slice(0,10);
+        // First word, ten characters — which for a block whose label starts
+        // with an emoji is just the emoji, and for "Maintenance" is
+        // "Maintenanc". Blocks carry their own short form for this bar.
+        const shortName = isBlockRow(b) ? blockShort(b) : fullName.split(' ')[0].slice(0,10);
         const bCheckIn  = String(b.check_in  || b.check_in_date  || '').slice(0,10);
         const bCheckOut = String(b.check_out || b.check_out_date || '').slice(0,10);
         const isRealStart = bCheckIn===ds;
@@ -11410,6 +11576,27 @@ function deleteCleaning(id) {
 function isOwnEntry(b) {
   const p = String((b && b.platform) || '').toLowerCase();
   return !p || p === 'manual' || p === 'direct';
+}
+
+// Change what a block says it is for, from the booking detail. Tapping the
+// chip that is already on clears the category, which puts the card back to
+// a plain "Blocked" rather than leaving a wrong one that cannot be removed.
+async function bdSetBlockReason(bookingId, key) {
+  const b = bookings.find(x => String(x.id) === String(bookingId));
+  if (!b || !isBlockRow(b)) return;
+  const next = (b.block_reason === key) ? null : key;
+  if (db) {
+    const { error } = await db.from('bookings').update({ block_reason: next }).eq('id', bookingId);
+    if (error) { toast('Could not save that: ' + error.message, 'error'); return; }
+  }
+  b.block_reason = next;
+  b.display_name = blockLabel(b);
+  const el = document.getElementById('bd-reasons-' + bookingId);
+  if (el) el.innerHTML = blockReasonChips(next, k => `bdSetBlockReason('${bookingId}','${k}')`);
+  const title = document.getElementById('day-modal-title');
+  if (title) title.textContent = b.display_name;
+  if (currentTab === 'bookings') renderLaneView();
+  if (currentTab === 'calendar') renderCalendar();
 }
 
 function bdEdit(bookingId, cancel) {
@@ -14210,6 +14397,7 @@ function openModal(id){
     // Status is reset to 'confirmed' above; put the hidden-field state back to
     // match it, or the form reopens with the guest fields still hidden from
     // the last time it was used to block something.
+    _blockReason = null;
     bmBlockMode();
   }
 
