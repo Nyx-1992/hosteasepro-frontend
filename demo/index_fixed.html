@@ -9911,7 +9911,16 @@ function renderLaneView() {
     // Pending / Upcoming / Next and the current-guest card all count stays,
     // and a held night is not one. It is shown on the rail beside them and
     // counted separately in the footer.
-    const blocksProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false && b.status==='blocked');
+    //
+    // OURS ONLY — source_uid is null. A block mirrored from a platform's
+    // calendar is a copy of a decision made somewhere else, and there are
+    // ten of them on the TV House alone, including LekkeSlaap echo runs of
+    // 57, 95 and 182 nights. Listing those here would bury the three real
+    // stays under placeholder rows nobody can act on. They stay where they
+    // have always been — grey on the calendar, which is where the echo loop
+    // was spotted in the first place. This rail is for decisions made in
+    // HEP, which are exactly the ones that were impossible to find again.
+    const blocksProp = bookings.filter(b=>b.property_id===pid && b.is_active!==false && b.status==='blocked' && !b.source_uid);
     // A block has no check-in to be "upcoming" from — the one running today
     // is the one most worth seeing — so the split is by whether it is over.
     const shownBlocks = (bookingFilter==='pending' || bookingFilter==='cancelled') ? []
