@@ -178,7 +178,22 @@ console.log('\nThe half that makes the label worth having');
 
 const lane = (app.match(/function renderLaneView\(\)[\s\S]*?\n\}\n\nfunction openBookingDetail/) || [''])[0];
 ok('blocks are collected for the rail',
-   /const blocksProp = bookings\.filter\([\s\S]{0,140}?b\.status==='blocked'\)/.test(lane));
+   /const blocksProp = bookings\.filter\([\s\S]{0,180}?b\.status==='blocked'/.test(lane));
+{
+  // Ours only. The TV House carries ten platform-mirrored blocks running
+  // into 2028, including LekkeSlaap echo runs of 57, 95 and 182 nights —
+  // listing those would bury the three real stays under rows nobody can
+  // act on. They stay grey on the calendar, where the echo loop was found.
+  const src = (lane.match(/const blocksProp = bookings\.filter\([\s\S]*?\);/) || [''])[0];
+  const run = new Function('bookings','pid', src + '\nreturn blocksProp;');
+  const rows = [
+    { id:'mine', property_id:'tv', is_active:true, status:'blocked', block_reason:'maintenance', source_uid:null },
+    { id:'echo', property_id:'tv', is_active:true, status:'blocked', source_uid:'1351565941@lekkeslaap.co.za' },
+  ];
+  ok('  only the ones made here, never a platform mirror',
+     run(rows, 'tv').map(b => b.id).join(',') === 'mine',
+     run(rows, 'tv').map(b => b.id).join(',') || '(none)');
+}
 ok('  and rendered beside the stays, in date order',
    /const rail = shown\.filter\([\s\S]{0,60}?\)\.concat\(shownBlocks\)/.test(lane));
 ok('  with their own card',
