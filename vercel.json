@@ -59,6 +59,14 @@
       "destination": "/demo/welcome.html"
     },
     {
+      "source": "/robots.txt",
+      "destination": "/demo/robots.txt"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/demo/sitemap.xml"
+    },
+    {
       "source": "/manifest.json",
       "destination": "/demo/manifest.json"
     },
