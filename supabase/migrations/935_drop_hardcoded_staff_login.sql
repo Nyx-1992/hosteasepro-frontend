@@ -1,0 +1,40 @@
+-- Drop the staff portal login that hardcodes S&N's org id.
+--
+-- WHAT IT IS. There are two staff_portal_login functions. The one the app
+-- actually calls takes a portal key and looks the staff up inside THAT
+-- agency:
+--
+--   staff_portal_login(p_portal_key text, p_name text, p_pin text)
+--
+-- The other one is what it looked like before HEP had more than one
+-- agency in it:
+--
+--   staff_portal_login(p_name text, p_pin text)
+--
+-- and its body does this:
+--
+--   SELECT portal_key FROM organizations
+--    WHERE id = '5966bc67-5c2f-45ae-8519-9b7eaeee09f4'
+--
+-- That uuid is S&N Apt Management. The function takes a name and a PIN
+-- from anyone on the internet — it is SECURITY DEFINER and executable by
+-- the anon role, which is correct for the keyed version because the key
+-- IS the credential — and answers them against S&N, because S&N is
+-- written into the function.
+--
+-- WHY IT MATTERS NOW RATHER THAN BEFORE. With one agency it was a
+-- shortcut that was always true. With a second agency it becomes a
+-- standing answer to "which agency?" that ignores the question. A cleaner
+-- at another agency called Patricia, with whatever PIN she was given,
+-- gets checked against S&N's roster — and anyone at all can probe S&N's
+-- staff names and PINs without needing to know a portal key, which is the
+-- one thing that is supposed to scope a portal request.
+--
+-- "A DEFAULT THAT IS ONE TENANT'S REAL DATA IS NEVER A SAFE DEFAULT."
+--
+-- SAFE TO DROP. Nothing calls it. demo/domestic.html passes p_portal_key
+-- on every call (one call site, line ~1536), and so does the roster
+-- lookup beside it. The keyed function is a separate overload and is not
+-- touched by this.
+
+DROP FUNCTION IF EXISTS public.staff_portal_login(p_name text, p_pin text);
