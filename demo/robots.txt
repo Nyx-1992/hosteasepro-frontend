@@ -1,0 +1,20 @@
+# HostEase Pro
+#
+# Only the sales pages are worth indexing. Everything else here is either a
+# login box with nothing behind it until you sign in, or a portal reached by
+# a key that is handed out directly.
+#
+# This file asks politely and secures nothing. The staff and cleaner portals
+# are gated server-side on their portal key; listing them here keeps them out
+# of search results, it does not keep anyone out of them.
+
+User-agent: *
+Allow: /welcome
+Allow: /pricing
+Allow: /signup
+
+Disallow: /domestic
+Disallow: /outside-cleaner
+Disallow: /api/
+
+Sitemap: https://hosteasepro.com/sitemap.xml

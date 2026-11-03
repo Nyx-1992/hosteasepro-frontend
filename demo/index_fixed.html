@@ -5227,6 +5227,11 @@ function showClientOnly() {
 
 async function _afterLogin(user) {
   CURRENT_ORG_ID = user.org_id || null;
+  // Remembers that SOMEBODY has signed in on this browser, so the root
+  // URL knows to show the app rather than the sales page. See
+  // strangerAtTheDoor() — this is the flag it reads, and it is the only
+  // thing written here. No name, no email, no org.
+  try { localStorage.setItem('hep_known_user', '1'); } catch (e) {}
 
   // ── SEND THE NEW PERSON TO A TAB THEY MAY ACTUALLY OPEN ──────────
   //
@@ -5291,6 +5296,42 @@ async function _afterLogin(user) {
   // than a letting agency.
   if (isPlatformOwner()) switchTab('customers');
 }
+// ── SOMEBODY WHO HAS NEVER BEEN HERE BEFORE ───────────────────────────────
+//
+// hosteasepro.com serves the APP. Anyone who hears about HEP and types the
+// domain lands on a password box, with the sales page reachable only from a
+// small "New here?" link underneath it. For a product nobody has heard of,
+// the front door is a wall.
+//
+// The obvious fix — point the root at the sales page — breaks the installed
+// app. hep-manifest.json has start_url "/", so Nicole's, Silja's and the TV
+// House owners' home-screen icons would all open a pitch for software they
+// already use.
+//
+// So the root stays the app and only a genuine stranger is sent on. Four
+// things each say "not a stranger", and any one of them is enough:
+//
+//   a live session          — already signed in, nothing to sell
+//   hep_known_user          — somebody has signed in on this browser before
+//   standalone display-mode — opened from the installed app
+//   ?signin                 — came from the sales page's own Sign in link,
+//                             which must never bounce back to where it came
+//
+// The cost of being wrong is one tap: her own people on a brand-new browser
+// see the sales page and press Sign in. The cost of not doing it is that
+// every stranger who ever types the domain sees a login box.
+function strangerAtTheDoor() {
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.has('signin') || q.has('reset') || q.has('invite')) return false;
+    if (location.pathname !== '/' && location.pathname !== '/index_fixed.html') return false;
+    if (localStorage.getItem('hep_known_user')) return false;
+    if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return false;
+    if (window.navigator.standalone) return false;   // iOS home-screen app
+    return true;
+  } catch (e) { return false; }  // never strand anyone over a storage error
+}
+
 async function restoreSession() {
   if (!db) return;
   // A recovery link carries a real, if limited, session. Without this guard
@@ -5300,7 +5341,10 @@ async function restoreSession() {
   try {
     const { data } = await db.auth.getSession();
     const session = data && data.session;
-    if (!session || !session.user) return;
+    if (!session || !session.user) {
+      if (strangerAtTheDoor()) location.replace('/welcome');
+      return;
+    }
     const profile = await fetchProfile(session.user.id, session.user.email);
     if (!profile) return;
     currentUser = profile;
