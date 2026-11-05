@@ -244,6 +244,28 @@ ok('  inside _afterLogin, so it covers a restored session too',
    /async function _afterLogin\(user\) \{[\s\S]{0,420}?hep_known_user/.test(app));
 ok('the redirect only happens when there is no session',
    /if \(!session \|\| !session\.user\) \{\s*\n\s*if \(strangerAtTheDoor\(\)\) location\.replace\('\/welcome'\);/.test(app));
+
+// A PASSWORD-RESET LINK MUST NOT BE SWALLOWED. Supabase sends recovery as
+// '#type=recovery' or '?code=' — a hash and a param strangerAtTheDoor()
+// does not look at. It is safe only because isRecoveryUrl() returns FIRST,
+// and the owners being sent a reset link this week is exactly who would
+// land on a sales page if that order ever flipped.
+{
+  const rs = (app.match(/async function restoreSession\(\)[\s\S]*?\n\}/) || [''])[0];
+  const iRecovery = rs.indexOf('isRecoveryUrl()');
+  const iStranger = rs.indexOf('strangerAtTheDoor()');
+  ok('a recovery link is checked before the stranger redirect',
+     iRecovery > -1 && iStranger > -1 && iRecovery < iStranger,
+     `isRecoveryUrl at ${iRecovery}, strangerAtTheDoor at ${iStranger}`);
+  ok('  and it returns rather than falling through',
+     /if \(isRecoveryUrl\(\)\) return;/.test(rs));
+  const isRec = (app.match(/function isRecoveryUrl\(\)[\s\S]*?\n\}/) || [''])[0];
+  const run = (hash, search) => new Function('INITIAL_URL',
+    isRec + '\nreturn isRecoveryUrl();')({ hash, search });
+  ok('  proof: Supabase\'s hash form is recognised', run('#type=recovery&access_token=x', '') === true);
+  ok('  proof: the PKCE form is recognised',         run('', '?code=abc123') === true);
+  ok('  proof: a plain visit is not',                run('', '') === false);
+}
 ok('and the sales page Sign in points somewhere that will not bounce',
    /href="\/\?signin=1"/.test(read('demo', 'welcome.html')));
 
