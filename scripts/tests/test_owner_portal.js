@@ -267,7 +267,20 @@ ok('the redirect only happens when there is no session',
   ok('  proof: a plain visit is not',                run('', '') === false);
 }
 ok('and the sales page Sign in points somewhere that will not bounce',
-   /href="\/\?signin=1"/.test(read('demo', 'welcome.html')));
+   /href="\/login"/.test(read('demo', 'welcome.html')));
+
+// THE ADDRESS YOU GIVE SOMEBODY. Every owner, cleaner and staff member
+// arrives on a link from us, and their browser has no sign-in flag yet —
+// so a bare hosteasepro.com would read them as strangers and show them a
+// sales pitch. /login and /app are not the front door and never redirect.
+{
+  const v = JSON.parse(read('vercel.json'));
+  const srcs = v.rewrites.map(r => r.source);
+  ['/login', '/app'].forEach(pth => {
+    ok('  ' + pth + ' serves the app', srcs.includes(pth));
+    ok('    ahead of the catch-all', srcs.indexOf(pth) < srcs.indexOf('/(.*)'));
+  });
+}
 
 console.log('\nBeing findable at all');
 const welcome = read('demo', 'welcome.html');

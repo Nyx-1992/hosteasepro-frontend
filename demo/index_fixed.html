@@ -5361,6 +5361,12 @@ function strangerAtTheDoor() {
   try {
     const q = new URLSearchParams(location.search);
     if (q.has('signin') || q.has('reset') || q.has('invite')) return false;
+    // Only the bare root is a front door. /login and /app are addresses you
+    // only have because somebody gave them to you — which is how every
+    // property owner, cleaner and staff member gets here. Giving Mirka &
+    // Antonio "hosteasepro.com" would have shown them a pitch for
+    // property-management software: their browser has never signed in since
+    // this flag existed, so they would have read as strangers.
     if (location.pathname !== '/' && location.pathname !== '/index_fixed.html') return false;
     if (localStorage.getItem('hep_known_user')) return false;
     if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) return false;
