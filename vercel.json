@@ -59,6 +59,14 @@
       "destination": "/demo/welcome.html"
     },
     {
+      "source": "/login",
+      "destination": "/demo/index_fixed.html"
+    },
+    {
+      "source": "/app",
+      "destination": "/demo/index_fixed.html"
+    },
+    {
       "source": "/robots.txt",
       "destination": "/demo/robots.txt"
     },
