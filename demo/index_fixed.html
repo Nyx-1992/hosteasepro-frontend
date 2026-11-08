@@ -982,9 +982,20 @@ function _buildMobileNavStub(){/* replaced by main script */}
 
         <!-- Owner questions sub-tab -->
         <div id="msg-subtab-owner" style="display:none">
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px" id="oq-filters"></div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="oq-cat-filters"></div>
+          <!-- Owner: "seperate monthly report in categories so it is easy to
+               break off" … "will be consolidated into one report for that
+               month." One document per property per month, split into
+               category sections that each stand on their own. -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+            <button class="btn btn-sm btn-ghost" id="oq-report-btn" onclick="toggleOwnerReport()">📄 Monthly report</button>
+            <select id="oq-rep-month" onchange="renderOwnerReport()" style="display:none;padding:5px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.82rem;background:var(--input-bg)"></select>
+            <select id="oq-rep-prop" onchange="renderOwnerReport()" style="display:none;padding:5px 9px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.82rem;background:var(--input-bg)"></select>
+            <button class="btn btn-sm btn-primary" id="oq-rep-dl" onclick="downloadOwnerReport()" style="display:none">⬇ PDF</button>
+          </div>
+          <div id="oq-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+          <div id="oq-cat-filters" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
           <div id="oq-list"></div>
+          <div id="oq-report" style="display:none"></div>
         </div>
       </div>
 
@@ -12954,6 +12965,191 @@ async function ownerQuerySetStatus(id, status) {
     if (error) throw error;
     await loadOwnerQueries();
   } catch (e) { toast('Could not change that: ' + e.message, 'error'); }
+}
+
+// ══ THE MONTH, IN ONE DOCUMENT ═══════════════════════════════════════════
+//
+// Owner: "seperate monthly report in categories so it is easy to break off
+// … will be consolidated into one report for that month."
+//
+// One property, one month. The sections are by category and each carries
+// its own heading, count and page break — so a section can be lifted out
+// and handed to the pool company or the gardener without the rest of it.
+//
+// Scoped to ONE property on purpose. This goes to an owner, and an owner
+// has no business reading another owner's complaints.
+let _oqReportOn = false;
+let _oqReportThreads = {};   // query id → messages, fetched once per report
+
+function toggleOwnerReport() {
+  _oqReportOn = !_oqReportOn;
+  ['oq-filters','oq-cat-filters','oq-list'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = _oqReportOn ? 'none' : '';
+  });
+  ['oq-rep-month','oq-rep-prop'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = _oqReportOn ? '' : 'none';
+  });
+  const dl = document.getElementById('oq-rep-dl');
+  if (dl) dl.style.display = _oqReportOn ? '' : 'none';
+  const rep = document.getElementById('oq-report');
+  if (rep) rep.style.display = _oqReportOn ? '' : 'none';
+  const btn = document.getElementById('oq-report-btn');
+  if (btn) { btn.textContent = _oqReportOn ? '← Back to the list' : '📄 Monthly report'; btn.className = 'btn btn-sm ' + (_oqReportOn ? 'btn-primary' : 'btn-ghost'); }
+  if (_oqReportOn) { buildOwnerReportPickers(); renderOwnerReport(); }
+}
+
+// Only months and properties that HAVE something. An empty report is a
+// document that says nothing, and offering twelve of them is worse than
+// offering the three that are real.
+function buildOwnerReportPickers() {
+  const mSel = document.getElementById('oq-rep-month');
+  const pSel = document.getElementById('oq-rep-prop');
+  if (!mSel || !pSel) return;
+  const months = [...new Set(ownerQueries.map(q => String(q.created_at).slice(0,7)))].sort().reverse();
+  const props  = [...new Set(ownerQueries.map(q => q.property_id))];
+  if (!months.length) { mSel.innerHTML = '<option>—</option>'; pSel.innerHTML = '<option>—</option>'; return; }
+  const keep = mSel.value;
+  mSel.innerHTML = months.map(m => `<option value="${m}">${escHtml(monthLabel(m, true))}</option>`).join('');
+  if (months.includes(keep)) mSel.value = keep;
+  const keepP = pSel.value;
+  pSel.innerHTML = props.map(p => `<option value="${escAttr(p)}">${escHtml(propName(p) || 'Property')}</option>`).join('');
+  if (props.includes(keepP)) pSel.value = keepP;
+}
+
+async function renderOwnerReport() {
+  const el = document.getElementById('oq-report');
+  if (!el || !db) return;
+  const ym   = (document.getElementById('oq-rep-month') || {}).value || todaySAST().slice(0,7);
+  const prop = (document.getElementById('oq-rep-prop')  || {}).value || '';
+  const rows = ownerQueries
+    .filter(q => String(q.created_at).slice(0,7) === ym && String(q.property_id) === String(prop))
+    .sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
+
+  if (!rows.length) {
+    el.innerHTML = `<div class="text-muted" style="font-size:.85rem;padding:16px 0">Nothing raised for ${escHtml(propName(prop)||'that property')} in ${escHtml(monthLabel(ym, true))}.</div>`;
+    return;
+  }
+
+  el.innerHTML = skeletonRows(3);
+  // One request for the whole month's messages, not one per thread.
+  const { data, error } = await db.from('owner_query_messages')
+    .select('*').in('query_id', rows.map(r => r.id)).order('created_at');
+  if (error) { el.innerHTML = `<div style="color:var(--red)">${escHtml(error.message)}</div>`; return; }
+  _oqReportThreads = {};
+  (data || []).forEach(m => { (_oqReportThreads[m.query_id] = _oqReportThreads[m.query_id] || []).push(m); });
+
+  const open     = rows.filter(q => q.status === 'open').length;
+  const answered = rows.filter(q => q.status === 'answered').length;
+  const closed   = rows.filter(q => q.status === 'closed').length;
+  const STAT = { open:['Waiting on us','#b45309'], answered:['Answered','#166534'], closed:['Closed','#64748b'] };
+
+  // Grouped in the order the category list is defined, so two months of
+  // reports put the same topic in the same place.
+  const groups = OWNER_REQUEST_CATEGORIES
+    .map(c => [c, rows.filter(q => q.category === c.key)])
+    .filter(([, qs]) => qs.length);
+  const uncategorised = rows.filter(q => !q.category);
+  if (uncategorised.length) groups.push([{ key: null, icon: '📄' }, uncategorised]);
+
+  el.innerHTML = `
+  <div id="oq-report-page" style="background:#fff;color:#12233a;border:1px solid var(--border);border-radius:12px;padding:26px 28px;max-width:760px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;border-bottom:2px solid #12233a;padding-bottom:12px;margin-bottom:16px">
+      <div>
+        <div style="font-size:1.25rem;font-weight:700">${escHtml(propName(prop) || 'Property')}</div>
+        <div style="font-size:.9rem;color:#61748c;margin-top:2px">Owner requests — ${escHtml(monthLabel(ym, true))}</div>
+      </div>
+      <div style="text-align:right;font-size:.78rem;color:#61748c">
+        <div style="font-weight:700;color:#12233a">${escHtml((CLIENT_BRAND && CLIENT_BRAND.name) || 'HostEase Pro')}</div>
+        <div>Prepared ${fmtDate(todaySAST())}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:20px;font-size:.84rem">
+      <div><strong style="font-size:1.1rem">${rows.length}</strong> request${rows.length===1?'':'s'}</div>
+      ${open     ? `<div style="color:#b45309"><strong style="font-size:1.1rem">${open}</strong> waiting on us</div>` : ''}
+      ${answered ? `<div style="color:#166534"><strong style="font-size:1.1rem">${answered}</strong> answered</div>` : ''}
+      ${closed   ? `<div style="color:#64748b"><strong style="font-size:1.1rem">${closed}</strong> closed</div>` : ''}
+    </div>
+
+    ${groups.map(([c, qs]) => `
+      <div class="oq-rep-section" style="margin-bottom:22px;break-inside:avoid">
+        <div style="background:#f4f1ea;border-left:4px solid #c8922e;padding:7px 12px;font-weight:700;font-size:.95rem;margin-bottom:10px">
+          ${c.icon} ${escHtml(catLabel(c.key))} <span style="color:#61748c;font-weight:400">· ${qs.length}</span>
+        </div>
+        ${qs.map(q => {
+          const msgs = _oqReportThreads[q.id] || [];
+          const asked  = msgs.find(m => m.author_side === 'client');
+          const answer = [...msgs].reverse().find(m => m.author_side === 'agency');
+          const [lbl, col] = STAT[q.status] || STAT.open;
+          return `
+          <div style="border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px;margin-bottom:9px;break-inside:avoid">
+            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">
+              <div style="font-weight:700;font-size:.88rem">${escHtml(q.subject)}</div>
+              <div style="font-size:.72rem;color:${col};font-weight:700;white-space:nowrap">${lbl}</div>
+            </div>
+            <div style="font-size:.72rem;color:#61748c;margin-top:2px">Raised ${fmtDate(String(q.created_at).slice(0,10))}${q.raised_by_name ? ' · ' + escHtml(q.raised_by_name) : ''}</div>
+            ${asked ? `<div style="margin-top:9px;font-size:.82rem;line-height:1.55;white-space:pre-wrap;border-left:3px solid #e2e8f0;padding-left:10px">${escHtml(asked.body)}</div>` : ''}
+            <div style="margin-top:10px;font-size:.82rem;line-height:1.55">
+              <span style="font-weight:700">Our answer: </span>
+              ${answer ? `<span style="white-space:pre-wrap">${escHtml(answer.body)}</span>`
+                       : `<span style="color:#b45309">Not answered yet.</span>`}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`).join('')}
+
+    <div style="border-top:1px solid #e2e8f0;padding-top:10px;font-size:.72rem;color:#61748c">
+      Every request above was raised in the HostEase Pro owner portal and can be answered there.
+    </div>
+  </div>`;
+}
+
+// Multi-page, unlike the invoice PDF, which scales one page to fit. A
+// month of requests runs to several pages and squeezing them onto one
+// would make the thing unreadable — which is the only reason it exists.
+async function downloadOwnerReport() {
+  const page = document.getElementById('oq-report-page');
+  const btn  = document.getElementById('oq-rep-dl');
+  if (!page) { toast('Nothing to download', 'info'); return; }
+  const orig = btn.textContent; btn.disabled = true; btn.textContent = 'Generating…';
+  let clone = null;
+  try {
+    const W = 760;
+    clone = page.cloneNode(true);
+    Object.assign(clone.style, { width: W+'px', maxWidth: W+'px', position: 'fixed', top: '0', left: '-99999px' });
+    document.body.appendChild(clone);
+    const canvas = await html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: W });
+    const Ctor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!Ctor) throw new Error('jsPDF not loaded');
+    const pdf = new Ctor({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight(), margin = 8;
+    const imgW = pw - margin*2;
+    const imgH = imgW * (canvas.height / canvas.width);
+    const usable = ph - margin*2;
+    // Slice the tall canvas into page-height strips rather than scaling it
+    // down to nothing.
+    const sliceH = Math.floor(canvas.width * (usable / imgW));
+    let y = 0, first = true;
+    while (y < canvas.height) {
+      const h = Math.min(sliceH, canvas.height - y);
+      const part = document.createElement('canvas');
+      part.width = canvas.width; part.height = h;
+      part.getContext('2d').drawImage(canvas, 0, y, canvas.width, h, 0, 0, canvas.width, h);
+      if (!first) pdf.addPage();
+      pdf.addImage(part.toDataURL('image/jpeg', 0.95), 'JPEG', margin, margin, imgW, imgW * (h / canvas.width));
+      first = false; y += h;
+    }
+    const ym = (document.getElementById('oq-rep-month') || {}).value || '';
+    const pn = (propName((document.getElementById('oq-rep-prop') || {}).value) || 'property').replace(/[^A-Za-z0-9]+/g, '-');
+    pdf.save(`owner-requests-${pn}-${ym}.pdf`);
+    toast('Report downloaded ✓', 'success');
+  } catch (e) {
+    console.warn('owner report PDF:', e);
+    toast('Could not build the PDF — check the console', 'error');
+  } finally {
+    if (clone) document.body.removeChild(clone);
+    btn.disabled = false; btn.textContent = orig;
+  }
 }
 
 // ── GUEST TIMELINE (B1) ─────────────────────────────────────────────

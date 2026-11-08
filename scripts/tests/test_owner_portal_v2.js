@@ -186,7 +186,47 @@ ok('the email subject carries the topic',
 ok('  and the alert actually fetches the category',
    /select=id,subject,status,category,org_id/.test(alert));
 
-// ══ 5. FIVE LANGUAGES ═════════════════════════════════════════════════════
+// ══ 5. THE MONTH IN ONE DOCUMENT ══════════════════════════════════════════
+console.log('\nThe monthly report');
+
+const rep = (app.match(/async function renderOwnerReport\(\)[\s\S]*?\n\}/) || [''])[0];
+ok('there is one', !!rep);
+ok('  it is one month and ONE property',
+   /String\(q\.created_at\)\.slice\(0,7\) === ym && String\(q\.property_id\) === String\(prop\)/.test(rep),
+   'this goes to an owner, and an owner has no business reading another owner\'s complaints');
+ok('  split into category sections', /const groups = OWNER_REQUEST_CATEGORIES/.test(rep));
+ok('  in a fixed order, so two months put a topic in the same place',
+   /OWNER_REQUEST_CATEGORIES\s*\n?\s*\.map\(c => \[c, rows\.filter/.test(rep));
+ok('  each section standing on its own', /class="oq-rep-section"[^>]*break-inside:avoid/.test(rep),
+   '"so it is easy to break off"');
+ok('  uncategorised requests are not dropped', /const uncategorised = rows\.filter\(q => !q\.category\)/.test(rep));
+ok('  every request shows what was asked and what we answered',
+   /Our answer: /.test(rep) && /m\.author_side === 'client'/.test(rep));
+ok('  an unanswered one says so rather than showing blank',
+   /Not answered yet\./.test(rep));
+ok('  the answer shown is the LAST one we sent',
+   /\[\.\.\.msgs\]\.reverse\(\)\.find\(m => m\.author_side === 'agency'\)/.test(rep));
+ok('  the thread bodies are escaped', /escHtml\(asked\.body\)/.test(rep) && /escHtml\(answer\.body\)/.test(rep));
+ok('  and it is one query for the month, not one per thread',
+   /\.in\('query_id', rows\.map\(r => r\.id\)\)/.test(rep));
+
+const pick = (app.match(/function buildOwnerReportPickers\(\)[\s\S]*?\n\}/) || [''])[0];
+ok('only months that have something are offered', /\[\.\.\.new Set\(ownerQueries\.map\(q => String\(q\.created_at\)\.slice\(0,7\)\)\)\]/.test(pick),
+   'twelve empty months is worse than the three that are real');
+ok('  and the chosen month survives a rebuild', /if \(months\.includes\(keep\)\) mSel\.value = keep;/.test(pick));
+
+const dl = (app.match(/async function downloadOwnerReport\(\)[\s\S]*?\n\}/) || [''])[0];
+ok('the PDF is multi-page', /while \(y < canvas\.height\)/.test(dl) && /pdf\.addPage\(\)/.test(dl),
+   'the invoice PDF scales one page to fit; a month of requests would be unreadable that way');
+ok('  sliced, not squashed', /part\.getContext\('2d'\)\.drawImage\(canvas, 0, y/.test(dl));
+ok('  the file is named for the property and month',
+   /owner-requests-\$\{pn\}-\$\{ym\}\.pdf/.test(dl));
+ok('  and a failure is reported', /Could not build the PDF/.test(dl));
+
+ok('the report hides the list while it is open',
+   /\['oq-filters','oq-cat-filters','oq-list'\]\.forEach/.test(app));
+
+// ══ 6. FIVE LANGUAGES ═════════════════════════════════════════════════════
 console.log('\nStill five languages');
 
 ['en','de','cs','pl','es'].forEach(loc => {
