@@ -351,6 +351,36 @@ ok('  and an unsent one still is', /if \(short\) return `<span class="oq-draft-c
 ok('there is a box to write the short form in', /id="oq-sum-\$\{id\}"/.test(app));
 ok('  and saving carries both fields', /query_id: queryId, org_id: q\.org_id, body: body \|\| null, summary,/.test(app));
 
+console.log('\n  The owner can add a note to open work');
+
+const m942 = read('supabase', 'migrations', '942_owner_notes_on_tasks.sql')
+  .split('\n').filter(l => !/^\s*--/.test(l)).join('\n');
+ok('it is an RPC, not an UPDATE policy on tasks',
+   /CREATE OR REPLACE FUNCTION public\.owner_add_task_note/.test(m942) &&
+   !/CREATE POLICY[\s\S]*ON public\.tasks FOR UPDATE/.test(m942),
+   'a scoped UPDATE policy would let an owner retitle, reassign or close our work — RLS cannot restrict columns');
+ok('  it only appends, never overwrites',
+   /SET comments = coalesce\(comments, '\[\]'::jsonb\) \|\| jsonb_build_object/.test(m942));
+ok('  the side is stamped by the function, not passed in',
+   /'side', 'client'/.test(m942),
+   "the agency writes comments on the same task; a note must say truthfully which side it came from");
+ok('  only on tasks they can already see', /t\.client_visible/.test(m942) &&
+   /t\.property_id = ANY \(public\.client_property_uuids\(\)\)/.test(m942));
+ok('  AND ONLY ON OPEN ONES — "only on the todos"',
+   /kanban_status, 'todo'\) NOT IN \('done', 'cancelled'\)/.test(m942) &&
+   /status, 'pending'\)     NOT IN \('completed', 'cancelled'\)/.test(m942),
+   'both columns, because the board reads one and everything else reads the other');
+ok('  an empty note is refused', /RAISE EXCEPTION 'empty note'/.test(m942));
+ok('  and anon cannot call it',
+   /REVOKE ALL ON FUNCTION public\.owner_add_task_note\(uuid, text\) FROM PUBLIC, anon/.test(m942));
+
+ok('the box is on the owner card', /id="ctn-\$\{t\.id\}"/.test(app));
+ok('  hidden on finished work', /\$\{col\.id === 'done' \|\| col\.id === 'cancelled' \? '' :/.test(app));
+ok('  existing notes are shown, both sides apart',
+   /c\.side === 'client' \? '#e0f2fe' : 'var\(--surface-2\)'/.test(app));
+ok('  and escaped', /escHtml\(c\.text \|\| c\.body \|\| ''\)/.test(app));
+ok('  in their language', /ct\('addNote'\)/.test(app));
+
 // ══ 8. FIVE LANGUAGES ═════════════════════════════════════════════════════
 console.log('\nStill five languages');
 
