@@ -13234,52 +13234,53 @@ async function renderOwnerReport() {
       ${closed   ? `<div style="color:#64748b"><strong style="font-size:1.1rem">${closed}</strong> closed</div>` : ''}
     </div>
 
-    ${groups.map(([c, qs]) => `
-      <div class="oq-rep-section" style="margin-bottom:22px;break-inside:avoid">
-        <div style="background:#f4f1ea;border-left:4px solid #c8922e;padding:7px 12px;font-weight:700;font-size:.95rem;margin-bottom:0">
-          ${c.icon} ${escHtml(catLabel(c.key))} <span style="color:#61748c;font-weight:400">· ${qs.length}</span>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:.8rem;table-layout:fixed">
-          <thead>
-            <tr style="text-align:left;color:#61748c;font-size:.68rem;text-transform:uppercase">
-              <th style="width:22%;padding:7px 9px;border-bottom:1px solid #e2e8f0;font-weight:700">Request</th>
-              <th style="width:39%;padding:7px 9px;border-bottom:1px solid #e2e8f0;font-weight:700">What they asked</th>
-              <th style="width:39%;padding:7px 9px;border-bottom:1px solid #e2e8f0;font-weight:700">Our answer</th>
-            </tr>
-          </thead>
-          <tbody>
-          ${qs.map(q => {
-            const msgs   = _oqReportThreads[q.id] || [];
-            const asked  = msgs.find(m => m.author_side === 'client');
-            const answer = [...msgs].reverse().find(m => m.author_side === 'agency');
-            const draft  = drafts[q.id];
-            const [lbl, col] = STAT[q.status] || STAT.open;
-            const visibleActs = (acts[q.id] || []).filter(t => t.client_visible);
-            return `
-            <tr style="break-inside:avoid;vertical-align:top">
-              <td style="padding:10px 9px;border-bottom:1px solid #eef2f6">
-                <div style="font-weight:700">${escHtml(q.subject)}</div>
-                <div style="font-size:.7rem;color:${col};font-weight:700;margin-top:3px">${lbl}</div>
-                <div style="font-size:.68rem;color:#61748c;margin-top:2px">${fmtDate(String(q.created_at).slice(0,10))}</div>
-              </td>
-              <td style="padding:10px 9px;border-bottom:1px solid #eef2f6;white-space:pre-wrap;line-height:1.5">${asked ? escHtml(asked.body) : '—'}</td>
-              <td style="padding:10px 9px;border-bottom:1px solid #eef2f6;line-height:1.5">
-                ${answer ? `<span style="white-space:pre-wrap">${escHtml(answer.body)}</span>`
-                  : draft ? `<span class="oq-draft-cell"><span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-bottom:4px">DRAFT — NOT SENT</span><br><span style="white-space:pre-wrap">${escHtml(draft)}</span></span>`
-                  : `<span style="color:#b45309">Not answered yet.</span>`}
-                ${visibleActs.length ? `<div style="margin-top:8px;background:#f8fafc;border-radius:6px;padding:7px 9px">
-                  <div style="font-size:.64rem;font-weight:700;text-transform:uppercase;color:#61748c;margin-bottom:4px">What we are doing</div>
-                  ${visibleActs.map(t => {
-                    const done = t.status === 'completed' || t.kanban_status === 'done';
-                    return `<div style="font-size:.76rem;line-height:1.45;${done?'color:#64748b':''}">${done?'✓':'○'} <span style="${done?'text-decoration:line-through':''}">${escHtml(t.title)}</span></div>`;
-                  }).join('')}
-                </div>` : ''}
-              </td>
-            </tr>`;
-          }).join('')}
-          </tbody>
-        </table>
-      </div>`).join('')}
+    <table style="width:100%;border-collapse:collapse;font-size:.8rem;table-layout:fixed">
+      <thead>
+        <tr style="text-align:left;color:#61748c;font-size:.68rem;text-transform:uppercase">
+          <th style="width:18%;padding:8px 9px;border-bottom:2px solid #12233a;font-weight:700">Category</th>
+          <th style="width:41%;padding:8px 9px;border-bottom:2px solid #12233a;font-weight:700">Their request</th>
+          <th style="width:41%;padding:8px 9px;border-bottom:2px solid #12233a;font-weight:700">Our answer</th>
+        </tr>
+      </thead>
+      <tbody>
+      ${groups.map(([c, qs]) => qs.map((q, i) => {
+        const msgs   = _oqReportThreads[q.id] || [];
+        const asked  = msgs.find(m => m.author_side === 'client');
+        const answer = [...msgs].reverse().find(m => m.author_side === 'agency');
+        const draft  = drafts[q.id];
+        const [lbl, col] = STAT[q.status] || STAT.open;
+        const visibleActs = (acts[q.id] || []).filter(t => t.client_visible);
+        // The category is written once per group and the rows beneath it
+        // carry a blank cell — so it reads as one block per topic while
+        // still being a column you can scan down.
+        const firstOfGroup = i === 0;
+        return `
+        <tr class="oq-rep-section" style="break-inside:avoid;vertical-align:top;${firstOfGroup ? 'border-top:2px solid #e8e3d8' : ''}">
+          <td style="padding:11px 9px;border-bottom:1px solid #eef2f6;${firstOfGroup ? 'background:#f9f7f2' : ''}">
+            ${firstOfGroup ? `<div style="font-weight:700">${c.icon} ${escHtml(catLabel(c.key))}</div>
+              <div style="font-size:.68rem;color:#61748c;margin-top:2px">${qs.length} request${qs.length===1?'':'s'}</div>` : ''}
+          </td>
+          <td style="padding:11px 9px;border-bottom:1px solid #eef2f6">
+            <div style="font-weight:700;margin-bottom:4px">${escHtml(q.subject)}</div>
+            <div style="font-size:.68rem;color:#61748c;margin-bottom:5px">${fmtDate(String(q.created_at).slice(0,10))} · <span style="color:${col};font-weight:700">${lbl}</span></div>
+            <div style="white-space:pre-wrap;line-height:1.5">${asked ? escHtml(asked.body) : '—'}</div>
+          </td>
+          <td style="padding:11px 9px;border-bottom:1px solid #eef2f6;line-height:1.5">
+            ${answer ? `<span style="white-space:pre-wrap">${escHtml(answer.body)}</span>`
+              : draft ? `<span class="oq-draft-cell"><span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-bottom:4px">DRAFT — NOT SENT</span><br><span style="white-space:pre-wrap">${escHtml(draft)}</span></span>`
+              : `<span style="color:#b45309">Not answered yet.</span>`}
+            ${visibleActs.length ? `<div style="margin-top:8px;background:#f8fafc;border-radius:6px;padding:7px 9px">
+              <div style="font-size:.64rem;font-weight:700;text-transform:uppercase;color:#61748c;margin-bottom:4px">What we are doing</div>
+              ${visibleActs.map(t => {
+                const done = t.status === 'completed' || t.kanban_status === 'done';
+                return `<div style="font-size:.76rem;line-height:1.45;${done?'color:#64748b':''}">${done?'✓':'○'} <span style="${done?'text-decoration:line-through':''}">${escHtml(t.title)}</span></div>`;
+              }).join('')}
+            </div>` : ''}
+          </td>
+        </tr>`;
+      }).join('')).join('')}
+      </tbody>
+    </table>
 
     <div style="border-top:1px solid #e2e8f0;padding-top:10px;font-size:.72rem;color:#61748c">
       Every request above was raised in the HostEase Pro owner portal and can be answered there.
