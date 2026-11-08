@@ -70,7 +70,7 @@ export default async function handler(req, res) {
     // Re-read everything from the database. Nothing the browser sent is used
     // in the email itself.
     const rows = await rest(
-      `owner_queries?id=eq.${queryId}&select=id,subject,status,org_id,property_id,raised_by_name,last_message_at`);
+      `owner_queries?id=eq.${queryId}&select=id,subject,status,category,org_id,property_id,raised_by_name,last_message_at`);
     const q = rows && rows[0];
     if (!q) return res.status(200).json({ skipped: 'no such query' });
 
@@ -107,7 +107,14 @@ export default async function handler(req, res) {
 
     const preview = String(last.body || '').slice(0, 600);
     const who = q.raised_by_name || last.author_name || 'The owner';
-    const subject = `${propName}: ${q.subject}`;
+    // The topic goes in the subject line, because that is the part read on
+    // a phone before anything is opened: "TV House · Pool: ..." says
+    // whether this is for today or for the weekly catch-up.
+    const CATS = { maintenance:'Maintenance', pool:'Pool', garden:'Garden', cleaning:'Cleaning',
+                   access:'Keys & security', utilities:'Utilities', invoice:'Invoice',
+                   booking:'Bookings', meeting:'Meeting request', other:'Other' };
+    const cat = q.category && CATS[q.category] ? CATS[q.category] : '';
+    const subject = `${propName}${cat ? ' · ' + cat : ''}: ${q.subject}`;
 
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',

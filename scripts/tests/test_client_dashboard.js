@@ -232,12 +232,22 @@ check('manual and direct share one bucket', [clientPlat('manual'), clientPlat('d
 console.log('\n── Monthly chart ──');
 check('twelve months', r.monthKeys.length, 12);
 check('last month is the current one', r.monthKeys[11], TODAY.slice(0, 7));
+// byMonth now splits a month three ways — guest / owner / block — plus
+// the month's own length, so the bar can draw the free nights too.
 checkTrue('every month total is within the days of that month',
   r.monthKeys.every(k => {
     const [y, m] = k.split('-').map(Number);
-    const tot = Object.values(r.byMonth[k]).reduce((s, n) => s + n, 0);
-    return tot <= new Date(y, m, 0).getDate();
-  }), 'a month claims more booked nights than it has days');
+    const b = r.byMonth[k];
+    return b.guest + b.owner + b.block <= new Date(y, m, 0).getDate();
+  }), 'a month claims more nights than it has days');
+checkTrue('each month knows its own length',
+  r.monthKeys.every(k => {
+    const [y, m] = k.split('-').map(Number);
+    return r.byMonth[k].days === new Date(y, m, 0).getDate();
+  }), 'the free segment is drawn from this');
+checkTrue('an owner stay is counted as the owner, never as a guest',
+  r.monthKeys.every(k => r.byMonth[k].guest >= 0 && r.byMonth[k].owner >= 0),
+  'November drew a bar of zero while the owners were in the house');
 
 console.log('\n── Averages ──');
 checkTrue('average stay is a plausible length',
@@ -322,7 +332,10 @@ console.log('\n── Chart agrees with the calendar ──');
 const curMonth = TODAY.slice(0, 7);
 const calNightsThisMonth = Object.keys(r.days)
   .filter(d => d.startsWith(curMonth) && !r.days[d].blocked).length;
-const chartThisMonth = Object.values(r.byMonth[curMonth] || {}).reduce((s, n) => s + n, 0);
+// "Booked" is guest nights. The bar is taller than this because it also
+// draws the owners' own nights and anything held back — which is the
+// point — so the comparison is against the calendar's unblocked days.
+const chartThisMonth = (r.byMonth[curMonth] || {}).guest || 0;
 check('current month: chart total matches the calendar', chartThisMonth, calNightsThisMonth);
 checkTrue('a month of future bookings is not drawn as empty',
   calNightsThisMonth === 0 || chartThisMonth > 0,

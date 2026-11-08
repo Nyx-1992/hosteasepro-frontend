@@ -982,7 +982,8 @@ function _buildMobileNavStub(){/* replaced by main script */}
 
         <!-- Owner questions sub-tab -->
         <div id="msg-subtab-owner" style="display:none">
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="oq-filters"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px" id="oq-filters"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px" id="oq-cat-filters"></div>
           <div id="oq-list"></div>
         </div>
       </div>
@@ -12792,6 +12793,7 @@ function setMsgSubTab(tab) {
 // a conversation with somebody outside this screen.
 let ownerQueries = [];
 let _oqFilter = 'open';
+let _oqCategory = null;
 let _oqOpenId = null;
 
 async function loadOwnerQueries() {
@@ -12828,6 +12830,7 @@ const OQ_STATUS = { open:['Waiting on us','#b45309','#fef3c7'],
                     closed:['Closed','var(--muted)','var(--sand)'] };
 
 function setOqFilter(f) { _oqFilter = f; renderOwnerQueries(); }
+function setOqCategory(c) { _oqCategory = c; renderOwnerQueries(); }
 
 function renderOwnerQueries() {
   const el = document.getElementById('oq-list');
@@ -12840,10 +12843,28 @@ function renderOwnerQueries() {
       `<button class="btn btn-sm ${f===_oqFilter?'btn-primary':'btn-ghost'}" onclick="setOqFilter('${f}')">${
         f==='all'?'All':OQ_STATUS[f][0]} · ${counts[f]}</button>`).join('');
   }
-  const rows = _oqFilter === 'all' ? ownerQueries : ownerQueries.filter(q => q.status === _oqFilter);
+  // A second row of filters, by what the request is ABOUT. Owner: "which
+  // can be for some specific category and we then get it flagged on our
+  // end too." Only categories that actually appear are offered — a row of
+  // ten chips reading zero is just noise on a phone.
+  const cf = document.getElementById('oq-cat-filters');
+  if (cf) {
+    const present = OWNER_REQUEST_CATEGORIES
+      .map(c => [c, ownerQueries.filter(q => q.category === c.key).length])
+      .filter(([, n]) => n > 0);
+    cf.innerHTML = present.length
+      ? `<button class="btn btn-sm ${!_oqCategory ? 'btn-primary' : 'btn-ghost'}" onclick="setOqCategory(null)">All topics</button>` +
+        present.map(([c, n]) =>
+          `<button class="btn btn-sm ${_oqCategory===c.key?'btn-primary':'btn-ghost'}" onclick="setOqCategory('${c.key}')">${c.icon} ${escHtml(catLabel(c.key))} · ${n}</button>`).join('')
+      : '';
+  }
+
+  let rows = _oqFilter === 'all' ? ownerQueries : ownerQueries.filter(q => q.status === _oqFilter);
+  if (_oqCategory) rows = rows.filter(q => q.category === _oqCategory);
   if (!rows.length) {
     el.innerHTML = `<div class="text-muted" style="font-size:.85rem;padding:14px 0">${
-      _oqFilter === 'open' ? 'Nothing waiting on us.' : 'Nothing here.'}</div>`;
+      _oqCategory ? 'Nothing here under ' + escHtml(catLabel(_oqCategory)) + '.'
+      : _oqFilter === 'open' ? 'Nothing waiting on us.' : 'Nothing here.'}</div>`;
     return;
   }
   el.innerHTML = rows.map(q => {
@@ -12853,7 +12874,10 @@ function renderOwnerQueries() {
     <div style="border:1px solid var(--border);border-radius:11px;margin-bottom:10px;overflow:hidden;background:var(--card-bg)">
       <div onclick="toggleOwnerQuery('${q.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;cursor:pointer">
         <div style="min-width:0">
-          <div style="font-weight:700;font-size:.88rem">${escHtml(q.subject)}</div>
+          <div style="font-weight:700;font-size:.88rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            ${escHtml(q.subject)}
+            ${q.category ? `<span style="background:var(--sand);border:1px solid var(--border);color:var(--muted);font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap">${catIcon(q.category)} ${escHtml(catLabel(q.category))}</span>` : ''}
+          </div>
           <div class="text-muted" style="font-size:.75rem;margin-top:3px">
             ${escHtml(propName(q.property_id) || 'Property')}
             ${q.raised_by_name ? ' · ' + escHtml(q.raised_by_name) : ''}
@@ -15813,11 +15837,11 @@ function toggleVaultExpand(id) {
 // the world can be served". Strings live in one map rather than being
 // scattered, so adding a language is a data edit.
 const CLIENT_T = {
-  en:{title:'Your property',income:'Income',occupancy:'Occupancy',nights:'Nights booked',upcoming:'Upcoming stays',cleaning:'Cleaning',inspections:'Inspections',recent:'Recent bookings',noBookings:'No bookings in this period',thisYear:'Last 12 months',guest:'Guest',arrives:'Arrives',departs:'Departs',nightsCol:'Nights',cleans:'cleans completed',lastInspection:'Last inspection',none:'None recorded yet',managedBy:'Managed by',language:'Language',actualIncome:'Actual income received',afterFees:'after platform commission and fees',fromStatements:'From platform statements',estimated:'Estimated from bookings',period:'Period',signOut:'Sign out',welcome:'Welcome back',noStatements:'No platform statements loaded yet — your manager uploads these each month.',occNote:'Share of nights booked over the last 12 months',uploadTitle:'Send us a statement',uploadHelp:'If you receive statements we don\'t — Booking.com invoices, for example — upload the PDF here and we will add the figures to your income.',uploadBtn:'Choose a PDF',uploading:'Uploading…',uploaded:'Sent — thank you',yourUploads:'Sent by you',monthlyNights:'Nights booked by month',calendar:'Availability',platformMix:'Where bookings come from',free:'Free',booked:'Booked',ofNights:'of nights',noPlatform:'Direct / other',prevMonth:'Previous',nextMonth:'Next',avgStay:'Average stay',bestMonth:'Busiest month',weCollect:'Collected by us on your behalf',directToYou:'Paid directly to you — not shown here',allChannels:'Covers every booking channel',tasks:'Work on your property',todo:'To do',inProgress:'In progress',done:'Done',noTasks:'Nothing outstanding',due:'Due',priority:'Priority',high:'High',medium:'Medium',low:'Low',lights:'Lights',meter:'Electricity meter',notes:'Notes',noPhotos:'No photos attached',turnovers:'Turnover cleans',deepCleans:'Deep cleans',lastClean:'Last clean',inspectedBy:'Inspected by',pool:'Pool',garden:'Garden',breakage:'Breakage found',condition:'Condition',allGood:'All good',needsAttention:'Needs attention',inventory:'Inventory checks',allPresent:'Everything present',itemsFlagged:'items flagged',lastCheck:'Last check',showing:'Showing',m3:'3 months',m6:'6 months',m12:'12 months',blockedLbl:'Not available',stays:'Stays',revPerNight:'Average per night',docsTitle:'Documents',docsHelp:'Invoices, bills, certificates and reports for your property.',docsNone:'Nothing here yet.',queriesTitle:'Questions',queriesHelp:'Ask us anything about your property — we answer here, and the whole conversation stays in one place.',askBtn:'Ask a question',qSubject:'What is it about?',qMessage:'Your question',qSend:'Send',qNone:'No questions yet.',qOpen:'Waiting for us',qAnswered:'Answered',qClosed:'Closed',qReply:'Reply',qClose:'Mark as sorted',qYou:'You',qUs:'Us',qAbout:'About',qThanks:'Sent — we will come back to you here.'},
-  de:{title:'Ihre Immobilie',income:'Einnahmen',occupancy:'Auslastung',nights:'Gebuchte Nächte',upcoming:'Kommende Aufenthalte',cleaning:'Reinigung',inspections:'Inspektionen',recent:'Letzte Buchungen',noBookings:'Keine Buchungen in diesem Zeitraum',thisYear:'Letzte 12 Monate',guest:'Gast',arrives:'Anreise',departs:'Abreise',nightsCol:'Nächte',cleans:'Reinigungen abgeschlossen',lastInspection:'Letzte Inspektion',none:'Noch nichts erfasst',managedBy:'Verwaltet von',language:'Sprache',actualIncome:'Tatsächlich erhaltene Einnahmen',afterFees:'nach Plattformprovision und Gebühren',fromStatements:'Aus Plattformabrechnungen',estimated:'Geschätzt aus Buchungen',period:'Zeitraum',signOut:'Abmelden',welcome:'Willkommen zurück',noStatements:'Noch keine Plattformabrechnungen geladen — Ihr Verwalter lädt diese monatlich hoch.',occNote:'Anteil gebuchter Nächte in den letzten 12 Monaten',uploadTitle:'Abrechnung senden',uploadHelp:'Falls Sie Abrechnungen erhalten, die wir nicht bekommen — etwa Booking.com-Rechnungen — laden Sie das PDF hier hoch und wir übernehmen die Zahlen.',uploadBtn:'PDF auswählen',uploading:'Wird hochgeladen…',uploaded:'Gesendet — vielen Dank',yourUploads:'Von Ihnen gesendet',monthlyNights:'Gebuchte Nächte pro Monat',calendar:'Verfügbarkeit',platformMix:'Woher die Buchungen kommen',free:'Frei',booked:'Gebucht',ofNights:'der Nächte',noPlatform:'Direkt / andere',prevMonth:'Zurück',nextMonth:'Weiter',avgStay:'Durchschnittlicher Aufenthalt',bestMonth:'Stärkster Monat',weCollect:'Von uns für Sie eingezogen',directToYou:'Direkt an Sie gezahlt — hier nicht enthalten',allChannels:'Umfasst alle Buchungskanäle',tasks:'Arbeiten an Ihrer Immobilie',todo:'Offen',inProgress:'In Bearbeitung',done:'Erledigt',noTasks:'Nichts offen',due:'Fällig',priority:'Priorität',high:'Hoch',medium:'Mittel',low:'Niedrig',lights:'Beleuchtung',meter:'Stromzähler',notes:'Notizen',noPhotos:'Keine Fotos angehängt',turnovers:'Wechselreinigungen',deepCleans:'Grundreinigungen',lastClean:'Letzte Reinigung',inspectedBy:'Geprüft von',pool:'Pool',garden:'Garten',breakage:'Schaden festgestellt',condition:'Zustand',allGood:'Alles in Ordnung',needsAttention:'Handlungsbedarf',inventory:'Inventarkontrollen',allPresent:'Alles vorhanden',itemsFlagged:'Positionen gemeldet',lastCheck:'Letzte Kontrolle',showing:'Zeitraum',m3:'3 Monate',m6:'6 Monate',m12:'12 Monate',blockedLbl:'Nicht verfügbar',stays:'Aufenthalte',revPerNight:'Durchschnitt pro Nacht',docsTitle:'Dokumente',docsHelp:'Rechnungen, Belege, Zertifikate und Berichte zu Ihrer Immobilie.',docsNone:'Noch nichts vorhanden.',queriesTitle:'Fragen',queriesHelp:'Fragen Sie uns alles zu Ihrer Immobilie — wir antworten hier, und das ganze Gespräch bleibt an einem Ort.',askBtn:'Frage stellen',qSubject:'Worum geht es?',qMessage:'Ihre Frage',qSend:'Senden',qNone:'Noch keine Fragen.',qOpen:'Wartet auf uns',qAnswered:'Beantwortet',qClosed:'Erledigt',qReply:'Antworten',qClose:'Als erledigt markieren',qYou:'Sie',qUs:'Wir',qAbout:'Betrifft',qThanks:'Gesendet — wir melden uns hier bei Ihnen.'},
-  cs:{title:'Vaše nemovitost',income:'Příjmy',occupancy:'Obsazenost',nights:'Rezervované noci',upcoming:'Nadcházející pobyty',cleaning:'Úklid',inspections:'Kontroly',recent:'Poslední rezervace',noBookings:'V tomto období žádné rezervace',thisYear:'Posledních 12 měsíců',guest:'Host',arrives:'Příjezd',departs:'Odjezd',nightsCol:'Nocí',cleans:'dokončených úklidů',lastInspection:'Poslední kontrola',none:'Zatím nic nezaznamenáno',managedBy:'Spravuje',language:'Jazyk',actualIncome:'Skutečně přijaté příjmy',afterFees:'po provizi a poplatcích platforem',fromStatements:'Z výpisů platforem',estimated:'Odhad z rezervací',period:'Období',signOut:'Odhlásit se',welcome:'Vítejte zpět',noStatements:'Zatím nebyly nahrány žádné výpisy z platforem — váš správce je nahrává každý měsíc.',occNote:'Podíl obsazených nocí za posledních 12 měsíců',uploadTitle:'Zaslat výpis',uploadHelp:'Pokud dostáváte výpisy, které my nemáme — například faktury Booking.com — nahrajte PDF zde a my čísla doplníme.',uploadBtn:'Vybrat PDF',uploading:'Nahrávání…',uploaded:'Odesláno — děkujeme',yourUploads:'Odeslané vámi',monthlyNights:'Rezervované noci podle měsíce',calendar:'Dostupnost',platformMix:'Odkud přicházejí rezervace',free:'Volno',booked:'Obsazeno',ofNights:'nocí',noPlatform:'Přímé / jiné',prevMonth:'Předchozí',nextMonth:'Další',avgStay:'Průměrný pobyt',bestMonth:'Nejsilnější měsíc',weCollect:'Inkasováno námi ve váš prospěch',directToYou:'Vyplaceno přímo vám — zde není zahrnuto',allChannels:'Zahrnuje všechny rezervační kanály',tasks:'Práce na vaší nemovitosti',todo:'K vyřízení',inProgress:'Probíhá',done:'Hotovo',noTasks:'Nic nevyřízeného',due:'Termín',priority:'Priorita',high:'Vysoká',medium:'Střední',low:'Nízká',lights:'Osvětlení',meter:'Elektroměr',notes:'Poznámky',noPhotos:'Nejsou přiloženy žádné fotografie',turnovers:'Úklidy mezi pobyty',deepCleans:'Generální úklidy',lastClean:'Poslední úklid',inspectedBy:'Kontrolu provedl',pool:'Bazén',garden:'Zahrada',breakage:'Zjištěno poškození',condition:'Stav',allGood:'Vše v pořádku',needsAttention:'Vyžaduje pozornost',inventory:'Kontroly inventáře',allPresent:'Vše na místě',itemsFlagged:'nahlášených položek',lastCheck:'Poslední kontrola',showing:'Období',m3:'3 měsíce',m6:'6 měsíců',m12:'12 měsíců',blockedLbl:'Nedostupné',stays:'Pobyty',revPerNight:'Průměr za noc',docsTitle:'Dokumenty',docsHelp:'Faktury, účty, certifikáty a zprávy k vaší nemovitosti.',docsNone:'Zatím tu nic není.',queriesTitle:'Dotazy',queriesHelp:'Zeptejte se nás na cokoli ohledně vaší nemovitosti — odpovíme zde a celá konverzace zůstane na jednom místě.',askBtn:'Položit dotaz',qSubject:'Čeho se to týká?',qMessage:'Váš dotaz',qSend:'Odeslat',qNone:'Zatím žádné dotazy.',qOpen:'Čeká na nás',qAnswered:'Zodpovězeno',qClosed:'Uzavřeno',qReply:'Odpovědět',qClose:'Označit jako vyřešené',qYou:'Vy',qUs:'My',qAbout:'Týká se',qThanks:'Odesláno — ozveme se vám zde.'},
-  pl:{title:'Twoja nieruchomość',income:'Przychód',occupancy:'Obłożenie',nights:'Zarezerwowane noce',upcoming:'Nadchodzące pobyty',cleaning:'Sprzątanie',inspections:'Inspekcje',recent:'Ostatnie rezerwacje',noBookings:'Brak rezerwacji w tym okresie',thisYear:'Ostatnie 12 miesięcy',guest:'Gość',arrives:'Przyjazd',departs:'Wyjazd',nightsCol:'Noce',cleans:'ukończonych sprzątań',lastInspection:'Ostatnia inspekcja',none:'Brak zapisów',managedBy:'Zarządzane przez',language:'Język',actualIncome:'Faktycznie otrzymany przychód',afterFees:'po prowizji i opłatach platform',fromStatements:'Z wyciągów platform',estimated:'Szacowane z rezerwacji',period:'Okres',signOut:'Wyloguj',welcome:'Witaj ponownie',noStatements:'Nie wgrano jeszcze wyciągów z platform — zarządca wgrywa je co miesiąc.',occNote:'Udział zarezerwowanych nocy w ciągu ostatnich 12 miesięcy',uploadTitle:'Wyślij wyciąg',uploadHelp:'Jeśli otrzymujesz wyciągi, których my nie mamy — na przykład faktury Booking.com — wgraj PDF tutaj, a my dodamy dane do przychodu.',uploadBtn:'Wybierz PDF',uploading:'Wysyłanie…',uploaded:'Wysłano — dziękujemy',yourUploads:'Wysłane przez Ciebie',monthlyNights:'Zarezerwowane noce wg miesiąca',calendar:'Dostępność',platformMix:'Skąd pochodzą rezerwacje',free:'Wolne',booked:'Zajęte',ofNights:'nocy',noPlatform:'Bezpośrednie / inne',prevMonth:'Poprzedni',nextMonth:'Następny',avgStay:'Średni pobyt',bestMonth:'Najlepszy miesiąc',weCollect:'Pobierane przez nas w Twoim imieniu',directToYou:'Wypłacane bezpośrednio Tobie — nieujęte tutaj',allChannels:'Obejmuje wszystkie kanały rezerwacji',tasks:'Prace przy Twojej nieruchomości',todo:'Do zrobienia',inProgress:'W toku',done:'Gotowe',noTasks:'Nic w toku',due:'Termin',priority:'Priorytet',high:'Wysoki',medium:'Średni',low:'Niski',lights:'Oświetlenie',meter:'Licznik energii',notes:'Notatki',noPhotos:'Brak załączonych zdjęć',turnovers:'Sprzątania między pobytami',deepCleans:'Sprzątania generalne',lastClean:'Ostatnie sprzątanie',inspectedBy:'Kontrolę wykonał(a)',pool:'Basen',garden:'Ogród',breakage:'Wykryto uszkodzenie',condition:'Stan',allGood:'Wszystko w porządku',needsAttention:'Wymaga uwagi',inventory:'Kontrole inwentarza',allPresent:'Wszystko na miejscu',itemsFlagged:'zgłoszonych pozycji',lastCheck:'Ostatnia kontrola',showing:'Okres',m3:'3 miesiące',m6:'6 miesięcy',m12:'12 miesięcy',blockedLbl:'Niedostępne',stays:'Pobyty',revPerNight:'Średnio za noc',docsTitle:'Dokumenty',docsHelp:'Faktury, rachunki, certyfikaty i raporty dotyczące Twojej nieruchomości.',docsNone:'Jeszcze nic tu nie ma.',queriesTitle:'Pytania',queriesHelp:'Zapytaj nas o cokolwiek dotyczącego Twojej nieruchomości — odpowiemy tutaj, a cała rozmowa pozostanie w jednym miejscu.',askBtn:'Zadaj pytanie',qSubject:'Czego dotyczy?',qMessage:'Twoje pytanie',qSend:'Wyślij',qNone:'Brak pytań.',qOpen:'Czeka na nas',qAnswered:'Odpowiedziano',qClosed:'Zamknięte',qReply:'Odpowiedz',qClose:'Oznacz jako załatwione',qYou:'Ty',qUs:'My',qAbout:'Dotyczy',qThanks:'Wysłane — odezwiemy się tutaj.'},
-  es:{title:'Su propiedad',income:'Ingresos',occupancy:'Ocupación',nights:'Noches reservadas',upcoming:'Próximas estancias',cleaning:'Limpieza',inspections:'Inspecciones',recent:'Reservas recientes',noBookings:'Sin reservas en este período',thisYear:'Últimos 12 meses',guest:'Huésped',arrives:'Llegada',departs:'Salida',nightsCol:'Noches',cleans:'limpiezas completadas',lastInspection:'Última inspección',none:'Aún sin registros',managedBy:'Gestionado por',language:'Idioma',actualIncome:'Ingresos realmente recibidos',afterFees:'tras comisiones y tarifas de plataforma',fromStatements:'De los extractos de plataforma',estimated:'Estimado a partir de reservas',period:'Período',signOut:'Cerrar sesión',welcome:'Bienvenido de nuevo',noStatements:'Aún no se han cargado extractos — su gestor los sube cada mes.',occNote:'Proporción de noches reservadas en los últimos 12 meses',uploadTitle:'Enviar un extracto',uploadHelp:'Si recibe extractos que nosotros no — facturas de Booking.com, por ejemplo — suba el PDF aquí y añadiremos las cifras a sus ingresos.',uploadBtn:'Elegir un PDF',uploading:'Subiendo…',uploaded:'Enviado — gracias',yourUploads:'Enviado por usted',monthlyNights:'Noches reservadas por mes',calendar:'Disponibilidad',platformMix:'De dónde vienen las reservas',free:'Libre',booked:'Reservado',ofNights:'de las noches',noPlatform:'Directo / otros',prevMonth:'Anterior',nextMonth:'Siguiente',avgStay:'Estancia media',bestMonth:'Mes más fuerte',weCollect:'Cobrado por nosotros en su nombre',directToYou:'Pagado directamente a usted — no incluido aquí',allChannels:'Cubre todos los canales de reserva',tasks:'Trabajos en su propiedad',todo:'Pendiente',inProgress:'En curso',done:'Hecho',noTasks:'Nada pendiente',due:'Vence',priority:'Prioridad',high:'Alta',medium:'Media',low:'Baja',lights:'Iluminación',meter:'Contador de luz',notes:'Notas',noPhotos:'Sin fotos adjuntas',turnovers:'Limpiezas entre estancias',deepCleans:'Limpiezas a fondo',lastClean:'Última limpieza',inspectedBy:'Inspeccionado por',pool:'Piscina',garden:'Jardín',breakage:'Daño detectado',condition:'Estado',allGood:'Todo correcto',needsAttention:'Requiere atención',inventory:'Revisiones de inventario',allPresent:'Todo presente',itemsFlagged:'artículos señalados',lastCheck:'Última revisión',showing:'Período',m3:'3 meses',m6:'6 meses',m12:'12 meses',blockedLbl:'No disponible',stays:'Estancias',revPerNight:'Media por noche',docsTitle:'Documentos',docsHelp:'Facturas, recibos, certificados e informes de su propiedad.',docsNone:'Aún no hay nada aquí.',queriesTitle:'Preguntas',queriesHelp:'Pregúntenos lo que quiera sobre su propiedad: respondemos aquí y toda la conversación queda en un solo lugar.',askBtn:'Hacer una pregunta',qSubject:'¿Sobre qué es?',qMessage:'Su pregunta',qSend:'Enviar',qNone:'Aún no hay preguntas.',qOpen:'Esperando respuesta',qAnswered:'Respondida',qClosed:'Cerrada',qReply:'Responder',qClose:'Marcar como resuelta',qYou:'Usted',qUs:'Nosotros',qAbout:'Sobre',qThanks:'Enviado: le responderemos aquí.'},
+  en:{title:'Your property',income:'Income',occupancy:'Occupancy',nights:'Nights booked',upcoming:'Upcoming stays',cleaning:'Cleaning',inspections:'Inspections',recent:'Recent bookings',noBookings:'No bookings in this period',thisYear:'Last 12 months',guest:'Guest',arrives:'Arrives',departs:'Departs',nightsCol:'Nights',cleans:'cleans completed',lastInspection:'Last inspection',none:'None recorded yet',managedBy:'Managed by',language:'Language',actualIncome:'Actual income received',afterFees:'after platform commission and fees',fromStatements:'From platform statements',estimated:'Estimated from bookings',period:'Period',signOut:'Sign out',welcome:'Welcome back',noStatements:'No platform statements loaded yet — your manager uploads these each month.',occNote:'Share of nights booked over the last 12 months',uploadTitle:'Send us a statement',uploadHelp:'If you receive statements we don\'t — Booking.com invoices, for example — upload the PDF here and we will add the figures to your income.',uploadBtn:'Choose a PDF',uploading:'Uploading…',uploaded:'Sent — thank you',yourUploads:'Sent by you',monthlyNights:'Nights booked by month',calendar:'Availability',platformMix:'Where bookings come from',free:'Free',booked:'Booked',ofNights:'of nights',noPlatform:'Direct / other',prevMonth:'Previous',nextMonth:'Next',avgStay:'Average stay',bestMonth:'Busiest month',weCollect:'Collected by us on your behalf',directToYou:'Paid directly to you — not shown here',allChannels:'Covers every booking channel',tasks:'Work on your property',todo:'To do',inProgress:'In progress',done:'Done',noTasks:'Nothing outstanding',due:'Due',priority:'Priority',high:'High',medium:'Medium',low:'Low',lights:'Lights',meter:'Electricity meter',notes:'Notes',noPhotos:'No photos attached',turnovers:'Turnover cleans',deepCleans:'Deep cleans',lastClean:'Last clean',inspectedBy:'Inspected by',pool:'Pool',garden:'Garden',breakage:'Breakage found',condition:'Condition',allGood:'All good',needsAttention:'Needs attention',inventory:'Inventory checks',allPresent:'Everything present',itemsFlagged:'items flagged',lastCheck:'Last check',showing:'Showing',m3:'3 months',m6:'6 months',m12:'12 months',blockedLbl:'Not available',stays:'Stays',revPerNight:'Average per night',docsTitle:'Documents',docsHelp:'Invoices, bills, certificates and reports for your property.',docsNone:'Nothing here yet.',queriesTitle:'Questions',queriesHelp:'Ask us anything about your property — we answer here, and the whole conversation stays in one place.',askBtn:'Ask a question',qSubject:'What is it about?',qMessage:'Your question',qSend:'Send',qNone:'No questions yet.',qOpen:'Waiting for us',qAnswered:'Answered',qClosed:'Closed',qReply:'Reply',qClose:'Mark as sorted',qYou:'You',qUs:'Us',qAbout:'About',qThanks:'Sent — we will come back to you here.',occGuests:'Guests',occOwner:'Owner stay',occBlocked:'Held back',reqCats:{maintenance:'Maintenance & repairs',pool:'Pool',garden:'Garden & irrigation',cleaning:'Cleaning & linen',access:'Keys & security',utilities:'Utilities & costs',invoice:'Invoice & payments',booking:'Bookings',meeting:'Meeting request',other:'Something else'}},
+  de:{title:'Ihre Immobilie',income:'Einnahmen',occupancy:'Auslastung',nights:'Gebuchte Nächte',upcoming:'Kommende Aufenthalte',cleaning:'Reinigung',inspections:'Inspektionen',recent:'Letzte Buchungen',noBookings:'Keine Buchungen in diesem Zeitraum',thisYear:'Letzte 12 Monate',guest:'Gast',arrives:'Anreise',departs:'Abreise',nightsCol:'Nächte',cleans:'Reinigungen abgeschlossen',lastInspection:'Letzte Inspektion',none:'Noch nichts erfasst',managedBy:'Verwaltet von',language:'Sprache',actualIncome:'Tatsächlich erhaltene Einnahmen',afterFees:'nach Plattformprovision und Gebühren',fromStatements:'Aus Plattformabrechnungen',estimated:'Geschätzt aus Buchungen',period:'Zeitraum',signOut:'Abmelden',welcome:'Willkommen zurück',noStatements:'Noch keine Plattformabrechnungen geladen — Ihr Verwalter lädt diese monatlich hoch.',occNote:'Anteil gebuchter Nächte in den letzten 12 Monaten',uploadTitle:'Abrechnung senden',uploadHelp:'Falls Sie Abrechnungen erhalten, die wir nicht bekommen — etwa Booking.com-Rechnungen — laden Sie das PDF hier hoch und wir übernehmen die Zahlen.',uploadBtn:'PDF auswählen',uploading:'Wird hochgeladen…',uploaded:'Gesendet — vielen Dank',yourUploads:'Von Ihnen gesendet',monthlyNights:'Gebuchte Nächte pro Monat',calendar:'Verfügbarkeit',platformMix:'Woher die Buchungen kommen',free:'Frei',booked:'Gebucht',ofNights:'der Nächte',noPlatform:'Direkt / andere',prevMonth:'Zurück',nextMonth:'Weiter',avgStay:'Durchschnittlicher Aufenthalt',bestMonth:'Stärkster Monat',weCollect:'Von uns für Sie eingezogen',directToYou:'Direkt an Sie gezahlt — hier nicht enthalten',allChannels:'Umfasst alle Buchungskanäle',tasks:'Arbeiten an Ihrer Immobilie',todo:'Offen',inProgress:'In Bearbeitung',done:'Erledigt',noTasks:'Nichts offen',due:'Fällig',priority:'Priorität',high:'Hoch',medium:'Mittel',low:'Niedrig',lights:'Beleuchtung',meter:'Stromzähler',notes:'Notizen',noPhotos:'Keine Fotos angehängt',turnovers:'Wechselreinigungen',deepCleans:'Grundreinigungen',lastClean:'Letzte Reinigung',inspectedBy:'Geprüft von',pool:'Pool',garden:'Garten',breakage:'Schaden festgestellt',condition:'Zustand',allGood:'Alles in Ordnung',needsAttention:'Handlungsbedarf',inventory:'Inventarkontrollen',allPresent:'Alles vorhanden',itemsFlagged:'Positionen gemeldet',lastCheck:'Letzte Kontrolle',showing:'Zeitraum',m3:'3 Monate',m6:'6 Monate',m12:'12 Monate',blockedLbl:'Nicht verfügbar',stays:'Aufenthalte',revPerNight:'Durchschnitt pro Nacht',docsTitle:'Dokumente',docsHelp:'Rechnungen, Belege, Zertifikate und Berichte zu Ihrer Immobilie.',docsNone:'Noch nichts vorhanden.',queriesTitle:'Fragen',queriesHelp:'Fragen Sie uns alles zu Ihrer Immobilie — wir antworten hier, und das ganze Gespräch bleibt an einem Ort.',askBtn:'Frage stellen',qSubject:'Worum geht es?',qMessage:'Ihre Frage',qSend:'Senden',qNone:'Noch keine Fragen.',qOpen:'Wartet auf uns',qAnswered:'Beantwortet',qClosed:'Erledigt',qReply:'Antworten',qClose:'Als erledigt markieren',qYou:'Sie',qUs:'Wir',qAbout:'Betrifft',qThanks:'Gesendet — wir melden uns hier bei Ihnen.',occGuests:'Gäste',occOwner:'Eigentümer',occBlocked:'Gesperrt',reqCats:{maintenance:'Instandhaltung & Reparaturen',pool:'Pool',garden:'Garten & Bewässerung',cleaning:'Reinigung & Wäsche',access:'Schlüssel & Sicherheit',utilities:'Nebenkosten & Strom',invoice:'Rechnung & Zahlungen',booking:'Buchungen',meeting:'Terminwunsch',other:'Sonstiges'}},
+  cs:{title:'Vaše nemovitost',income:'Příjmy',occupancy:'Obsazenost',nights:'Rezervované noci',upcoming:'Nadcházející pobyty',cleaning:'Úklid',inspections:'Kontroly',recent:'Poslední rezervace',noBookings:'V tomto období žádné rezervace',thisYear:'Posledních 12 měsíců',guest:'Host',arrives:'Příjezd',departs:'Odjezd',nightsCol:'Nocí',cleans:'dokončených úklidů',lastInspection:'Poslední kontrola',none:'Zatím nic nezaznamenáno',managedBy:'Spravuje',language:'Jazyk',actualIncome:'Skutečně přijaté příjmy',afterFees:'po provizi a poplatcích platforem',fromStatements:'Z výpisů platforem',estimated:'Odhad z rezervací',period:'Období',signOut:'Odhlásit se',welcome:'Vítejte zpět',noStatements:'Zatím nebyly nahrány žádné výpisy z platforem — váš správce je nahrává každý měsíc.',occNote:'Podíl obsazených nocí za posledních 12 měsíců',uploadTitle:'Zaslat výpis',uploadHelp:'Pokud dostáváte výpisy, které my nemáme — například faktury Booking.com — nahrajte PDF zde a my čísla doplníme.',uploadBtn:'Vybrat PDF',uploading:'Nahrávání…',uploaded:'Odesláno — děkujeme',yourUploads:'Odeslané vámi',monthlyNights:'Rezervované noci podle měsíce',calendar:'Dostupnost',platformMix:'Odkud přicházejí rezervace',free:'Volno',booked:'Obsazeno',ofNights:'nocí',noPlatform:'Přímé / jiné',prevMonth:'Předchozí',nextMonth:'Další',avgStay:'Průměrný pobyt',bestMonth:'Nejsilnější měsíc',weCollect:'Inkasováno námi ve váš prospěch',directToYou:'Vyplaceno přímo vám — zde není zahrnuto',allChannels:'Zahrnuje všechny rezervační kanály',tasks:'Práce na vaší nemovitosti',todo:'K vyřízení',inProgress:'Probíhá',done:'Hotovo',noTasks:'Nic nevyřízeného',due:'Termín',priority:'Priorita',high:'Vysoká',medium:'Střední',low:'Nízká',lights:'Osvětlení',meter:'Elektroměr',notes:'Poznámky',noPhotos:'Nejsou přiloženy žádné fotografie',turnovers:'Úklidy mezi pobyty',deepCleans:'Generální úklidy',lastClean:'Poslední úklid',inspectedBy:'Kontrolu provedl',pool:'Bazén',garden:'Zahrada',breakage:'Zjištěno poškození',condition:'Stav',allGood:'Vše v pořádku',needsAttention:'Vyžaduje pozornost',inventory:'Kontroly inventáře',allPresent:'Vše na místě',itemsFlagged:'nahlášených položek',lastCheck:'Poslední kontrola',showing:'Období',m3:'3 měsíce',m6:'6 měsíců',m12:'12 měsíců',blockedLbl:'Nedostupné',stays:'Pobyty',revPerNight:'Průměr za noc',docsTitle:'Dokumenty',docsHelp:'Faktury, účty, certifikáty a zprávy k vaší nemovitosti.',docsNone:'Zatím tu nic není.',queriesTitle:'Dotazy',queriesHelp:'Zeptejte se nás na cokoli ohledně vaší nemovitosti — odpovíme zde a celá konverzace zůstane na jednom místě.',askBtn:'Položit dotaz',qSubject:'Čeho se to týká?',qMessage:'Váš dotaz',qSend:'Odeslat',qNone:'Zatím žádné dotazy.',qOpen:'Čeká na nás',qAnswered:'Zodpovězeno',qClosed:'Uzavřeno',qReply:'Odpovědět',qClose:'Označit jako vyřešené',qYou:'Vy',qUs:'My',qAbout:'Týká se',qThanks:'Odesláno — ozveme se vám zde.',occGuests:'Hosté',occOwner:'Majitelé',occBlocked:'Blokováno',reqCats:{maintenance:'Údržba a opravy',pool:'Bazén',garden:'Zahrada a zavlažování',cleaning:'Úklid a prádlo',access:'Klíče a zabezpečení',utilities:'Energie a náklady',invoice:'Faktury a platby',booking:'Rezervace',meeting:'Žádost o schůzku',other:'Něco jiného'}},
+  pl:{title:'Twoja nieruchomość',income:'Przychód',occupancy:'Obłożenie',nights:'Zarezerwowane noce',upcoming:'Nadchodzące pobyty',cleaning:'Sprzątanie',inspections:'Inspekcje',recent:'Ostatnie rezerwacje',noBookings:'Brak rezerwacji w tym okresie',thisYear:'Ostatnie 12 miesięcy',guest:'Gość',arrives:'Przyjazd',departs:'Wyjazd',nightsCol:'Noce',cleans:'ukończonych sprzątań',lastInspection:'Ostatnia inspekcja',none:'Brak zapisów',managedBy:'Zarządzane przez',language:'Język',actualIncome:'Faktycznie otrzymany przychód',afterFees:'po prowizji i opłatach platform',fromStatements:'Z wyciągów platform',estimated:'Szacowane z rezerwacji',period:'Okres',signOut:'Wyloguj',welcome:'Witaj ponownie',noStatements:'Nie wgrano jeszcze wyciągów z platform — zarządca wgrywa je co miesiąc.',occNote:'Udział zarezerwowanych nocy w ciągu ostatnich 12 miesięcy',uploadTitle:'Wyślij wyciąg',uploadHelp:'Jeśli otrzymujesz wyciągi, których my nie mamy — na przykład faktury Booking.com — wgraj PDF tutaj, a my dodamy dane do przychodu.',uploadBtn:'Wybierz PDF',uploading:'Wysyłanie…',uploaded:'Wysłano — dziękujemy',yourUploads:'Wysłane przez Ciebie',monthlyNights:'Zarezerwowane noce wg miesiąca',calendar:'Dostępność',platformMix:'Skąd pochodzą rezerwacje',free:'Wolne',booked:'Zajęte',ofNights:'nocy',noPlatform:'Bezpośrednie / inne',prevMonth:'Poprzedni',nextMonth:'Następny',avgStay:'Średni pobyt',bestMonth:'Najlepszy miesiąc',weCollect:'Pobierane przez nas w Twoim imieniu',directToYou:'Wypłacane bezpośrednio Tobie — nieujęte tutaj',allChannels:'Obejmuje wszystkie kanały rezerwacji',tasks:'Prace przy Twojej nieruchomości',todo:'Do zrobienia',inProgress:'W toku',done:'Gotowe',noTasks:'Nic w toku',due:'Termin',priority:'Priorytet',high:'Wysoki',medium:'Średni',low:'Niski',lights:'Oświetlenie',meter:'Licznik energii',notes:'Notatki',noPhotos:'Brak załączonych zdjęć',turnovers:'Sprzątania między pobytami',deepCleans:'Sprzątania generalne',lastClean:'Ostatnie sprzątanie',inspectedBy:'Kontrolę wykonał(a)',pool:'Basen',garden:'Ogród',breakage:'Wykryto uszkodzenie',condition:'Stan',allGood:'Wszystko w porządku',needsAttention:'Wymaga uwagi',inventory:'Kontrole inwentarza',allPresent:'Wszystko na miejscu',itemsFlagged:'zgłoszonych pozycji',lastCheck:'Ostatnia kontrola',showing:'Okres',m3:'3 miesiące',m6:'6 miesięcy',m12:'12 miesięcy',blockedLbl:'Niedostępne',stays:'Pobyty',revPerNight:'Średnio za noc',docsTitle:'Dokumenty',docsHelp:'Faktury, rachunki, certyfikaty i raporty dotyczące Twojej nieruchomości.',docsNone:'Jeszcze nic tu nie ma.',queriesTitle:'Pytania',queriesHelp:'Zapytaj nas o cokolwiek dotyczącego Twojej nieruchomości — odpowiemy tutaj, a cała rozmowa pozostanie w jednym miejscu.',askBtn:'Zadaj pytanie',qSubject:'Czego dotyczy?',qMessage:'Twoje pytanie',qSend:'Wyślij',qNone:'Brak pytań.',qOpen:'Czeka na nas',qAnswered:'Odpowiedziano',qClosed:'Zamknięte',qReply:'Odpowiedz',qClose:'Oznacz jako załatwione',qYou:'Ty',qUs:'My',qAbout:'Dotyczy',qThanks:'Wysłane — odezwiemy się tutaj.',occGuests:'Goście',occOwner:'Właściciele',occBlocked:'Zablokowane',reqCats:{maintenance:'Konserwacja i naprawy',pool:'Basen',garden:'Ogród i nawadnianie',cleaning:'Sprzątanie i pranie',access:'Klucze i bezpieczeństwo',utilities:'Media i koszty',invoice:'Faktury i płatności',booking:'Rezerwacje',meeting:'Prośba o spotkanie',other:'Coś innego'}},
+  es:{title:'Su propiedad',income:'Ingresos',occupancy:'Ocupación',nights:'Noches reservadas',upcoming:'Próximas estancias',cleaning:'Limpieza',inspections:'Inspecciones',recent:'Reservas recientes',noBookings:'Sin reservas en este período',thisYear:'Últimos 12 meses',guest:'Huésped',arrives:'Llegada',departs:'Salida',nightsCol:'Noches',cleans:'limpiezas completadas',lastInspection:'Última inspección',none:'Aún sin registros',managedBy:'Gestionado por',language:'Idioma',actualIncome:'Ingresos realmente recibidos',afterFees:'tras comisiones y tarifas de plataforma',fromStatements:'De los extractos de plataforma',estimated:'Estimado a partir de reservas',period:'Período',signOut:'Cerrar sesión',welcome:'Bienvenido de nuevo',noStatements:'Aún no se han cargado extractos — su gestor los sube cada mes.',occNote:'Proporción de noches reservadas en los últimos 12 meses',uploadTitle:'Enviar un extracto',uploadHelp:'Si recibe extractos que nosotros no — facturas de Booking.com, por ejemplo — suba el PDF aquí y añadiremos las cifras a sus ingresos.',uploadBtn:'Elegir un PDF',uploading:'Subiendo…',uploaded:'Enviado — gracias',yourUploads:'Enviado por usted',monthlyNights:'Noches reservadas por mes',calendar:'Disponibilidad',platformMix:'De dónde vienen las reservas',free:'Libre',booked:'Reservado',ofNights:'de las noches',noPlatform:'Directo / otros',prevMonth:'Anterior',nextMonth:'Siguiente',avgStay:'Estancia media',bestMonth:'Mes más fuerte',weCollect:'Cobrado por nosotros en su nombre',directToYou:'Pagado directamente a usted — no incluido aquí',allChannels:'Cubre todos los canales de reserva',tasks:'Trabajos en su propiedad',todo:'Pendiente',inProgress:'En curso',done:'Hecho',noTasks:'Nada pendiente',due:'Vence',priority:'Prioridad',high:'Alta',medium:'Media',low:'Baja',lights:'Iluminación',meter:'Contador de luz',notes:'Notas',noPhotos:'Sin fotos adjuntas',turnovers:'Limpiezas entre estancias',deepCleans:'Limpiezas a fondo',lastClean:'Última limpieza',inspectedBy:'Inspeccionado por',pool:'Piscina',garden:'Jardín',breakage:'Daño detectado',condition:'Estado',allGood:'Todo correcto',needsAttention:'Requiere atención',inventory:'Revisiones de inventario',allPresent:'Todo presente',itemsFlagged:'artículos señalados',lastCheck:'Última revisión',showing:'Período',m3:'3 meses',m6:'6 meses',m12:'12 meses',blockedLbl:'No disponible',stays:'Estancias',revPerNight:'Media por noche',docsTitle:'Documentos',docsHelp:'Facturas, recibos, certificados e informes de su propiedad.',docsNone:'Aún no hay nada aquí.',queriesTitle:'Preguntas',queriesHelp:'Pregúntenos lo que quiera sobre su propiedad: respondemos aquí y toda la conversación queda en un solo lugar.',askBtn:'Hacer una pregunta',qSubject:'¿Sobre qué es?',qMessage:'Su pregunta',qSend:'Enviar',qNone:'Aún no hay preguntas.',qOpen:'Esperando respuesta',qAnswered:'Respondida',qClosed:'Cerrada',qReply:'Responder',qClose:'Marcar como resuelta',qYou:'Usted',qUs:'Nosotros',qAbout:'Sobre',qThanks:'Enviado: le responderemos aquí.',occGuests:'Huéspedes',occOwner:'Propietarios',occBlocked:'Bloqueado',reqCats:{maintenance:'Mantenimiento y reparaciones',pool:'Piscina',garden:'Jardín y riego',cleaning:'Limpieza y ropa',access:'Llaves y seguridad',utilities:'Suministros y costes',invoice:'Facturas y pagos',booking:'Reservas',meeting:'Solicitud de reunión',other:'Otra cosa'}},
 };
 let clientLocale = 'en';
 const ct = k => (CLIENT_T[clientLocale] || CLIENT_T.en)[k] || CLIENT_T.en[k] || k;
@@ -15853,6 +15877,12 @@ function clientNormalise(rows) {
 // To an owner, "manual" and "direct" are one thing — a booking that did
 // not come through a platform — so they share a bucket instead of
 // appearing as two bars that say the same thing in different colours.
+// What a night was spent on, for the owner's month chart. Deliberately not
+// the platform palette: this chart answers "let, ours, or still for sale",
+// and reusing Booking.com's blue for "guest" would invite reading the
+// colour as a channel.
+const CLIENT_OCC_COLORS = { guest: '#2F6FED', owner: '#64748b', block: '#cbd5e1' };
+
 const CLIENT_PLAT_ORDER = ['booking', 'airbnb', 'lekkeslaap', 'direct'];
 const clientPlat = p => (!p || p === 'manual' || p === 'direct') ? 'direct' : p;
 const clientPlatLabel = p => p === 'direct' ? ct('noPlatform') : (PLATFORM_LABELS[p] || p);
@@ -16222,7 +16252,12 @@ async function renderClientDashboard() {
     const isoOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
     _clientDays = {};
-    const paint = (b, blocked) => {
+    // `kind` is 'guest', 'owner' or 'block'. `blocked` stays beside it as
+    // the plain not-a-let flag every other panel on this page already
+    // reads — occupancy, the platform mix and the calendar — so none of
+    // them has to learn the three-way split to keep being right.
+    const paint = (b, kind) => {
+      const blocked = kind !== 'guest';
       if (!b.check_in_date || !b.check_out_date) return;
       const cursor = new Date(b.check_in_date + 'T00:00:00');
       const outIso = String(b.check_out_date).slice(0, 10);
@@ -16236,13 +16271,31 @@ async function renderClientDashboard() {
         // blocks, so a block can only ever fill a gap — it never covers
         // a night a guest actually paid for.
         if (!_clientDays[iso]) {
-          _clientDays[iso] = { p: clientPlat(b.platform), blocked, in: b.check_in_date, out: b.check_out_date };
+          _clientDays[iso] = { p: clientPlat(b.platform), kind, blocked, in: b.check_in_date, out: b.check_out_date };
         }
         cursor.setDate(cursor.getDate() + 1);   // DST-safe; +86400000 is not
       }
     };
-    lettable.forEach(b => paint(b, false));
-    blocks.forEach(b => paint(b, true));
+    // ── WHY A NIGHT IS GONE, NOT JUST THAT IT IS ─────────────────────
+    //
+    // Owner: "The bookings don't seem right though? we didn't have so many
+    // night occupied as it displays. We need to ensure to differentiate
+    // guest bookings and maybe somehow display availability too (since the
+    // owners stay in the house too)."
+    //
+    // Painted guests first, then owner stays, then placeholder blocks, so
+    // the strongest claim on a night wins it. That order matters on this
+    // property: LekkeSlaap mirrors the owners' own November closure back
+    // as an anonymous block, and whichever landed first used to decide
+    // what the night was called.
+    //
+    // An owner stay is still not a let and still never counts as booked —
+    // what changes is that it stops being invisible. November 2026 drew a
+    // bar of zero while Mirka and Antonio were in the house for twenty
+    // nights of it.
+    lettable.forEach(b => paint(b, 'guest'));
+    blocks.filter(isOwnerStay).forEach(b => paint(b, 'owner'));
+    blocks.filter(b => !isOwnerStay(b)).forEach(b => paint(b, 'block'));
 
     const inWindow = iso => iso >= from && iso < today;
     const bookedNights = Object.keys(_clientDays).filter(iso => inWindow(iso) && !_clientDays[iso].blocked);
@@ -16279,21 +16332,44 @@ async function renderClientDashboard() {
     // calendar beside it showed that month nearly full — two panels on
     // one screen flatly contradicting each other, which is how it was
     // spotted.
+    // Each month now carries all three kinds plus its own length, so a bar
+    // can show what is left as well as what is gone.
     const byMonth = {};
-    monthKeys.forEach(k => { byMonth[k] = {}; });
+    const daysInMonth = k => {
+      const [y, m] = k.split('-').map(Number);
+      return new Date(y, m, 0).getDate();
+    };
+    monthKeys.forEach(k => { byMonth[k] = { guest: 0, owner: 0, block: 0, days: daysInMonth(k) }; });
     Object.keys(_clientDays).forEach(iso => {
-      if (_clientDays[iso].blocked) return;
       const k = iso.slice(0, 7);
       if (!byMonth[k]) return;
-      const p = _clientDays[iso].p;
-      byMonth[k][p] = (byMonth[k][p] || 0) + 1;
+      byMonth[k][_clientDays[iso].kind || (_clientDays[iso].blocked ? 'block' : 'guest')] += 1;
     });
-    const monthTotal = k => Object.values(byMonth[k]).reduce((s, n) => s + n, 0);
-    const peakMonth = Math.max(1, ...monthKeys.map(monthTotal));
+    // "Booked" has always meant let to a guest, and still does. The bar is
+    // taller than this number because it also draws the nights the owners
+    // took and the nights we held — which is the point.
+    const monthTotal = k => byMonth[k].guest;
     const bestKey = monthKeys.reduce((a, b) => monthTotal(b) > monthTotal(a) ? b : a, monthKeys[0]);
 
-    const staysInWindow = lettable.filter(b => (b.check_out_date || '') > from && (b.check_in_date || '') < today);
-    const avgStay = staysInWindow.length ? (nightsBooked / staysInWindow.length) : 0;
+    // ── THE FOOTER AND THE BARS NOW MEASURE THE SAME THING ───────────
+    //
+    // Owner: "the booked nights average on the bottom and the bar graph
+    // are not aligning."
+    //
+    // They could not. The bars are twelve CALENDAR months ending with this
+    // one — December to November here — while nightsBooked counted a
+    // trailing twelve months from today, which starts on 8 November and so
+    // included three weeks of November 2025 that no bar on the chart
+    // draws. Two periods, one card, no way to tell them apart.
+    //
+    // Occupancy keeps the trailing window, because a trailing figure is
+    // what occupancy is. This footer now reads off the chart's own span.
+    const chartFrom = monthKeys[0] + '-01';
+    const chartTo   = monthKeys[monthKeys.length - 1] + '-' + String(daysInMonth(monthKeys[monthKeys.length - 1])).padStart(2, '0');
+    const guestNightsInChart = monthKeys.reduce((s, k) => s + byMonth[k].guest, 0);
+    const staysInChart = lettable.filter(b =>
+      (b.check_out_date || '') > chartFrom && (b.check_in_date || '') <= chartTo);
+    const avgStay = staysInChart.length ? (guestNightsInChart / staysInChart.length) : 0;
 
     // Average per night divides the statement total by the nights those
     // statements actually cover — not by all 12 months of nights. Three
@@ -16387,7 +16463,6 @@ async function renderClientDashboard() {
           <div class="client-chart">
             ${monthKeys.map((k, idx) => {
               const tot = monthTotal(k);
-              const pct = Math.round((tot / peakMonth) * 100);
               // The month alone was ambiguous — twelve bars reading Aug…Jul
               // never say which year you are looking at. January carries
               // its year, and so does the first bar whatever month it is,
@@ -16395,14 +16470,26 @@ async function renderClientDashboard() {
               // turns over.
               const showYear = idx === 0 || k.endsWith('-01');
               const label = monthLabel(k, showYear);
-              // Stacked in a fixed platform order so a colour means the
-              // same thing in every column. Segments are a share of their
-              // own bar, so they always add up to it exactly.
-              const segs = CLIENT_PLAT_ORDER.filter(p => byMonth[k][p]).map(p =>
-                `<div title="${escHtml(clientPlatLabel(p))}: ${byMonth[k][p]}" style="height:${(byMonth[k][p] / tot) * 100}%;background:${PLAT_COLORS[p] || PLAT_COLORS.direct};width:100%"></div>`
-              ).join('');
-              const tip = `${monthLabel(k, true)}: ${tot} ${ct('nightsCol').toLowerCase()}` +
-                CLIENT_PLAT_ORDER.filter(p => byMonth[k][p]).map(p => `\n${clientPlatLabel(p)}: ${byMonth[k][p]}`).join('');
+              // Every bar is the whole month, so the empty part of it is
+              // the nights still for sale. Guests at the bottom, then the
+              // owners' own nights, then anything held back — read upward,
+              // a column says how the month was spent.
+              const m = byMonth[k];
+              const seg = (n, colour, name) => n
+                ? `<div title="${escHtml(name)}: ${n}" style="height:${(n / m.days) * 100}%;background:${colour};width:100%"></div>`
+                : '';
+              // Bottom-up in the picture means last in the DOM: the column
+              // packs its segments to the bottom, so guests are written
+              // last to land underneath.
+              const segs = seg(m.block, CLIENT_OCC_COLORS.block, ct('occBlocked'))
+                         + seg(m.owner, CLIENT_OCC_COLORS.owner, ct('occOwner'))
+                         + seg(m.guest, CLIENT_OCC_COLORS.guest, ct('occGuests'));
+              const freeNights = Math.max(0, m.days - m.guest - m.owner - m.block);
+              const tip = [`${monthLabel(k, true)} — ${m.days} ${ct('nightsCol').toLowerCase()}`,
+                           `${ct('occGuests')}: ${m.guest}`,
+                           m.owner ? `${ct('occOwner')}: ${m.owner}` : '',
+                           m.block ? `${ct('occBlocked')}: ${m.block}` : '',
+                           `${ct('free')}: ${freeNights}`].filter(Boolean).join('\n');
               // The count lives INSIDE the plot column, directly above its
               // own bar. Sitting outside it, every number lined up along
               // the top of the card instead — a "7" hanging far above the
@@ -16410,11 +16497,16 @@ async function renderClientDashboard() {
               return `<div class="client-chart-col">
                 <div class="client-chart-plot">
                   <div style="font-size:.6rem;color:var(--muted);font-weight:700;line-height:1.3;text-align:center">${tot || ''}</div>
-                  <div title="${escHtml(tip)}" style="width:100%;height:${pct}%;min-height:${tot ? 3 : 0}px;display:flex;flex-direction:column;border-radius:4px 4px 0 0;overflow:hidden;background:var(--surface-2)">${segs}</div>
+                  <div title="${escHtml(tip)}" style="width:100%;height:100%;display:flex;flex-direction:column;justify-content:flex-end;border-radius:4px 4px 0 0;overflow:hidden;background:var(--surface-2)">${segs}</div>
                 </div>
                 <div class="client-chart-lbl${showYear ? ' on' : ''}">${escHtml(label)}</div>
               </div>`;
             }).join('')}
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:.72rem;color:var(--muted)">
+            ${[['guest', ct('occGuests')], ['owner', ct('occOwner')], ['block', ct('occBlocked')]].map(([k, lbl]) =>
+              `<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:${CLIENT_OCC_COLORS[k]}"></span>${escHtml(lbl)}</span>`).join('')}
+            <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:9px;height:9px;border-radius:2px;background:var(--surface-2);border:1px solid var(--border)"></span>${escHtml(ct('free'))}</span>
           </div>
           <div class="client-card-foot" style="display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
             <div><div class="text-muted" style="font-size:.68rem">${ct('avgStay')}</div>
@@ -16650,8 +16742,39 @@ async function clientOpenDocument(id) {
 }
 
 // ── QUESTIONS ─────────────────────────────────────────────────────────────
+//
+// THE CATEGORIES ARE NOT INVENTED. They are the headings of the email the
+// TV House owners actually sent on 6 November — pool running all day and
+// the decayed control box, irrigation spraying the walls and terrace, the
+// bathroom and floors and lights and the stove knobs nobody replaced all
+// year, the garage and the missing towels, the sun sail taken off the
+// terrace, guests holding garage keys and the front door left unlocked,
+// one line on an invoice they did not understand, and a request to meet.
+// Every one of those lands in a bucket here, which is the only test of
+// whether a category list is real.
+//
+// Icons, not colours: a chip has to be readable before it is pretty, and
+// these appear in five languages where the word lengths differ wildly.
+const OWNER_REQUEST_CATEGORIES = [
+  { key: 'maintenance', icon: '🔧' },
+  { key: 'pool',        icon: '🏊' },
+  { key: 'garden',      icon: '🌿' },
+  { key: 'cleaning',    icon: '🧹' },
+  { key: 'access',      icon: '🔑' },
+  { key: 'utilities',   icon: '⚡' },
+  { key: 'invoice',     icon: '🧾' },
+  { key: 'booking',     icon: '📅' },
+  { key: 'meeting',     icon: '🤝' },
+  { key: 'other',       icon: '💬' },
+];
+const catIcon  = k => (OWNER_REQUEST_CATEGORIES.find(c => c.key === k) || {}).icon || '💬';
+// The owner's own language for the portal; the agency screen reads English.
+const ctCat    = k => ((CLIENT_T[clientLocale] || CLIENT_T.en).reqCats || CLIENT_T.en.reqCats)[k] || k;
+const catLabel = k => k ? (CLIENT_T.en.reqCats[k] || k) : 'Uncategorised';
+
 let _clientQueries = [];
 let _openQueryId = null;
+let _askCategory = null;
 const QSTATUS = () => ({ open:[ct('qOpen'),'#b45309','#fef3c7'],
                          answered:[ct('qAnswered'),'#166534','#dcfce7'],
                          closed:[ct('qClosed'),'var(--muted)','var(--sand)'] });
@@ -16672,6 +16795,7 @@ async function renderClientQueries() {
   el.innerHTML = `
     <button class="btn btn-primary btn-sm" onclick="clientAskOpen()" id="client-ask-btn">✍️ ${ct('askBtn')}</button>
     <div id="client-ask-form" style="display:none;margin-top:12px;background:var(--sand);border:1px solid var(--border);border-radius:10px;padding:12px">
+      <div id="cq-cats" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${clientCatChips()}</div>
       <input id="cq-subject" placeholder="${escAttr(ct('qSubject'))}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.86rem;margin-bottom:8px"/>
       <textarea id="cq-body" rows="4" placeholder="${escAttr(ct('qMessage'))}" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.86rem;resize:vertical"></textarea>
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
@@ -16688,8 +16812,10 @@ async function renderClientQueries() {
         <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:9px;overflow:hidden">
           <div onclick="clientToggleQuery('${q.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;cursor:pointer">
             <div style="min-width:0">
-              <div style="font-size:.86rem;font-weight:600">${escHtml(q.subject)}</div>
-              <div class="text-muted" style="font-size:.73rem;margin-top:2px">${fmtDate(String(q.last_message_at).slice(0,10))}</div>
+              <div style="font-size:.86rem;font-weight:600">${q.category ? catIcon(q.category) + ' ' : ''}${escHtml(q.subject)}</div>
+              <div class="text-muted" style="font-size:.73rem;margin-top:2px">
+                ${q.category ? escHtml(ctCat(q.category)) + ' · ' : ''}${fmtDate(String(q.last_message_at).slice(0,10))}
+              </div>
             </div>
             <span style="background:${bg};color:${fg};font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:10px;white-space:nowrap;flex-shrink:0">${escHtml(lbl)}</span>
           </div>
@@ -16698,6 +16824,24 @@ async function renderClientQueries() {
       }).join('') : `<div class="text-muted" style="font-size:.82rem">${ct('qNone')}</div>`}
     </div>`;
   if (_openQueryId) renderClientThread(_openQueryId);
+}
+
+// Picking one is optional, same as the block reasons: it steers the
+// request on our side, it is not a gate on asking a question. Tapping the
+// chosen chip again clears it.
+function clientCatChips() {
+  return OWNER_REQUEST_CATEGORIES.map(c => {
+    const on = c.key === _askCategory;
+    return `<button type="button" onclick="clientPickCat('${c.key}')"
+      style="border:1.5px solid ${on?'var(--accent)':'var(--border)'};background:${on?'var(--accent)':'var(--card)'};
+             color:${on?'#fff':'var(--ink)'};border-radius:999px;padding:5px 11px;font-size:.76rem;
+             font-family:inherit;font-weight:${on?'700':'500'};cursor:pointer">${c.icon} ${escHtml(ctCat(c.key))}</button>`;
+  }).join('');
+}
+function clientPickCat(key) {
+  _askCategory = (_askCategory === key) ? null : key;
+  const el = document.getElementById('cq-cats');
+  if (el) el.innerHTML = clientCatChips();
 }
 
 function clientAskOpen(close) {
@@ -16768,7 +16912,7 @@ async function clientAskSend() {
     const { data: q, error } = await db.from('owner_queries').insert([{
       org_id: prop.org_id, property_id: prop.id, raised_by: uid,
       raised_by_name: (currentUser && (currentUser.name || currentUser.email)) || null,
-      subject,
+      subject, category: _askCategory || null,
     }]).select().single();
     if (error) throw error;
     const { error: mErr } = await db.from('owner_query_messages').insert([{
@@ -16780,6 +16924,7 @@ async function clientAskSend() {
     notifyAgencyOfQuery(q.id, subject, body);
     document.getElementById('cq-subject').value = '';
     document.getElementById('cq-body').value = '';
+    _askCategory = null;
     say(ct('qThanks'));
     _openQueryId = q.id;
     await renderClientQueries();
@@ -16895,13 +17040,32 @@ async function renderClientUploads() {
 
 // Language is stored on the profile, so it follows the client to any
 // device rather than living in one browser.
+// THIS NEVER SAVED, FOR ANYBODY. It wrote profiles.locale directly, and
+// `profiles` has exactly one policy — profiles_select_own, SELECT. With no
+// UPDATE policy the write matched zero rows, and PostgREST reports that as
+// success, so there was no error to see: the picker worked for the rest of
+// the session and the next page load read the old language back.
+//
+// The fix is not an UPDATE policy on profiles. `using (auth.uid() = id)`
+// would also let a client set their own role to 'owner' and org_id to the
+// agency's, and is_org_member() keys off that row. RLS cannot restrict
+// columns, so 937 added a function that writes exactly one.
+//
+// The failure is shown now rather than logged. A silent no-op is what let
+// this sit unnoticed from the day the language picker shipped.
 async function setClientLocale(loc) {
+  const previous = clientLocale;
   clientLocale = loc;
   if (currentUser) currentUser.locale = loc;
   renderClientDashboard();
-  if (db && currentUser) {
-    const { error } = await db.from('profiles').update({ locale: loc }).eq('id', currentUser.id);
-    if (error) console.warn('setClientLocale:', error);
+  if (!db || !currentUser) return;
+  const { error } = await db.rpc('set_my_locale', { p_locale: loc });
+  if (error) {
+    console.warn('setClientLocale:', error);
+    clientLocale = previous;
+    if (currentUser) currentUser.locale = previous;
+    renderClientDashboard();
+    alert('Could not save the language — it will go back on the next reload.');
   }
 }
 
