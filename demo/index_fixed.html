@@ -12912,7 +12912,7 @@ async function renderOwnerQueryThread(id) {
   const el = document.getElementById('oq-thread-' + id);
   if (!el || !db) return;
   const q = ownerQueries.find(x => String(x.id) === String(id));
-  await loadQueryActions(id);
+  await Promise.all([loadQueryActions(id), loadQueryDraft(id)]);
   const { data, error } = await db.from('owner_query_messages')
     .select('*').eq('query_id', id).order('created_at');
   if (error) { el.innerHTML = `<div style="color:var(--red);font-size:.8rem">${escHtml(error.message)}</div>`; return; }
@@ -12926,9 +12926,11 @@ async function renderOwnerQueryThread(id) {
   }).join('')
   + `<div id="oq-actions-${id}" style="margin-top:12px;border-top:1px dashed var(--border);padding-top:10px">${renderQueryActions(id)}</div>
     <div style="margin-top:10px">
-      <textarea id="oq-reply-${id}" rows="3" placeholder="Reply to the owner…" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.86rem;resize:vertical"></textarea>
+      ${_queryDrafts[id] ? `<div style="font-size:.7rem;font-weight:700;color:#b45309;margin-bottom:5px">✎ Draft — not sent</div>` : ''}
+      <textarea id="oq-draft-${id}" rows="4" placeholder="Write the answer — save it as a draft, send it when you are ready…" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.86rem;resize:vertical">${escHtml(_queryDrafts[id] || '')}</textarea>
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-primary btn-sm" onclick="ownerQueryReply('${id}')">Send reply</button>
+        <button class="btn btn-ghost btn-sm" onclick="saveQueryDraft('${id}')">💾 Save draft</button>
+        <button class="btn btn-primary btn-sm" onclick="sendQueryDraft('${id}')">Send to owner</button>
         ${q && q.status !== 'closed'
           ? `<button class="btn btn-ghost btn-sm" onclick="ownerQuerySetStatus('${id}','closed')">✓ Close</button>`
           : `<button class="btn btn-ghost btn-sm" onclick="ownerQuerySetStatus('${id}','open')">↩ Reopen</button>`}
@@ -12984,6 +12986,63 @@ async function ownerQuerySetStatus(id, status) {
 // instead of WhatsApp. The box is there for the ones that are genuinely
 // ours alone — chasing a supplier's invoice, say.
 let _queryActions = {};   // query id → tasks
+let _queryDrafts  = {};   // query id → an answer written but not sent
+
+// Deliberately a separate table, not a column on owner_queries: the
+// owner's own select policy there returns every column, and their portal
+// asks for '*'. See 939.
+async function loadQueryDraft(queryId) {
+  if (!db) return null;
+  const { data } = await db.from('owner_query_drafts')
+    .select('body').eq('query_id', queryId).maybeSingle();
+  _queryDrafts[queryId] = data ? data.body : null;
+  return _queryDrafts[queryId];
+}
+
+async function saveQueryDraft(queryId) {
+  const ta = document.getElementById('oq-draft-' + queryId);
+  const q  = ownerQueries.find(x => String(x.id) === String(queryId));
+  if (!ta || !q || !db) return;
+  const body = (ta.value || '').trim();
+  if (!body) {
+    await db.from('owner_query_drafts').delete().eq('query_id', queryId);
+    _queryDrafts[queryId] = null;
+    toast('Draft cleared', 'info');
+    return;
+  }
+  const { data: sess } = await db.auth.getSession();
+  const { error } = await db.from('owner_query_drafts').upsert([{
+    query_id: queryId, org_id: q.org_id, body,
+    updated_by: sess?.session?.user?.id || null, updated_at: new Date().toISOString(),
+  }], { onConflict: 'query_id' });
+  if (error) { toast('Could not save the draft: ' + error.message, 'error'); return; }
+  _queryDrafts[queryId] = body;
+  toast('Draft saved — not sent ✓', 'success');
+}
+
+// Sending is the one moment the owner sees any of this. The draft is
+// deleted only after the message is safely in, so a failed post leaves the
+// words where they were rather than losing them.
+async function sendQueryDraft(queryId) {
+  const ta = document.getElementById('oq-draft-' + queryId);
+  const body = ((ta && ta.value) || _queryDrafts[queryId] || '').trim();
+  if (!body) { toast('Nothing to send', 'info'); return; }
+  if (!confirm('Send this answer to the owner?\n\nThey see it in their portal straight away.')) return;
+  try {
+    const { data: sess } = await db.auth.getSession();
+    const uid = sess?.session?.user?.id || null;
+    const { error } = await db.from('owner_query_messages').insert([{
+      query_id: queryId, author_id: uid,
+      author_name: (currentUser && (currentUser.name || currentUser.email)) || 'HostEase Pro',
+      author_side: 'agency', body,
+    }]);
+    if (error) throw error;
+    await db.from('owner_query_drafts').delete().eq('query_id', queryId);
+    _queryDrafts[queryId] = null;
+    toast('Sent to the owner ✓', 'success');
+    await loadOwnerQueries();
+  } catch (e) { toast('Could not send: ' + e.message, 'error'); }
+}
 
 async function loadQueryActions(queryId) {
   if (!db) return [];
@@ -13134,6 +13193,14 @@ async function renderOwnerReport() {
     .in('owner_query_id', rows.map(r => r.id));
   (taskRows || []).forEach(t => { (acts[t.owner_query_id] = acts[t.owner_query_id] || []).push(t); });
 
+  // An answer not yet sent still belongs in the table — that is the column
+  // she is working through. It is marked, and it is left out of the PDF,
+  // because a draft in a document that gets forwarded is an answer given.
+  const drafts = {};
+  const { data: draftRows } = await db.from('owner_query_drafts')
+    .select('query_id,body').in('query_id', rows.map(r => r.id));
+  (draftRows || []).forEach(d => { drafts[d.query_id] = d.body; });
+
   const open     = rows.filter(q => q.status === 'open').length;
   const answered = rows.filter(q => q.status === 'answered').length;
   const closed   = rows.filter(q => q.status === 'closed').length;
@@ -13169,45 +13236,49 @@ async function renderOwnerReport() {
 
     ${groups.map(([c, qs]) => `
       <div class="oq-rep-section" style="margin-bottom:22px;break-inside:avoid">
-        <div style="background:#f4f1ea;border-left:4px solid #c8922e;padding:7px 12px;font-weight:700;font-size:.95rem;margin-bottom:10px">
+        <div style="background:#f4f1ea;border-left:4px solid #c8922e;padding:7px 12px;font-weight:700;font-size:.95rem;margin-bottom:0">
           ${c.icon} ${escHtml(catLabel(c.key))} <span style="color:#61748c;font-weight:400">· ${qs.length}</span>
         </div>
-        ${qs.map(q => {
-          const msgs = _oqReportThreads[q.id] || [];
-          const asked  = msgs.find(m => m.author_side === 'client');
-          const answer = [...msgs].reverse().find(m => m.author_side === 'agency');
-          const [lbl, col] = STAT[q.status] || STAT.open;
-          return `
-          <div style="border:1px solid #e2e8f0;border-radius:9px;padding:12px 14px;margin-bottom:9px;break-inside:avoid">
-            <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline">
-              <div style="font-weight:700;font-size:.88rem">${escHtml(q.subject)}</div>
-              <div style="font-size:.72rem;color:${col};font-weight:700;white-space:nowrap">${lbl}</div>
-            </div>
-            <div style="font-size:.72rem;color:#61748c;margin-top:2px">Raised ${fmtDate(String(q.created_at).slice(0,10))}${q.raised_by_name ? ' · ' + escHtml(q.raised_by_name) : ''}</div>
-            ${asked ? `<div style="margin-top:9px;font-size:.82rem;line-height:1.55;white-space:pre-wrap;border-left:3px solid #e2e8f0;padding-left:10px">${escHtml(asked.body)}</div>` : ''}
-            <div style="margin-top:10px;font-size:.82rem;line-height:1.55">
-              <span style="font-weight:700">Our answer: </span>
-              ${answer ? `<span style="white-space:pre-wrap">${escHtml(answer.body)}</span>`
-                       : `<span style="color:#b45309">Not answered yet.</span>`}
-            </div>
-            ${(() => {
-              // Only the ones the owner is allowed to see. An internal note
-              // to chase a supplier does not belong in a document we send
-              // them, and client_visible is already the word for that.
-              const open = (acts[q.id] || []).filter(t => t.client_visible);
-              if (!open.length) return '';
-              return `<div style="margin-top:10px;background:#f8fafc;border-radius:7px;padding:9px 11px">
-                <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#61748c;margin-bottom:5px">What we are doing</div>
-                ${open.map(t => {
-                  const done = t.status === 'completed' || t.kanban_status === 'done';
-                  return `<div style="font-size:.81rem;line-height:1.5;${done?'color:#64748b':''}">
-                    ${done ? '✓' : '○'} <span style="${done?'text-decoration:line-through':''}">${escHtml(t.title)}</span>
-                  </div>`;
-                }).join('')}
-              </div>`;
-            })()}
-          </div>`;
-        }).join('')}
+        <table style="width:100%;border-collapse:collapse;font-size:.8rem;table-layout:fixed">
+          <thead>
+            <tr style="text-align:left;color:#61748c;font-size:.68rem;text-transform:uppercase">
+              <th style="width:22%;padding:7px 9px;border-bottom:1px solid #e2e8f0;font-weight:700">Request</th>
+              <th style="width:39%;padding:7px 9px;border-bottom:1px solid #e2e8f0;font-weight:700">What they asked</th>
+              <th style="width:39%;padding:7px 9px;border-bottom:1px solid #e2e8f0;font-weight:700">Our answer</th>
+            </tr>
+          </thead>
+          <tbody>
+          ${qs.map(q => {
+            const msgs   = _oqReportThreads[q.id] || [];
+            const asked  = msgs.find(m => m.author_side === 'client');
+            const answer = [...msgs].reverse().find(m => m.author_side === 'agency');
+            const draft  = drafts[q.id];
+            const [lbl, col] = STAT[q.status] || STAT.open;
+            const visibleActs = (acts[q.id] || []).filter(t => t.client_visible);
+            return `
+            <tr style="break-inside:avoid;vertical-align:top">
+              <td style="padding:10px 9px;border-bottom:1px solid #eef2f6">
+                <div style="font-weight:700">${escHtml(q.subject)}</div>
+                <div style="font-size:.7rem;color:${col};font-weight:700;margin-top:3px">${lbl}</div>
+                <div style="font-size:.68rem;color:#61748c;margin-top:2px">${fmtDate(String(q.created_at).slice(0,10))}</div>
+              </td>
+              <td style="padding:10px 9px;border-bottom:1px solid #eef2f6;white-space:pre-wrap;line-height:1.5">${asked ? escHtml(asked.body) : '—'}</td>
+              <td style="padding:10px 9px;border-bottom:1px solid #eef2f6;line-height:1.5">
+                ${answer ? `<span style="white-space:pre-wrap">${escHtml(answer.body)}</span>`
+                  : draft ? `<span class="oq-draft-cell"><span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-bottom:4px">DRAFT — NOT SENT</span><br><span style="white-space:pre-wrap">${escHtml(draft)}</span></span>`
+                  : `<span style="color:#b45309">Not answered yet.</span>`}
+                ${visibleActs.length ? `<div style="margin-top:8px;background:#f8fafc;border-radius:6px;padding:7px 9px">
+                  <div style="font-size:.64rem;font-weight:700;text-transform:uppercase;color:#61748c;margin-bottom:4px">What we are doing</div>
+                  ${visibleActs.map(t => {
+                    const done = t.status === 'completed' || t.kanban_status === 'done';
+                    return `<div style="font-size:.76rem;line-height:1.45;${done?'color:#64748b':''}">${done?'✓':'○'} <span style="${done?'text-decoration:line-through':''}">${escHtml(t.title)}</span></div>`;
+                  }).join('')}
+                </div>` : ''}
+              </td>
+            </tr>`;
+          }).join('')}
+          </tbody>
+        </table>
       </div>`).join('')}
 
     <div style="border-top:1px solid #e2e8f0;padding-top:10px;font-size:.72rem;color:#61748c">
@@ -13228,6 +13299,15 @@ async function downloadOwnerReport() {
   try {
     const W = 760;
     clone = page.cloneNode(true);
+    // A DRAFT MUST NOT LEAVE THE BUILDING. The table shows unsent answers
+    // so she can work through the month; a PDF gets forwarded, and a draft
+    // inside one is an answer given. Stripped from the copy that is
+    // rendered, never from what is on screen.
+    const dropped = clone.querySelectorAll('.oq-draft-cell').length;
+    clone.querySelectorAll('.oq-draft-cell').forEach(n => {
+      n.textContent = 'Not answered yet.';
+      n.style.color = '#b45309';
+    });
     Object.assign(clone.style, { width: W+'px', maxWidth: W+'px', position: 'fixed', top: '0', left: '-99999px' });
     document.body.appendChild(clone);
     const canvas = await html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: '#ffffff', width: W });
@@ -13254,7 +13334,8 @@ async function downloadOwnerReport() {
     const ym = (document.getElementById('oq-rep-month') || {}).value || '';
     const pn = (propName((document.getElementById('oq-rep-prop') || {}).value) || 'property').replace(/[^A-Za-z0-9]+/g, '-');
     pdf.save(`owner-requests-${pn}-${ym}.pdf`);
-    toast('Report downloaded ✓', 'success');
+    toast(dropped ? `Report downloaded ✓ — ${dropped} unsent draft${dropped===1?'':'s'} left out`
+                  : 'Report downloaded ✓', 'success');
   } catch (e) {
     console.warn('owner report PDF:', e);
     toast('Could not build the PDF — check the console', 'error');
