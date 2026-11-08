@@ -207,7 +207,8 @@ ok('  an unanswered one says so rather than showing blank',
    /Not answered yet\./.test(rep));
 ok('  the answer shown is the LAST one we sent',
    /\[\.\.\.msgs\]\.reverse\(\)\.find\(m => m\.author_side === 'agency'\)/.test(rep));
-ok('  the thread bodies are escaped', /escHtml\(asked\.body\)/.test(rep) && /escHtml\(answer\.body\)/.test(rep));
+ok('  the cell contents are escaped',
+   /escHtml\(asked\.body\)/.test(rep) && /escHtml\(q\.request_summary\)/.test(rep) && /escHtml\(short\)/.test(rep));
 ok('  and it is one query for the month, not one per thread',
    /\.in\('query_id', rows\.map\(r => r\.id\)\)/.test(rep));
 
@@ -304,8 +305,8 @@ ok('  one table, not one per category',
    'scoped to the report — the expenses screen has a Category header too');
 ok('  the name is written once per group, so it still reads as blocks',
    /const firstOfGroup = i === 0;/.test(app));
-ok('the answer column prefers a sent reply over a draft',
-   /\$\{answer \? `<span style="white-space:pre-wrap">\$\{escHtml\(answer\.body\)\}<\/span>`\s*\n?\s*: draft \?/.test(app));
+ok('the answer column prefers a sent reply over an unsent draft',
+   app.indexOf('if (sent)  return') < app.indexOf('if (draft) return'));
 ok('  a draft is labelled as unsent', /DRAFT — NOT SENT/.test(app));
 ok('  and nothing at all says so plainly', /Not answered yet\./.test(app));
 
@@ -316,6 +317,27 @@ ok('A DRAFT NEVER REACHES THE PDF',
 ok('  stripped from the copy, not from the screen',
    dl2.indexOf('clone.querySelectorAll') > dl2.indexOf('clone = page.cloneNode'));
 ok('  and the toast says how many were held back', /unsent draft/.test(dl2));
+
+console.log('\n  A report is a digest, not a transcript');
+
+const m940 = read('supabase', 'migrations', '940_report_summaries.sql')
+  .split('\n').filter(l => !/^\s*--/.test(l)).join('\n');
+ok('the request has a short form', /ALTER TABLE public\.owner_queries[\s\S]{0,120}request_summary text/.test(m940));
+ok('  and so does the answer', /ALTER TABLE public\.owner_query_drafts[\s\S]{0,80}summary text/.test(m940));
+ok('  the ANSWER summary sits on the org-only table',
+   /ALTER TABLE public\.owner_query_drafts\s*\n\s*ADD COLUMN IF NOT EXISTS summary text/.test(m940) &&
+   !/ALTER TABLE public\.owner_queries[\s\S]{0,160}\bsummary text/.test(m940),
+   'a summary of an answer is an answer — the owner must not read it before it is sent');
+
+ok('the report prefers the short form', /const short = draft && draft\.summary;/.test(app));
+ok('  falling back to the full message when there is none',
+   /q\.request_summary \? escHtml\(q\.request_summary\) : \(asked \? escHtml\(asked\.body\) : '—'\)/.test(app));
+ok('A SENT ANSWER\'S SUMMARY IS NOT MARKED AS A DRAFT',
+   /if \(short && sent\) return `<span style="white-space:pre-wrap">\$\{escHtml\(short\)\}<\/span>`;/.test(app),
+   'oq-draft-cell is what the PDF strips — carrying it would blank a real answer out of the download');
+ok('  and an unsent one still is', /if \(short\) return `<span class="oq-draft-cell"/.test(app));
+ok('there is a box to write the short form in', /id="oq-sum-\$\{id\}"/.test(app));
+ok('  and saving carries both fields', /query_id: queryId, org_id: q\.org_id, body, summary,/.test(app));
 
 // ══ 8. FIVE LANGUAGES ═════════════════════════════════════════════════════
 console.log('\nStill five languages');

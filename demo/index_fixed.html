@@ -12927,7 +12927,11 @@ async function renderOwnerQueryThread(id) {
   + `<div id="oq-actions-${id}" style="margin-top:12px;border-top:1px dashed var(--border);padding-top:10px">${renderQueryActions(id)}</div>
     <div style="margin-top:10px">
       ${_queryDrafts[id] ? `<div style="font-size:.7rem;font-weight:700;color:#b45309;margin-bottom:5px">✎ Draft — not sent</div>` : ''}
-      <textarea id="oq-draft-${id}" rows="4" placeholder="Write the answer — save it as a draft, send it when you are ready…" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.86rem;resize:vertical">${escHtml(_queryDrafts[id] || '')}</textarea>
+      <textarea id="oq-draft-${id}" rows="4" placeholder="Write the answer — save it as a draft, send it when you are ready…" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.86rem;resize:vertical">${escHtml((_queryDrafts[id] || {}).body || '')}</textarea>
+      <!-- The short form is what the monthly report shows. Kept separate
+           from the reply because a reply to a person and a line in a table
+           are not the same piece of writing. -->
+      <textarea id="oq-sum-${id}" rows="2" placeholder="Short version for the monthly report (optional)…" style="width:100%;margin-top:6px;padding:8px 11px;border:1.5px dashed var(--border);border-radius:8px;font-family:inherit;font-size:.82rem;resize:vertical;background:var(--sand)">${escHtml((_queryDrafts[id] || {}).summary || '')}</textarea>
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <button class="btn btn-ghost btn-sm" onclick="saveQueryDraft('${id}')">💾 Save draft</button>
         <button class="btn btn-primary btn-sm" onclick="sendQueryDraft('${id}')">Send to owner</button>
@@ -12994,8 +12998,8 @@ let _queryDrafts  = {};   // query id → an answer written but not sent
 async function loadQueryDraft(queryId) {
   if (!db) return null;
   const { data } = await db.from('owner_query_drafts')
-    .select('body').eq('query_id', queryId).maybeSingle();
-  _queryDrafts[queryId] = data ? data.body : null;
+    .select('body,summary').eq('query_id', queryId).maybeSingle();
+  _queryDrafts[queryId] = data || null;
   return _queryDrafts[queryId];
 }
 
@@ -13004,6 +13008,8 @@ async function saveQueryDraft(queryId) {
   const q  = ownerQueries.find(x => String(x.id) === String(queryId));
   if (!ta || !q || !db) return;
   const body = (ta.value || '').trim();
+  const sumEl = document.getElementById('oq-sum-' + queryId);
+  const summary = ((sumEl && sumEl.value) || '').trim() || null;
   if (!body) {
     await db.from('owner_query_drafts').delete().eq('query_id', queryId);
     _queryDrafts[queryId] = null;
@@ -13012,11 +13018,11 @@ async function saveQueryDraft(queryId) {
   }
   const { data: sess } = await db.auth.getSession();
   const { error } = await db.from('owner_query_drafts').upsert([{
-    query_id: queryId, org_id: q.org_id, body,
+    query_id: queryId, org_id: q.org_id, body, summary,
     updated_by: sess?.session?.user?.id || null, updated_at: new Date().toISOString(),
   }], { onConflict: 'query_id' });
   if (error) { toast('Could not save the draft: ' + error.message, 'error'); return; }
-  _queryDrafts[queryId] = body;
+  _queryDrafts[queryId] = { body, summary };
   toast('Draft saved — not sent ✓', 'success');
 }
 
@@ -13025,7 +13031,7 @@ async function saveQueryDraft(queryId) {
 // words where they were rather than losing them.
 async function sendQueryDraft(queryId) {
   const ta = document.getElementById('oq-draft-' + queryId);
-  const body = ((ta && ta.value) || _queryDrafts[queryId] || '').trim();
+  const body = ((ta && ta.value) || (_queryDrafts[queryId] || {}).body || '').trim();
   if (!body) { toast('Nothing to send', 'info'); return; }
   if (!confirm('Send this answer to the owner?\n\nThey see it in their portal straight away.')) return;
   try {
@@ -13198,8 +13204,8 @@ async function renderOwnerReport() {
   // because a draft in a document that gets forwarded is an answer given.
   const drafts = {};
   const { data: draftRows } = await db.from('owner_query_drafts')
-    .select('query_id,body').in('query_id', rows.map(r => r.id));
-  (draftRows || []).forEach(d => { drafts[d.query_id] = d.body; });
+    .select('query_id,body,summary').in('query_id', rows.map(r => r.id));
+  (draftRows || []).forEach(d => { drafts[d.query_id] = d; });
 
   const open     = rows.filter(q => q.status === 'open').length;
   const answered = rows.filter(q => q.status === 'answered').length;
@@ -13263,12 +13269,26 @@ async function renderOwnerReport() {
           <td style="padding:11px 9px;border-bottom:1px solid #eef2f6">
             <div style="font-weight:700;margin-bottom:4px">${escHtml(q.subject)}</div>
             <div style="font-size:.68rem;color:#61748c;margin-bottom:5px">${fmtDate(String(q.created_at).slice(0,10))} · <span style="color:${col};font-weight:700">${lbl}</span></div>
-            <div style="white-space:pre-wrap;line-height:1.5">${asked ? escHtml(asked.body) : '—'}</div>
+            <div style="white-space:pre-wrap;line-height:1.5">${
+              q.request_summary ? escHtml(q.request_summary) : (asked ? escHtml(asked.body) : '—')}</div>
           </td>
           <td style="padding:11px 9px;border-bottom:1px solid #eef2f6;line-height:1.5">
-            ${answer ? `<span style="white-space:pre-wrap">${escHtml(answer.body)}</span>`
-              : draft ? `<span class="oq-draft-cell"><span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-bottom:4px">DRAFT — NOT SENT</span><br><span style="white-space:pre-wrap">${escHtml(draft)}</span></span>`
-              : `<span style="color:#b45309">Not answered yet.</span>`}
+${(() => {
+              // The SHORT form wins in a report. The full reply is the thing
+              // that gets sent; a table of 600-word cells cannot be read
+              // across, which is the whole reason it is a table.
+              const short = draft && draft.summary;
+              const sent  = answer && answer.body;
+              // oq-draft-cell is what the PDF strips, so it marks UNSENT
+              // only. A summary of an answer already sent is not a draft,
+              // and carrying the class would blank it out of the download
+              // as though we had never replied.
+              if (short && sent) return `<span style="white-space:pre-wrap">${escHtml(short)}</span>`;
+              if (short) return `<span class="oq-draft-cell"><span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-bottom:4px">DRAFT — NOT SENT</span><br><span style="white-space:pre-wrap">${escHtml(short)}</span></span>`;
+              if (sent)  return `<span style="white-space:pre-wrap">${escHtml(sent)}</span>`;
+              if (draft) return `<span class="oq-draft-cell"><span style="display:inline-block;background:#fef3c7;color:#92400e;font-size:.64rem;font-weight:700;padding:1px 6px;border-radius:8px;margin-bottom:4px">DRAFT — NOT SENT</span><br><span style="white-space:pre-wrap">${escHtml(draft.body)}</span></span>`;
+              return `<span style="color:#b45309">Not answered yet.</span>`;
+            })()}
             ${visibleActs.length ? `<div style="margin-top:8px;background:#f8fafc;border-radius:6px;padding:7px 9px">
               <div style="font-size:.64rem;font-weight:700;text-transform:uppercase;color:#61748c;margin-bottom:4px">What we are doing</div>
               ${visibleActs.map(t => {
