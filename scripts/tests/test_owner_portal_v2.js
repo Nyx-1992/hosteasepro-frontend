@@ -381,6 +381,35 @@ ok('  existing notes are shown, both sides apart',
 ok('  and escaped', /escHtml\(c\.text \|\| c\.body \|\| ''\)/.test(app));
 ok('  in their language', /ct\('addNote'\)/.test(app));
 
+console.log('\n  Correcting an answer already sent');
+
+const m943 = read('supabase', 'migrations', '943_correct_a_sent_answer.sql')
+  .split('\n').filter(l => !/^\s*--/.test(l)).join('\n');
+ok('the original text is kept', /ADD COLUMN IF NOT EXISTS[\s\S]{0,80}original_body text/.test(m943),
+   'the owner may already have read it, or acted on it');
+ok('  and the correction is timestamped', /edited_at     timestamptz/.test(m943));
+ok('OUR SIDE ONLY — the owner\'s words cannot be rewritten',
+   (m943.match(/author_side = 'agency'/g) || []).length === 2,
+   'both USING and WITH CHECK, or an agency message could be edited INTO a client one');
+ok('  and only by a member of that org',
+   /EXISTS \(SELECT 1 FROM public\.owner_queries q[\s\S]{0,120}is_org_member\(q\.org_id\)\)/.test(m943));
+
+const ed = (app.match(/async function editOwnerMessage\(msgId, queryId\)[\s\S]*?\n\}/) || [''])[0];
+ok('there is an editor', !!ed);
+ok('  the first correction records the original',
+   /original_body: current,/.test(ed) && /\.is\('original_body', null\)/.test(ed),
+   'a second tidy-up must not overwrite what was first sent');
+ok('  a later one moves only the text and the time',
+   /\.not\('original_body', 'is', null\)/.test(ed));
+ok('  an answer cannot be emptied', /An answer cannot be emptied/.test(ed));
+ok('  and an unchanged one is a no-op', /if \(body === current\.trim\(\)\) return;/.test(ed));
+ok('the edit button is only on OUR messages',
+   /\$\{us \? `<button onclick="editOwnerMessage/.test(app));
+ok('BOTH SIDES SEE THAT IT CHANGED',
+   /m\.edited_at \? `<span title="Corrected/.test(app) && /m\.edited_at \? ' · <span style="color:#b45309/.test(app),
+   'a silent edit leaves the owner remembering a paragraph that is no longer there');
+ok('  in their language', /ct\('corrected'\)/.test(app));
+
 // ══ 8. FIVE LANGUAGES ═════════════════════════════════════════════════════
 console.log('\nStill five languages');
 
