@@ -201,7 +201,7 @@ ok('  each section standing on its own', /class="oq-rep-section"[^>]*break-insid
    '"so it is easy to break off"');
 ok('  uncategorised requests are not dropped', /const uncategorised = rows\.filter\(q => !q\.category\)/.test(rep));
 ok('  every request shows what was asked and what we answered',
-   /<th[^>]*>What they asked<\/th>/.test(rep) && /<th[^>]*>Our answer<\/th>/.test(rep) &&
+   /<th[^>]*>Their request<\/th>/.test(rep) && /<th[^>]*>Our answer<\/th>/.test(rep) &&
    /m\.author_side === 'client'/.test(rep));
 ok('  an unanswered one says so rather than showing blank',
    /Not answered yet\./.test(rep));
@@ -293,9 +293,17 @@ ok('  the draft is deleted only AFTER the message is in',
    'a failed post must leave the words where they were');
 
 console.log('\n  The three columns');
-ok('each category is a table', /<th[^>]*>Request<\/th>/.test(app));
-ok('  what they asked', /<th[^>]*>What they asked<\/th>/.test(app));
+// She asked for three columns: category, their request, our answer. The
+// first version made category a SECTION HEADING and the three columns
+// something else — "I don't see the category column I told you about".
+ok('CATEGORY IS A COLUMN, not a heading', /<th[^>]*>Category<\/th>/.test(app));
+ok('  their request', /<th[^>]*>Their request<\/th>/.test(app));
 ok('  and our answer', /<th[^>]*>Our answer<\/th>/.test(app));
+ok('  one table, not one per category',
+   (rep.match(/<th[^>]*>Category<\/th>/g) || []).length === 1,
+   'scoped to the report — the expenses screen has a Category header too');
+ok('  the name is written once per group, so it still reads as blocks',
+   /const firstOfGroup = i === 0;/.test(app));
 ok('the answer column prefers a sent reply over a draft',
    /\$\{answer \? `<span style="white-space:pre-wrap">\$\{escHtml\(answer\.body\)\}<\/span>`\s*\n?\s*: draft \?/.test(app));
 ok('  a draft is labelled as unsent', /DRAFT — NOT SENT/.test(app));
