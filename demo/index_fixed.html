@@ -12912,6 +12912,7 @@ async function renderOwnerQueryThread(id) {
   const el = document.getElementById('oq-thread-' + id);
   if (!el || !db) return;
   const q = ownerQueries.find(x => String(x.id) === String(id));
+  await loadQueryActions(id);
   const { data, error } = await db.from('owner_query_messages')
     .select('*').eq('query_id', id).order('created_at');
   if (error) { el.innerHTML = `<div style="color:var(--red);font-size:.8rem">${escHtml(error.message)}</div>`; return; }
@@ -12923,7 +12924,8 @@ async function renderOwnerQueryThread(id) {
         <div style="font-size:.85rem;white-space:pre-wrap;line-height:1.5">${escHtml(m.body)}</div>
       </div></div>`;
   }).join('')
-  + `<div style="margin-top:10px">
+  + `<div id="oq-actions-${id}" style="margin-top:12px;border-top:1px dashed var(--border);padding-top:10px">${renderQueryActions(id)}</div>
+    <div style="margin-top:10px">
       <textarea id="oq-reply-${id}" rows="3" placeholder="Reply to the owner…" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.86rem;resize:vertical"></textarea>
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <button class="btn btn-primary btn-sm" onclick="ownerQueryReply('${id}')">Send reply</button>
@@ -12965,6 +12967,92 @@ async function ownerQuerySetStatus(id, status) {
     if (error) throw error;
     await loadOwnerQueries();
   } catch (e) { toast('Could not change that: ' + e.message, 'error'); }
+}
+
+// ══ WHAT WE SAID WE WOULD DO ═════════════════════════════════════════════
+//
+// Owner: "action point pool: have pool company review the db board"
+//
+// A reply that promises something is a sentence. It has no status, nothing
+// reminds anybody, and by the owners' next arrival the only record that we
+// said it is buried in a thread. So a promise becomes a task — the same
+// `tasks` rows the Task board already shows, and that the owner portal
+// already draws under "Work on your property" when client_visible is on.
+//
+// Shown to the owner by DEFAULT. They raised the question; seeing that it
+// turned into a job with a status is most of the reason to use the portal
+// instead of WhatsApp. The box is there for the ones that are genuinely
+// ours alone — chasing a supplier's invoice, say.
+let _queryActions = {};   // query id → tasks
+
+async function loadQueryActions(queryId) {
+  if (!db) return [];
+  const { data, error } = await db.from('tasks')
+    .select('id,title,status,kanban_status,client_visible,priority')
+    .eq('owner_query_id', queryId).order('created_at');
+  if (error) { console.warn('loadQueryActions:', error); return []; }
+  _queryActions[queryId] = data || [];
+  return _queryActions[queryId];
+}
+
+function renderQueryActions(queryId) {
+  const list = _queryActions[queryId] || [];
+  const done = t => t.status === 'completed' || t.kanban_status === 'done';
+  return `
+    <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:7px">
+      Action points${list.length ? ' · ' + list.filter(t => !done(t)).length + ' open' : ''}
+    </div>
+    ${list.map(t => `
+      <div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;font-size:.82rem">
+        <input type="checkbox" ${done(t) ? 'checked' : ''} onchange="toggleQueryAction('${queryId}','${t.id}',this.checked)" style="margin-top:3px;cursor:pointer"/>
+        <span style="flex:1;${done(t) ? 'text-decoration:line-through;color:var(--muted)' : ''}">${escHtml(t.title)}</span>
+        ${t.client_visible ? '<span title="The owner sees this" style="font-size:.64rem;color:var(--muted);flex-shrink:0">👤</span>' : ''}
+      </div>`).join('')}
+    <div style="display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap">
+      <input id="oq-act-${queryId}" placeholder="Add an action point…"
+        onkeydown="if(event.key==='Enter')addQueryAction('${queryId}')"
+        style="flex:1;min-width:180px;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.82rem"/>
+      <label style="display:flex;align-items:center;gap:5px;font-size:.74rem;color:var(--muted);cursor:pointer">
+        <input type="checkbox" id="oq-act-vis-${queryId}" checked/> show the owner
+      </label>
+      <button class="btn btn-sm btn-ghost" onclick="addQueryAction('${queryId}')">+ Add</button>
+    </div>`;
+}
+
+async function addQueryAction(queryId) {
+  const input = document.getElementById('oq-act-' + queryId);
+  const title = (input.value || '').trim();
+  if (!title) { input.focus(); return; }
+  const q = ownerQueries.find(x => String(x.id) === String(queryId));
+  if (!q || !db) return;
+  const visible = !!(document.getElementById('oq-act-vis-' + queryId) || {}).checked;
+  const { error } = await db.from('tasks').insert([{
+    org_id: q.org_id, property_id: q.property_id, owner_query_id: q.id,
+    title, type: 'other', status: 'pending', kanban_status: 'todo',
+    priority: 'normal', client_visible: visible,
+  }]);
+  if (error) { toast('Could not add that: ' + error.message, 'error'); return; }
+  input.value = '';
+  await loadQueryActions(queryId);
+  const el = document.getElementById('oq-actions-' + queryId);
+  if (el) el.innerHTML = renderQueryActions(queryId);
+  toast(visible ? 'Action point added — the owner can see it ✓' : 'Action point added ✓', 'success');
+}
+
+// Both columns, because the Task board reads kanban_status and everything
+// else reads status. Setting one and not the other leaves a task that is
+// done on one screen and outstanding on the next.
+async function toggleQueryAction(queryId, taskId, done) {
+  if (!db) return;
+  const { error } = await db.from('tasks').update({
+    status: done ? 'completed' : 'pending',
+    kanban_status: done ? 'done' : 'todo',
+    updated_at: new Date().toISOString(),
+  }).eq('id', taskId);
+  if (error) { toast('Could not change that: ' + error.message, 'error'); return; }
+  await loadQueryActions(queryId);
+  const el = document.getElementById('oq-actions-' + queryId);
+  if (el) el.innerHTML = renderQueryActions(queryId);
 }
 
 // ══ THE MONTH, IN ONE DOCUMENT ═══════════════════════════════════════════
@@ -13038,6 +13126,14 @@ async function renderOwnerReport() {
   _oqReportThreads = {};
   (data || []).forEach(m => { (_oqReportThreads[m.query_id] = _oqReportThreads[m.query_id] || []).push(m); });
 
+  // What we said we would do, beside what we said. A report that carries
+  // the answer but not the commitment is the half an owner cannot check.
+  const acts = {};
+  const { data: taskRows } = await db.from('tasks')
+    .select('id,title,status,kanban_status,client_visible,owner_query_id')
+    .in('owner_query_id', rows.map(r => r.id));
+  (taskRows || []).forEach(t => { (acts[t.owner_query_id] = acts[t.owner_query_id] || []).push(t); });
+
   const open     = rows.filter(q => q.status === 'open').length;
   const answered = rows.filter(q => q.status === 'answered').length;
   const closed   = rows.filter(q => q.status === 'closed').length;
@@ -13094,6 +13190,22 @@ async function renderOwnerReport() {
               ${answer ? `<span style="white-space:pre-wrap">${escHtml(answer.body)}</span>`
                        : `<span style="color:#b45309">Not answered yet.</span>`}
             </div>
+            ${(() => {
+              // Only the ones the owner is allowed to see. An internal note
+              // to chase a supplier does not belong in a document we send
+              // them, and client_visible is already the word for that.
+              const open = (acts[q.id] || []).filter(t => t.client_visible);
+              if (!open.length) return '';
+              return `<div style="margin-top:10px;background:#f8fafc;border-radius:7px;padding:9px 11px">
+                <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:#61748c;margin-bottom:5px">What we are doing</div>
+                ${open.map(t => {
+                  const done = t.status === 'completed' || t.kanban_status === 'done';
+                  return `<div style="font-size:.81rem;line-height:1.5;${done?'color:#64748b':''}">
+                    ${done ? '✓' : '○'} <span style="${done?'text-decoration:line-through':''}">${escHtml(t.title)}</span>
+                  </div>`;
+                }).join('')}
+              </div>`;
+            })()}
           </div>`;
         }).join('')}
       </div>`).join('')}

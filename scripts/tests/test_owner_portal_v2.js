@@ -226,7 +226,47 @@ ok('  and a failure is reported', /Could not build the PDF/.test(dl));
 ok('the report hides the list while it is open',
    /\['oq-filters','oq-cat-filters','oq-list'\]\.forEach/.test(app));
 
-// ══ 6. FIVE LANGUAGES ═════════════════════════════════════════════════════
+// ══ 6. WHAT WE SAID WE WOULD DO ═══════════════════════════════════════════
+console.log('\nAction points');
+
+const mig938 = read('supabase', 'migrations', '938_action_points_on_requests.sql')
+  .split('\n').filter(l => !/^\s*--/.test(l)).join('\n');
+ok('a task can point back at the request it came from',
+   /ADD COLUMN IF NOT EXISTS owner_query_id uuid/.test(mig938));
+ok('  deleting the question does NOT delete the work',
+   /REFERENCES public\.owner_queries\(id\) ON DELETE SET NULL/.test(mig938),
+   'the pool company still has to look at that box');
+ok('  it reuses tasks rather than inventing a second to-do list',
+   /ALTER TABLE public\.tasks/.test(mig938));
+
+const addA = (app.match(/async function addQueryAction\(queryId\)[\s\S]*?\n\}/) || [''])[0];
+ok('one can be added from the thread', !!addA && /id="oq-act-\$\{queryId\}"/.test(app));
+ok('  it inherits the request\'s property and org',
+   /org_id: q\.org_id, property_id: q\.property_id, owner_query_id: q\.id/.test(addA));
+ok('  shown to the owner by default', /id="oq-act-vis-\$\{queryId\}" checked/.test(app),
+   'seeing a question turn into a job with a status is most of the reason to use the portal');
+ok('  but it can be kept internal', /const visible = !!\(document\.getElementById\('oq-act-vis-' \+ queryId\)/.test(addA));
+ok('  and an empty one is refused', /if \(!title\) \{ input\.focus\(\); return; \}/.test(addA));
+
+const tog = (app.match(/async function toggleQueryAction\(queryId, taskId, done\)[\s\S]*?\n\}/) || [''])[0];
+ok('ticking one writes BOTH status columns',
+   /status: done \? 'completed' : 'pending',\s*\n\s*kanban_status: done \? 'done' : 'todo'/.test(tog),
+   'the Task board reads kanban_status and everything else reads status');
+
+ok('the thread loads its action points before drawing them',
+   /await loadQueryActions\(id\);\s*\n\s*const \{ data, error \} = await db\.from\('owner_query_messages'\)/.test(app));
+
+console.log('\n  And they reach the report');
+ok('the report fetches them for the month',
+   /\.in\('owner_query_id', rows\.map\(r => r\.id\)\)/.test(app));
+ok('  showing only the ones the owner may see',
+   /\(acts\[q\.id\] \|\| \[\]\)\.filter\(t => t\.client_visible\)/.test(app),
+   'an internal note to chase a supplier does not belong in a document we send them');
+ok('  with done ones struck through, not hidden',
+   /text-decoration:line-through/.test(app) && /done \? '✓' : '○'/.test(app));
+ok('  and the titles escaped', /escHtml\(t\.title\)/.test(app));
+
+// ══ 7. FIVE LANGUAGES ═════════════════════════════════════════════════════
 console.log('\nStill five languages');
 
 ['en','de','cs','pl','es'].forEach(loc => {
