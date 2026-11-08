@@ -12926,7 +12926,7 @@ async function renderOwnerQueryThread(id) {
   }).join('')
   + `<div id="oq-actions-${id}" style="margin-top:12px;border-top:1px dashed var(--border);padding-top:10px">${renderQueryActions(id)}</div>
     <div style="margin-top:10px">
-      ${_queryDrafts[id] ? `<div style="font-size:.7rem;font-weight:700;color:#b45309;margin-bottom:5px">✎ Draft — not sent</div>` : ''}
+      ${(_queryDrafts[id] || {}).body ? `<div style="font-size:.7rem;font-weight:700;color:#b45309;margin-bottom:5px">✎ Draft — not sent</div>` : ''}
       <textarea id="oq-draft-${id}" rows="4" placeholder="Write the answer — save it as a draft, send it when you are ready…" style="width:100%;padding:9px 11px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:.86rem;resize:vertical">${escHtml((_queryDrafts[id] || {}).body || '')}</textarea>
       <!-- The short form is what the monthly report shows. Kept separate
            from the reply because a reply to a person and a line in a table
@@ -13010,7 +13010,7 @@ async function saveQueryDraft(queryId) {
   const body = (ta.value || '').trim();
   const sumEl = document.getElementById('oq-sum-' + queryId);
   const summary = ((sumEl && sumEl.value) || '').trim() || null;
-  if (!body) {
+  if (!body && !summary) {
     await db.from('owner_query_drafts').delete().eq('query_id', queryId);
     _queryDrafts[queryId] = null;
     toast('Draft cleared', 'info');
@@ -13018,11 +13018,11 @@ async function saveQueryDraft(queryId) {
   }
   const { data: sess } = await db.auth.getSession();
   const { error } = await db.from('owner_query_drafts').upsert([{
-    query_id: queryId, org_id: q.org_id, body, summary,
+    query_id: queryId, org_id: q.org_id, body: body || null, summary,
     updated_by: sess?.session?.user?.id || null, updated_at: new Date().toISOString(),
   }], { onConflict: 'query_id' });
   if (error) { toast('Could not save the draft: ' + error.message, 'error'); return; }
-  _queryDrafts[queryId] = { body, summary };
+  _queryDrafts[queryId] = { body: body || null, summary };
   toast('Draft saved — not sent ✓', 'success');
 }
 
@@ -13043,8 +13043,11 @@ async function sendQueryDraft(queryId) {
       author_side: 'agency', body,
     }]);
     if (error) throw error;
-    await db.from('owner_query_drafts').delete().eq('query_id', queryId);
-    _queryDrafts[queryId] = null;
+    // The row stays. 940 put the report's short form on it, and deleting
+    // it here would drop the summary the moment an answer went out — the
+    // report would fall straight back to printing the whole reply.
+    await db.from('owner_query_drafts').update({ body: null }).eq('query_id', queryId);
+    if (_queryDrafts[queryId]) _queryDrafts[queryId].body = null;
     toast('Sent to the owner ✓', 'success');
     await loadOwnerQueries();
   } catch (e) { toast('Could not send: ' + e.message, 'error'); }
@@ -17183,6 +17186,7 @@ const ctCat    = k => ((CLIENT_T[clientLocale] || CLIENT_T.en).reqCats || CLIENT
 const catLabel = k => k ? (CLIENT_T.en.reqCats[k] || k) : 'Uncategorised';
 
 let _clientQueries = [];
+let _clientThreadCache = {};   // query id → its messages, for the table
 let _openQueryId = null;
 let _askCategory = null;
 const QSTATUS = () => ({ open:[ct('qOpen'),'#b45309','#fef3c7'],
@@ -17197,6 +17201,14 @@ async function renderClientQueries() {
       .select('*').order('last_message_at', { ascending: false });
     if (error) throw error;
     _clientQueries = data || [];
+    // One request for every message, so the table can show both sides
+    // without opening each thread. RLS limits this to their own queries.
+    _clientThreadCache = {};
+    if (_clientQueries.length) {
+      const { data: msgs } = await db.from('owner_query_messages')
+        .select('*').in('query_id', _clientQueries.map(q => q.id)).order('created_at');
+      (msgs || []).forEach(m => { (_clientThreadCache[m.query_id] = _clientThreadCache[m.query_id] || []).push(m); });
+    }
   } catch (e) {
     el.innerHTML = `<div style="color:var(--red);font-size:.8rem">${escHtml(e.message)}</div>`;
     return;
@@ -17214,6 +17226,39 @@ async function renderClientQueries() {
         <span id="cq-msg" style="font-size:.8rem"></span>
       </div>
     </div>
+    ${_clientQueries.length ? `<div style="margin-top:14px;overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem;min-width:520px;table-layout:fixed">
+        <thead><tr style="text-align:left;color:var(--muted);font-size:.68rem;text-transform:uppercase">
+          <th style="width:20%;padding:7px 8px;border-bottom:2px solid var(--border);font-weight:700">${escHtml(ct('qAbout'))}</th>
+          <th style="width:40%;padding:7px 8px;border-bottom:2px solid var(--border);font-weight:700">${escHtml(ct('qMessage'))}</th>
+          <th style="width:40%;padding:7px 8px;border-bottom:2px solid var(--border);font-weight:700">${escHtml(ct('qUs'))}</th>
+        </tr></thead>
+        <tbody>
+        ${_clientQueries.map(q => {
+          const [lbl, fg, bg] = S[q.status] || S.open;
+          // Their own first message and OUR sent reply. There is no draft
+          // here and there cannot be: owner_query_drafts is org-members
+          // only, so this screen has no route to an unsent answer.
+          const mine = (_clientThreadCache[q.id] || []).find(m => m.author_side === 'client');
+          const ours = [...(_clientThreadCache[q.id] || [])].reverse().find(m => m.author_side === 'agency');
+          return `<tr style="vertical-align:top;cursor:pointer" onclick="clientToggleQuery('${q.id}')">
+            <td style="padding:10px 8px;border-bottom:1px solid var(--border)">
+              <div style="font-weight:600">${q.category ? catIcon(q.category) + ' ' + escHtml(ctCat(q.category)) : '—'}</div>
+              <div style="margin-top:4px"><span style="background:${bg};color:${fg};font-size:.64rem;font-weight:700;padding:2px 7px;border-radius:9px;white-space:nowrap">${escHtml(lbl)}</span></div>
+            </td>
+            <td style="padding:10px 8px;border-bottom:1px solid var(--border)">
+              <div style="font-weight:600;margin-bottom:3px">${escHtml(q.subject)}</div>
+              <div class="text-muted" style="font-size:.7rem;margin-bottom:4px">${fmtDate(String(q.created_at).slice(0,10))}</div>
+              <div style="white-space:pre-wrap;line-height:1.5">${mine ? escHtml(mine.body) : ''}</div>
+            </td>
+            <td style="padding:10px 8px;border-bottom:1px solid var(--border);white-space:pre-wrap;line-height:1.5">
+              ${ours ? escHtml(ours.body) : `<span style="color:var(--muted)">—</span>`}
+            </td>
+          </tr>`;
+        }).join('')}
+        </tbody>
+      </table>
+    </div>` : ''}
     <div style="margin-top:14px">
       ${_clientQueries.length ? _clientQueries.map(q => {
         const [lbl, fg, bg] = S[q.status] || S.open;

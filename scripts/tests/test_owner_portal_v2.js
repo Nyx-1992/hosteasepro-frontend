@@ -282,16 +282,28 @@ ok('  never as a column on owner_queries',
 ok('  org members only', /public\.is_org_member\(org_id\)/.test(m939));
 ok('  with RLS on and anon revoked',
    /ENABLE ROW LEVEL SECURITY/.test(m939) && /REVOKE ALL ON TABLE public\.owner_query_drafts FROM anon/.test(m939));
-ok('the owner portal never reads that table',
-   !/owner_query_drafts/.test((app.match(/async function renderClientQueries\(\)[\s\S]*?\n\}/)||[''])[0] +
-                              (app.match(/async function renderClientThread\(id\)[\s\S]*?\n\}/)||[''])[0]));
+// The owner's screens must have no route to an unsent answer at all —
+// not a route they decline to take. owner_query_drafts is org-members
+// only in the database; this checks the client code never even asks.
+{
+  const clientFns = ['renderClientQueries','renderClientThread','clientAskSend','clientReplySend','clientCloseQuery']
+    .map(fn => (app.match(new RegExp('(?:async )?function ' + fn + '\\([^)]*\\)[\\s\\S]*?\\n\\}')) || [''])[0]).join('\n');
+  // Comments explaining WHY it must not read that table contain its name.
+  // Strip them, or the prose describing the rule fails the rule.
+  ok('the owner portal never reads the drafts table', !/owner_query_drafts/.test(codeOnly(clientFns)));
+  ok('  and its answer column shows only SENT agency messages',
+     /m\.author_side === 'agency'/.test(clientFns) && /_clientThreadCache/.test(clientFns));
+}
 
 const send = (app.match(/async function sendQueryDraft\(queryId\)[\s\S]*?\n\}/) || [''])[0];
 ok('sending asks first', /confirm\('Send this answer to the owner\?/.test(send),
    'it is the one moment the owner sees any of this');
-ok('  the draft is deleted only AFTER the message is in',
-   send.indexOf("owner_query_messages'") < send.indexOf("owner_query_drafts').delete"),
+ok('  the body is cleared only AFTER the message is in',
+   send.indexOf("owner_query_messages'") < send.indexOf("owner_query_drafts').update"),
    'a failed post must leave the words where they were');
+ok('  and sending keeps the short form',
+   /update\(\{ body: null \}\)/.test(send) && !/owner_query_drafts'\)\.delete/.test(send),
+   'deleting the row would drop the summary and the report would print the whole reply again');
 
 console.log('\n  The three columns');
 // She asked for three columns: category, their request, our answer. The
@@ -337,7 +349,7 @@ ok('A SENT ANSWER\'S SUMMARY IS NOT MARKED AS A DRAFT',
    'oq-draft-cell is what the PDF strips — carrying it would blank a real answer out of the download');
 ok('  and an unsent one still is', /if \(short\) return `<span class="oq-draft-cell"/.test(app));
 ok('there is a box to write the short form in', /id="oq-sum-\$\{id\}"/.test(app));
-ok('  and saving carries both fields', /query_id: queryId, org_id: q\.org_id, body, summary,/.test(app));
+ok('  and saving carries both fields', /query_id: queryId, org_id: q\.org_id, body: body \|\| null, summary,/.test(app));
 
 // ══ 8. FIVE LANGUAGES ═════════════════════════════════════════════════════
 console.log('\nStill five languages');
