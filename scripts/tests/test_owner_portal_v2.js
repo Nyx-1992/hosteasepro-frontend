@@ -1,0 +1,216 @@
+#!/usr/bin/env node
+/**
+ * What the owners' first real visit to the portal turned up.
+ *
+ * Four things, from one message:
+ *
+ *   "I changed it to german for me, when refreshing the page it got back to
+ *    czech."
+ *   "The bookings don't seem right though? we didn't have so many night
+ *    occupied as it displays."
+ *   "We need to ensure to differentiate guest bookings and maybe somehow
+ *    display availability too (since the owners stay in the house too)."
+ *   "You will see the booked nights average on the bottom and the bar graph
+ *    are not aligning."
+ *   "we would like to give them the opportunity to log some kind of
+ *    requests, which can be for some specific category and we then get it
+ *    flagged on our end too."
+ *
+ * THE LANGUAGE NEVER SAVED, FOR ANYBODY. profiles carries exactly one
+ * policy — profiles_select_own, SELECT. No UPDATE policy, so the write
+ * matched zero rows, and PostgREST calls that success. No error, no save.
+ *
+ * THE CHART COUNTED 17 NIGHTS THAT WERE NOT GUESTS. Two rows imported from
+ * Trello — Clare Lang 13–22 Apr, Heinrich Winkler 1–9 May — carry
+ * status 'blocked' AND a real name. clientNormalise reads a named blocked
+ * row as a misclassified booking (right for the feed quirk it was written
+ * for) and counts it as a let. April read 24 against 15 real guest nights,
+ * and May read 8 against none at all.
+ *
+ * AND THE OWNERS WERE INVISIBLE. November 2026 drew a bar of zero while
+ * Mirka and Antonio were in the house for twenty nights of it.
+ *
+ * Run: node scripts/tests/test_owner_portal_v2.js
+ */
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..', '..');
+const read = (...p) => fs.readFileSync(path.join(ROOT, ...p), 'utf8');
+const app   = read('demo', 'index_fixed.html');
+const alert = read('api', 'owner-query-alert.js');
+const mig   = read('supabase', 'migrations', '937_owner_locale_and_request_categories.sql');
+
+const codeOnly = (s) => s
+  .replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+  .replace(/(^|[^:'"\\])\/\/[^\n]*/g, (m, p1) => p1 + ' '.repeat(m.length - p1.length));
+const SQL = mig.split('\n').filter(l => !/^\s*--/.test(l)).join('\n');
+
+const fail = [];
+const ok = (name, cond, detail) => {
+  console.log((cond ? '  ✓ ' : '  ✗ ') + name);
+  if (!cond) { if (detail) console.log('      ' + detail); fail.push(name); }
+};
+
+const CT = (() => {
+  const m = app.match(/const CLIENT_T = \{[\s\S]*?\n\};/)[0];
+  return eval('(' + m.replace('const CLIENT_T = ', '').replace(/;$/, '') + ')');
+})();
+
+// ══ 1. THE LANGUAGE PICKER ════════════════════════════════════════════════
+console.log('\nThe language sticks now');
+
+ok('it no longer writes profiles directly',
+   !/from\('profiles'\)\.update\(\{ locale/.test(codeOnly(app)),
+   'profiles has no UPDATE policy, so that write matched zero rows and reported success');
+ok('it goes through a function that writes one column',
+   /rpc\('set_my_locale', \{ p_locale: loc \}\)/.test(app));
+ok('the function exists', /CREATE OR REPLACE FUNCTION public\.set_my_locale\(p_locale text\)/.test(SQL));
+ok('  and only ever touches the caller\'s own row',
+   /UPDATE public\.profiles SET locale = p_locale WHERE id = auth\.uid\(\)/.test(SQL));
+ok('  it writes nothing but locale',
+   (SQL.match(/UPDATE public\.profiles SET/g) || []).length === 1 &&
+   !/SET\s+(role|org_id)/.test(SQL),
+   'a blanket UPDATE policy on profiles would let a client set their own role and org_id');
+ok('  an unknown locale is refused', /RAISE EXCEPTION 'unknown locale %'/.test(SQL));
+ok('  and anon cannot call it',
+   /REVOKE ALL ON FUNCTION public\.set_my_locale\(text\) FROM PUBLIC, anon/.test(SQL));
+ok('a failed save is shown, not just logged',
+   /Could not save the language/.test(app),
+   'a silent no-op is exactly what hid this since the picker shipped');
+ok('  and the picker snaps back to what is really stored',
+   /clientLocale = previous;/.test(app));
+
+// ══ 2. GUESTS, OWNERS AND FREE NIGHTS ═════════════════════════════════════
+console.log('\nA night says what it was spent on');
+
+ok('each day records its kind', /_clientDays\[iso\] = \{ p: clientPlat\(b\.platform\), kind,/.test(app));
+ok('  while still carrying the plain not-a-let flag the other panels read',
+   /const blocked = kind !== 'guest';/.test(app),
+   'occupancy, the platform mix and the calendar must keep working unchanged');
+ok('guests are painted first, then owners, then blocks',
+   /lettable\.forEach\(b => paint\(b, 'guest'\)\);[\s\S]{0,200}?blocks\.filter\(isOwnerStay\)\.forEach\(b => paint\(b, 'owner'\)\);[\s\S]{0,200}?blocks\.filter\(b => !isOwnerStay\(b\)\)\.forEach\(b => paint\(b, 'block'\)\)/.test(app),
+   'LekkeSlaap mirrors the owners\' own closure back as an anonymous block');
+
+ok('a month counts all three kinds and its own length',
+   /byMonth\[k\] = \{ guest: 0, owner: 0, block: 0, days: daysInMonth\(k\) \}/.test(app));
+{
+  const src = (app.match(/const daysInMonth = k => \{[\s\S]*?\n    \};/) || [''])[0];
+  const run = new Function('k', src + '\nreturn daysInMonth(k);');
+  ok('  proof: February 2026 is 28 nights', run('2026-02') === 28, String(run('2026-02')));
+  ok('  proof: November is 30', run('2026-11') === 30, String(run('2026-11')));
+  ok('  proof: a leap February is 29', run('2028-02') === 29, String(run('2028-02')));
+}
+ok('"booked" still means let to a guest',
+   /const monthTotal = k => byMonth\[k\]\.guest;/.test(app),
+   'the bar grows taller than the number because it also draws what was not sold');
+ok('the free part of a month is drawn',
+   /const freeNights = Math\.max\(0, m\.days - m\.guest - m\.owner - m\.block\);/.test(app));
+ok('the bar is the whole month, not a share of the busiest one',
+   /height:100%;display:flex;flex-direction:column;justify-content:flex-end/.test(app),
+   'scaling to the peak month made a full month and a quiet one look equally full');
+ok('  and nothing still refers to the old peak scaling',
+   !/peakMonth/.test(codeOnly(app)));
+ok('guests sit at the bottom of the column',
+   /seg\(m\.block[\s\S]{0,120}?seg\(m\.owner[\s\S]{0,120}?seg\(m\.guest/.test(app),
+   'the column packs to the bottom, so guests must be written last');
+ok('there is a legend', /CLIENT_OCC_COLORS\[k\]/.test(app) && /occGuests/.test(app));
+ok('  in its own palette, not the platform one',
+   /const CLIENT_OCC_COLORS = \{ guest:/.test(app),
+   'reusing Booking.com blue for "guest" invites reading the colour as a channel');
+
+// ══ 3. THE FOOTER AND THE BARS ════════════════════════════════════════════
+console.log('\nThe average and the bars measure the same thing');
+
+ok('the footer reads off the chart\'s own span',
+   /const guestNightsInChart = monthKeys\.reduce\(\(s, k\) => s \+ byMonth\[k\]\.guest, 0\)/.test(app));
+ok('  and counts the stays inside it',
+   /const staysInChart = lettable\.filter\(b =>\s*\n?\s*\(b\.check_out_date \|\| ''\) > chartFrom && \(b\.check_in_date \|\| ''\) <= chartTo\)/.test(app));
+ok('  avgStay divides one by the other',
+   /const avgStay = staysInChart\.length \? \(guestNightsInChart \/ staysInChart\.length\) : 0;/.test(app));
+ok('it no longer mixes the trailing window into the chart footer',
+   !/avgStay = staysInWindow/.test(codeOnly(app)),
+   'nightsBooked runs from today minus 12 months; the bars are 12 calendar months — three weeks apart');
+ok('occupancy keeps the trailing window, which is what occupancy is',
+   /const bookedNights = Object\.keys\(_clientDays\)\.filter\(iso => inWindow\(iso\) && !_clientDays\[iso\]\.blocked\)/.test(app));
+
+// ══ 4. REQUESTS, BY CATEGORY ══════════════════════════════════════════════
+console.log('\nRequests have a topic');
+
+ok('the column exists', /ADD COLUMN IF NOT EXISTS category text/.test(SQL));
+ok('  nullable, with no default',
+   !/category text NOT NULL/.test(SQL) && !/category[^\n]*DEFAULT/.test(SQL),
+   'a forced guess would make the filter lie');
+ok('  and is indexed for the filter',
+   /CREATE INDEX IF NOT EXISTS owner_queries_category_idx/.test(SQL));
+
+const KEYS = [...(app.match(/const OWNER_REQUEST_CATEGORIES = \[[\s\S]*?\n\];/) || [''])[0]
+  .matchAll(/key: '([a-z]+)'/g)].map(m => m[1]);
+ok('there is a category list', KEYS.length >= 8, KEYS.join(', '));
+
+// The real test of a category list: does the email they actually sent fit?
+console.log('\n  Every heading of the 6 November email lands somewhere');
+[['Pool running all day, broken control box', 'pool'],
+ ['Irrigation spraying the walls and terrace', 'garden'],
+ ['Bathroom, floors, lights, stove knobs',     'maintenance'],
+ ['Garage clutter and the missing towels',     'cleaning'],
+ ['Guests with garage keys, door left unlocked','access'],
+ ['Paying Eskom for pool hours not agreed',    'utilities'],
+ ['The 2,354 ZAR line on INVOICE-2026-018',    'invoice'],
+ ['Please tell us when you can meet',          'meeting'],
+].forEach(([topic, key]) =>
+  ok('    ' + topic + ' → ' + key, KEYS.includes(key)));
+
+ok('the migration documents the same list it will receive',
+   KEYS.every(k => mig.includes(k)));
+
+console.log('\n  On both screens');
+ok('the owner gets chips', /function clientCatChips\(\)/.test(app) && /id="cq-cats"/.test(app));
+ok('  picking one is optional', /category: _askCategory \|\| null/.test(codeOnly(app)));
+ok('  tapping it again clears it', /_askCategory = \(_askCategory === key\) \? null : key;/.test(app));
+ok('  and it resets after sending', /_askCategory = null;\s*\n\s*say\(ct\('qThanks'\)\)/.test(app));
+ok('the owner sees the topic on their own list', /\$\{q\.category \? catIcon\(q\.category\) \+ ' ' : ''\}/.test(app));
+ok('  in their language', /const ctCat    = k =>/.test(app) && /reqCats/.test(app));
+ok('the agency sees it as a tag', /catIcon\(q\.category\)\} \$\{escHtml\(catLabel\(q\.category\)\)\}/.test(app));
+ok('  in English, because that screen is not translated',
+   /const catLabel = k => k \? \(CLIENT_T\.en\.reqCats\[k\] \|\| k\) : 'Uncategorised'/.test(app));
+ok('the agency can filter by topic', /function setOqCategory\(c\)/.test(app) && /id="oq-cat-filters"/.test(app));
+ok('  showing only topics that actually appear',
+   /\.filter\(\(\[, n\]\) => n > 0\)/.test(app),
+   'ten chips all reading zero is noise on a phone');
+ok('  and the empty state names the topic', /Nothing here under/.test(app));
+
+ok('the email subject carries the topic',
+   /\$\{propName\}\$\{cat \? ' · ' \+ cat : ''\}: \$\{q\.subject\}/.test(alert),
+   'the subject line is the part read on a phone before anything is opened');
+ok('  and the alert actually fetches the category',
+   /select=id,subject,status,category,org_id/.test(alert));
+
+// ══ 5. FIVE LANGUAGES ═════════════════════════════════════════════════════
+console.log('\nStill five languages');
+
+['en','de','cs','pl','es'].forEach(loc => {
+  const d = CT[loc];
+  const missing = ['occGuests','occOwner','occBlocked'].filter(k => !d[k]);
+  const cats = d.reqCats ? Object.keys(d.reqCats) : [];
+  ok('  ' + loc + ': legend + ' + cats.length + ' categories',
+     missing.length === 0 && cats.length === KEYS.length,
+     'missing ' + missing.join(',') + '; cats ' + cats.length + ' vs ' + KEYS.length);
+});
+ok('  every category key has a label in every language',
+   ['en','de','cs','pl','es'].every(l => KEYS.every(k => CT[l].reqCats[k])));
+ok('  and Czech is really Czech, not English left in',
+   CT.cs.reqCats.pool === 'Bazén' && CT.cs.occOwner === 'Majitelé' && CT.cs.reqCats.meeting.includes('schůzku'),
+   [CT.cs.reqCats.pool, CT.cs.occOwner, CT.cs.reqCats.meeting].join(' / '));
+ok('  German too, since that is the language she reads it in',
+   CT.de.occGuests === 'Gäste' && CT.de.reqCats.garden === 'Garten & Bewässerung',
+   [CT.de.occGuests, CT.de.reqCats.garden].join(' / '));
+
+// ── Result ────────────────────────────────────────────────────────
+console.log('');
+if (fail.length) {
+  console.log(`✗ ${fail.length} check(s) failed:`);
+  fail.forEach(f => console.log('   - ' + f));
+  process.exit(1);
+}
+console.log('✓ owner portal v2: all checks passed');
