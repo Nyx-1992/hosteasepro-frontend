@@ -201,7 +201,8 @@ ok('  each section standing on its own', /class="oq-rep-section"[^>]*break-insid
    '"so it is easy to break off"');
 ok('  uncategorised requests are not dropped', /const uncategorised = rows\.filter\(q => !q\.category\)/.test(rep));
 ok('  every request shows what was asked and what we answered',
-   /Our answer: /.test(rep) && /m\.author_side === 'client'/.test(rep));
+   /<th[^>]*>What they asked<\/th>/.test(rep) && /<th[^>]*>Our answer<\/th>/.test(rep) &&
+   /m\.author_side === 'client'/.test(rep));
 ok('  an unanswered one says so rather than showing blank',
    /Not answered yet\./.test(rep));
 ok('  the answer shown is the LAST one we sent',
@@ -253,8 +254,8 @@ ok('ticking one writes BOTH status columns',
    /status: done \? 'completed' : 'pending',\s*\n\s*kanban_status: done \? 'done' : 'todo'/.test(tog),
    'the Task board reads kanban_status and everything else reads status');
 
-ok('the thread loads its action points before drawing them',
-   /await loadQueryActions\(id\);\s*\n\s*const \{ data, error \} = await db\.from\('owner_query_messages'\)/.test(app));
+ok('the thread loads its action points and any draft before drawing them',
+   /await Promise\.all\(\[loadQueryActions\(id\), loadQueryDraft\(id\)\]\);\s*\n\s*const \{ data, error \} = await db\.from\('owner_query_messages'\)/.test(app));
 
 console.log('\n  And they reach the report');
 ok('the report fetches them for the month',
@@ -263,10 +264,52 @@ ok('  showing only the ones the owner may see',
    /\(acts\[q\.id\] \|\| \[\]\)\.filter\(t => t\.client_visible\)/.test(app),
    'an internal note to chase a supplier does not belong in a document we send them');
 ok('  with done ones struck through, not hidden',
-   /text-decoration:line-through/.test(app) && /done \? '✓' : '○'/.test(app));
+   /text-decoration:line-through/.test(app) && /done\s*\?\s*'✓'\s*:\s*'○'/.test(app),
+   'an owner should see what was closed, not only what is left');
 ok('  and the titles escaped', /escHtml\(t\.title\)/.test(app));
 
-// ══ 7. FIVE LANGUAGES ═════════════════════════════════════════════════════
+// ══ 7. DRAFTS, AND THE THREE-COLUMN TABLE ═════════════════════════════════
+console.log('\nAn answer written but not sent');
+
+const m939 = read('supabase', 'migrations', '939_draft_answers.sql')
+  .split('\n').filter(l => !/^\s*--/.test(l)).join('\n');
+ok('drafts live in their OWN table',
+   /CREATE TABLE IF NOT EXISTS public\.owner_query_drafts/.test(m939));
+ok('  never as a column on owner_queries',
+   !/ALTER TABLE public\.owner_queries[\s\S]{0,120}draft/i.test(m939),
+   "the owner's own select policy returns every column, and their portal asks for '*'");
+ok('  org members only', /public\.is_org_member\(org_id\)/.test(m939));
+ok('  with RLS on and anon revoked',
+   /ENABLE ROW LEVEL SECURITY/.test(m939) && /REVOKE ALL ON TABLE public\.owner_query_drafts FROM anon/.test(m939));
+ok('the owner portal never reads that table',
+   !/owner_query_drafts/.test((app.match(/async function renderClientQueries\(\)[\s\S]*?\n\}/)||[''])[0] +
+                              (app.match(/async function renderClientThread\(id\)[\s\S]*?\n\}/)||[''])[0]));
+
+const send = (app.match(/async function sendQueryDraft\(queryId\)[\s\S]*?\n\}/) || [''])[0];
+ok('sending asks first', /confirm\('Send this answer to the owner\?/.test(send),
+   'it is the one moment the owner sees any of this');
+ok('  the draft is deleted only AFTER the message is in',
+   send.indexOf("owner_query_messages'") < send.indexOf("owner_query_drafts').delete"),
+   'a failed post must leave the words where they were');
+
+console.log('\n  The three columns');
+ok('each category is a table', /<th[^>]*>Request<\/th>/.test(app));
+ok('  what they asked', /<th[^>]*>What they asked<\/th>/.test(app));
+ok('  and our answer', /<th[^>]*>Our answer<\/th>/.test(app));
+ok('the answer column prefers a sent reply over a draft',
+   /\$\{answer \? `<span style="white-space:pre-wrap">\$\{escHtml\(answer\.body\)\}<\/span>`\s*\n?\s*: draft \?/.test(app));
+ok('  a draft is labelled as unsent', /DRAFT — NOT SENT/.test(app));
+ok('  and nothing at all says so plainly', /Not answered yet\./.test(app));
+
+const dl2 = (app.match(/async function downloadOwnerReport\(\)[\s\S]*?\n\}/) || [''])[0];
+ok('A DRAFT NEVER REACHES THE PDF',
+   /clone\.querySelectorAll\('\.oq-draft-cell'\)\.forEach/.test(dl2),
+   'a PDF gets forwarded, and a draft inside one is an answer given');
+ok('  stripped from the copy, not from the screen',
+   dl2.indexOf('clone.querySelectorAll') > dl2.indexOf('clone = page.cloneNode'));
+ok('  and the toast says how many were held back', /unsent draft/.test(dl2));
+
+// ══ 8. FIVE LANGUAGES ═════════════════════════════════════════════════════
 console.log('\nStill five languages');
 
 ['en','de','cs','pl','es'].forEach(loc => {
