@@ -381,6 +381,60 @@ ok('  existing notes are shown, both sides apart',
 ok('  and escaped', /escHtml\(c\.text \|\| c\.body \|\| ''\)/.test(app));
 ok('  in their language', /ct\('addNote'\)/.test(app));
 
+console.log('\n  Correcting an answer already sent');
+
+const m943 = read('supabase', 'migrations', '943_correct_a_sent_answer.sql')
+  .split('\n').filter(l => !/^\s*--/.test(l)).join('\n');
+ok('the original text is kept', /ADD COLUMN IF NOT EXISTS[\s\S]{0,80}original_body text/.test(m943),
+   'the owner may already have read it, or acted on it');
+ok('  and the correction is timestamped', /edited_at     timestamptz/.test(m943));
+ok('OUR SIDE ONLY — the owner\'s words cannot be rewritten',
+   (m943.match(/author_side = 'agency'/g) || []).length === 2,
+   'both USING and WITH CHECK, or an agency message could be edited INTO a client one');
+ok('  and only by a member of that org',
+   /EXISTS \(SELECT 1 FROM public\.owner_queries q[\s\S]{0,120}is_org_member\(q\.org_id\)\)/.test(m943));
+
+const ed = (app.match(/async function editOwnerMessage\(msgId, queryId\)[\s\S]*?\n\}/) || [''])[0];
+ok('there is an editor', !!ed);
+ok('  the first correction records the original',
+   /original_body: current,/.test(ed) && /\.is\('original_body', null\)/.test(ed),
+   'a second tidy-up must not overwrite what was first sent');
+ok('  a later one moves only the text and the time',
+   /\.not\('original_body', 'is', null\)/.test(ed));
+ok('  an answer cannot be emptied', /An answer cannot be emptied/.test(ed));
+ok('  and an unchanged one is a no-op', /if \(body === current\.trim\(\)\) return;/.test(ed));
+ok('the edit button is only on OUR messages',
+   /\$\{us \? `<button onclick="editOwnerMessage/.test(app));
+ok('BOTH SIDES SEE THAT IT CHANGED',
+   /m\.edited_at \? `<span title="Corrected/.test(app) && /m\.edited_at \? ' · <span style="color:#b45309/.test(app),
+   'a silent edit leaves the owner remembering a paragraph that is no longer there');
+ok('  in their language', /ct\('corrected'\)/.test(app));
+
+console.log('\n  Removing a comment, and not rendering it raw');
+
+const rdc = (app.match(/function renderDrawerComments\(t\)[\s\S]*?\n\}/) || [''])[0];
+ok('author, time and text are all escaped',
+   /escHtml\(author\)/.test(rdc) && /escHtml\(when\)/.test(rdc) && /escHtml\(c\.text \|\| c\.body \|\| ''\)/.test(rdc),
+   'this rendered raw, and 942 let an outside account write into it');
+ok('  including the initials in the avatar',
+   /escHtml\(author\.split\(' '\)\.map/.test(rdc));
+ok('an owner note shows its timestamp, not "undefined"',
+   /c\.time \|\| \(c\.at \? fmtDate/.test(rdc),
+   'ours carry `time` pre-formatted; theirs come from the RPC with `at`');
+ok('  and is marked as theirs', /c\.side === 'client'/.test(rdc) && /owner<\/span>/.test(rdc));
+
+const rmc = (app.match(/async function removeDrawerComment\(i\)[\s\S]*?\n\}/) || [''])[0];
+ok('there is a remove button', /onclick="removeDrawerComment\(\$\{i\}\)"/.test(rdc) && !!rmc);
+ok('  it confirms, naming whose comment it is',
+   /confirm\(`Remove \$\{who\}'s comment\?/.test(rmc) && /the owner\)` : /.test(rmc));
+ok('  it writes the shortened list to the database before memory',
+   rmc.indexOf("update({ comments: kept })") < rmc.indexOf('t._comments = kept;'),
+   'a failed write must not leave the screen showing a comment that is still stored');
+ok('  and a failed removal is reported', /Could not remove that/.test(rmc));
+ok('  both copies of the list are kept in step',
+   /t\._comments = kept;\s*\n\s*t\.comments  = kept;/.test(rmc),
+   'the drawer reads _comments and the save path reads comments');
+
 // ══ 8. FIVE LANGUAGES ═════════════════════════════════════════════════════
 console.log('\nStill five languages');
 
