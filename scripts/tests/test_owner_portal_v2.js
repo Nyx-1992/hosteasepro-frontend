@@ -410,6 +410,31 @@ ok('BOTH SIDES SEE THAT IT CHANGED',
    'a silent edit leaves the owner remembering a paragraph that is no longer there');
 ok('  in their language', /ct\('corrected'\)/.test(app));
 
+console.log('\n  Removing a comment, and not rendering it raw');
+
+const rdc = (app.match(/function renderDrawerComments\(t\)[\s\S]*?\n\}/) || [''])[0];
+ok('author, time and text are all escaped',
+   /escHtml\(author\)/.test(rdc) && /escHtml\(when\)/.test(rdc) && /escHtml\(c\.text \|\| c\.body \|\| ''\)/.test(rdc),
+   'this rendered raw, and 942 let an outside account write into it');
+ok('  including the initials in the avatar',
+   /escHtml\(author\.split\(' '\)\.map/.test(rdc));
+ok('an owner note shows its timestamp, not "undefined"',
+   /c\.time \|\| \(c\.at \? fmtDate/.test(rdc),
+   'ours carry `time` pre-formatted; theirs come from the RPC with `at`');
+ok('  and is marked as theirs', /c\.side === 'client'/.test(rdc) && /owner<\/span>/.test(rdc));
+
+const rmc = (app.match(/async function removeDrawerComment\(i\)[\s\S]*?\n\}/) || [''])[0];
+ok('there is a remove button', /onclick="removeDrawerComment\(\$\{i\}\)"/.test(rdc) && !!rmc);
+ok('  it confirms, naming whose comment it is',
+   /confirm\(`Remove \$\{who\}'s comment\?/.test(rmc) && /the owner\)` : /.test(rmc));
+ok('  it writes the shortened list to the database before memory',
+   rmc.indexOf("update({ comments: kept })") < rmc.indexOf('t._comments = kept;'),
+   'a failed write must not leave the screen showing a comment that is still stored');
+ok('  and a failed removal is reported', /Could not remove that/.test(rmc));
+ok('  both copies of the list are kept in step',
+   /t\._comments = kept;\s*\n\s*t\.comments  = kept;/.test(rmc),
+   'the drawer reads _comments and the save path reads comments');
+
 // ══ 8. FIVE LANGUAGES ═════════════════════════════════════════════════════
 console.log('\nStill five languages');
 

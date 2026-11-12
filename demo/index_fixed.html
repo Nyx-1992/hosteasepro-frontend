@@ -18950,14 +18950,56 @@ function renderDrawerComments(t) {
   const el = document.getElementById('drawer-comments');
   if (!el) return;
   if (!comments.length) { el.innerHTML = '<div style="color:var(--muted);font-size:.8rem;font-style:italic;padding:8px 0">No comments yet</div>'; return; }
-  el.innerHTML = comments.map(c => `
+  // ESCAPED, ALL THREE FIELDS. This rendered author, text and time raw.
+  // It was staff-only text until 942 let a property owner write here from
+  // their portal — an outside account can now put markup into the agency's
+  // own task board, which is where it would run.
+  el.innerHTML = comments.map((c, i) => {
+    const author = String(c.author || 'Unknown');
+    // The owner's notes come from the RPC with `at`, a timestamp; ours are
+    // written here with `time`, already formatted. Without this an owner's
+    // note read "undefined".
+    const when = c.time || (c.at ? fmtDate(String(c.at).slice(0,10)) : '');
+    const fromOwner = c.side === 'client';
+    return `
     <div style="display:flex;gap:9px;margin-bottom:10px">
-      <div style="width:28px;height:28px;border-radius:50%;background:${assigneeColor(c.author).bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;flex-shrink:0">${c.author.split(' ').map(w=>w[0]).join('').slice(0,2)}</div>
-      <div style="flex:1">
-        <div style="font-size:.72rem;color:var(--muted);margin-bottom:2px"><strong style="color:var(--ink)">${c.author}</strong> · ${c.time}</div>
-        <div style="font-size:.83rem;color:var(--ink);background:var(--surface-2);border-radius:8px;padding:7px 10px;line-height:1.5">${c.text}</div>
+      <div style="width:28px;height:28px;border-radius:50%;background:${fromOwner ? '#0369a1' : assigneeColor(author).bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;flex-shrink:0">${escHtml(author.split(' ').map(w=>w[0]).join('').slice(0,2))}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.72rem;color:var(--muted);margin-bottom:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span><strong style="color:var(--ink)">${escHtml(author)}</strong>${when ? ' · ' + escHtml(when) : ''}</span>
+          ${fromOwner ? '<span style="background:#e0f2fe;color:#0369a1;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:8px">owner</span>' : ''}
+          <button onclick="removeDrawerComment(${i})" title="Remove this comment"
+            style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:.72rem;padding:0;margin-left:auto">✕</button>
+        </div>
+        <div style="font-size:.83rem;color:var(--ink);background:${fromOwner ? '#f0f9ff' : 'var(--surface-2)'};border-radius:8px;padding:7px 10px;line-height:1.5;white-space:pre-wrap">${escHtml(c.text || c.body || '')}</div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+}
+
+// Owner: "can we make a remove button for the comments. I made a boopsie."
+//
+// Nina posted a quote to the wrong task and had to follow it with "Ignore
+// comment above" — which is now two wrong things in the thread instead of
+// one. Removing by INDEX, from the array as it was just rendered, because
+// these comments have no ids.
+async function removeDrawerComment(i) {
+  const t = tasks.find(x => String(x.id) === String(_drawerTaskId));
+  if (!t || !Array.isArray(t._comments)) return;
+  const c = t._comments[i];
+  if (!c) return;
+  const who = c.side === 'client' ? `${c.author || 'The owner'} (the owner)` : (c.author || 'this');
+  const preview = String(c.text || c.body || '').slice(0, 80);
+  if (!confirm(`Remove ${who}'s comment?\n\n"${preview}"\n\nThis cannot be undone.`)) return;
+  const kept = t._comments.slice(0, i).concat(t._comments.slice(i + 1));
+  const isSample = typeof _drawerTaskId === 'string' && /^t\d+$/.test(_drawerTaskId);
+  if (db && !isSample) {
+    const { error } = await db.from('tasks').update({ comments: kept }).eq('id', _drawerTaskId);
+    if (error) { toast('Could not remove that: ' + error.message, 'error'); return; }
+  }
+  t._comments = kept;
+  t.comments  = kept;
+  renderDrawerComments(t);
 }
 async function addDrawerComment() {
   const input = document.getElementById('drawer-comment-input');
