@@ -69,14 +69,52 @@ export default async function handler(req) {
     .find(t => /^[a-f0-9]{16,64}$/i.test(t)) || '';
   if (!token) return notFound();
 
-  const r = await fetch(
-    `${SUPABASE_URL}/rest/v1/properties?ical_token=eq.${encodeURIComponent(token)}&select=id,name,short_key`,
-    { headers: { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` } });
-  if (!r.ok) return notFound();
+  const svc = { apikey: SERVICE_ROLE_KEY, Authorization: `Bearer ${SERVICE_ROLE_KEY}` };
 
-  const property = (await r.json())[0];
+  // ── TWO KINDS OF TOKEN ──────────────────────────────────────────
+  //
+  // A PER-CHANNEL token (944) says which channel is reading and whether
+  // that channel is told about cancellations. The property's own
+  // ical_token is the shared feed that is pasted into three platforms
+  // right now; it still works and says nothing new.
+  //
+  // Per-channel is tried FIRST, because the whole point is that one
+  // channel can be given a different feed from the others.
+  let property = null;
+  let opts = {};
+
+  const perChannel = await fetch(
+    `${SUPABASE_URL}/rest/v1/outbound_feed_tokens?token=eq.${encodeURIComponent(token)}` +
+    `&select=channel,tombstones,property_id,properties(id,name,short_key)`,
+    { headers: svc });
+  if (perChannel.ok) {
+    const row = (await perChannel.json())[0];
+    if (row && row.properties) {
+      property = row.properties;
+      opts = { tombstones: !!row.tombstones, channel: row.channel };
+      // Best effort: knowing when a channel last read its own feed is how
+      // "Airbnb has not picked this up yet" stops being a guess. Never
+      // awaited — a write must not delay or fail the calendar.
+      fetch(`${SUPABASE_URL}/rest/v1/outbound_feed_tokens?token=eq.${encodeURIComponent(token)}`,
+        { method: 'PATCH',
+          headers: { ...svc, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ last_served_at: new Date().toISOString() }) }).catch(() => {});
+    }
+  }
+
+  if (!property) {
+    const r = await fetch(
+      `${SUPABASE_URL}/rest/v1/properties?ical_token=eq.${encodeURIComponent(token)}&select=id,name,short_key`,
+      { headers: svc });
+    if (!r.ok) return notFound();
+    property = (await r.json())[0];
+  }
   if (!property) return notFound();
 
+  // feedId stays the SHORT KEY whichever token was used. It is what the
+  // event UIDs are built from, so every URL for a property emits the same
+  // UIDs — which is the only reason a tombstone on the Airbnb feed can
+  // cancel an event Airbnb imported from the shared one.
   return generateIcalFeed(property.id, property.name || 'Property',
-                          property.short_key || token.slice(0, 8));
+                          property.short_key || token.slice(0, 8), opts);
 }
