@@ -138,6 +138,92 @@ console.log('\nWhen the database will not answer');
 
 globalThis.fetch = async () => ({ ok:false, status:500, json: async () => ({}) });
 const res3 = await generateIcalFeed('x', 'Broken', 'abc123');
+// ══ 5. TELLING ONE CHANNEL, AND ONLY ONE, TO LET A DATE GO ════════════════
+//
+// Airbnb held 14–17 December on Speranta a day after Frank Olyn's booking
+// was deleted. Dropping an event is not a cancellation; the protocol's way
+// to say "release this" is the same UID with STATUS:CANCELLED. That is the
+// change that coincided with LekkeSlaap refusing the whole calendar on
+// 9 October, so it is now per-channel and OFF unless the token asks.
+console.log('\n── Cancellations, on an opt-in feed only ──');
+
+// Removed rows: one ordinary, one caretaker, one 147-night glitch, one far
+// older than the window the feed looks at.
+const GONE = [
+  { id:207, guest_name:'Frank Olyn',     check_in_date:'2026-12-14', check_out_date:'2026-12-17', notes:null },
+  { id:193, guest_name:'Tino Caretaker', check_in_date:'2026-12-20', check_out_date:'2026-12-22', notes:null },
+  { id:664, guest_name:'Blocked',        check_in_date:'2027-02-01', check_out_date:'2027-06-28', notes:null },
+  { id:570, guest_name:'Booking.com Guest', check_in_date:'2026-11-04', check_out_date:'2026-11-06', notes:null },
+];
+let calls = [];
+globalThis.fetch = async (url) => {
+  calls.push(String(url));
+  const gone = String(url).includes('is_active.eq.false');
+  return { ok:true, status:200, json: async () => (gone ? GONE : LIVE) };
+};
+
+const resT = await generateIcalFeed('83b2a84a-5451-4be5-a84f-2efc0d2602d5', 'TV House', 'tvhouse',
+                                    { tombstones: true });
+const icsT = await resT.text();
+
+ok('with tombstones on, cancellations are published',
+   (icsT.match(/STATUS:CANCELLED/g) || []).length >= 1);
+ok('  the UID matches the one the channel already imported',
+   icsT.includes('UID:hep-tvhouse-207@snapartments.co.za'),
+   'the UID comes from the SHORT KEY, not the token — that is what makes this work at all');
+ok('  and the sequence is bumped so it is seen as an update',
+   /UID:hep-tvhouse-207@snapartments\.co\.za[\s\S]*?SEQUENCE:1[\s\S]*?STATUS:CANCELLED/.test(icsT));
+ok('  over the dates Airbnb is still holding',
+   /DTSTART;VALUE=DATE:20261214\r\nDTEND;VALUE=DATE:20261217/.test(icsT));
+
+ok('a caretaker row is NOT tombstoned', !icsT.includes('hep-tvhouse-193@'),
+   'it was never published, so cancelling it says something that was never said');
+ok('a 147-night glitch is NOT tombstoned', !icsT.includes('hep-tvhouse-664@'));
+// Per EVENT, not across the document — a lazy match would happily run from
+// one event's UID to a later event's STATUS line and report a bug that is
+// not there.
+const eventsOf = (txt) => txt.split('BEGIN:VEVENT').slice(1).map(e => e.split('END:VEVENT')[0]);
+const cancelledUids = eventsOf(icsT)
+  .filter(e => e.includes('STATUS:CANCELLED'))
+  .map(e => (e.match(/UID:([^\r\n]+)/) || [])[1]);
+ok('a row still live in the same feed is NOT tombstoned',
+   !cancelledUids.includes('hep-tvhouse-570@snapartments.co.za'),
+   'cancelling a booking we are still publishing would put a real stay back on sale: ' + cancelledUids.join(', '));
+ok('  exactly one cancellation, the one that is genuinely gone',
+   cancelledUids.length === 1 && cancelledUids[0] === 'hep-tvhouse-207@snapartments.co.za',
+   cancelledUids.join(', ') || '(none)');
+ok('the live bookings are still published',
+   /DTSTART;VALUE=DATE:20261104/.test(icsT) && /DTSTART;VALUE=DATE:20261201/.test(icsT));
+
+ok('the removed-rows query is bounded by age', calls.some(u => u.includes('updated_at=gte.')),
+   'June left 150 dead placeholder rows; a feed mostly made of tombstones is the shape suspected of breaking LekkeSlaap');
+ok('  and by count', calls.some(u => u.includes('limit=40')));
+ok('  and asks only for future dates', calls.some(u => u.includes('is_active.eq.false') && u.includes('check_out_date=gte.')));
+
+// The default feed must not have moved a single byte.
+console.log('\n── And the shared feed is untouched ──');
+calls = [];
+globalThis.fetch = async (url) => { calls.push(String(url)); return { ok:true, status:200, json: async () => LIVE }; };
+const resD = await generateIcalFeed('83b2a84a-5451-4be5-a84f-2efc0d2602d5', 'TV House', FEED_ID);
+const icsD = await resD.text();
+ok('no cancellations without the opt-in', !icsD.includes('STATUS:CANCELLED'));
+ok('  and still exactly one fetch', calls.length === 1, String(calls.length));
+ok('  byte-identical to the feed before this change',
+   icsD.replace(/DTSTAMP:[0-9TZ]+/g, '') === ics.replace(/DTSTAMP:[0-9TZ]+/g, ''),
+   'LekkeSlaap and Booking.com must see exactly what they saw yesterday');
+
+// A failure fetching the removed rows must never break the calendar.
+globalThis.fetch = async (url) => {
+  if (String(url).includes('is_active.eq.false')) throw new Error('network');
+  return { ok:true, status:200, json: async () => LIVE };
+};
+const resF = await generateIcalFeed('83b2a84a-5451-4be5-a84f-2efc0d2602d5', 'TV House', 'tvhouse',
+                                    { tombstones: true });
+const icsF = await resF.text();
+ok('a failure fetching cancellations still yields a valid calendar',
+   resF.status === 200 && icsF.includes('END:VCALENDAR') && icsF.includes('DTSTART;VALUE=DATE:20261104'),
+   'a feed that holds a date too long loses one booking; one that fails to build puts every booked night on sale');
+
 ok('a failed lookup is an error, not an empty calendar', res3.status === 500,
    'an empty 200 would tell every channel the property is completely free');
 
