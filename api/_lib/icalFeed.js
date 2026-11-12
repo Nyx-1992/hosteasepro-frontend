@@ -16,7 +16,7 @@ export function formatICalDate(date) {
   return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
 }
 
-export async function generateIcalFeed(propertyId, propertyName, feedId) {
+export async function generateIcalFeed(propertyId, propertyName, feedId, opts = {}) {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     return new Response('Server not configured — missing SUPABASE_URL or service role key', { status: 500 });
   }
@@ -159,6 +159,66 @@ export async function generateIcalFeed(propertyId, propertyName, feedId) {
       lines.push('STATUS:CANCELLED');
       lines.push('END:VEVENT');
     }
+    // ── TELLING A CHANNEL TO LET A DATE GO ────────────────────────────
+    //
+    // Only on a feed whose token asks for it — see 944. Dropping an event
+    // is not a cancellation: the consumer sees a feed that no longer
+    // mentions a date, and whether it releases it is its own business. In
+    // practice Airbnb held 14–17 December on a flat that was free, a day
+    // after the booking was deleted. The protocol's way to say "release
+    // this" is the same UID with STATUS:CANCELLED, which is what this is.
+    //
+    // THE UID IS WHY THIS WORKS AT ALL. It is built from feedId, which is
+    // the property's SHORT KEY, not the token — so this URL emits the same
+    // UIDs the channel already imported, and the tombstone lands on the
+    // event it is meant to cancel.
+    //
+    // BOUNDED, ON PURPOSE. Nothing older than 90 days and no more than 40:
+    // these bookings go back to a June clear-out of 150 placeholder rows,
+    // and republishing all of them as cancellations would be a feed mostly
+    // made of tombstones — the exact shape suspected of making LekkeSlaap
+    // refuse the whole calendar on 9 October. Anything that old has been
+    // re-read many times over; it is the recent deletions that are stuck.
+    if (opts.tombstones && emitted > 0) {
+      try {
+        const cutoff = new Date(Date.now() - 90 * 86400000).toISOString();
+        const gone = await fetch(
+          `${SUPABASE_URL}/rest/v1/bookings?property_id=eq.${propertyId}` +
+          `&or=(is_active.eq.false,status.eq.cancelled)` +
+          `&check_out_date=gte.${todayStr}&updated_at=gte.${cutoff}` +
+          `&select=id,guest_name,check_in_date,check_out_date,notes` +
+          `&order=updated_at.desc&limit=40`,
+          { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`,
+                       'Content-Type': 'application/json' } });
+        if (gone.ok) {
+          const live = new Set(bookings.map(b => String(b.id)));
+          for (const b of await gone.json()) {
+            // Never cancel something this same feed is still publishing:
+            // a row can be inactive and have an active twin on the same
+            // id in a later read. Belt and braces.
+            if (live.has(String(b.id))) continue;
+            // Only tombstone what would ever have been published. A
+            // caretaker row or a 200-night placeholder was filtered out
+            // when it was live, so the channel never saw it.
+            if (!publishable(b)) continue;
+            lines.push('BEGIN:VEVENT');
+            lines.push(`UID:hep-${feedId}-${b.id}@snapartments.co.za`);
+            lines.push(`DTSTAMP:${now}`);
+            lines.push(`DTSTART;VALUE=DATE:${b.check_in_date.replace(/-/g, '')}`);
+            lines.push(`DTEND;VALUE=DATE:${b.check_out_date.replace(/-/g, '')}`);
+            lines.push('SUMMARY:Not Available');
+            lines.push('SEQUENCE:1');
+            lines.push('STATUS:CANCELLED');
+            lines.push('END:VEVENT');
+          }
+        }
+      } catch (e) {
+        // A feed that holds a date too long loses one booking. A feed
+        // that fails to build puts every booked night back on sale.
+        // Never let the optional half break the necessary half.
+      }
+    }
+
     lines.push('END:VCALENDAR');
     const icsContent = lines.join('\r\n');
 
