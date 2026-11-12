@@ -13007,7 +13007,16 @@ async function editOwnerMessage(msgId, queryId) {
     original_body: current,
     edited_at: new Date().toISOString(),
   }).eq('id', msgId).is('original_body', null);
-  if (error) { toast('Could not change that: ' + error.message, 'error'); return; }
+  if (error) {
+    // Shipped ahead of its migration on purpose, so the rest of this
+    // release was not held behind an approval prompt that kept timing
+    // out. Say which thing is missing rather than relaying Postgres.
+    const missing = /column .*(edited_at|original_body)/i.test(error.message || '');
+    toast(missing
+      ? 'Correcting a sent answer needs migration 943, which has not been applied yet.'
+      : 'Could not change that: ' + error.message, 'error');
+    return;
+  }
   // A second correction: the original is already recorded, so only the
   // text and the timestamp move.
   await db.from('owner_query_messages').update({ body, edited_at: new Date().toISOString() })
