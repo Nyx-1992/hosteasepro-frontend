@@ -6475,6 +6475,10 @@ async function syncICalFeeds(silent = false) {
   await loadIcalFeeds();
 
   let totalNew = 0, totalUpdated = 0, totalReleased = 0, totalCancelled = 0, errors = 0;
+  // Rows the feed still carries that somebody here deleted. Counted and
+  // shown, not silent: "the channel is still publishing this" is the whole
+  // reason a deleted booking looks like it came back.
+  let totalSkipped = 0;
 
   for (const feed of ICAL_FEEDS) {
     try {
@@ -6531,16 +6535,42 @@ async function syncICalFeeds(silent = false) {
             .eq('platform', feed.platform)
             .eq('status', 'blocked')
             .eq('is_active', true)
-            .lte('check_in_date', evt.check_out_date)
-            .gte('check_out_date', evt.check_in_date)
+            // TOUCHING IS NOT OVERLAPPING. lte/gte are both true when one
+            // stay ends exactly where the next begins, so a same-day
+            // turnover matched the outgoing row and overwrote it — two
+            // bookings collapsed into one and the changeover clean between
+            // them vanished. Strict inequalities: a stay sharing no night
+            // with another is a different booking. A genuinely re-issued
+            // closure still overlaps properly and still matches.
+            .lt('check_in_date', evt.check_out_date)
+            .gt('check_out_date', evt.check_in_date)
             .limit(1);
           if (byOverlap && byOverlap.length > 0) { existing = byOverlap; matchedByOverlap = true; }
         }
 
         if (existing && existing.length > 0) {
           const ex = existing[0];
+          // ── DELETED MEANS DELETED ──────────────────────────────────────────
+          //
+          // Owner, 23 Nov: "Again a cancelled booking which is not removed."
+          // Frank Olyn was deleted on 11 November and was back in Upcoming on
+          // the 23rd, with a real new guest (Edward Christiaan) booked over
+          // the top of him.
+          //
+          // This line used to be `{ is_active: true }` unconditionally, so
+          // every match re-opened whatever the match found. The cron importer
+          // was fixed for exactly this and the Sync button was not, which is
+          // why deleting a booking appeared to work and then undid itself the
+          // next time anybody pressed Sync.
+          //
+          // Nothing in either importer ever sets is_active = false, so a false
+          // can only have come from a person or a repair — and both meant it.
+          // Skipping rather than updating is deliberate: having found the row
+          // is what stops it being re-inserted as a fresh duplicate instead.
+          if (ex.is_active === false) { totalSkipped++; continue; }
+
           // ── UPDATE: preserve manually-edited data; always apply cancellation ──
-          const updates = { is_active: true };
+          const updates = {};
           // Matched via the overlap fallback, not an exact UID/date match —
           // this row represents the same closure re-issued with a new UID,
           // so move it to the feed's current dates/UID instead of leaving it
@@ -6743,7 +6773,7 @@ async function syncICalFeeds(silent = false) {
   // sync status hidden — console only
   const total_feeds = ICAL_FEEDS.length;
   const succeeded = total_feeds - errors;
-  const msg = `iCal: ${totalNew} new · ${totalUpdated} updated${totalReleased?` · ${totalReleased} released`:''}${totalCancelled?` · ${totalCancelled} cancelled`:''} · ${succeeded}/${total_feeds} feeds OK${errors?' ('+errors+' failed — check console)':''}`;
+  const msg = `iCal: ${totalNew} new · ${totalUpdated} updated${totalReleased?` · ${totalReleased} released`:''}${totalCancelled?` · ${totalCancelled} cancelled`:''}${totalSkipped?` · ${totalSkipped} deleted (still in feed)`:''} · ${succeeded}/${total_feeds} feeds OK${errors?' ('+errors+' failed — check console)':''}`;
   if (!silent || totalNew > 0) toast(msg, errors > 0 ? 'info' : 'success');
   console.log('[iCal sync]', msg);
   renderSyncHealth();
