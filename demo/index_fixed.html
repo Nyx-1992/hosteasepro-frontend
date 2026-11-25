@@ -3634,7 +3634,7 @@ function renderSocialShareSettings() {
   const sel = document.getElementById('social-prop');
   if (!sel) return;
   const propKeys = Object.keys(PROPS);
-  sel.innerHTML = propKeys.map(k => `<option value="${k}">${PROPS[k].name}</option>`).join('');
+  sel.innerHTML = propKeys.map(k => `<option value="${k}">${escHtml(PROPS[k].name)}</option>`).join('');
   renderSocialCaption();
 }
 
@@ -8205,7 +8205,7 @@ function openExtractReview() {
   const p = _extractDraft;
   if (!p) return;
   const propOpts = (sel) => Object.keys(PROPS).map(k =>
-    `<option value="${k}" ${sel===k?'selected':''}>${PROPS[k].short||PROPS[k].name}</option>`).join('');
+    `<option value="${k}" ${sel===k?'selected':''}>${escHtml(PROPS[k].short||PROPS[k].name)}</option>`).join('');
   const rec = extractReconciliation(p);
   const dupes = extractDuplicates(p);
   const money = n => 'R ' + Number(n||0).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -9567,14 +9567,14 @@ function renderDashboardPropertyColumns() {
     <div class="card" style="padding:16px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
         <span style="width:10px;height:10px;border-radius:50%;background:${DASH_PROP_COLORS[i%DASH_PROP_COLORS.length]};display:inline-block"></span>
-        <div class="card-title" style="margin:0;font-size:.88rem">${PROPS[key].name} — Next Arrivals</div>
+        <div class="card-title" style="margin:0;font-size:.88rem">${escHtml(PROPS[key].name)} — Next Arrivals</div>
       </div>
       <div id="dash-arrivals-${key}"></div>
     </div>`).join('');
 
   const calCards = keys.map(key => `
     <div class="card" style="padding:14px">
-      <div class="card-title" style="font-size:.84rem;margin-bottom:10px">📅 ${PROPS[key].name} Calendar</div>
+      <div class="card-title" style="font-size:.84rem;margin-bottom:10px">📅 ${escHtml(PROPS[key].name)} Calendar</div>
       <div id="dash-cal-${key}"></div>
     </div>`).join('');
 
@@ -9623,7 +9623,7 @@ function renderDashboard() {
           <span style="font-size:1.3rem;animation:pulse 1.5s infinite">🔔</span>
           <div>
             <div style="font-weight:700;font-size:.9rem;color:var(--ink)">${pendingDirect.length} direct booking${pendingDirect.length>1?'s':''} awaiting approval</div>
-            <div style="font-size:.76rem;color:var(--muted)">${pendingDirect.map(b=>b.display_name+' · '+fmtDate(b.check_in)).join(' · ')}</div>
+            <div style="font-size:.76rem;color:var(--muted)">${escHtml(pendingDirect.map(b=>b.display_name+' · '+fmtDate(b.check_in)).join(' · '))}</div>
           </div>
         </div>
         <button class="btn btn-sm" style="background:var(--amber);color:#fff;margin-left:auto" onclick="switchTab('bookings');setBookingFilter('pending')">Review →</button>
@@ -9648,7 +9648,7 @@ function renderDashboard() {
       const col = PLAT_COLORS[cur.platform]||'var(--accent)';
       out += `<div style="background:var(--ocean-light);border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid var(--ocean)">
         <div style="font-size:.68rem;font-weight:700;color:var(--ocean);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Currently staying</div>
-        <div style="font-weight:700;font-size:.88rem;color:var(--ink)">${cur.display_name}</div>
+        <div style="font-weight:700;font-size:.88rem;color:var(--ink)">${escHtml(cur.display_name)}</div>
         <div style="font-size:.75rem;color:var(--muted);margin-top:2px;display:flex;justify-content:space-between">
           <span>🛫 Out ${fmtDate(cur.check_out)}</span>
           <span style="color:${nightsLeft<=1?'var(--red)':'var(--muted)'}">⏳ ${nightsLeft<=0?'out today':nightsLeft===1?'1d left':nightsLeft+'d left'}</span>
@@ -9666,7 +9666,7 @@ function renderDashboard() {
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;${i<next3.length-1?'border-bottom:1px solid var(--border)':''}">
         <div style="min-width:0;flex:1">
           <div style="font-weight:600;font-size:.85rem;color:var(--ink);display:flex;align-items:center;gap:5px">
-            ${b.display_name}
+            ${escHtml(b.display_name)}
             ${daysUntil<=2?'<span style="background:#fee2e2;color:#dc2626;font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:5px">'+daysUntil+'d</span>':daysUntil<=5?'<span style="background:#fef3c7;color:#92400e;font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:5px">'+daysUntil+'d</span>':''}
           </div>
           <div style="font-size:.73rem;color:var(--muted);margin-top:1px">🛬 ${fmtDate(b.check_in)} · ${b.nights||0}n · <span style="${cleanOk?'color:var(--green)':'color:var(--red)'}">${cleanOk?'🧹✓':'🧹 !'}</span></div>
@@ -10132,8 +10132,8 @@ function renderLaneView() {
       <!-- ── Header ── -->
       <div class="lane-hd">
         <div>
-          <div class="lane-name">${prop.name}</div>
-          <div class="lane-addr">${prop.address}</div>
+          <div class="lane-name">${escHtml(prop.name)}</div>
+          <div class="lane-addr">${escHtml(prop.address)}</div>
         </div>
         <span style="background:${statusBg};color:${statusCol};font-size:.74rem;font-weight:700;padding:5px 12px;border-radius:20px;white-space:nowrap;flex-shrink:0">
           ${statusText}
@@ -10150,7 +10150,7 @@ function renderLaneView() {
       <!-- ── Rail: current guest (with lifecycle) + upcoming/past bookings ── -->
       <div class="lane-body">
         ${rail.length===0&&!current ? emptyState('📭',
-          `No ${bookingFilter==='all'?'':bookingFilter+' '}bookings for ${prop.name} yet`,
+          `No ${bookingFilter==='all'?'':bookingFilter+' '}bookings for ${escHtml(prop.name)} yet`,
           `<button class="btn btn-sm btn-primary" onclick="openModal('booking-modal')" style="margin-right:6px">+ Add Booking</button>
            <button class="btn btn-sm btn-ghost" onclick="serverSync(false)">🔄 Sync calendars</button>
            <button class="btn btn-sm btn-ghost" onclick="serverSync(true)" title="Show what would change without saving anything">👀 Check only</button>`
@@ -10167,7 +10167,7 @@ function renderLaneView() {
                   <circle cx="13" cy="13" r="10" fill="none" stroke="#2F6FED" stroke-width="4" stroke-linecap="round" stroke-dasharray="${ringFilled} ${ringC.toFixed(1)}" transform="rotate(-90 13 13)"/>
                 </svg>
                 <div style="min-width:0">
-                  <div class="lane-nname">${current.display_name}</div>
+                  <div class="lane-nname">${escHtml(current.display_name)}</div>
                   <div class="lane-nsub">🛬 ${fmtDate(current.check_in)} → 🛫 ${fmtDate(current.check_out)} · 🌙 ${current.nights||0}n · 👥 ${current.number_of_guests||1}</div>
                 </div>
               </div>
@@ -10206,7 +10206,7 @@ function renderLaneView() {
             <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
               <div style="flex:1;min-width:0">
                 <div style="font-weight:700;font-size:.9rem;color:var(--ink);display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-                  ${b.display_name}
+                  ${escHtml(b.display_name)}
                   ${isPending?'<span style="background:#f59e0b;color:#fff;font-size:.62rem;padding:2px 7px;border-radius:10px;font-weight:700">Pending</span>':''}
                   ${isImminent&&!isPast?'<span style="background:#fff3e0;color:#b45309;font-size:.62rem;padding:2px 6px;border-radius:6px;font-weight:600">⏳ '+daysUntil+'d</span>':''}
                   ${isSoon&&!isImminent&&!isPast?'<span style="background:#fef9c3;color:#92400e;font-size:.62rem;padding:2px 6px;border-radius:6px;font-weight:600">⏳ '+daysUntil+'d</span>':''}
@@ -10298,7 +10298,7 @@ function openBookingDetail(bookingId) {
         <div>
           <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Guest</div>
           <div style="display:flex;gap:6px;align-items:center">
-            <input id="gname-${b.id}" value="${b.guest_name||''}" placeholder="Add guest name…"
+            <input id="gname-${b.id}" value="${escAttr(b.guest_name||'')}" placeholder="Add guest name…"
               style="padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.86rem;outline:none;background:#fff;width:180px"/>
             <button class="btn btn-primary btn-sm" onclick="saveGuestName('${b.id}')">Save</button>
           </div>
@@ -10603,7 +10603,7 @@ function renderBookings() {
           ${pendingDirect.map(b=>`
             <div style="display:flex;justify-content:space-between;align-items:center;background:white;border-radius:10px;padding:12px 14px;margin-bottom:8px;gap:10px;flex-wrap:wrap">
               <div>
-                <div style="font-weight:700;font-size:.88rem">${b.display_name}</div>
+                <div style="font-weight:700;font-size:.88rem">${escHtml(b.display_name)}</div>
                 <div style="font-size:.76rem;color:var(--muted)">${propName(b.property_id)} · ${fmtDate(b.check_in)} → ${fmtDate(b.check_out)} · ${b.nights||0} nights</div>
                 ${b.notes?`<div style="font-size:.72rem;color:var(--muted);margin-top:2px">${b.notes.split('|')[0]}</div>`:''}
               </div>
@@ -10680,7 +10680,7 @@ function renderTodaysCheckouts() {
         const { b, bid, tasks, doneCount, total } = x;
         return `<div style="background:#fff;border-radius:8px;padding:6px 9px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px" onclick="openBookingDetail('${bid}')">
           <div style="min-width:0">
-            <div style="font-weight:700;font-size:.74rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b.display_name}</div>
+            <div style="font-weight:700;font-size:.74rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(b.display_name)}</div>
             <div style="font-size:.6rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${propName(b.property_id)} · ${doneCount}/${total}</div>
           </div>
           <div style="display:flex;gap:3px;flex-shrink:0">
@@ -11270,7 +11270,7 @@ function renderWeekView() {
           ${dayBookings.map(b => {
             const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'var(--accent))'));
             return `<div style="background:${col};color:#fff;font-size:.6rem;font-weight:600;padding:2px 4px;border-radius:4px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-              ${b.display_name||b.guest_name||b.platform}
+              ${escHtml(b.display_name||b.guest_name||b.platform)}
             </div>`;
           }).join('')}
           ${dayCleans.map(c => `
@@ -11315,8 +11315,8 @@ function renderDayView() {
     ${dayBookings.map(b => {
       const col = isOwnerStay(b)?PLAT_COLORS['owner']:(b.status==='blocked'?PLAT_COLORS['blocked']:(PLAT_COLORS[b.platform]||'var(--accent)'));
       return `<div style="background:${col}18;border-left:4px solid ${col};border-radius:10px;padding:12px 14px;margin-bottom:10px;cursor:pointer" onclick="openBookingDetail('${b.id}')">
-        <div style="font-weight:700;color:var(--ink)">${b.display_name||b.guest_name}</div>
-        <div style="font-size:.78rem;color:var(--muted);margin-top:3px">${propName(b.property_id)} · Check-in: ${fmtDate(b.check_in)} · Check-out: ${fmtDate(b.check_out)} · ${b.nights||0}n</div>
+        <div style="font-weight:700;color:var(--ink)">${escHtml(b.display_name||b.guest_name)}</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-top:3px">${escHtml(propName(b.property_id))} · Check-in: ${fmtDate(b.check_in)} · Check-out: ${fmtDate(b.check_out)} · ${b.nights||0}n</div>
         <span class="badge badge-${b.platform}" style="margin-top:6px">${b.platform}</span>
       </div>`;
     }).join('')}
@@ -11557,7 +11557,7 @@ function showDay(ds) {
   // Birthdays
   bdayCleaners.forEach(c=>{
     h+=`<div style="background:#f0abfc20;border:1.5px solid #d946ef;border-radius:9px;padding:12px;margin-bottom:8px">
-      <div style="font-weight:700;color:#86198f">🎂 ${c.name}'s Birthday!</div>
+      <div style="font-weight:700;color:#86198f">🎂 ${escHtml(c.name)}'s Birthday!</div>
       <div style="font-size:.82rem;color:var(--muted);margin-top:3px">Remember to wish her well 🎉</div>
     </div>`;
   });
@@ -11600,7 +11600,7 @@ function showDay(ds) {
         <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px">Guest Name</div>
         ${b.status==='blocked' ? `<div style="font-size:.74rem;color:var(--accent);margin-bottom:5px">If this is actually a guest (some platforms send zero guest info for a block or a stay — you'd know from the platform's own dashboard/email), enter their name and Save to convert it to a confirmed booking.</div>` : ''}
         <div style="display:flex;gap:6px;align-items:center">
-          <input id="gname-${b.id}" value="${b.guest_name||''}" placeholder="Click to add guest name…"
+          <input id="gname-${b.id}" value="${escAttr(b.guest_name||'')}" placeholder="Click to add guest name…"
             style="flex:1;padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:.86rem;outline:none;background:#fff"/>
           <button class="btn btn-primary btn-sm" onclick="saveGuestName('${b.id}')">${b.status==='blocked' ? 'Convert' : 'Save'}</button>
         </div>
@@ -11640,7 +11640,7 @@ function showDay(ds) {
         ${propName(d.property_id)} · ${d.time||'—'} · ${d.type}
       </div>
       ${linkedBooking ? `<div style="font-size:.76rem;color:#0369a1;margin-top:4px;background:#e0f2fe;padding:3px 8px;border-radius:6px;display:inline-block">
-        🔗 Linked: ${linkedBooking.display_name||linkedBooking.guest_name} (${fmtDate(linkedBooking.check_out)})
+        🔗 Linked: ${escHtml(linkedBooking.display_name||linkedBooking.guest_name)} (${fmtDate(linkedBooking.check_out)})
       </div>` : `<div style="font-size:.75rem;color:var(--muted);margin-top:4px;font-style:italic">Independent clean</div>`}
       ${d.notes?`<div style="font-size:.8rem;font-style:italic;margin-top:4px">"${d.notes}"</div>`:''}
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
@@ -12434,7 +12434,7 @@ function renderGuestManagement() {
         <!-- Card header -->
         <div class="ring-hd">
           <div style="min-width:0">
-            <div class="ring-name">${b.display_name}</div>
+            <div class="ring-name">${escHtml(b.display_name)}</div>
             <div class="ring-sub">${propName(b.property_id)} · ${nights}n · ${fmtDate(b.check_in)}→${fmtDate(b.check_out)}</div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">
@@ -13771,7 +13771,7 @@ function renderGuestTimeline() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:8px">
         <div style="min-width:0">
           <div style="font-weight:700;font-size:.88rem;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span>${b.display_name||b.guest_name||'Guest'}</span>
+            <span>${escHtml(b.display_name||b.guest_name||'Guest')}</span>
             ${stayCount>1?`<span style="background:var(--warm);color:var(--accent2);font-size:.6rem;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap">🔁 ${stayCount===2?'2nd':stayCount+'th'} stay</span>`:''}
           </div>
           <div style="font-size:.73rem;color:var(--muted);margin-top:2px">
@@ -13940,7 +13940,7 @@ function renderKnowledgeManual() {
   document.getElementById('km-prop-tabs').innerHTML = propKeys.map(key => `
     <button onclick="setKmProp('${key}')"
       style="padding:6px 16px;border-radius:8px;border:none;font-size:.82rem;font-weight:600;cursor:pointer;background:${kmProp===key?'var(--ocean)':'transparent'};color:${kmProp===key?'#fff':'var(--muted)'};transition:all .2s">
-      ${PROPS[key].name || PROPS[key].short}
+      ${escHtml(PROPS[key].name || PROPS[key].short)}
     </button>`).join('');
 
   document.getElementById('km-section-tabs').innerHTML = KM_SECTIONS.map(s => `
@@ -14788,7 +14788,7 @@ function renderOwnerStatementTab() {
     ownerStmtProp = propKeys.find(k => (PROPS[k].name||'').toLowerCase().includes('tv')) || propKeys[0];
   }
   document.getElementById('ownstmt-prop').innerHTML = propKeys.map(k =>
-    `<option value="${k}" ${k===ownerStmtProp?'selected':''}>${PROPS[k].name}</option>`).join('');
+    `<option value="${k}" ${k===ownerStmtProp?'selected':''}>${escHtml(PROPS[k].name)}</option>`).join('');
   document.getElementById('ownstmt-month').value = ownerStmtMonth;
   loadOrgSettings().then(() => onOwnerStmtChange());
   loadOwnerStmtHistory();
@@ -15460,7 +15460,7 @@ function renderCleanerOptions() {
   const sel = document.getElementById('d-cleaner');
   if (!sel) return;
   const current = sel.value;
-  sel.innerHTML = getDomesticStaff().map(c => `<option>${c.name}</option>`).join('')
+  sel.innerHTML = getDomesticStaff().map(c => `<option>${escHtml(c.name)}</option>`).join('')
     + '<option value="__other__">Other (outside cleaner)</option>';
   if ([...sel.options].some(o => o.value === current)) sel.value = current;
 }
@@ -15656,12 +15656,12 @@ function staffCard(c) {
       ${canDelete ? `<button class="contact-del" onclick="deleteStaffEntry('${c.id}')" title="Delete">✕</button>` : ''}
     </div>` : ''}
     <div class="contact-info" style="padding-top:16px">
-      <div class="contact-name">${c.name}</div>
-      <div class="text-muted" style="font-size:.78rem;margin-bottom:6px">${c.role||(isCleaner?'Cleaner':STAFF_CAT_LABELS[c.cat]||c.cat)}</div>
+      <div class="contact-name">${escHtml(c.name)}</div>
+      <div class="text-muted" style="font-size:.78rem;margin-bottom:6px">${escHtml(c.role||(isCleaner?'Cleaner':STAFF_CAT_LABELS[c.cat]||c.cat))}</div>
       ${c.phone?`<div style="font-size:.8rem;margin-bottom:2px">📞 ${c.phone}</div>`:''}
-      ${c.email?`<div style="font-size:.8rem;margin-bottom:2px">✉️ ${c.email}</div>`:''}
+      ${c.email?`<div style="font-size:.8rem;margin-bottom:2px">✉️ ${escHtml(c.email)}</div>`:''}
       ${seePay&&isDomestic&&isCleaner?`<div style="font-size:.8rem;margin-bottom:2px">💰 ${fmtCleanerRate(c)}${c.cleaner_payment?' · '+c.cleaner_payment:''}</div>`:''}
-      ${isDomestic&&c.cleaner_properties&&c.cleaner_properties.length?`<div style="font-size:.8rem;margin-bottom:2px">🏠 ${c.cleaner_properties.map(k=>PROPS[k]?PROPS[k].short:k).join(', ')}</div>`:''}
+      ${isDomestic&&c.cleaner_properties&&c.cleaner_properties.length?`<div style="font-size:.8rem;margin-bottom:2px">🏠 ${escHtml(c.cleaner_properties.map(k=>PROPS[k]?PROPS[k].short:k).join(', '))}</div>`:''}
       ${seePay&&isDomestic&&c.birthday?`<div style="font-size:.8rem;margin-bottom:2px">🎂 ${fmtBirthday(c.birthday)}</div>`:''}
       ${seePay&&c.portal_pin?`<div style="font-size:.8rem;margin-bottom:2px">🔑 Staff portal access</div>`:''}
       ${seePay&&c.note?`<div class="contact-note">${c.note}</div>`:''}
@@ -15775,7 +15775,7 @@ function renderOrganogram(el) {
       <div style="font-weight:700;font-size:.82rem">${escHtml(c.name)}</div>
       <div style="font-size:.7rem;color:var(--muted)">${escHtml(c.role || STAFF_CAT_LABELS[c.cat] || '')}</div>
       ${c.cleaner_properties && c.cleaner_properties.length
-        ? `<div style="font-size:.66rem;color:var(--muted);margin-top:3px">🏠 ${c.cleaner_properties.map(k=>PROPS[k]?PROPS[k].short:k).join(', ')}</div>` : ''}
+        ? `<div style="font-size:.66rem;color:var(--muted);margin-top:3px">🏠 ${escHtml(c.cleaner_properties.map(k=>PROPS[k]?PROPS[k].short:k).join(', '))}</div>` : ''}
       ${c.portal_pin ? `<div style="font-size:.64rem;color:var(--teal);margin-top:2px">🔑 portal access</div>` : ''}
     </div>`;
   const row = (nodes) => `<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">${nodes}</div>`;
@@ -15899,7 +15899,7 @@ function openStaffModal(id) {
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
                 <label style="display:flex;align-items:center;gap:5px;font-weight:400;min-width:110px">
                   <input type="checkbox" class="staff-prop-chk" value="${k}" ${existingProps.includes(k)?'checked':''} style="width:auto"/>
-                  ${PROPS[k].short}
+                  ${escHtml(PROPS[k].short)}
                 </label>
                 <input type="number" class="staff-prop-rate" data-prop="${k}" placeholder="Rate" value="${existingRateFor(k)}" style="width:90px"/>
               </div>`).join('')}
@@ -15913,7 +15913,7 @@ function openStaffModal(id) {
             ${Object.keys(PROPS).map(k => `
               <label style="display:inline-flex;align-items:center;gap:5px;font-weight:400;margin:0 12px 4px 0">
                 <input type="checkbox" class="staff-prop-only-chk" value="${k}" ${existingProps.includes(k)?'checked':''} style="width:auto"/>
-                ${PROPS[k].short}
+                ${escHtml(PROPS[k].short)}
               </label>`).join('')}
           </div>
           <div class="text-muted" style="font-size:.72rem;margin-top:2px">No rate here — they are paid the same whatever they clean.</div>
@@ -16196,8 +16196,8 @@ function contactCard(c) {
       </div>` : ''}
       <div class="contact-avatar" style="font-size:${c.initials.length>2?'.72rem':'.8rem'}">${c.initials}</div>
       <div class="contact-info">
-        <div class="contact-name">🔒 ${c.name}</div>
-        <div class="contact-role">${c.role||''}</div>
+        <div class="contact-name">🔒 ${escHtml(c.name)}</div>
+        <div class="contact-role">${escHtml(c.role||'')}</div>
         <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="toggleContactSensitive('${c.id}')">Show details</button>
       </div>
     </div>`;
@@ -16211,8 +16211,8 @@ function contactCard(c) {
     </div>
     <div class="contact-avatar" style="font-size:${c.initials.length>2?'.72rem':'.8rem'}">${c.initials}</div>
     <div class="contact-info">
-      <div class="contact-name">${c.sensitive?'🔒 ':''}${c.name}</div>
-      <div class="contact-role">${c.role||''}</div>
+      <div class="contact-name">${c.sensitive?'🔒 ':''}${escHtml(c.name)}</div>
+      <div class="contact-role">${escHtml(c.role||'')}</div>
       ${c.phone?`<div class="contact-row">
         <span class="lbl">📱 ${c.phone}</span>
         <div class="contact-actions">
@@ -18634,7 +18634,7 @@ function openBudgetLine(id) {
   const freqOpts = Object.keys(BUDGET_FREQ).map(k =>
     `<option value="${k}" ${b&&b.frequency===k?'selected':''}>${BUDGET_FREQ[k]}</option>`).join('');
   const propOpts = Object.keys(PROPS).map(k =>
-    `<option value="${k}" ${b&&b.property_id===k?'selected':''}>${PROPS[k].short||PROPS[k].name}</option>`).join('');
+    `<option value="${k}" ${b&&b.property_id===k?'selected':''}>${escHtml(PROPS[k].short||PROPS[k].name)}</option>`).join('');
 
   const planOpts = pricingPlans.filter(p => p.active).map(p =>
     `<option value="${p.id}" ${b&&b.plan_id===p.id?'selected':''}>${escHtml(p.name)} — R${Number(p.monthly_fee).toLocaleString('en-ZA')}/mo</option>`).join('');
