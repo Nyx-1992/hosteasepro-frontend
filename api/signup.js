@@ -30,6 +30,7 @@
 
 import { sendWelcomeEmail } from './_lib/welcomeEmail.js';
 import { sendSignupAlert } from './_lib/ownerAlert.js';
+import { checkSignupAllowed, recordSignupAttempt, clientIp } from './_lib/signupGuard.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const TRIAL_DAYS = 7;
@@ -57,6 +58,22 @@ export default async function handler(req, res) {
   if (String(password).length < 8) {
     return res.status(400).json({ error: 'Password must be at least 8 characters.' });
   }
+
+  // ── IS THIS A FLOOD? ──────────────────────────────────────────────
+  //
+  // Checked after the shape of the request is known, so a malformed body
+  // does not burn somebody's hourly allowance, and before anything is
+  // created, so a refusal leaves nothing behind. The attempt is recorded
+  // either way: a blocked one is the evidence that the limit is working,
+  // and without it a second attempt from the same address starts from
+  // zero again.
+  const ip = clientIp(req);
+  const verdict = await checkSignupAllowed({ supabaseUrl: SUPABASE_URL, svcHeaders: svc, ip, email });
+  if (!verdict.allowed) {
+    await recordSignupAttempt({ supabaseUrl: SUPABASE_URL, svcHeaders: svc, ip, email, outcome: verdict.reason });
+    return res.status(429).json({ error: verdict.message });
+  }
+  await recordSignupAttempt({ supabaseUrl: SUPABASE_URL, svcHeaders: svc, ip, email, outcome: 'attempt' });
 
   let orgId = null;
   let userId = null;

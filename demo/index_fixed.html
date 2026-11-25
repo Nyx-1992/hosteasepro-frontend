@@ -5124,6 +5124,32 @@ async function startPasswordReset() {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return say('That email address does not look right.', true);
   if (!db) return say('Not connected to the server. Please refresh and try again.', true);
 
+  // ── A COOLDOWN, AND WHAT IT IS AND IS NOT FOR ────────────────────
+  //
+  // 25 November: three reset emails reached the owner's inbox inside
+  // thirty minutes, and a fourth request went to every account in the
+  // org within eighteen seconds.
+  //
+  // THIS DOES NOT STOP THAT. A script calls Supabase's /auth/v1/recover
+  // directly and never loads this page, so a check in the browser is
+  // invisible to it. The real limit for that is the per-hour cap in
+  // Supabase (Authentication → Rate Limits), which is server-side and
+  // the only thing an attacker cannot route around.
+  //
+  // What this IS for is the person in front of the screen who does not
+  // see the email arrive and clicks again, and again — the case the
+  // green-message comment above already worries about. Three identical
+  // mails in an inbox during a week like this one look like an attack
+  // even when they came from the same honest, impatient click.
+  const COOLDOWN_MS = 60000;
+  const lastSent = Number(sessionStorage.getItem('hep_reset_sent_at') || 0);
+  const waited = Date.now() - lastSent;
+  if (lastSent && waited < COOLDOWN_MS) {
+    const secs = Math.ceil((COOLDOWN_MS - waited) / 1000);
+    return say(`A reset link was just sent. Check your inbox and spam — you can ask for another in ${secs} second${secs === 1 ? '' : 's'}.`, false);
+  }
+  try { sessionStorage.setItem('hep_reset_sent_at', String(Date.now())); } catch (e) { /* private window */ }
+
   try {
     // redirectTo must be on Supabase's allow-list (Authentication → URL
     // Configuration) or the link in the email refuses to open. Built from
